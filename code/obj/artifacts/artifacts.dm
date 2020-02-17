@@ -13,17 +13,12 @@
 	var/associated_datum = /datum/artifact/art
 
 	New(var/loc, var/forceartitype)
-		..()
 		var/datum/artifact/AS = new src.associated_datum(src)
 		if (forceartitype) AS.validtypes = list("[forceartitype]")
 		src.artifact = AS
 
-		SPAWN_DBG(0)
+		spawn(0)
 			src.ArtifactSetup()
-
-	disposing()
-		artifact_controls.artifacts -= src
-		..()
 
 	UpdateName()
 		src.name = "[name_prefix(null, 1)][src.real_name][name_suffix(null, 1)]"
@@ -82,17 +77,15 @@
 			if("dna_mutagen","mutagen","omega_mutagen")
 				if (A.artitype == "martian")
 					ArtifactDevelopFault(80)
-			if("phlogiston","dbreath","el_diablo","thermite","thalmerite","argine")
+			if("napalm","dbreath","el_diablo")
 				src.ArtifactStimulus("heat", 310 + (volume * 5))
-			if("infernite","kerosene","ghostchilijuice")
+			if("infernite","foof","ghostchilijuice")
 				src.ArtifactStimulus("heat", 310 + (volume * 10))
-			if("napalm_goo","foof","ghostchilijuice")
-				src.ArtifactStimulus("heat", 310 + (volume * 15))
 			if("cryostylane")
 				src.ArtifactStimulus("heat", 310 - (volume * 10))
-			if("acid","acetic_acid")
+			if("acid")
 				src.ArtifactTakeDamage(volume * 2)
-			if("pacid","clacid","nitric_acid")
+			if("pacid")
 				src.ArtifactTakeDamage(volume * 10)
 			if("george_melonium")
 				var/random_stimulus = pick("heat","force","radiate","elec")
@@ -118,7 +111,10 @@
 		src.ArtifactStimulus("carbtouch", 1)
 
 	bullet_act(var/obj/projectile/P)
-		if(src.material) src.material.triggerOnBullet(src, src, P)
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 		switch (P.proj_data.damage_type)
 			if(D_KINETIC,D_PIERCING,D_SLASHING)
@@ -134,7 +130,7 @@
 		..()
 
 	Bumped(M as mob|obj)
-		if (isitem(M))
+		if (istype(M,/obj/item/))
 			var/obj/item/ITM = M
 			src.ArtifactStimulus("force", ITM.throwforce)
 			for (var/obj/machinery/networked/test_apparatus/impact_pad/I in src.loc.contents)
@@ -160,12 +156,8 @@
 			AS.validtypes = list("[forceartitype]")
 		src.artifact = AS
 
-		SPAWN_DBG(0)
+		spawn(0)
 			src.ArtifactSetup()
-
-	disposing()
-		artifact_controls.artifacts -= src
-		..()
 
 	examine()
 		set src in oview()
@@ -233,7 +225,7 @@
 			if("dna_mutagen","mutagen","omega_mutagen")
 				if (A.artitype == "martian")
 					ArtifactDevelopFault(80)
-			if("phlogiston","dbreath","el_diablo")
+			if("napalm","dbreath","el_diablo")
 				src.ArtifactStimulus("heat", 310 + (volume * 5))
 			if("infernite","foof","ghostchilijuice")
 				src.ArtifactStimulus("heat", 310 + (volume * 10))
@@ -282,7 +274,7 @@
 		..()
 
 	Bumped(M as mob|obj)
-		if (isitem(M))
+		if (istype(M,/obj/item/))
 			var/obj/item/ITM = M
 			src.ArtifactStimulus("force", ITM.throwforce)
 			for (var/obj/machinery/networked/test_apparatus/impact_pad/I in src.loc.contents)
@@ -304,12 +296,8 @@
 			AS.validtypes = list("[forceartitype]")
 		src.artifact = AS
 
-		SPAWN_DBG(0)
+		spawn(0)
 			src.ArtifactSetup()
-
-	disposing()
-		artifact_controls.artifacts -= src
-		..()
 
 	examine()
 		set src in oview()
@@ -332,11 +320,11 @@
 	New(var/loc,var/forceartitype = null,var/cinematic = 0)
 		var/turf/T = get_turf(src)
 		if (cinematic)
-			T.visible_message("<span style=\"color:red\"><b>An artifact suddenly warps into existence!</b></span>")
+			T.visible_message("<span style=\"color:red\"><b>An artifact suddenly warps into existance!</b></span>")
 			playsound(T,"sound/effects/teleport.ogg",50,1)
 			var/obj/decal/teleport_swirl/swirl = unpool(/obj/decal/teleport_swirl)
 			swirl.set_loc(T)
-			SPAWN_DBG(15)
+			spawn(15)
 				pool(swirl)
 		Artifact_Spawn(T,forceartitype)
 		qdel(src)

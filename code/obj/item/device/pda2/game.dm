@@ -32,7 +32,7 @@
 		return
 
 	/* new disposing() pattern should handle this. -singh
-	disposing()
+	Del()
 		src.clear_blocks()
 		..()
 	*/
@@ -156,7 +156,7 @@
 
 			src.master.updateSelfDialog()
 			if(speedup)
-				SPAWN_DBG(5) //Ugh the process loop for items is so slow most of the time
+				spawn(5) //Ugh the process loop for items is so slow most of the time
 					src.process(0)
 
 		return
@@ -373,7 +373,7 @@
 		var/name_part1 = pick("the Automatic ", "Farmer ", "Lord ", "Professor ", "the Evil ", "the Dread King ", "the Space ", "Lord ")
 		var/name_part2 = pick("Melonoid", "Murdertron", "Sorcerer", "Ruin", "Jeff", "Ectoplasm", "Crushulon")
 
-		src.enemy_name = replacetext((name_part1 + name_part2), "the ", "")
+		src.enemy_name = dd_replacetext((name_part1 + name_part2), "the ", "")
 
 
 

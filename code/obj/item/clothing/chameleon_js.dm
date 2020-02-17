@@ -5,7 +5,6 @@
 	wear_image_icon = 'icons/mob/jumpsuits/worn_js.dmi'
 	inhand_image_icon = 'icons/mob/inhand/jumpsuit/hand_js.dmi'
 	icon_state = "black"
-	uses_multiple_icon_states = 1
 	item_state = "black"
 	permeability_coefficient = 0.50
 	var/list/clothing_choices = list()
@@ -20,7 +19,7 @@
 	attackby(obj/item/clothing/under/U as obj, mob/user as mob)
 		if(istype(U, /obj/item/clothing/under/chameleon))
 			boutput(user, "<span style=\"color:red\">No!!! That's a terrible idea! You'll cause a horrible jumpsuit chain reaction!</span>")
-			SPAWN_DBG(10)
+			spawn(10)
 				boutput(user, "<span style=\"color:red\">Nah, just kidding. Doing that still doesn't work though!</span>")
 			return
 

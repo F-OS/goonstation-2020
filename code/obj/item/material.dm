@@ -13,31 +13,11 @@
 	var/scoopable = 1
 	burn_type = 1
 	var/wiggle = 6 // how much we want the sprite to be deviated fron center
-	max_stack = INFINITY
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	New()
 		..()
 		src.pixel_x = rand(0 - wiggle, wiggle)
 		src.pixel_y = rand(0 - wiggle, wiggle)
-		setup_material()
-
-	unpooled()
-		..()
-		src.pixel_x = rand(0 - wiggle, wiggle)
-		src.pixel_y = rand(0 - wiggle, wiggle)
-		setup_material()
-
-	pooled()
-		..()
-
-	proc/setup_material()
-		.= 0
-
-	update_stack_appearance()
-		if(material)
-			name = "[amount] [initial(src.name)][amount > 1 ? "s":""]"
-		return
 
 	attackby(obj/item/W as obj, mob/user as mob)
 		if (istype(W, /obj/item/satchel/mining/))
@@ -53,9 +33,9 @@
 		else ..()
 
 	HasEntered(AM as mob|obj)
-		if (isobserver(AM))
+		if (istype(AM,/mob/dead/))
 			return
-		else if (isliving(AM))
+		else if (istype(AM,/mob/living/))
 			var/mob/living/H = AM
 			var/obj/item/ore_scoop/S = H.get_equipped_ore_scoop()
 			if (S && S.satchel && S.satchel.contents.len < S.satchel.maxitems && src.scoopable)
@@ -78,78 +58,37 @@
 		else
 			return
 
-	MouseDrop(over_object, src_location, over_location) //src dragged onto over_object
-		if (isobserver(usr))
+	MouseDrop(over_object, src_location, over_location)
+		if (istype(usr,/mob/dead/))
 			boutput(usr, "<span style=\"color:red\">Quit that! You're dead!</span>")
 			return
 
-		if(!istype(over_object, /obj/screen/hud))
-			if (get_dist(usr,src) > 1)
-				boutput(usr, "<span style=\"color:red\">You're too far away from it to do that.</span>")
-				return
-			if (get_dist(usr,over_object) > 1)
-				boutput(usr, "<span style=\"color:red\">You're too far away from it to do that.</span>")
-				return
+		if (get_dist(usr,src) > 1)
+			boutput(usr, "<span style=\"color:red\">You're too far away from it to do that.</span>")
+			return
 
-		if(istype(over_object, /obj/machinery/power/furnace))
-			return ..()
+		if (get_dist(usr,over_object) > 1)
+			boutput(usr, "<span style=\"color:red\">You're too far away from it to do that.</span>")
+			return
 
-		if(istype(over_object, /obj/afterlife_donations))
-			return ..()
+		if (isturf(over_object))
+			var/turf/T = over_object
+			usr.visible_message("<span style=\"color:blue\">[usr.name] begins sorting [src] into a pile!</span>")
+			var/staystill = usr.loc
+			for(var/obj/item/I in view(1,usr))
+				if (!I)
+					continue
+				if (src.name != I.name)
+					continue
+				if (I.loc == usr)
+					continue
+				I.set_loc(T)
+				sleep(0.5)
+				if (usr.loc != staystill) break
+			boutput(usr, "<span style=\"color:blue\">You finish sorting [src]!</span>")
 
-		if (istype(over_object,/obj/item/raw_material)) //piece to piece, doesnt matter if in hand or not.
-			var/obj/item/targetObject = over_object
-			targetObject.stack_item(src)
-			usr.visible_message("<span style=\"color:blue\">[usr.name] stacks \the [src]!</span>")
-		else if(isturf(over_object)) //piece to turf. piece loc doesnt matter.
-			if(src.amount > 1) //split stack.
-				usr.visible_message("<span style=\"color:blue\">[usr.name] splits the stack of [src]!</span>")
-				var/toSplit = round(amount / 2)
-				var/atom/movable/splitStack = split_stack(toSplit)
-				if(splitStack)
-					splitStack.set_loc(over_object)
-			else
-				if(isturf(src.loc))
-					src.set_loc(over_object)
-				for(var/obj/item/I in view(1,usr))
-					if (!I || I == src)
-						continue
-					if (!src.check_valid_stack(I))
-						continue
-					src.stack_item(I)
-				usr.visible_message("<span style=\"color:blue\">[usr.name] stacks \the [src]!</span>")
-		else if(istype(over_object, /obj/screen/hud))
-			var/obj/screen/hud/H = over_object
-			var/mob/living/carbon/human/dude = usr
-			switch(H.id)
-				if("lhand")
-					if(dude.l_hand)
-						if(dude.l_hand == src) return
-						else if (istype(dude.l_hand, /obj/item/raw_material))
-							var/obj/item/raw_material/DP = dude.l_hand
-							DP.stack_item(src)
-							usr.visible_message("<span style=\"color:blue\">[usr.name] stacks \the [DP]!</span>")
-					else
-						var/toSplit = round(amount / 2)
-						var/atom/movable/splitStack = split_stack(toSplit)
-						if(splitStack)
-							usr.visible_message("<span style=\"color:blue\">[usr.name] splits the stack of [src]!</span>")
-							splitStack.set_loc(dude)
-							dude.put_in_hand(splitStack, 1)
-				if("rhand")
-					if(dude.r_hand)
-						if(dude.r_hand == src) return
-						else if (istype(dude.r_hand, /obj/item/raw_material))
-							var/obj/item/raw_material/DP = dude.r_hand
-							DP.stack_item(src)
-							usr.visible_message("<span style=\"color:blue\">[usr.name] stacks \the [DP]!</span>")
-					else
-						var/toSplit = round(amount / 2)
-						var/atom/movable/splitStack = split_stack(toSplit)
-						if(splitStack)
-							usr.visible_message("<span style=\"color:blue\">[usr.name] splits the stack of [src]!</span>")
-							splitStack.set_loc(dude)
-							dude.put_in_hand(splitStack, 0)
+		else
+			..()
 
 /obj/item/raw_material/rock
 	name = "rock"
@@ -159,10 +98,9 @@
 	throwforce = 10
 	scoopable = 0
 
-	setup_material()
+	New()
 		..()
 		src.icon_state = pick("rock1","rock2","rock3")
-		src.setMaterial(getMaterial("rock"), appearance = 0, setname = 0)
 
 /obj/item/raw_material/mauxite
 	name = "mauxite ore"
@@ -171,8 +109,8 @@
 	material_name = "Mauxite"
 	metal = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("mauxite"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("mauxite")
 		return ..()
 
 /obj/item/raw_material/molitz
@@ -182,8 +120,8 @@
 	material_name = "Molitz"
 	crystal = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("molitz"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("molitz")
 		return ..()
 
 /obj/item/raw_material/pharosium
@@ -194,8 +132,8 @@
 	metal = 1
 	conductor = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("pharosium"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("pharosium")
 		return ..()
 
 /obj/item/raw_material/cobryl // relate this to precursors
@@ -205,8 +143,8 @@
 	material_name = "Cobryl"
 	metal = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("cobryl"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("cobryl")
 		return ..()
 
 /obj/item/raw_material/char
@@ -217,11 +155,11 @@
 	//cogwerks - burn vars
 	burn_point = 450
 	burn_output = 1600
-	burn_possible = 2
+	burn_possible = 1
 	health = 20
 
-	setup_material()
-		src.setMaterial(getMaterial("char"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("char")
 		return ..()
 
 /obj/item/raw_material/claretine // relate this to wizardry somehow
@@ -231,8 +169,8 @@
 	material_name = "Claretine"
 	conductor = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("claretine"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("claretine")
 		return ..()
 
 /obj/item/raw_material/bohrum
@@ -243,8 +181,8 @@
 	metal = 3
 	dense = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("bohrum"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("bohrum")
 		return ..()
 
 /obj/item/raw_material/syreline
@@ -254,8 +192,8 @@
 	material_name = "Syreline"
 	metal = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("syreline"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("syreline")
 		return ..()
 
 /obj/item/raw_material/erebite
@@ -266,21 +204,21 @@
 	material_name = "Erebite"
 	powersource = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("erebite"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("erebite")
 		return ..()
 
 	ex_act(severity)
 		if(exploded)
 			return
-		exploded = 1/*
+		exploded = 1
 		for(var/obj/item/raw_material/erebite/E in get_turf(src))
 			if(E == src) continue
 			qdel(E)
 
 		for(var/obj/item/raw_material/erebite/E in range(4,src))
 			if (E == src) continue
-			qdel(E)*/
+			qdel(E)
 
 		switch(severity)
 			if(1)
@@ -303,6 +241,10 @@
 
 	temperature_expose(null, temp, volume)
 
+		for(var/obj/item/raw_material/erebite/E in range(6,src))
+			if (E == src) continue
+			qdel(E)
+
 		explosion(src, src.loc, 1, 2, 3, 4, 1)
 
 		// if not on mining z level
@@ -323,8 +265,8 @@
 	metal = 1
 	powersource = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("cerenkite"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("cerenkite")
 		return ..()
 
 /obj/item/raw_material/plasmastone
@@ -335,13 +277,13 @@
 	//cogwerks - burn vars
 	burn_point = 1000
 	burn_output = 10000
-	burn_possible = 2
+	burn_possible = 1
 	health = 40
 	powersource = 1
 	crystal = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("plasmastone"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("plasmastone")
 		return ..()
 
 /obj/item/raw_material/gemstone
@@ -353,7 +295,7 @@
 	throwforce = 3
 	crystal = 1
 
-	setup_material()
+	New()
 		..()
 		var/picker = rand(1,100)
 		var/list/picklist
@@ -365,8 +307,8 @@
 			else
 				picklist = list("onyx","rosequartz","citrine","jade","aquamarine","iolite")
 
-		var/datum/material/M = getMaterial(pick(picklist))
-		src.setMaterial(M)//, appearance = 0, setname = 0) // why was this set to not update the name/appearance??
+		var/datum/material/M = getCachedMaterial(pick(picklist))
+		src.setMaterial(M)
 
 /obj/item/raw_material/uqill // relate this to ancients
 	name = "uqill nugget"
@@ -375,19 +317,19 @@
 	material_name = "Uqill"
 	dense = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("uqill"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("uqill")
 		return ..()
 
 
 /obj/item/raw_material/fibrilith
-	name = "fibrilith chunk"
+	name = "fibrilith"
 	desc = "A compressed chunk of Fibrilith, an odd mineral known for its high tensile strength."
 	icon_state = "fibrilith"
 	material_name = "Fibrilith"
 
-	setup_material()
-		src.setMaterial(getMaterial("fibrilith"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("fibrilith")
 		return ..()
 
 /obj/item/raw_material/telecrystal
@@ -398,31 +340,9 @@
 	crystal = 1
 	powersource = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("telecrystal"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("telecrystal")
 		return ..()
-
-	attack(mob/M as mob, mob/user as mob, def_zone)//spyguy apologizes in advance -- not somepotato i promise
-		if(M == user)
-			boutput(M, "<b style='color:red'>You eat the [html_encode(src)]!</b>")
-			boutput(M, "Nothing happens, though.")
-			qdel(src)
-		else if(istype(M))
-			boutput(user, "<b style='color:red'>You feed [html_encode(M)] the [html_encode(src)]!</b>")
-			boutput(M, "<b style='color:red'>[html_encode(user)] feeds you the [html_encode(src)]!</b>")
-			boutput(M, "Nothing happens, though.")
-			boutput(user, "Nothing happens, though.")
-			qdel(src)
-		else return ..()
-		return
-	var/emagged = 0
-	emag_act()
-		if(emagged) return
-		src.visible_message( "<b style='color:blue'>\the [src] turns blue!</b>" )
-		emagged = 1
-		src.color = "#00f"
-		name = "Blue Telecrystal"
-		desc = "[desc] It's all shiny and blue now."
 
 /obj/item/raw_material/miracle
 	name = "miracle matter"
@@ -430,8 +350,8 @@
 	icon_state = "miracle"
 	material_name = "Miracle Matter"
 
-	setup_material()
-		src.setMaterial(getMaterial("miracle"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("miracle")
 		return ..()
 
 /obj/item/raw_material/starstone
@@ -441,8 +361,8 @@
 	material_name = "Starstone"
 	crystal = 1
 
-	setup_material()
-		src.setMaterial(getMaterial("starstone"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("starstone")
 		return ..()
 
 /obj/item/raw_material/eldritch
@@ -453,8 +373,8 @@
 	crystal = 1
 	dense = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("koshmarite"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("koshmarite")
 		return ..()
 
 /obj/item/raw_material/martian
@@ -464,8 +384,8 @@
 	material_name = "Viscerite"
 	dense = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("viscerite"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("viscerite")
 		var/datum/reagents/R = new/datum/reagents(25)
 		reagents = R
 		R.my_atom = src
@@ -479,21 +399,21 @@
 	material_name = "Gold"
 	dense = 2
 
-	setup_material()
-		src.setMaterial(getMaterial("gold"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("gold")
 		return ..()
 
 // Misc building material
 
 /obj/item/raw_material/fabric
-	name = "fabric sheet"
+	name = "fabric"
 	desc = "Some spun cloth. Useful if you want to make clothing."
 	icon_state = "fabric"
 	material_name = "Fabric"
 	scoopable = 0
 
-	setup_material()
-		src.setMaterial(getMaterial("fibrilith"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("fibrilith")
 		return ..()
 
 /obj/item/raw_material/cotton/
@@ -501,8 +421,8 @@
 	desc = "It's a big puffy white thing. Most likely not a cloud though."
 	icon_state = "cotton"
 
-	setup_material()
-		src.setMaterial(getMaterial("cotton"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("cotton")
 		return ..()
 
 /obj/item/raw_material/ice
@@ -513,8 +433,8 @@
 	crystal = 1
 	scoopable = 0
 
-	setup_material()
-		src.setMaterial(getMaterial("ice"), appearance = 0, setname = 0)
+	New()
+		src.material = getCachedMaterial("ice")
 		return ..()
 
 /obj/item/raw_material/scrap_metal
@@ -535,11 +455,9 @@
 	icon_state = "shard"
 	inhand_image_icon = 'icons/mob/inhand/hand_tools.dmi'
 	item_state = "shard-glass"
-	flags = TABLEPASS | FPRINT
-	tool_flags = TOOL_CUTTING
 	w_class = 3.0
 	hit_type = DAMAGE_CUT
-	hitsound = 'sound/impact_sounds/Flesh_Stab_1.ogg'
+	hitsound = 'sound/effects/bloody_stab.ogg'
 	force = 5.0
 	throwforce = 15.0
 	g_amt = 3750
@@ -548,13 +466,11 @@
 	stamina_cost = 15
 	stamina_crit_chance = 35
 	burn_possible = 0
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
-	var/sound_stepped = 'sound/impact_sounds/Glass_Shards_Hit_1.ogg'
+	var/sound_stepped = 'sound/misc/glass_step.ogg'
 
 	New()
 		..()
 		icon_state += "[rand(1,3)]"
-		src.setItemSpecial(/datum/item_special/double)
 
 	attack(mob/living/carbon/M as mob, mob/living/carbon/user as mob)
 		if(!scalpel_surgery(M,user)) return ..()
@@ -565,133 +481,92 @@
 			var/mob/M = AM
 			if(ishuman(M))
 				var/mob/living/carbon/human/H = M
-				if(H.getStatusDuration("stunned") || H.getStatusDuration("weakened")) // nerf for dragging a person and a shard to damage them absurdly fast - drsingh
+				if(istype(H.mutantrace, /datum/mutantrace/abomination))
 					return
-				if(isabomination(H))
-					return
-				if(!H.shoes || (src.material && src.material.hasProperty("hard") && src.material.getProperty("hard") >= 70))
-					boutput(H, "<span style=\"color:red\"><B>You step on [src]! Ouch!</B></span>")
+				if(!H.shoes)
+					boutput(H, "<span style=\"color:red\"><B>You step on [src] barefoot! Ouch!</B></span>")
 					playsound(src.loc, src.sound_stepped, 50, 1)
 					var/obj/item/affecting = H.organs[pick("l_leg", "r_leg")]
-					H.changeStatus("weakened", 3 SECONDS)
-					H.force_laydown_standup()
+					H.weakened = max(3, H.weakened)
 					var/shard_damage = force
 					affecting.take_damage(shard_damage, 0)
 					H.UpdateDamageIcon()
 					H.updatehealth()
 		..()
 
-	custom_suicide = 1
-	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
-		user.visible_message("<span style='color:red'><b>[user] slashes [his_or_her(user)] own throat with [src]!</b></span>")
-		blood_slash(user, 25)
-		user.TakeDamage("head", 150, 0)
-		user.updatehealth()
-		SPAWN_DBG(500)
-			if (user && !isdead(user))
-				user.suiciding = 0
+	suicide(var/mob/usr as mob)
+		usr.visible_message("<span style=\"color:red\"><b>[usr] slashes \his own throat with [src]!</b></span>")
+		blood_slash(usr, 25)
+		usr.TakeDamage("head", 150, 0)
+		usr.updatehealth()
+		spawn(100)
+			if (usr)
+				usr.suiciding = 0
 		return 1
 
 	glass
-		setup_material()
+
+		New()
 			..()
-			var/datum/material/M = getMaterial("glass")
-			src.setMaterial(M, appearance = 1, setname = 1) // why were these set to 0 and 0, why would you use a glass shard to make some other kind of materialed thing when you could just use the base /obj/item/raw_material/shard
+			var/datum/material/M = getCachedMaterial("glass")
+			src.setMaterial(M)
 
 	plasmacrystal
-		setup_material()
+
+		New()
 			..()
-			var/datum/material/M = getMaterial("plasmaglass")
-			src.setMaterial(M, appearance = 1, setname = 1)
+			var/datum/material/M = getCachedMaterial("plasmaglass")
+			src.setMaterial(M)
 
 // bars, tied into the new material system
 
 /obj/item/material_piece/mauxite
 	desc = "A processed bar of Mauxite, a sturdy common metal."
 	default_material = "mauxite"
-	icon_state = "mauxite-bar"
 
 /obj/item/material_piece/molitz
 	desc = "A cut block of Molitz, a common crystalline substance."
 	default_material = "molitz"
-	icon_state = "molitz-bar"
 
 /obj/item/material_piece/pharosium
 	desc = "A processed bar of Pharosium, a conductive metal."
 	default_material = "pharosium"
-	icon_state = "cobryl-bar"
 
 /obj/item/material_piece/cobryl
 	desc = "A processed bar of Cobryl, a somewhat valuable metal."
 	default_material = "cobryl"
-	icon_state = "cobryl-bar"
 
 /obj/item/material_piece/claretine
 	desc = "A compressed Claretine, a highly conductive salt."
 	default_material = "claretine"
-	icon_state = "claretine-bar"
 
 /obj/item/material_piece/bohrum
 	desc = "A processed bar of Bohrum, a heavy and highly durable metal."
 	default_material = "bohrum"
-	icon_state = "bohrum-bar"
 
 /obj/item/material_piece/syreline
 	desc = "A processed bar of Syreline, an extremely valuable and coveted metal."
 	default_material = "syreline"
-	icon_state = "syreline-bar"
 
 /obj/item/material_piece/plasmastone
 	desc = "A cut block of Plasmastone."
 	default_material = "plasmastone"
-	icon_state = "plasmastone-bar"
 
 /obj/item/material_piece/uqill
 	desc = "A cut block of Uqill. It is quite heavy."
 	default_material = "uqill"
-	icon_state = "uqill-bar"
 
 /obj/item/material_piece/koshmarite
 	desc = "A cut block of an unusual dense stone. It seems similar to obsidian."
 	default_material = "koshmarite"
-	icon_state = "eldritch-bar"
 
 /obj/item/material_piece/viscerite
 	desc = "A cut block of a disgusting flesh-like material. Grody."
 	default_material = "viscerite"
-	icon_state = "martian-bar"
-
-/obj/item/material_piece/char
-	desc = "A cut block of Char."
-	default_material = "char"
-	icon_state = "wad"
-	color = "#221122"
-
-/obj/item/material_piece/telecrystal
-	desc = "A cut block of Telecrystal."
-	default_material = "telecrystal"
-	icon_state = "martian-bar"
-
-/obj/item/material_piece/fibrilith
-	desc = "A cut block of Fibrilith."
-	default_material = "fibrilith"
-	icon_state = "martian-bar"
-
-/obj/item/material_piece/cerenkite
-	desc = "A cut block of Cerenkite."
-	default_material = "cerenkite"
-	icon_state = "martian-bar"
-
-/obj/item/material_piece/erebite
-	desc = "A cut block of Erebite."
-	default_material = "erebite"
-	icon_state = "martian-bar"
 
 /obj/item/material_piece/gold
-	name = "stamped bullion"
-	desc = "Oh wow! This stuff's got to be worth a lot of money!"
+	desc = "Dag."
+	default_material = "gold"
 
 /obj/item/material_piece/ice
 	desc = "Uh. What's the point in this? Is someone planning to make an igloo?"
@@ -749,7 +624,7 @@
 
 		for (var/obj/item/raw_material/M in src.contents)
 			output_bar_from_item(M)
-			pool(M)
+			qdel(M)
 			sleep(smelt_interval)
 
 		var/insufficient_counter = 0
@@ -836,15 +711,14 @@
 	proc/output_bar_with_quality(var/quality,var/default_material)
 		var/datum/material/MAT = null
 		if (istext(default_material))
-			MAT = getMaterial(default_material)
+			MAT = getCachedMaterial(default_material)
 			if (!MAT)
 				return null
 		else
 			return null
 
 		var/bar_type = getProcessedMaterialForm(MAT)
-		var/obj/item/material_piece/BAR = unpool(bar_type)
-		BAR.set_loc(get_output_location())
+		var/obj/item/material_piece/BAR = new bar_type(get_output_location())
 
 		BAR.quality = quality
 		BAR.name += getQualityName(quality)
@@ -860,16 +734,15 @@
 		var/datum/material/MAT = O.material
 		if (!O.material)
 			if (istext(default_material))
-				MAT = getMaterial(default_material)
-				SPAWN_DBG(0)
+				MAT = getCachedMaterial(default_material)
+				spawn(0)
 					if (!O.material)
 						return null
 			else
 				return null
 
 		var/bar_type = getProcessedMaterialForm(MAT)
-		var/obj/item/material_piece/BAR = unpool(bar_type)
-		BAR.set_loc(get_output_location())
+		var/obj/item/material_piece/BAR = new bar_type(get_output_location())
 
 		BAR.quality = O.quality
 		BAR.name += getQualityName(O.quality)
@@ -890,7 +763,7 @@
 			return
 
 	MouseDrop(over_object, src_location, over_location)
-		if(!isliving(usr))
+		if(!istype(usr,/mob/living/))
 			boutput(usr, "<span style=\"color:red\">Get your filthy dead fingers off that!</span>")
 			return
 
@@ -917,7 +790,7 @@
 
 		else if (istype(over_object,/obj/machinery/manufacturer/))
 			var/obj/machinery/manufacturer/M = over_object
-			if (M.status & BROKEN || M.status & NOPOWER || M.dismantle_stage > 0)
+			if (M.stat & BROKEN || M.stat & NOPOWER || M.dismantle_stage > 0)
 				boutput(usr, "<span style=\"color:red\">You can't use a non-functioning manufacturer as an output target.</span>")
 			else
 				src.output_location = M
@@ -941,7 +814,7 @@
 		if (!O || !user)
 			return
 
-		if(!isliving(user))
+		if(!istype(user,/mob/living/))
 			boutput(user, "<span style=\"color:red\">Only living mobs are able to use the reclaimer's quick-load feature.</span>")
 			return
 
@@ -962,7 +835,7 @@
 			if (amtload) boutput(user, "<span style=\"color:blue\">[amtload] materials loaded from [O]!</span>")
 			else boutput(user, "<span style=\"color:red\">No material loaded!</span>")
 
-		else if (istype(O, /obj/item/raw_material/) || istype(O, /obj/item/sheet/) || istype(O, /obj/item/rods/) || istype(O, /obj/item/tile/) || istype(O, /obj/item/cable_coil))
+		else if (istype(O, /obj/item/raw_material/) || istype(O, /obj/item/sheet/) || istype(O, /obj/item/rods/) || istype(O, /obj/item/tile/))
 			quickload(user,O)
 		else
 			..()
@@ -977,15 +850,12 @@
 				continue
 			if (M.name != O.name)
 				continue
-			if(!istype(M, /obj/item/cable_coil))
-				if (!istype(M.material))
-					continue
-				if (!M.material.material_flags & MATERIAL_CRYSTAL || !M.material.material_flags & MATERIAL_METAL)
-					continue
-
-			M.set_loc(src)
-			playsound(get_turf(src), sound_load, 40, 1)
-			sleep(0.5)
+			if (!istype(M.material))
+				continue
+			if (M.material.material_flags & MATERIAL_CRYSTAL || M.material.material_flags & MATERIAL_METAL)
+				M.set_loc(src)
+				playsound(get_turf(src), sound_load, 40, 1)
+				sleep(0.5)
 			if (user.loc != staystill) break
 		boutput(user, "<span style=\"color:blue\">You finish stuffing [O] into [src]!</span>")
 		return
@@ -1000,7 +870,7 @@
 
 		if (istype(output_location,/obj/machinery/manufacturer))
 			var/obj/machinery/manufacturer/M = output_location
-			if (M.status & NOPOWER || M.status & BROKEN | M.dismantle_stage > 0)
+			if (M.stat & NOPOWER || M.stat & BROKEN | M.dismantle_stage > 0)
 				return M.loc
 			return M
 

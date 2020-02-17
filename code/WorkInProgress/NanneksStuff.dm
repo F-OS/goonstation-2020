@@ -24,7 +24,6 @@
 	New()
 		..()
 		for(var/area/projection/P in world)
-			LAGCHECK(LAG_LOW)
 			if(P.id == src.id)
 				src.proj = P
 				P.pointer = src
@@ -194,7 +193,7 @@ This works
 
 			src.icon = make_icon_with_turf(the_turf)
 
-			SPAWN_DBG(5) src.Life()
+			spawn(5) src.Life()
 
 		else
 			logTheThing("admin", null, null, "[src]/(%coords([src.x], [src.y], [src.z])%) not defined properly with ID = [src.id] and PTP = [src.pointer]")
@@ -216,7 +215,6 @@ This works
 
 	New()
 		for(var/obj/projection/P in world)
-			LAGCHECK(LAG_LOW)
 			if(P.id == src.id)
 				src.proj = P
 				P.pointer = src

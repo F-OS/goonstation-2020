@@ -49,7 +49,7 @@
 				if (R)
 					R.adapt(0)
 
-	this.update_icon_state()
+	this.set_icon_state()
 
 
 /obj/railway
@@ -79,8 +79,8 @@
 
 	proc/entering(var/obj/railway_vehicle/V)
 
-	proc/update_icon_state()
-		set_icon_state("[dir1]-[dir2]")
+	proc/set_icon_state()
+		icon_state = "[dir1]-[dir2]"
 
 	onVarChanged(variable, oldVal, val)
 		..()
@@ -89,7 +89,7 @@
 				var/D = dir2
 				dir2 = dir1
 				dir1 = D
-			update_icon_state()
+			set_icon_state()
 		else if (variable == "icon_state")
 			setup_dirs()
 
@@ -334,18 +334,18 @@
 			for (var/mob/living/M in dest_t)
 				M.TakeDamage("chest", src.road_rage_force, 0)
 				M.visible_message("<span style=\"color:red\"><b>[M] was hit by [src]!</b></span>", "<span style=\"color:red\"><b>You were hit by [src]!</b></span>")
-				playsound(src.loc, "sound/impact_sounds/Generic_Hit_Heavy_1.ogg", 40, 1)
-				SPAWN_DBG(0)
+				playsound(src.loc, "sound/misc/meteorimpact.ogg", 40, 1)
+				spawn
 					M.throw_at(get_edge_target_turf(M, knock_dir), 10, 2)
 			for (var/obj/O in dest_t)
 				if (O == src || istype(O, /obj/railway) || !O.density)
 					continue
-				playsound(src.loc, "sound/impact_sounds/Generic_Hit_Heavy_1.ogg", 40, 1)
+				playsound(src.loc, "sound/misc/meteorimpact.ogg", 40, 1)
 				if (O.anchored && magically_destructive)
 					visible_message("<span style=\"color:red\"><b>[src] crashes into [O].</b></span>")
 					qdel(O)
 				else if (!O.anchored)
-					SPAWN_DBG(0)
+					spawn
 						visible_message("<span style=\"color:red\"><b>[O] was hit by [src]!</b></span>")
 						O.throw_at(get_edge_target_turf(O, knock_dir), 10, 2)
 

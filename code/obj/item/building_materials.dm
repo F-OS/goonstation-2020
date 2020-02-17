@@ -13,8 +13,8 @@ MATERIAL
 		return
 	if (B.sheet.reinforcement)
 		W.set_reinforcement(B.sheet.reinforcement)
-		if (map_settings)
-			W = new map_settings.rwindows_thin (usr.loc)
+		if (map_setting && map_setting == "COG2")
+			W = new /obj/window/auto/reinforced(usr.loc)
 		else
 			W = new /obj/window/reinforced(usr.loc)
 
@@ -27,8 +27,8 @@ MATERIAL
 		return
 	if (B.sheet.reinforcement)
 		W.set_reinforcement(B.sheet.reinforcement)
-		if (map_settings)
-			W = new map_settings.rwindows (usr.loc)
+		if (map_setting && map_setting == "COG2")
+			W = new /obj/window/auto/reinforced(usr.loc)
 		else
 			W = new /obj/window/reinforced(usr.loc)
 
@@ -52,7 +52,7 @@ MATERIAL
 
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			update_appearance()
 
 	proc/amount_check(var/use_amount,var/mob/user)
@@ -68,10 +68,10 @@ MATERIAL
 			return
 		src.amount = max(0,amount - use_amount)
 		if (amount < 1)
-			if (isliving(src.loc))
+			if (istype(src.loc,/mob/living/))
 				var/mob/living/L = src.loc
 				L.u_equip(src)
-				L.Browse(null, "window=met_sheet")
+				L << browse(null, "window=met_sheet")
 				onclose(L, "met_sheet")
 			qdel(src)
 		return
@@ -124,27 +124,8 @@ MATERIAL
 		if (istype(W, /obj/item/sheet))
 			var/obj/item/sheet/S = W
 			if (S.material && src.material && (S.material.mat_id != src.material.mat_id))
-				// build glass tables
-				if (src.material.material_flags & MATERIAL_METAL && S.material.material_flags & MATERIAL_CRYSTAL) // we're a metal and they're a glass
-					if (src.amount_check(1,usr) && S.amount_check(2,usr))
-						var/reinf = S.reinforcement ? 1 : 0
-						var/a_type = reinf ? /obj/item/furniture_parts/table/glass/reinforced : /obj/item/furniture_parts/table/glass
-						var/a_icon_state = "[reinf ? "r_" : null]table_parts"
-						var/a_name = "[reinf ? "reinforced " : null]glass table parts"
-						actions.start(new /datum/action/bar/icon/build(S, a_type, 2, S.material, 1, 'icons/obj/table_glass.dmi', a_icon_state, a_name, null, src, 1), user)
-					return
-				else if (src.material.material_flags & MATERIAL_CRYSTAL && S.material.material_flags & MATERIAL_METAL) // we're a glass and they're a metal
-					if (src.amount_check(2,usr) && S.amount_check(1,usr))
-						var/reinf = src.reinforcement ? 1 : 0
-						var/a_type = reinf ? /obj/item/furniture_parts/table/glass/reinforced : /obj/item/furniture_parts/table/glass
-						var/a_icon_state = "[reinf ? "r_" : null]table_parts"
-						var/a_name = "[reinf ? "reinforced " : null]glass table parts"
-						actions.start(new /datum/action/bar/icon/build(src, a_type, 2, src.material, 1, 'icons/obj/table_glass.dmi', a_icon_state, a_name, null, S, 1), user)
-					return
-
-				else
-					boutput(user, "<span style=\"color:red\">You can't mix different materials!</span>")
-					return
+				boutput(user, "<span style=\"color:red\">You can't mix different materials!</span>")
+				return
 			if (S.reinforcement && src.reinforcement && (S.reinforcement.mat_id != src.reinforcement.mat_id))
 				boutput(user, "<span style=\"color:red\">You can't mix different reinforcements!</span>")
 				return
@@ -177,9 +158,6 @@ MATERIAL
 				if (sheetsinput < 1)
 					return
 				sheetsinput = min(sheetsinput,makesheets)
-
-				if (!R) //Wire note: Fix for Cannot read null.material (the rods are getting destroyed during the input())
-					return
 
 				var/obj/item/sheet/S = new /obj/item/sheet(get_turf(user))
 				S.setMaterial(src.material)
@@ -249,7 +227,6 @@ MATERIAL
 				L["table"] = "Table Parts (2 Sheets)"
 				L["light"] = "Light Fixture Parts, Tube (2 Sheets)"
 				L["light2"] = "Light Fixture Parts, Bulb (2 Sheets)"
-				L["light3"] = "Light Fixture Parts, floor (2 Sheets)"
 				L["bed"] = "Bed (2 Sheets)"
 				L["closet"] = "Closet (2 Sheets)"
 				L["construct"] = "Wall Girders (2 Sheets)"
@@ -269,14 +246,14 @@ MATERIAL
 			t1 += "<BR>"
 
 		t1 += "</TT></HTML>"
-		user.Browse(t1, "window=met_sheet")
+		user << browse(t1, "window=met_sheet")
 		onclose(user, "met_sheet")
 		return
 
 	Topic(href, href_list)
 		..()
 		if (usr.restrained() || usr.stat)
-			if(!isrobot(usr))
+			if(!istype(usr, /mob/living/silicon/robot))
 				return
 
 		//Magtractor holding metal check
@@ -331,10 +308,10 @@ MATERIAL
 				if("table")
 					if (!amount_check(2,usr)) return
 
-					a_type = /obj/item/furniture_parts/table
+					a_type = /obj/item/table_parts
 					a_amount = 1
 					a_cost = 2
-					a_icon = 'icons/obj/table.dmi'
+					a_icon = 'icons/obj/metal.dmi'
 					a_icon_state = "table_parts"
 					a_name = "table parts"
 
@@ -359,18 +336,6 @@ MATERIAL
 					a_icon_state = "bulb-fixture"
 					a_name = "a light bulb fixture"
 
-				// Added (Kyle).
-				if("light3")
-					if (!amount_check(2,usr)) return
-					/obj/machinery/light/small/floor
-					a_type = /obj/item/light_parts/floor
-					a_amount = 1
-					a_cost = 2
-					a_icon = 'icons/obj/lighting.dmi'
-					a_icon_state = "floor-fixture"
-					a_name = "a floor light fixture"
-
-
 				if("stool")
 					a_type = /obj/stool
 					a_amount = 1
@@ -388,7 +353,7 @@ MATERIAL
 					a_name = "a chair"
 
 				if("rack")
-					a_type = /obj/item/furniture_parts/rack
+					a_type = /obj/item/rack_parts
 					a_amount = 1
 					a_cost = 1
 					a_icon = 'icons/obj/metal.dmi'
@@ -400,7 +365,7 @@ MATERIAL
 					a_type = /obj/storage/closet
 					a_amount = 1
 					a_cost = 2
-					a_icon = 'icons/obj/large_storage.dmi'
+					a_icon = 'icons/obj/closet.dmi'
 					a_icon_state = "closed"
 					a_name = "a closet"
 
@@ -451,11 +416,7 @@ MATERIAL
 
 				if("construct")
 					var/turf/T = get_turf(usr)
-					var/area/A = get_area (usr)
 					if (!istype(T, /turf/simulated/floor))
-						boutput(usr, "<span style=\"color:red\">You can't build girders here.</span>")
-						return
-					if (istype(A, /area/supply/spawn_point || /area/supply/delivery_point || /area/supply/sell_point))
 						boutput(usr, "<span style=\"color:red\">You can't build girders here.</span>")
 						return
 					if (!amount_check(2,usr)) return
@@ -468,23 +429,28 @@ MATERIAL
 
 				if("smallwindow")
 					if (src.reinforcement)
-						a_type = map_settings ? map_settings.rwindows_thin : /obj/window/reinforced
+						a_type = /obj/window/reinforced
 					else
-						a_type = map_settings ? map_settings.windows_thin : /obj/window
+						a_type = /obj/window
 					a_amount = 1
 					a_cost = 1
 					a_icon = 'icons/obj/window.dmi'
 					a_icon_state = "window"
-					a_name = "a one-directional window"
+					a_name = "an one-directional window"
 					a_callback = /proc/window_reinforce_callback
 
 				if("bigwindow")
 					if (!amount_check(2,usr)) return
 					if (src.reinforcement)
-						a_type = map_settings ? map_settings.rwindows : /obj/window/reinforced
-
+						if (map_setting && map_setting == "COG2")
+							a_type = /obj/window/auto/reinforced
+						else
+							a_type = /obj/window/reinforced
 					else
-						a_type = map_settings ? map_settings.windows : /obj/window
+						if (map_setting && map_setting == "COG2")
+							a_type = /obj/window/auto
+						else
+							a_type = /obj/window
 					a_amount = 1
 					a_cost = 2
 					a_icon = 'icons/obj/window.dmi'
@@ -495,11 +461,11 @@ MATERIAL
 				if("retable")
 					if (!amount_check(2,usr)) return
 
-					a_type = /obj/item/furniture_parts/table/reinforced
+					a_type = /obj/item/table_parts/reinforced
 					a_amount = 1
 					a_cost = 2
-					a_icon = 'icons/obj/table_reinforced.dmi'
-					a_icon_state = "table_parts"
+					a_icon = 'icons/obj/metal.dmi'
+					a_icon_state = "reinf_tableparts"
 					a_name = "reinforced table parts"
 
 				if("remetal")
@@ -523,42 +489,42 @@ MATERIAL
 
 	New()
 		..()
-		var/datum/material/M = getMaterial("steel")
+		var/datum/material/M = getCachedMaterial("steel")
 		src.setMaterial(M)
 
 	reinforced
 
 		New()
 			..()
-			var/datum/material/M = getMaterial("steel")
+			var/datum/material/M = getCachedMaterial("steel")
 			src.set_reinforcement(M)
 
 /obj/item/sheet/glass
 
 	New()
 		..()
-		var/datum/material/M = getMaterial("glass")
+		var/datum/material/M = getCachedMaterial("glass")
 		src.setMaterial(M)
 
 	reinforced
 
 		New()
 			..()
-			var/datum/material/M = getMaterial("steel")
+			var/datum/material/M = getCachedMaterial("steel")
 			src.set_reinforcement(M)
 
 	crystal
 
 		New()
 			..()
-			var/datum/material/M = getMaterial("plasmaglass")
+			var/datum/material/M = getCachedMaterial("plasmaglass")
 			src.setMaterial(M)
 
 		reinforced
 
 			New()
 				..()
-				var/datum/material/M = getMaterial("steel")
+				var/datum/material/M = getCachedMaterial("steel")
 				src.set_reinforcement(M)
 
 // RODS
@@ -581,10 +547,6 @@ MATERIAL
 	stamina_crit_chance = 30
 	rand_pos = 1
 
-	New()
-		..()
-		update_icon()
-
 	check_valid_stack(atom/movable/O as obj)
 		if (!istype(O,/obj/item/rods/))
 			return 0
@@ -597,18 +559,10 @@ MATERIAL
 			return 0
 		return 1
 
-	proc/update_icon()
-		if (src.amount > 5)
-			icon_state = "rods"
-		else
-			icon_state = "rods_[src.amount]"
-			item_state = "rods"
-
 	before_stack(atom/movable/O as obj, mob/user as mob)
 		user.visible_message("<span style=\"color:blue\">[user] begins gathering up [src]!</span>")
 
 	after_stack(atom/movable/O as obj, mob/user as mob, var/added)
-		update_icon()
 		boutput(user, "<span style=\"color:blue\">You finish gathering rods.</span>")
 
 	examine()
@@ -647,7 +601,7 @@ MATERIAL
 					boutput(user, "<span style=\"color:red\">You need more fuel to weld the rods.</span>")
 					return
 				if (!istype(src.loc,/turf/))
-					if (issilicon(user))
+					if (istype(user,/mob/living/silicon/))
 						boutput(user, "<span style=\"color:red\">Hardcore as it sounds, smelting parts of yourself off isn't big or clever.</span>")
 					else
 						boutput(user, "<span style=\"color:red\">You should probably put the rods down first.</span>")
@@ -669,7 +623,6 @@ MATERIAL
 				WELD.use_fuel(1)
 				playsound(src.loc, "sound/items/Welder.ogg", 50, 1, -6)
 				user.visible_message("<span style=\"color:red\"><B>[user]</B> welds the rods together into sheets.</span>")
-				update_icon()
 				if(src.amount < 1)	qdel(src)
 				return
 		if (istype(W, /obj/item/rods))
@@ -684,11 +637,9 @@ MATERIAL
 				src.amount = R.amount + src.amount - src.max_stack
 				R.amount = src.max_stack
 				boutput(user, "<span style=\"color:blue\">You add the rods to the stack. It now has [R.amount] rods.</span>")
-				update_icon()
 			else
 				R.amount += src.amount
 				boutput(user, "<span style=\"color:blue\">You add [R.amount] rods to the stack. It now has [R.amount] rods.</span>")
-				R.update_icon()
 				//SN src = null
 				qdel(src)
 				return
@@ -701,26 +652,17 @@ MATERIAL
 			/*	Can't do this because it colours the heads as well as the spike itself.
 			if(src.material) HS.setMaterial(src.material)*/
 			src.amount -= 1
-			update_icon()
 			if(src.amount < 1)	qdel(src)
 		return
 
 	attack_self(mob/user as mob)
-		if (user.getStatusDuration("weakened") | user.getStatusDuration("stunned"))
+		if (user.weakened | user.stunned)
 			return
-		if (istype(user.loc, /obj/vehicle/segway))
-			var/obj/vehicle/segway/S = user.loc
-			if (S.joustingTool == src) // already raised as a lance, lower it
-				user.visible_message("[user] lowers the rod lance.", "You lower the rod. Everybody lets out a sigh of relief.")
-				S.joustingTool = null
-			else // Lances up!
-				user.visible_message("[user] raises a rod as a lance!", "You raise the rod into jousting position.")
-				S.joustingTool = src
-		else if (locate(/obj/grille, usr.loc))
+		if (locate(/obj/grille, usr.loc))
 			for(var/obj/grille/G in usr.loc)
 				if (G.ruined)
 					G.health = G.health_max
-					G.set_density(1)
+					G.density = 1
 					G.ruined = 0
 					G.update_icon()
 					if(src.material)
@@ -736,8 +678,8 @@ MATERIAL
 				return
 			user.visible_message("<span style=\"color:blue\"><b>[user]</b> begins building a grille.</span>")
 			var/turf/T = usr.loc
-			SPAWN_DBG(15)
-				if (T == usr.loc && !usr.getStatusDuration("weakened") && !usr.getStatusDuration("stunned"))
+			spawn(15)
+				if (T == usr.loc && !usr.weakened && !usr.stunned)
 					src.consume_rods(2)
 					var/atom/G = new /obj/grille(usr.loc)
 					G.setMaterial(src.material)
@@ -750,12 +692,10 @@ MATERIAL
 			return
 		src.amount = max(0,amount - use_amount)
 		if (amount < 1)
-			if (isliving(src.loc))
+			if (istype(src.loc,/mob/living/))
 				var/mob/living/L = src.loc
 				L.u_equip(src)
 			qdel(src)
-		else
-			update_icon()
 		return
 
 /obj/head_on_spike
@@ -770,7 +710,7 @@ MATERIAL
 	var/bloodiness = 0 //
 
 	New()
-		SPAWN_DBG(0) //wait for the head to be added
+		spawn(0) //wait for the head to be added
 			update()
 
 	attack_hand(mob/user as mob)
@@ -821,8 +761,8 @@ MATERIAL
 				boutput(user, "<span style=\"color:red\">There isn't room on that spike for another head.</span>")
 				return
 
-			if(!heads.len) user.visible_message("<span style=\"color:red\"><B>[user.name] impales a [W.name] on the [src.name]!</B></span>")
-			else user.visible_message("<span style=\"color:red\"><B>[user.name] adds a [W.name] to the spike!</B></span>")
+			if(!heads.len) user.visible_message("<span style=\"color:red\"><B>[user.name] impales [W.name] on the [src.name]!</B></span>")
+			else user.visible_message("<span style=\"color:red\"><B>[user.name] adds [W.name] to the spike!</B></span>")
 
 			if(head_offset > 0) head_offset--
 
@@ -838,7 +778,7 @@ MATERIAL
 		src.overlays = null
 
 		if((heads.len < 3 && head_offset > 0) || heads.len == 0)
-			src.overlays += image('icons/obj/metal.dmi',"head_spike_blood")
+			src.overlays += icon('icons/obj/metal.dmi',"head_spike_blood")
 
 		switch(heads.len) //fuck it
 			if(0)
@@ -876,10 +816,10 @@ MATERIAL
 				H.dir = SOUTH
 				src.overlays += H
 
-			src.overlays += image('icons/obj/metal.dmi',"head_spike_flies")
+			src.overlays += icon('icons/obj/metal.dmi',"head_spike_flies")
 
 		if(anchored)
-			src.overlays += image('icons/obj/metal.dmi',"head_spike_weld")
+			src.overlays += icon('icons/obj/metal.dmi',"head_spike_weld")
 
 		return
 
@@ -889,31 +829,27 @@ MATERIAL
 
 		return 0
 
-	custom_suicide = 1
-	suicide(var/mob/living/carbon/human/user as mob)
-		if (!istype(user) || !src.user_can_suicide(user))
-			return 0
-		if (!src.has_space() || !user.organHolder)//!hasvar(user,"organHolder")) STOP USING HASVAR YOU UTTER FUCKWITS
-			return 0
+	suicide(var/mob/user as mob)
+		if(!src.has_space() || !hasvar(user,"organHolder")) return 0
 
-		user.visible_message("<span style='color:red'><b>[user] headbutts the spike, impaling [his_or_her(user)] head on it!</b></span>")
+		user.visible_message("<span style=\"color:red\"><b>[user] headbutts the spike, impaling \his head on it!</b></span>")
 		user.TakeDamage("head", 50, 0)
-		user.changeStatus("stunned", 500)
-		playsound(src.loc, "sound/impact_sounds/Flesh_Stab_1.ogg", 50, 1)
+		user.stunned = 50
+		playsound(src.loc, "sound/effects/bloody_stab.ogg", 50, 1)
 		if(prob(40)) user.emote("scream")
 
-		SPAWN_DBG(10)
-			user.visible_message("<span style='color:red'><b>[user] tears [his_or_her(user)] body away from the spike, leaving [his_or_her(user)] head behind!</b></span>")
-			var/obj/head = user.organHolder.drop_organ("head")
+		spawn(10)
+			user.visible_message("<span style=\"color:red\"><b>[user] tears \his body away from the spike, leaving \his head behind!</b></span>")
+			var/obj/head = user:organHolder.drop_organ("head")
 			head.set_loc(src)
 			heads += head
 			src.update()
-			make_cleanable( /obj/decal/cleanable/blood,user.loc)
-			playsound(src.loc, "sound/impact_sounds/Flesh_Break_2.ogg", 50, 1)
+			new /obj/decal/cleanable/blood(user.loc)
+			playsound(src.loc, "sound/effects/gib.ogg", 50, 1)
 			user.updatehealth()
 
-		SPAWN_DBG(500)
-			if (user && !isdead(user))
+		spawn(100)
+			if (user)
 				user.suiciding = 0
 
 		return 1
@@ -923,7 +859,7 @@ MATERIAL
 
 	New()
 		..()
-		var/datum/material/M = getMaterial("steel")
+		var/datum/material/M = getCachedMaterial("steel")
 		src.setMaterial(M)
 
 // TILES
@@ -975,7 +911,7 @@ MATERIAL
 			if (src.material)
 				F.setMaterial(src.material)
 			else
-				F.setMaterial(getMaterial("steel"))
+				F.setMaterial(getCachedMaterial("steel"))
 			F.amount = 1
 			src.amount--
 			user.put_in_hand_or_drop(F)
@@ -1015,9 +951,6 @@ MATERIAL
 
 		if (!( istype(W, /obj/item/tile) ))
 			return
-		if(!check_valid_stack(W))
-			boutput(user, "<span style=\"color:red\">You cannot combine [src] with [W] as they contain different materials!</span>")
-			return
 		if (W.amount == src.max_stack)
 			return
 		W.add_fingerprint(user)
@@ -1039,11 +972,9 @@ MATERIAL
 
 	proc/build(turf/S as turf)
 		var/turf/simulated/floor/W = S.ReplaceWithFloor()
-		if (W) //Wire: Fix for: Cannot read null.icon_old
-			W.inherit_area()
-			if (!W.icon_old)
-				W.icon_old = "floor"
-			W.to_plating()
+		if (!W.icon_old)
+			W.icon_old = "floor"
+		W.to_plating()
 
 		if(ismob(usr) && !istype(src.material, /datum/material/metal/steel))
 			logTheThing("station", usr, null, "constructs a floor (<b>Material:</b>: [src.material && src.material.name ? "[src.material.name]" : "*UNKNOWN*"]) at [log_loc(S)].")
@@ -1054,18 +985,18 @@ MATERIAL
 
 	New()
 		..()
-		var/datum/material/M = getMaterial("steel")
+		var/datum/material/M = getCachedMaterial("steel")
 		src.setMaterial(M)
 
 /obj/item/sheet/electrum
 	New()
 		..()
-		setMaterial(getMaterial("electrum"))
+		setMaterial(getCachedMaterial("electrum"))
 
 	consume_sheets(var/use_amount)
 		if (!isnum(use_amount))
 			return
-		if (isrobot(usr))
+		if (istype(usr, /mob/living/silicon/robot))
 			var/mob/living/silicon/robot/R = usr
 			R.cell.use(use_amount * 200)
 

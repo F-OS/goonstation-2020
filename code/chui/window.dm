@@ -1,3 +1,8 @@
+var/testes = 0
+#define CHUI_FLAG_SIZABLE 1
+#define CHUI_FLAG_MOVABLE 2
+#define CHUI_FLAG_FADEIN 4
+
 chui/window
 	//The windows name is what is displayed in the titlebar.
 	//It does not need to be unique, and is just a utility.
@@ -6,12 +11,6 @@ chui/window
 	//This is a list of people that have the window currently open.
 	//It is preferable you use verify first.
 	var/list/client/subscribers = new
-
-
-	//This is a list of people currently in the process of subscribing to the window. It should clear itself out.
-	var/list/client/connecting = new
-	var/max_retries = 5 	//How many times can we retry the client validation?
-	var/time_per_try = 2	//What is the base time we should wait between tries?
 
 	//This is the desired theme. Make sure it is set to a text string.
 	//It is automatically changed to the datum type in New()
@@ -34,20 +33,14 @@ chui/window
 	//It will allow you to split up your window into multiple HTML files/code.
 	var/list/sections = list()        //Section system, is a TODO.
 
-	//This var can be overridden in order to explicitly define the size of a newly opened window
-	var/windowSize = null
-
 	//The list of Chui flags. Not currently used to its full potential.
-	//CHUI_FLAG_SIZABLE  -> Allows the window to be resized.
-	//CHUI_FLAG_MOVABLE  -> Allows the window to be moved.
-	//CHUI_FLAG_CLOSABLE -> Allows the window to be closed.
-	var/flags = CHUI_FLAG_SIZABLE | CHUI_FLAG_MOVABLE | CHUI_FLAG_CLOSABLE
+	//CHUI_FLAG_SIZABLE -> Allows the window to be resized.
+	//CHUI_FLAG_MOVABLE -> Allows the window to be moved.
+	var/flags = CHUI_FLAG_SIZABLE | CHUI_FLAG_MOVABLE
 
 	//If overriden, be sure to call ..()
-	New(var/atom/adam)
-		if(!chui) chui = new()
+	New()
 		theme = chui.GetTheme( theme )
-		theAtom = adam
 
 	//Override this if you have a DM defined window.
 	//Returns the HTML the window will have.
@@ -73,31 +66,10 @@ chui/window
 	//The window ref is the \ref[src] of the window.
 	proc/Subscribe( var/client/who )
 		CDBG1( "[who] subscribed to [name]" )
-		if(!IsSubscribed(who) && !(who in connecting))
-
-			connecting += who //Add who to list of clients currently attempting to subscribe
-			//theme.streamToClient( who )
-			who << browse( src.generate(who, src.GetBody()), "window=\ref[src];titlebar=0;can_close=0;can_resize=0;can_scroll=0;border=0[windowSize ?";size=[windowSize]": null]" )
-
-			var/extrasleep = 0
-			var/retries = max_retries
-			/*
-			The clientside instance of chui will call back through the "registered" topic call.
-			This will then take the client out of the connecting list, move them into the subscribed list and break the loop below.
-			*/
-			do
-				if(winexists(who, "\ref[src].browser")) //Fuck if I know
-					winset( who, "\ref[src]", "on-close \".chui-close \ref[src]\"" )
-
-				if(who in connecting)
-					sleep(time_per_try + extrasleep++)
-				else break
-
-			while(retries-- > 0) //Keep trying to send the UI update until it times out or they get it.
-
-			if(who in connecting)
-				connecting -= who
-				who << browse(null, "window=\ref[src]")
+		subscribers += who
+		//theme.streamToClient( who )
+		who << browse( src.generate(who, src.GetBody()), "window=\ref[src];titlebar=0;can_close=0;can_resize=0;can_scroll=0;border=0" )
+		winset( who, "\ref[src]", "on-close \".chui-close \ref[src]\"" )
 
 
 	//Returns true if the client is subscribed.
@@ -119,15 +91,9 @@ chui/window
 		subscribers -= who
 		who << browse( null, "window=\ref[src]" )
 
-
 	//See /client/proc/Browse instead.
-	proc/bbrowse( client/who, var/body, var/options, var/forceChui )
+	proc/bbrowse( client/who, var/body, var/options )
 		var/list/config = params2list( options )
-
-		if (!forceChui && !who.use_chui && !config["override_setting"])	//"override_setting=1"
-			who << browse(body,"titlebar=1;can_close=1;can_resize=1;can_scroll=1;border=1;[options]")
-			return
-
 		var/name = config[ "window" ]
 		if( isnull( body ) )
 			usr << browse( null, options )
@@ -139,18 +105,10 @@ chui/window
 			flags |= CHUI_FLAG_SIZABLE
 		if( config["fade_in"] && text2num( config["fade_in"] ) )
 			flags |= CHUI_FLAG_FADEIN
-		if( isnull(config["can_close"]) || text2num(config["can_close"]) )
-			flags |= CHUI_FLAG_CLOSABLE
 		var/title = config["title"]
-		var/list/datah = list( "ref" = name, "flags" = flags )
-		if(!title)
-			datah["needstitle"] = 1
-
-		// use_chui_custom_frames allows enabling the standard Windows UI,
-		// which allows people an out if chui decides to go berzerk
-		var/list/built = list( "js" = list(), "css" = list(), "title" = (title || ""), data = datah )//todo, better this.
-		who << browse( theme.generateHeader(built) + theme.generateBody( body, built ) + theme.generateFooter(), who.use_chui_custom_frames ? "titlebar=0;can_close=0;can_resize=0;can_scroll=0;border=0;[options]" : "titlebar=1;can_close=1;can_resize=1;can_scroll=1;border=1;[options]")
-		//winset( who, "\ref[src]", "on-close=\".chui-close \ref[src]\"" )
+		var/list/built = list( "js" = list(), "css" = list(), "title" = (title || "1-800 Coder"), data = list( "ref" = name, "flags" = flags ) )//todo, better this.
+		who << browse( theme.generateHeader(built) + theme.generateBody( body, built ) + theme.generateFooter(), "titlebar=0;can_close=0;can_resize=0;can_scroll=0;border=0;[options]" )
+		winset( who, "\ref[src]", "on-close \".chui-close \ref[src]\"" )
 		//theme.streamToClient( who )
 
 	//Check if a client should actually be subscribed.
@@ -194,25 +152,15 @@ chui/window
 		CallJSFunction( "chui.templateSet", list( name, value ) )
 		OnVar( name, value, 1 )
 
-	//Sets multiple template vars. Accepts associated list.
-	proc/SetVars(var/list/vars)
-		var/list/toSend = list()
-		for(var/k in vars)
-			if(isnull(templateVars[k]) || templateVars[k] != vars[k])
-				toSend[k] = vars[k]
-				templateVars[k] = vars[k]
-		if(toSend.len)
-			CallJSFunction( "chui.templateBulk", list(json_encode(toSend)) )
-
 	//Gets a template var
 	proc/GetVar( var/name )
 		return templateVars[ name ]
 
-	//Generates a template var; use it for cases of inline HTML (instead of SetVar).
+	//Generates a template var; use it for cases of inline HTML.
 	proc/template( var/name, var/value )
 		if( !templateVars[ name ] )
 			templateVars[ name ] = value
-		return "<span id='chui-tmpl-[name]'>[isnull(templateVars[ name ]) ? "please wait..." : templateVars[name]]</span>"
+		return "<span id='chui-tmpl-[name]'>[templateVars[ name ] || "please wait..."]</span>"
 	//UNUSED..
 	/*
 	proc/_transfer( var/largebodyoftext )
@@ -228,18 +176,13 @@ chui/window
 
 	//Override this instead of Topic()
 	proc/OnTopic( href, href_list[] )
-	//Called when a theme button is clicked. Includes which client did the deed and any other assorted gubbins
-
-	proc/OnClick(var/client/who, var/id, var/href_list )
-
-
+	//Called when a theme button is clicked.
+	proc/OnClick( var/id )
 	//Called when Javascript sends a request; return with data to be given back to JS.
 	proc/OnRequest( var/method, var/list/data )
 		return template.OnRequest( method, data )
-
-
 	Topic( href, href_list[] )
-		if( !IsSubscribed( usr.client ) && !(usr.client in connecting) )
+		if( !IsSubscribed( usr.client ) )
 			usr << browse( null, "window=\ref[src]" )
 			return
 		var/action = href_list[ "_cact" ]
@@ -257,14 +200,7 @@ chui/window
 					return
 				//TODO: When JSON is included. callJSFunction( "chui.reqReturn",
 			else if( action == "click" && href_list["id"] )
-				OnClick( usr.client, href_list["id"], href_list["data"] )
-			else if( action == "register" ) //The client calls this automatically to let the server know it's ready to receive data.
-				DEBUG_MESSAGE("Chui register action received from [usr]")
-				var/client/C = usr.client
-				if(C in connecting)
-					DEBUG_MESSAGE("Finalizing [usr]'s subscription")
-					connecting -= C
-					subscribers |= C
+				OnClick( usr.client, href_list["id"] )
 			else
 				OnTopic( usr.client, href, href_list )
 		else
@@ -281,27 +217,15 @@ chui/window
 	if( istype( win ) )
 		win.Unsubscribe( src )
 	else
-		var/onCloseRef = winget(src, window, "on-close") //This exists to allow chui windows to work with the normal onclose.
-		var/list/split = splittext(onCloseRef, " ")		 //Unfortunately this ends up calling it twice if a window is closed by chui.
-		if(split.len >= 2) 								 //If anyone has a better solution go for it but don't just remove it because it will break things.
-			var/datum/targetDatum = locate(split[2])
-			if (targetDatum)
-				targetDatum.Topic("close=1", params2list("close=1"), targetDatum)
-
 		src << browse( null, "window=[window]" )//Might not be a standard chui window but we'll play along.
-		if(src && src.mob)
-			//boutput(world, "[src] was [src.mob.machine], setting to null")
-			if(src.mob.machine && istype(src.mob.machine, /obj/machinery))
-				src.mob.machine.current_user = null
-			src.mob.machine = null
 
 //A chui substitute for usr << browse()
 //Mostly the same syntax.
-client/proc/Browse( var/html, var/opts, var/forceChui )
-	chui.staticinst.bbrowse( src, html, opts, forceChui )
+client/proc/Browse( var/html, var/opts )
+	chui.staticinst.bbrowse( src, html, opts )
 
-mob/proc/Browse( var/html, var/opts, var/forceChui )
+mob/proc/Browse( var/html, var/opts )
 	if( src.client )
-		chui.staticinst.bbrowse( src.client, html, opts, forceChui )
+		chui.staticinst.bbrowse( src.client, html, opts )
 
 //#define browse #error Use --.Browse() instead.

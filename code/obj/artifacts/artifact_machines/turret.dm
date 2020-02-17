@@ -63,7 +63,7 @@
 	proc/target_is_valid(var/mob/living/M,var/obj/O)
 		if (!M || !O)
 			return 0
-		if (isdead(M))
+		if (M.stat == 2)
 			return 0
 		if (M == friend)
 			return 0

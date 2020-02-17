@@ -1,7 +1,6 @@
 /datum/abilityHolder/revenant
 	topBarRendered = 1
 	usesPoints = 1
-	cast_while_dead = 1
 	var/channeling = 0
 
 	var/datum/abilityHolder/wraith/relay = null
@@ -14,9 +13,9 @@
 		if (owner)
 			stat("Human vessel integrity:", "[(owner.max_health + 50) / 1.5]%")
 
-	generatePoints(var/mult = 1)
+	generatePoints()
 		if (relay)
-			relay.generatePoints(mult = 1)
+			relay.generatePoints()
 
 	deductPoints(cost)
 		if (relay)
@@ -42,50 +41,14 @@
 	id = "revenant"
 	effectType = effectTypePower
 	isBad = 0 // depends on who you ask really
-	can_copy = 0
 	var/isDying = 0
 	var/mob/wraith/wraith = null
 	var/ghoulTouchActive = 0
-	var/list/abilities
-	icon_state  = "evilaura"
-	
-	OnAdd()
-		if (ishuman(owner) && isdead(owner))
-			switch (owner:decomp_stage)
-				if (0)
-					owner.max_health = 100
-				if (1)
-					owner.max_health = 75
-				if (2)
-					owner.max_health = 50
-				if (3)
-					owner.max_health = 25
-				if (4)
-					// todo: send message, tell the player to fuck off, or something
-					owner.bioHolder.RemoveEffect("revenant")
-					qdel(src)
-					return
-		else
-			// do not possess non-humans; do not possess living people; do not pass go; do not collect $200
-			qdel(src)
-			return
 
-		owner.full_heal()
-		owner.reagents.clear_reagents()
-		owner.blinded = 0
-		owner.lying = 0
-		if (owner)
-			overlay_image = image("icon" = 'icons/effects/wraitheffects.dmi', "icon_state" = "evilaura", layer = MOB_EFFECT_LAYER)
-		if (owner.bioHolder.HasEffect("husk"))
-			owner.bioHolder.RemoveEffect("husk")
-		owner.set_mutantrace(null)
-		owner.set_face_icon_dirty()
-		owner.set_body_icon_dirty()
-		animate_levitate(owner)
-		..()
+	var/list/abilities
 
 	proc/ghoulTouch(var/mob/living/carbon/human/poorSob, var/obj/item/affecting)
-		if (poorSob.traitHolder.hasTrait("training_chaplain"))
+		if (poorSob.bioHolder.HasEffect("training_chaplain"))
 			poorSob.visible_message("<span style=\"color:red\">[poorSob]'s faith shields them from [owner]'s ethereal force!", "<span style=\"color:blue\">Your faith protects you from [owner]'s ethereal force!</span>")
 			return
 		else
@@ -94,7 +57,7 @@
 				affecting.take_damage(4, 4, 0, DAMAGE_BLUNT)
 			else
 				poorSob.TakeDamage("All", 4, 4, 0, DAMAGE_BLUNT)
-			poorSob.changeStatus("weakened", 2 SECONDS)
+			poorSob.weakened += 2
 			step_away(poorSob, owner, 15)
 			sleep(3)
 			step_away(poorSob, owner, 15)
@@ -130,6 +93,37 @@
 
 		src.addRevenantVerbs()
 
+	OnAdd()
+		if (ishuman(owner) && owner.stat == 2)
+			switch (owner:decomp_stage)
+				if (0)
+					owner.max_health = 100
+				if (1)
+					owner.max_health = 75
+				if (2)
+					owner.max_health = 50
+				if (3)
+					owner.max_health = 25
+				if (4)
+					// todo: send message, tell the player to fuck off, or something
+					owner.bioHolder.RemoveEffect("revenant")
+					qdel(src)
+					return
+		else
+			// do not possess non-humans; do not possess living people; do not pass go; do not collect $200
+			qdel(src)
+			return
+
+		owner.full_heal()
+		owner.reagents.clear_reagents()
+		owner.blinded = 0
+		owner.lying = 0
+		if (owner.bioHolder.HasEffect("husk"))
+			owner.bioHolder.RemoveEffect("husk")
+		owner.set_mutantrace(null)
+		owner.set_face_icon_dirty()
+		owner.set_body_icon_dirty()
+		animate_levitate(owner)
 
 	proc/RevenantDeath()
 		if (isDying)
@@ -178,16 +172,16 @@
 		owner.take_eye_damage(-INFINITY)
 		owner.take_eye_damage(-INFINITY, 1)
 		owner.losebreath = 0
-		owner.delStatus("paralysis")
-		owner.delStatus("stunned")
-		owner.delStatus("weakened")
-		owner.delStatus("slowed")
-		owner.delStatus("radiation")
+		owner.paralysis = 0
+		owner.stunned = 0
+		owner.weakened = 0
+		owner.slowed = 0
+		owner.radiation = 0
 		owner.take_ear_damage(-INFINITY)
 		owner.take_ear_damage(-INFINITY, 1)
 		owner.take_brain_damage(-120)
 		owner.bodytemperature = owner.base_body_temp
-		setalive(owner)
+		owner.stat = 0
 
 		owner.updatehealth()
 
@@ -231,8 +225,6 @@
 /datum/targetable/revenantAbility
 	icon = 'icons/mob/wraith_ui.dmi'
 	preferred_holder_type = /datum/abilityHolder/revenant
-	theme = "wraith"
-
 	New()
 		var/obj/screen/ability/topBar/B = new /obj/screen/ability/topBar(null)
 		B.icon = src.icon
@@ -257,7 +249,7 @@
 			return
 		last_cast = world.time + cooldown
 		holder.updateButtons()
-		SPAWN_DBG(cooldown + 5)
+		spawn(cooldown + 5)
 			holder.updateButtons()
 
 
@@ -280,15 +272,13 @@
 		var/current_prob = 100
 		if (ishuman(target))
 			var/mob/living/carbon/T = target
-			if (T.traitHolder.hasTrait("training_chaplain"))
+			if (T.bioHolder.HasEffect("training_chaplain"))
 				target.visible_message("<span style=\"color: red\"> [target] gives a rude gesture right back to [holder.owner]!</span>")
 				return 1
-			else if( check_target_immunity(T) )
-				holder.owner.show_message( "<span style='color:red'>That target seems to be warded from the effects!</span>" )
 			else
 				target:stunned = max(max(target:weakened, target:stunned), 3)
 				target:lying = 0
-				target:delStatus("weakened")
+				target:weakened = 0
 				target:show_message("<span style=\"color:red\">A ghostly force compels you to be still on your feet.</span>")
 		for (var/obj/O in view(7, holder.owner))
 			if (!O.anchored && isturf(O.loc))
@@ -296,7 +286,7 @@
 					current_prob *= 0.75
 					thrown += O
 					animate_float(O)
-		SPAWN_DBG(10)
+		spawn(10)
 			for (var/obj/O in thrown)
 				O.throw_at(target, 32, 2)
 
@@ -314,15 +304,15 @@
 	var/static/list/next = list("1" = NORTHEAST, "5" = EAST,  "4" = SOUTHEAST, "6" = SOUTH, "2" = SOUTHWEST, "10" = WEST,  "8" = NORTHWEST, "9" = NORTH)
 
 	proc/shock(var/turf/T)
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/mob/living/carbon/human/M in T)
-				if (M != holder.owner && !M.traitHolder.hasTrait("training_chaplain") && !check_target_immunity(M))
-					M.changeStatus("weakened", 2 SECONDS)
+				if (M != holder.owner && !M.bioHolder.HasEffect("training_chaplain"))
+					M.weakened += 2
 			animate_revenant_shockwave(T, 1, 3)
-			SPAWN_DBG(3)
+			spawn(3)
 				for (var/mob/living/carbon/human/M in T)
-					if (M != holder.owner && !M.traitHolder.hasTrait("training_chaplain") && !check_target_immunity(M))
-						M.changeStatus("weakened", 6 SECONDS)
+					if (M != holder.owner && !M.bioHolder.HasEffect("training_chaplain"))
+						M.weakened += 6
 						M.show_message("<span style=\"color:red\">A shockwave sweeps you off your feet!</span>")
 				for (var/obj/machinery/light/L in T)
 					L.broken()
@@ -336,7 +326,7 @@
 						T:to_plating()
 					else
 						T:break_tile()
-				SPAWN_DBG(10)
+				spawn(10)
 					T.pixel_y = 0
 					T.transform = null
 
@@ -353,7 +343,7 @@
 		for (var/turf/T in orange(1, origin))
 			next += T
 			next[T] = get_dir(origin, T)
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/i = 1, i <= iteration_depth, i++)
 				for (var/turf/T in next)
 					shock(T)
@@ -423,11 +413,8 @@
 
 		if (ismob(target))
 			var/mob/T = target
-			if (T.bioHolder && T.traitHolder.hasTrait("training_chaplain"))
+			if (T.bioHolder && T.bioHolder.HasEffect("training_chaplain"))
 				holder.owner.show_message("<span style=\"color: red\">Some mysterious force protects [target] from your influence.</span>")
-				return 1
-			else if( check_target_immunity(T) )
-				holder.owner.show_message("<span style='color:red'>[target] seems to be warded from the effects!</span>")
 				return 1
 			else
 				holder.owner.show_message("<span style=\"color:blue\">You hurl [target] away from you!</span>")
@@ -459,17 +446,14 @@
 		if (holder.owner.equipped())
 			holder.owner.show_message("<span style=\"color:red\">You require a free hand to cast this ability.</span>")
 			return 1
-		if (H.traitHolder.hasTrait("training_chaplain"))
+		if (H.bioHolder.HasEffect("training_chaplain"))
 			holder.owner.show_message("<span style=\"color: red\">Some mysterious force shields [target] from your influence.</span>")
-			return 1
-		else if( check_target_immunity(H) )
-			holder.owner.show_message("<span style='color:red'>[target] seems to be warded from the effects!</span>")
 			return 1
 
 		var/location = holder.owner.loc
 
 		holder.owner.visible_message("<span style=\"color:red\">[holder.owner] reaches out towards [H], making a crushing motion.</span>", "<span style=\"color:blue\">You reach out towards [H].</span>")
-		H.changeStatus("weakened", 2 SECONDS)
+		H.weakened += 2
 
 		var/datum/abilityHolder/revenant/RH
 		if (istype(holder, /datum/abilityHolder/revenant))
@@ -478,9 +462,9 @@
 		if (!RH || !istype(RH, /datum/abilityHolder/revenant/))
 			return
 
-		SPAWN_DBG(5)
+		spawn(5)
 			var/iterations = 0
-			while (holder.owner.loc == location && isalive(holder.owner) && !holder.owner.equipped())
+			while (holder.owner.loc == location && !holder.owner.equipped())
 				iterations++
 				if (!holder.owner)
 					RH.channeling = 0
@@ -496,7 +480,7 @@
 					holder.owner.show_message("<span style=\"color:red\">[H] is pulled from your telekinetic grip!</span>")
 					RH.channeling = 0
 					break
-				H.changeStatus("weakened", (2 + rand(0, iterations))*10)
+				H.weakened += (2 + rand(0, iterations))
 				H.TakeDamage("chest", 4 + rand(0, iterations), 0, 0, DAMAGE_CRUSH)
 				if (prob(40))
 					H.visible_message("<span style=\"color:red\">[H]'s bones crack loudly!</span>", "<span style=\"color:red\">You feel like you're about to be [pick("crushed", "destroyed", "vaporized")].</span>")

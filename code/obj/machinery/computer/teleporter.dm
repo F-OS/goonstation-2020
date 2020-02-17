@@ -6,9 +6,6 @@
 	var/id = null
 	desc = "A computer that sets which beacon the connected teleporter attempts to create a portal to."
 
-	lr = 1
-	lg = 0.3
-	lb = 0.9
 
 /obj/machinery/computer/teleporter/New()
 	src.id = text("[]", rand(1000, 9999))
@@ -16,15 +13,14 @@
 	return
 
 /obj/machinery/computer/teleporter/attackby(obj/item/W as obj, user as mob)
-	if (isscrewingtool(W))
+	if (istype(W, /obj/item/screwdriver))
 		playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		if(do_after(user, 20))
-			if (src.status & BROKEN)
+			if (src.stat & BROKEN)
 				boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 				var/obj/computerframe/A = new /obj/computerframe( src.loc )
 				if(src.material) A.setMaterial(src.material)
-				var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-				G.set_loc(src.loc)
+				new /obj/item/raw_material/shard/glass( src.loc )
 				var/obj/item/circuitboard/teleporter/M = new /obj/item/circuitboard/teleporter( A )
 				for (var/obj/C in src)
 					C.set_loc(src.loc)
@@ -52,7 +48,7 @@
 /obj/machinery/computer/teleporter/attack_hand()
 	src.add_fingerprint(usr)
 
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 
 	if (!src.linkedportalgen)
@@ -62,25 +58,22 @@
 	var/list/L = list()
 	var/list/areaindex = list()
 
-	for(var/obj/item/device/radio/beacon/R in tracking_beacons)//world)
-		if (!istype(R, /obj/item/device/radio/beacon/jones))
-			LAGCHECK(LAG_LOW)
-			var/turf/T = find_loc(R)
-			if (!T)	continue
-			var/tmpname = T.loc.name
-			if(areaindex[tmpname])
-				tmpname = "[tmpname] ([++areaindex[tmpname]])"
-			else
-				areaindex[tmpname] = 1
-			L[tmpname] = R
+	for(var/obj/item/device/radio/beacon/R in world)
+		var/turf/T = find_loc(R)
+		if (!T)	continue
+		var/tmpname = T.loc.name
+		if(areaindex[tmpname])
+			tmpname = "[tmpname] ([++areaindex[tmpname]])"
+		else
+			areaindex[tmpname] = 1
+		L[tmpname] = R
 
-	for (var/obj/item/implant/tracking/I in tracking_implants)//world)
-		LAGCHECK(LAG_LOW)
+	for (var/obj/item/implant/tracking/I in world)
 		if (!I.implanted || !ismob(I.loc))
 			continue
 		else
 			var/mob/M = I.loc
-			if (isdead(M))
+			if (M.stat == 2)
 				if (M.timeofdeath + 6000 < world.time)
 					continue
 			var/tmpname = M.real_name
@@ -90,13 +83,10 @@
 				areaindex[tmpname] = 1
 			L[tmpname] = I
 
-	var/desc = input("Please select a location to lock in.", "Locking Computer") as null|anything in L
-	if (isnull(desc))
-		return
+	var/desc = input("Please select a location to lock in.", "Locking Computer") in L
 	src.locked = L[desc]
 	for(var/mob/O in hearers(src, null))
 		O.show_message("<span style=\"color:blue\">Locked In</span>", 2)
-	playsound(src.loc, 'sound/machines/keypress.ogg', 50, 1, 5)
 	return
 
 // Called by the telegun etc (Convair880).
@@ -110,10 +100,10 @@
 	if (our_gen && (our_gen.find_links() < 2)) // Not linked to a working portal ring.
 		return 0
 
-	if (src.status)
-		if (src.status & NOPOWER)
+	if (src.stat)
+		if (src.stat & NOPOWER)
 			return 2 // No power.
-		if (src.status & BROKEN)
+		if (src.stat & BROKEN)
 			return 0
 
 	if (src.locked)
@@ -126,7 +116,7 @@
 	set desc = "ID Tag:"
 	set category = "Local"
 
-	if(status & (NOPOWER|BROKEN) || !isliving(usr))
+	if(stat & (NOPOWER|BROKEN) || !istype(usr,/mob/living))
 		return
 	if (t)
 		src.id = t

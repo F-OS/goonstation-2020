@@ -14,21 +14,11 @@
 	stamina_damage = 5
 	stamina_cost = 5
 	stamina_crit_chance = 5
-	custom_suicide = 1
 
 /obj/item/basketball/attack_hand(mob/user as mob)
 	..()
 	if(user)
 		src.icon_state = "bball"
-
-/obj/item/basketball/suicide(var/mob/user as mob)
-	user.visible_message("<span style=\"color:red\"><b>[user] fouls out, permanently.</b></span>")
-	user.TakeDamage("head", 175, 0)
-	user.updatehealth()
-	SPAWN_DBG(300)
-		if (user)
-			user.suiciding = 0
-	return 1
 
 /obj/item/basketball/throw_impact(atom/hit_atom)
 	..(hit_atom)
@@ -40,7 +30,7 @@
 			if(ishuman(M))
 				if((prob(50) && M.bioHolder.HasEffect("clumsy")) || M.equipped() || get_dir(M, src) == M.dir)
 					src.visible_message("<span class='combat'>[M] gets beaned with the [src.name].</span>")
-					M.changeStatus("stunned", 2 SECONDS)
+					M.stunned = max(2, M.stunned)
 					return
 				// catch the ball!
 				src.attack_hand(M)
@@ -49,7 +39,7 @@
 				return
 			src.visible_message("<span class='combat'>[M] gets beaned with the [src.name].</span>")
 			logTheThing("combat", M, null, "is struck by [src]")
-			M.changeStatus("stunned", 2 SECONDS)
+			M.stunned = max(2, M.stunned)
 			return
 
 /obj/item/basketball/throw_at(atom/target, range, speed)
@@ -63,10 +53,9 @@
 		W.dropped(user)
 		W.layer = initial(W.layer)
 		W.set_loc(src)
-		var/obj/item/plutonium_core/P = W
 		src.payload = W
 		if(src.loc == user)
-			P.plutonize(usr.verbs)
+			user.verbs += /proc/chaos_dunk
 		return
 	..(W, user)
 	return
@@ -75,12 +64,12 @@
 	..()
 	var/mob/living/carbon/human/H = user
 	if(istype(H) && payload && istype(payload))
-		payload.plutonize(usr.verbs)
+		H.verbs += /proc/chaos_dunk
 	return
 
-/obj/item/basketball/unequipped(var/mob/usr)
+/obj/item/basketball/unequipped(var/mob/user)
 	if(payload && istype(payload))
-		payload.unplutonize(usr.verbs)
+		user.verbs -= /proc/chaos_dunk
 	..()
 
 // hoop
@@ -93,13 +82,12 @@
 	anchored = 0
 	icon = 'icons/obj/stationobjs.dmi'
 	icon_state = "bbasket0"
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 	var/mounted = 0
 	var/active = 0
 	var/probability = 40
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (iswrenchingtool(W) && mounted)
+		if (istype(W,/obj/item/wrench) && mounted)
 			src.visible_message("<span style=\"color:blue\"><b>[user] removes [src].</b></span>")
 			src.pixel_y = 0
 			src.pixel_x = 0
@@ -111,9 +99,9 @@
 			user.u_equip(W)
 			if (user.bioHolder.HasEffect("clumsy") && prob(50)) // clowns are not good at basketball I guess
 				user.visible_message("<span class='combat'><b>[user] knocks their head into the rim of [src]!</b></span>")
-				user.changeStatus("weakened", 5 SECONDS)
+				user.weakened = max(5, user.weakened)
 			if (!src.shoot(W, user))
-				SPAWN_DBG(10)
+				spawn(10)
 					src.visible_message("<span style=\"color:red\">[user] whiffs the dunk.</span>")
 		return
 
@@ -150,7 +138,7 @@
 			return
 		if (istype(A, /obj/item/bballbasket)) // oh for FUCK'S SAKE
 			return // NO
-		if (isitem(A))
+		if (istype(A, /obj/item))
 			src.shoot(A)
 
 	proc/shoot(var/obj/O as obj, var/mob/user as mob)
@@ -170,7 +158,7 @@
 				src.visible_message("<span style=\"color:red\">[O] teeters on the edge of [src]!</span>")
 				var/delay = rand(5, 15)
 				animate_horizontal_wiggle(O, delay, 5, 1, -1) // target, number of animation loops, speed, positive x variation, negative x variation
-				SPAWN_DBG(delay)
+				spawn(delay)
 					if (O && O.loc == src.loc)
 						if (prob(40)) // It goes in!
 							src.visible_message("<span style=\"color:blue\">[O] slips into [src]!</span>")
@@ -193,7 +181,7 @@
 		playsound(get_turf(src), "rustle", 75, 1)
 		A.invisibility = 100
 		flick("bbasket1", src)
-		SPAWN_DBG(15)
+		spawn(15)
 			A.invisibility = 0
 			src.active = 0
 
@@ -211,12 +199,6 @@
 	w_class = 3.0
 	force = 0
 	throwforce = 10
-
-	proc/plutonize(var/usrverbs)
-		usrverbs += /mob/proc/chaos_dunk
-
-	proc/unplutonize(var/usrverbs)
-		usrverbs -= /mob/proc/chaos_dunk
 
 /obj/item/plutonium_core/attack_hand(mob/user as mob)
 	..()
@@ -245,7 +227,6 @@
 	force = 10
 	throw_range = 10
 	throwforce = 2
-	throw_spin = 0
 
 /obj/item/bloodbowlball/attack_hand(mob/user as mob)
 	..()
@@ -265,8 +246,8 @@
 					for(var/mob/V in AIviewers(src, null))
 						if(V.client)
 							V.show_message("<span class='combat'>[T] gets stabbed by one of the [src.name]'s spikes.</span>", 1)
-							playsound(src.loc, "sound/impact_sounds/Flesh_Stab_2.ogg", 65, 1)
-					T.changeStatus("stunned", 50)
+							playsound(src.loc, "sound/effects/bloody_stabOLD.ogg", 65, 1)
+					T.stunned = max(5, T.stunned)
 					T.TakeDamage("chest", 30, 0)
 					take_bleeding_damage(T, null, 15, DAMAGE_STAB)
 					return
@@ -288,10 +269,10 @@
 	..(target, range, speed)
 
 /obj/item/bloodbowlball/attack(target as mob, mob/user as mob)
-	playsound(target, "sound/impact_sounds/Flesh_Stab_1.ogg", 60, 1)
+	playsound(target, "sound/effects/bloody_stab.ogg", 60, 1)
 	if(iscarbon(target))
-		var/mob/living/carbon/targMob = target
-		if(!isdead(targMob))
+		if(target:stat != 2)
+			var/mob/living/carbon/targMob = target
 			targMob.visible_message("<span class='combat'><B>[user] attacks [target] with the [src]!</B></span>")
 			take_bleeding_damage(target, user, 5, DAMAGE_STAB)
 	if(prob(30))
@@ -304,3 +285,35 @@
 			user.TakeDamage(user.hand == 1 ? "l_arm" : "r_arm", 5, 0)
 			take_bleeding_damage(user, null, 1, DAMAGE_CUT, 0)
 
+// MADDEN NFL FOOTBALL 2051
+
+/obj/item/football
+	name = "football"
+	desc = "A pigskin. An oblate leather spheroid. For tossing around."
+	icon = 'icons/obj/items.dmi'
+	icon_state = "football"
+	item_state = "football"
+	w_class = 3.0
+	force = 0
+	throw_range = 10
+	throwforce = 0
+
+/obj/item/football/throw_at(atom/target, range, speed)
+	src.icon_state = "football_air"
+	..(target, range, speed)
+
+/obj/item/football/throw_impact(atom/hit_atom)
+	..(hit_atom)
+	src.icon_state = "football"
+	if(hit_atom)
+		playsound(src.loc, "sound/items/bball_bounce.ogg", 65, 1)
+
+/obj/item/football/suicide(var/mob/user as mob)
+	user.visible_message("<span style=\"color:red\"><b>[user] spikes the [src.name]. It bounces back up and hits \him square in the forehead!</b></span>")
+	user.TakeDamage("head", 150, 0)
+	playsound(src.loc, "sound/items/bball_bounce.ogg", 50, 1)
+	user.updatehealth()
+	spawn(100)
+		if (user)
+			user.suiciding = 0
+	return 1

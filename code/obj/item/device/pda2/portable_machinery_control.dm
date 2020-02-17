@@ -38,24 +38,22 @@
 		// Both can have unexpected and bad results.
 		if (!isturf(test_machinery.loc) || (!test_turf && !isturf(test_mob.loc)))
 			return 4
-		//if (hasvar(test_machinery, "occupant")) why are you doing a hasvar() if you just end up checking the types and doing nothing to anything that isn't those types WHY, WHY WOULD YOU DO THIS, IT'S TOTALLY POINTLESS
-		if (istype(test_machinery, /obj/machinery/port_a_brig))
-			var/obj/machinery/port_a_brig/PB = test_machinery
-			if (PB.occupant && (test_mob && ismob(test_mob)) && (PB.occupant == test_mob))
-				return 0 // It's not a Port-a-Sci, okay.
-			if (PB.occupant && !PB.locked)
-				return 3
-		else if (istype(test_machinery, /obj/machinery/sleeper/port_a_medbay))
-			var/obj/machinery/sleeper/port_a_medbay/PM = test_machinery
-			if (PM.occupant && (test_mob && ismob(test_mob)) && (PM.occupant == test_mob))
-				return 0 // It's not a Port-a-Sci, okay.
+		if (hasvar(test_machinery, "occupant"))
+			if (istype(test_machinery, /obj/machinery/port_a_brig/))
+				var/obj/machinery/port_a_brig/PB = test_machinery
+				if (PB.occupant && (test_mob && ismob(test_mob)) && (PB.occupant == test_mob))
+					return 0 // It's not a Port-a-Sci, okay.
+				if (PB.occupant && !PB.locked)
+					return 3
+			if (istype(test_machinery, /obj/machinery/port_a_medbay))
+				var/obj/machinery/port_a_medbay/PM = test_machinery
+				if (PM.occupant && (test_mob && ismob(test_mob)) && (PM.occupant == test_mob))
+					return 0 // It's not a Port-a-Sci, okay.
 
 		var/turf/our_loc = get_turf(src.master)
-		if (our_loc.loc:teleport_blocked == 2) return 0
 
 		// We don't have to loop through the PDA.loc checks as well if we send the device back to its home turf.
 		if (test_turf)
-			if (test_turf.loc:teleport_blocked == 2) return 0
 			if (!no_zlevel_check && (isrestrictedz(test_turf.z) || isrestrictedz(our_loc.z))) // Somebody will find a way to abuse it if I don't put this here.
 				return 0
 			if (test_turf.density)
@@ -104,7 +102,7 @@
 				. += "No linkable machinery found.<BR>"
 
 			else
-				for (src.our_machinery in src.machinerylist) //this technically works but doesn't do the thing it was intending to do, i think -zewaka
+				for (src.our_machinery in src.machinerylist)
 					. += "<A href='byond://?src=\ref[src];op=control;machinery=\ref[src.our_machinery]'>[src.our_machinery] at [get_area(src.our_machinery)]</A><BR>"
 
 			. += "<BR><A href='byond://?src=\ref[src];op=scanmachinery'>Scan for linkable machinery</A><BR>"
@@ -124,8 +122,8 @@
 				. += "\[<A href='byond://?src=\ref[src];op=return'>Send to home turf</A>\]<BR>"
 				. += "<HR><A href='byond://?src=\ref[src];op=machinerylist'>Return to list</A>"
 
-			else if (istype(src.active, /obj/machinery/sleeper/port_a_medbay))
-				var/obj/machinery/sleeper/port_a_medbay/P2 = src.active
+			else if (istype(src.active, /obj/machinery/port_a_medbay))
+				var/obj/machinery/port_a_medbay/P2 = src.active
 
 				. += "Location: [get_area(P2)] (Home: [P2.homeloc ? "[get_area(P2.homeloc)]" : "N/A"])<BR>"
 				. += "Occupant: [P2.occupant ? "[P2.occupant.name]" : "None"]"
@@ -167,7 +165,7 @@
 		switch (href_list["op"])
 
 			if ("control")
-				active = locate(href_list["machinery"]) in src.machinerylist
+				active = locate(href_list["machinery"])
 
 			if ("scanmachinery") // Get list of linkable machinery.
 				src.get_machinery()
@@ -193,11 +191,6 @@
 			if ("summon")
 				var/obj/P4 = src.active
 				var/turf/our_loc = get_turf(PDA)
-				if (isAIeye(usr))
-					our_loc = get_turf(usr)
-					if (!(our_loc.cameras && our_loc.cameras.len))
-						boutput(usr, "<span style=\"color:red\">This area is not within your range of influence.</span>")
-						return
 
 				// Z-level check bypass for Port-a-Sci.
 				var/zlevel_check_bypass = 0
@@ -225,8 +218,8 @@
 								var/obj/machinery/port_a_brig/PB = P4
 								if (PB.occupant)
 									PB.occupant.set_loc(PB)
-							if (istype(P4, /obj/machinery/sleeper/port_a_medbay))
-								var/obj/machinery/sleeper/port_a_medbay/PM = P4
+							if (istype(P4, /obj/machinery/port_a_medbay))
+								var/obj/machinery/port_a_medbay/PM = P4
 								if (PM.occupant)
 									PM.occupant.set_loc(PM)
 						if (istype(P4, /obj/storage/closet/port_a_sci/))
@@ -273,8 +266,8 @@
 								var/obj/machinery/port_a_brig/PB2 = P5
 								if (PB2.occupant)
 									PB2.occupant.set_loc(PB2)
-							if (istype(P5, /obj/machinery/sleeper/port_a_medbay))
-								var/obj/machinery/sleeper/port_a_medbay/PM2 = P5
+							if (istype(P5, /obj/machinery/port_a_medbay))
+								var/obj/machinery/port_a_medbay/PM2 = P5
 								if (PM2.occupant)
 									PM2.occupant.set_loc(PM2)
 						if (istype(P5, /obj/storage/closet/port_a_sci/))
@@ -298,8 +291,7 @@
 		if (!src.master)
 			return
 
-		for (var/obj/machinery/port_a_brig/M in portable_machinery)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/obj/machinery/port_a_brig/M in world)
 			var/turf/M_loc = get_turf(M)
 			if (M && M_loc && isturf(M_loc) && isrestrictedz(M_loc.z)) // Don't show stuff in "somewhere", okay.
 				continue
@@ -309,7 +301,7 @@
 
 /datum/computer/file/pda_program/portable_machinery_control/portamedbay
 	name = "P-Medbay Remote" // Damn forced line breaks.
-	our_machinery = /obj/machinery/sleeper/port_a_medbay
+	our_machinery = /obj/machinery/port_a_medbay
 	machinery_name = "Port-a-Medbay"
 	size = 4
 
@@ -317,8 +309,7 @@
 		if (!src.master)
 			return
 
-		for (var/obj/machinery/sleeper/port_a_medbay/M in portable_machinery)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/obj/machinery/port_a_medbay/M in world)
 			var/turf/M_loc = get_turf(M)
 			if (M && M_loc && isturf(M_loc) && isrestrictedz(M_loc.z)) // Don't show stuff in "somewhere", okay.
 				continue
@@ -336,8 +327,7 @@
 		if (!src.master)
 			return
 
-		for (var/obj/machinery/vending/port_a_nanomed/M in portable_machinery)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/obj/machinery/vending/port_a_nanomed/M in world)
 			var/turf/M_loc = get_turf(M)
 			if (M && M_loc && isturf(M_loc) && isrestrictedz(M_loc.z)) // Don't show stuff in "somewhere", okay.
 				continue
@@ -356,8 +346,7 @@
 		if (!src.master)
 			return
 
-		for (var/obj/storage/closet/port_a_sci/M in portable_machinery)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/obj/storage/closet/port_a_sci/M in world)
 			/*var/turf/M_loc = get_turf(M)
 			if (M && M_loc && isturf(M_loc) && isrestrictedz(M_loc.z)) // Don't show stuff in "somewhere", okay.
 				continue*/

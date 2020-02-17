@@ -71,8 +71,3 @@
 
 /datum/artifact_trigger/reagent/blood
 	stimulus_required = "blood"
-
-/datum/artifact_trigger/data
-	// touched by something that contains data (circuit board, disks) etc.
-	stimulus_required = "data"
-	do_amount_check = 0

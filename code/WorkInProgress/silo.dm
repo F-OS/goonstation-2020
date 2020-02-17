@@ -12,7 +12,7 @@
 			src.phantom.overlays += I
 
 /turf/simulated/floor/phantom_test
-	fullbright = 1
+	RL_Ignore = 1
 
 	New()
 		..()
@@ -29,14 +29,13 @@
 		A.phantom.dir = A.dir
 
 /turf/simulated/floor/phantom_test2
-	fullbright = 1
+	RL_Ignore = 1
 	icon = null*/
 
 /obj/grille/catwalk/dubious
 	name = "rusty catwalk"
 	desc = "This one looks even less safe than usual."
 	var/collapsing = 0
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	New()
 		health = rand(5, 10)
@@ -45,10 +44,10 @@
 	HasEntered(atom/movable/A)
 		if (ismob(A))
 			src.collapsing++
-			SPAWN_DBG(10)
+			spawn(10)
 				collapse_timer()
 				if (src.collapsing)
-					playsound(src.loc, 'sound/effects/creaking_metal1.ogg', 25, 1)
+					playsound(src.loc, 'sound/ambience/creaking_metal.ogg', 25, 1)
 
 	proc/collapse_timer()
 		var/still_collapsing = 0
@@ -59,11 +58,11 @@
 			src.collapsing--
 
 		if (src.collapsing >= 5)
-			playsound(src.loc, 'sound/impact_sounds/Metal_Hit_Light_1.ogg', 50, 1)
+			playsound(src.loc, 'sound/effects/grillehit.ogg', 50, 1)
 			for(var/mob/M in AIviewers(src, null))
 				boutput(M, "[src] collapses!")
 			qdel(src)
 
 		if (src.collapsing)
-			SPAWN_DBG(10)
+			spawn(10)
 				src.collapse_timer()

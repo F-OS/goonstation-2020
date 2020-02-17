@@ -17,10 +17,6 @@
 				user.detach_hud(src)
 				user.s_active = null
 
-	clear_master()
-		master = null
-		..()
-
 	proc/update()
 		if (!boxes)
 			return

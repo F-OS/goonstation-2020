@@ -2,7 +2,7 @@ client/verb/RPRules()
 	set name = "RP Rules"
 	set category = "chui"
 
-	src.Browse( {"<center><h2>Goonstation RP Server Guidelines and Rules</h2></center><hr>
+	src.Browse( {"<center><h2>Goonstation RP Server Guidelines and Rules - Test Drive Edition</h2></center><hr>
 	Welcome to the NSS Destiny! Now, since as this server is intended for roleplay, there are some guidelines, rules and tips to make your time fun for everyone!<hr>
 	<span style='size:1.5em'><b>Warning:</b> This server is intended for undisturbed roleplay. We will be cracking down very strictly on people who think this is the same as #4. You have been warned.</span>
 	<ul style='list-style-type:disc'>

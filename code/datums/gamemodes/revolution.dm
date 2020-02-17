@@ -17,7 +17,6 @@
 	var/finished = 0
 	var/const/waittime_l = 600 //lower bound on time before intercept arrives (in tenths of seconds)
 	var/const/waittime_h = 1800 //upper bound on time before intercept arrives (in tenths of seconds)
-	var/win_check_freq = 30 SECONDS //frequency of checks on the win conditions
 	var/round_limit = 21000 // 35 minutes (see post_setup)
 	var/endthisshit = 0
 
@@ -43,11 +42,11 @@
 	else
 		rev_number = revs_possible.len
 
-	var/list/chosen_revolutionaries = antagWeighter.choose(pool = revs_possible, role = "head_rev", amount = rev_number, recordChosen = 1)
-	for (var/datum/mind/rev in chosen_revolutionaries)
-		head_revolutionaries += rev
-		rev.special_role = "head_rev"
-		revs_possible.Remove(rev)
+	while(rev_number > 0)
+		var/datum/mind/revP = pick(revs_possible)
+		head_revolutionaries += revP
+		revs_possible -= revP
+		rev_number--
 
 	return 1
 
@@ -69,7 +68,7 @@
 			rev_mind.objectives += rev_obj
 
 		equip_revolutionary(rev_mind.current)
-		SHOW_REVHEAD_TIPS(rev_mind.current)
+		rev_mind.current << browse(grabResource("html/traitorTips/revTips.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
 		update_rev_icons_added(rev_mind)
 
 	for(var/datum/mind/rev_mind in head_revolutionaries)
@@ -79,17 +78,17 @@
 			boutput(rev_mind.current, "<B>Objective #[obj_count]</B>: [objective.explanation_text]")
 			obj_count++
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 	if(round_limit > 0)
-		SPAWN_DBG (round_limit) // this has got to end soon
-			command_alert("A revolution has been detected on [station_name(1)]. All loyal members of the crew are to ensure the revolution is quelled.","Emergency Riot Update")
-			SPAWN_DBG(6000) // 10 minutes to clean up shop
+		spawn (round_limit) // this has got to end soon
+			command_alert("A revolution has been detected on [station_name()]. All loyal members of the crew are to ensure the revolution is quelled.","Emergency Riot Update")
+			spawn(6000) // 10 minutes to clean up shop
 				command_alert("Revolution heads have been identified. Please stand by for hostile employee termination.", "Emergency Riot Update")
-				SPAWN_DBG(3000) // 5 minutes until everyone dies
+				spawn(3000) // 5 minutes until everyone dies
 					command_alert("You may feel a slight burning sensation.", "Emergency Riot Update")
-					SPAWN_DBG(100) // welp
+					spawn(100) // welp
 						for(var/mob/living/carbon/M in mobs)
 							M.gib()
 						endthisshit = 1
@@ -99,26 +98,25 @@
 
 	var/the_slot = ""
 
-	/*
 	if (!rev_mob.w_uniform)
-		var/obj/F = new /obj/item/device/flash/revolution(get_turf(rev_mob))
+		var/obj/F = new /obj/item/device/flash(get_turf(rev_mob))
 		rev_mob.put_in_hand_or_drop(F)
 		the_slot = "hand"
 	else
 		if (!rev_mob.r_store)
-			rev_mob.equip_if_possible(new /obj/item/device/flash/revolution(rev_mob), rev_mob.slot_r_store)
+			rev_mob.equip_if_possible(new /obj/item/device/flash(rev_mob), rev_mob.slot_r_store)
 			the_slot = "right pocket"
 		else if (!rev_mob.l_store)
-			rev_mob.equip_if_possible(new /obj/item/device/flash/revolution(rev_mob), rev_mob.slot_l_store)
+			rev_mob.equip_if_possible(new /obj/item/device/flash(rev_mob), rev_mob.slot_l_store)
 			the_slot = "left pocket"
 		else if (istype(rev_mob.back, /obj/item/storage/) && rev_mob.back.contents.len < 7)
-			rev_mob.equip_if_possible(new /obj/item/device/flash/revolution(rev_mob), rev_mob.slot_in_backpack)
+			rev_mob.equip_if_possible(new /obj/item/device/flash(rev_mob), rev_mob.slot_in_backpack)
 			the_slot = "backpack"
 		else
-			var/obj/F2 = new /obj/item/device/flash/revolution(get_turf(rev_mob))
+			var/obj/F2 = new /obj/item/device/flash(get_turf(rev_mob))
 			rev_mob.put_in_hand_or_drop(F2)
 			the_slot = "hand"
-	*/
+
 	rev_mob.show_text("You've been supplied with a <b>flash</b> in your [the_slot] with which to convert others to the cause!", "blue")
 	return
 
@@ -140,7 +138,7 @@
 		intercepttext += i_text.build(A, pick(head_revolutionaries))
 /*
 	for (var/obj/machinery/computer/communications/comm in machines)
-		if (!(comm.status & (BROKEN | NOPOWER)) && comm.prints_intercept)
+		if (!(comm.stat & (BROKEN | NOPOWER)) && comm.prints_intercept)
 			var/obj/item/paper/intercept = new /obj/item/paper( comm.loc )
 			intercept.name = "paper- 'Cent. Com. Status Summary'"
 			intercept.info = intercepttext
@@ -149,16 +147,11 @@
 			comm.messagetext.Add(intercepttext)
 */
 
-	for (var/obj/machinery/communications_dish/C in comm_dishes)
+	for (var/obj/machinery/communications_dish/C in machines)
 		C.add_centcom_report("Cent. Com. Status Summary", intercepttext)
 
 	command_alert("Summary downloaded and printed out at all communications consoles.", "Enemy communication intercept. Security Level Elevated.")
 
-/datum/game_mode/revolution/process()
-	..()
-	if (world.time > win_check_freq)
-		win_check_freq += win_check_freq
-		check_win()
 
 /datum/game_mode/revolution/check_win()
 	if(check_rev_victory())
@@ -176,45 +169,36 @@
 		return 0
 
 /datum/game_mode/revolution/proc/add_revolutionary(datum/mind/rev_mind)
-	.= 0
 	if (!rev_mind.current || (rev_mind.current && !rev_mind.current.client))
-		return 0
+		return
 
 	var/list/uncons = src.get_unconvertables()
 	if (!(rev_mind in src.revolutionaries) && !(rev_mind in src.head_revolutionaries) && !(rev_mind in uncons))
-		SHOW_REVVED_TIPS(rev_mind.current)
+		rev_mind.current << browse(grabResource("html/traitorTips/revAdded.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
 		rev_mind.current.show_text("<h2><font color=red>You are now a revolutionary! Kill the heads of staff and don't harm your fellow freedom fighters. You can identify your comrades by the R icons (blue = rev leader, red = regular member).</font></h2>")
 
 		src.revolutionaries += rev_mind
 		src.update_rev_icons_added(rev_mind)
 		logTheThing("combat", rev_mind.current, null, "was made a member of the revolution.")
 		. = 1
-
-		var/obj/itemspecialeffect/derev/E = unpool(/obj/itemspecialeffect/derev)
-		E.color = "#FF5555"
-		E.setup(rev_mind.current.loc)
+	return
 
 /datum/game_mode/revolution/proc/remove_revolutionary(datum/mind/rev_mind)
-	.= 0
 	if (!rev_mind.current)
-		return 0
+		return
 
 	if (rev_mind in revolutionaries)
-		SHOW_DEREVVED_TIPS(rev_mind.current)
-		rev_mind.current.show_text("<h2><font color=blue>You are no longer a revolutionary! Protect the heads of staff and help them kill the leaders of the revolution.</font></h2>", "blue")
+		rev_mind.current << browse(grabResource("html/traitorTips/revRemoved.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
+		rev_mind.current.show_text("<h2><font color=red>You are no longer a revolutionary! Protect the heads of staff and help them kill the leaders of the revolution.</font></h2>", "red")
 
 		src.revolutionaries -= rev_mind
 		src.update_rev_icons_removed(rev_mind)
 		logTheThing("combat", rev_mind.current, null, "is no longer a member of the revolution.")
 
 		for (var/mob/living/M in view(rev_mind.current))
-			M.show_text("<b>[rev_mind.current] looks like they just remembered their real allegiance!</b>", "blue")
+			M.show_text("<b>[rev_mind.current] looks like they just remembered their real allegiance!</b>", "red")
 
-		.= 1
-
-		var/obj/itemspecialeffect/derev/E = unpool(/obj/itemspecialeffect/derev)
-		E.color = "#5555FF"
-		E.setup(rev_mind.current.loc)
+	return
 
 /datum/game_mode/revolution/proc/update_all_rev_icons()
 	var/list/update_me = list()
@@ -258,11 +242,11 @@
 	for(var/mob/new_player/player in mobs)
 		if (ishellbanned(player)) continue //No treason for you
 		if ((player.client) && (player.ready) && !(player.mind in head_revolutionaries) && !(player.mind in token_players) && !candidates.Find(player.mind))
-			if(player.client.preferences.be_revhead)
+			if(player.client.preferences.be_misc)
 				candidates += player.mind
 
 	if(candidates.len < 1)
-		logTheThing("debug", null, null, "<b>Enemy Assignment</b>: Not enough players with be_revhead set to yes, so we're adding players who don't want to be rev leaders to the pool.")
+		logTheThing("debug", null, null, "<b>Enemy Assignment</b>: Not enough players with be_misc set to yes, so we're adding players who don't want to be rev leaders to the pool.")
 		for(var/mob/new_player/player in mobs)
 			if (ishellbanned(player)) continue //No treason for you
 			if ((player.client) && (player.ready) && !(player.mind in head_revolutionaries) && !(player.mind in token_players) && !candidates.Find(player.mind))
@@ -279,7 +263,7 @@
 	for(var/mob/living/carbon/human/player in mobs)
 		if(player.mind)
 			var/role = player.mind.assigned_role
-			if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director", "Medical Director","Communications Officer"))
+			if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director", "Medical Director"))
 				heads += player.mind
 
 	if(heads.len < 1)
@@ -294,7 +278,7 @@
 	for(var/mob/player in mobs)
 		if(player.mind)
 			var/role = player.mind.assigned_role
-			if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director", "Medical Director","Communications Officer"))
+			if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director", "Medical Director"))
 				heads += player.mind
 
 	return heads
@@ -308,19 +292,11 @@
 			if(rol in list("Cyborg"))
 				ucs += player.mind
 
-	for(var/mob/living/critter/small_animal/player in mobs)
-		if(player.mind)
-			if (player.ghost_spawned)
-				ucs += player.mind
-
 	for(var/mob/living/carbon/human/player in mobs)
 		if(player.mind)
-			if (locate(/obj/item/implant/antirev) in player.implant)
+			var/role = player.mind.assigned_role
+			if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director", "Medical Director", "Head Surgeon", "Head of Mining", "Security Officer", "Vice Officer", "Detective", "AI", "Cyborg"))
 				ucs += player.mind
-			else
-				var/role = player.mind.assigned_role
-				if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director", "Medical Director", "Head Surgeon", "Head of Mining", "Security Officer", "Vice Officer", "Detective", "AI", "Cyborg", "Nanotrasen Special Operative", "Nanotrasen Security Operative","Communications Officer"))
-					ucs += player.mind
 	//for(var/mob/living/carbon/human/player in mobs)
 
 	return ucs
@@ -334,14 +310,11 @@
 	// Run through all the heads
 	for(var/datum/mind/head_mind in head_check)
 		// If they exist, have a mob and aren't dead
-		if(head_mind && head_mind.current && !isdead(head_mind.current))
+		if(head_mind && head_mind.current && head_mind.current.stat != 2)
 
 			// Check to see if they're a robot
-			if(issilicon(head_mind.current))
+			if(istype(head_mind.current, /mob/living/silicon/robot))
 				// If they're a robot don't count them
-				continue
-
-			if(isghostcritter(head_mind.current) || isVRghost(head_mind.current))
 				continue
 
 			// Check if they're on the current z-level
@@ -351,6 +324,7 @@
 			// If they are then don't end the round
 			// This return means that they're alive and on the first z level and are not a robot
 			return 0
+	score_traitorswon = 1
 	return 1
 /*
 	for(var/datum/mind/rev_mind in head_revolutionaries)
@@ -369,14 +343,11 @@
 		return 0
 
 	for(var/datum/mind/rev_mind in head_revolutionaries)
-		if(rev_mind && rev_mind.current && !isdead(rev_mind.current))
+		if(rev_mind && rev_mind.current && rev_mind.current.stat != 2)
 
 			// Check to see if they're a robot
-			if(issilicon(rev_mind.current))
+			if(istype(rev_mind.current, /mob/living/silicon/robot))
 				// If they're a robot don't count them
-				continue
-
-			if(isghostcritter(rev_mind.current) || isVRghost(rev_mind.current))
 				continue
 
 			var/turf/T = get_turf_loc(rev_mind.current)
@@ -385,8 +356,6 @@
 
 			if(istype(T.loc, /area/station/security/brig) && !rev_mind.current.canmove)
 				continue
-
-
 
 			return 0
 	return 1
@@ -402,7 +371,7 @@
 
 	var/text = ""
 	if(finished == 1)
-		boutput(world, "<span style=\"color:red\"><FONT size = 3><B> The heads of staff were killed or abandoned the [station_or_ship()]! The revolutionaries win!</B></FONT></span>")
+		boutput(world, "<span style=\"color:red\"><FONT size = 3><B> The heads of staff were killed or abandoned the station! The revolutionaries win!</B></FONT></span>")
 	else if(finished == 2)
 		boutput(world, "<span style=\"color:red\"><FONT size = 3><B> The heads of staff managed to stop the revolution!</B></FONT></span>")
 	else if(finished == 3)
@@ -422,7 +391,7 @@
 		if(rev_mind.current)
 			text += "[rev_mind.current.real_name]"
 			var/turf/T = get_turf_loc(rev_mind.current)
-			if(isdead(rev_mind.current))
+			if(rev_mind.current.stat == 2)
 				text += " (Dead)"
 			else if(T.z == 2)
 				text += " (Imprisoned!)"
@@ -443,7 +412,7 @@
 			var/turf/T = get_turf_loc(rev_nh_mind.current)
 			if(T.z == 2)
 				text += " (Imprisoned!)"
-			else if(isdead(rev_nh_mind.current))
+			else if(rev_nh_mind.current.stat == 2)
 				text += " (Dead)"
 			else if(T.z != 1)
 				text += " (Abandoned the cause!)"
@@ -462,12 +431,12 @@
 		text = ""
 		if(head_mind.current)
 			text += "[head_mind.current.real_name]"
-			if(isdead(head_mind.current))
+			if(head_mind.current.stat == 2)
 				text += " (Dead)"
 			else
 				var/turf/T = get_turf_loc(head_mind.current)
 				if(T.z != 1)
-					text += " (Abandoned the [station_or_ship()]!)"
+					text += " (Abandoned the station!)"
 				else
 					text += " (Survived!)"
 		else
@@ -476,29 +445,3 @@
 		boutput(world, text)
 
 	..() // Admin-assigned antagonists or whatever.
-
-
-
-
-/obj/item/revolutionary_sign
-	name = "revolutionary sign"
-	desc = "A sign bearing revolutionary propaganda. Good for picketing."
-
-	icon = 'icons/obj/weapons.dmi'
-	icon_state = "revsign"
-	inhand_image_icon = 'icons/mob/inhand/hand_weapons.dmi'
-	item_state = "revsign"
-
-	w_class = 4.0
-	throwforce = 8
-	flags = FPRINT | TABLEPASS | CONDUCT
-	force = 7
-	stamina_damage = 25
-	stamina_cost = 14
-	stamina_crit_chance = 10
-	hitsound = 'sound/impact_sounds/Wood_Hit_1.ogg'
-
-	New()
-		..()
-		src.setItemSpecial(/datum/item_special/swipe)
-

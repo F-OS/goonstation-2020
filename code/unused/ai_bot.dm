@@ -25,9 +25,9 @@
 
 /obj/machinery/ai_bot/proc/update()
 
-	if(src.status & BROKEN)
+	if(src.stat & BROKEN)
 		if(src.health > 0)
-			status &= ~BROKEN
+			stat &= ~BROKEN
 		else
 			return
 	if(src.health < 0)
@@ -35,7 +35,7 @@
 	updateicon()
 
 /obj/machinery/ai_bot/proc/updateicon()
-	if(src.status & BROKEN)
+	if(src.stat & BROKEN)
 		icon_state = "ro+b"
 		return
 	if(opened)
@@ -85,7 +85,7 @@ To-do: Add overlays here */
 			O.show_message(text("<span style=\"color:red\">[user] has mended the robot!</span>"), 1)
 		src.update()
 
-	else if (ispryingtool(W))
+	else if (istype(W, /obj/item/weapon/crowbar))	// crowbar means open or close the cover
 		if(opened)
 			opened = 0
 			updateicon()
@@ -107,7 +107,7 @@ To-do: Add overlays here */
 //			chargecount = 0
 		updateicon()
 
-	else if	(isscrewingtool(W))
+	else if	(istype(W, /obj/item/weapon/screwdriver))	// haxing
 		if(opened)
 			boutput(user, "Close the Robot first")
 		else if(emagged)
@@ -174,7 +174,10 @@ To-do: Add overlays here */
 	src.update()
 
 /obj/machinery/ai_bot/bullet_act(flag)
-	if(src.material) src.material.triggerOnBullet(src, src, P)
+	if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, P.shooter.equipped())
+	for(var/atom/A in src)
+		if(A.material)
+			A.material.triggerOnAttacked(A, P.shooter, src, P.shooter.equipped())
 
 	if (flag == PROJECTILE_BULLET)
 		src.health -= 10
@@ -200,7 +203,7 @@ To-do: Add overlays here */
 	return
 
 /obj/machinery/ai_bot/proc/set_broken()
-	status |= BROKEN
+	stat |= BROKEN
 	icon_state = "ro+b"
 	overlays = null
 

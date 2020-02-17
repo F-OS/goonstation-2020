@@ -32,8 +32,6 @@
 	hand_count = 1
 	can_throw = 0
 	blood_id = "juice_tomato"
-	add_abilities = list(/datum/targetable/critter/slam,
-						/datum/targetable/critter/bite)
 
 	specific_emotes(var/act, var/param = null, var/voluntary = 0)
 		switch (act)
@@ -61,11 +59,13 @@
 
 	New()
 		..()
+		abilityHolder.addAbility(/datum/targetable/critter/slam)
+		abilityHolder.addAbility(/datum/targetable/critter/bite)
 
 	death(var/gibbed)
 		if (!gibbed)
-			playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
-			var/obj/decal/cleanable/blood/B = make_cleanable(/obj/decal/cleanable/blood,src.loc)
+			playsound(src.loc, "sound/effects/splat.ogg", 100, 1)
+			var/obj/decal/cleanable/blood/B = new(src.loc)
 			B.name = "ruined tomato"
 			ghostize()
 			qdel(src)

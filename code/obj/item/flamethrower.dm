@@ -36,12 +36,8 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	stamina_damage = 5
 	stamina_cost = 5
 	stamina_crit_chance = 1
-	move_triggered = 1
 
 /obj/item/flamethrower/loaded/
-	icon_state = "flamethrower_oxy_fuel"
-
-/obj/item/flamethrower/loaded/napalm
 	icon_state = "flamethrower_oxy_fuel"
 
 // PantsNote: Dumping this shit in here until I'm sure it works.
@@ -98,14 +94,8 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	part2 = new /obj/item/rods
 	part3 = new /obj/item/device/igniter
 
-/obj/item/flamethrower/loaded/napalm/New()
-	part1 = new /obj/item/weldingtool
-	part2 = new /obj/item/rods
-	part3 = new /obj/item/device/igniter
-	part4 = new /obj/item/tank/oxygen
-	part5 = new /obj/item/reagent_containers/food/drinks/fueltank/napalm
 
-/obj/item/assembly/weld_rod/disposing()
+/obj/item/assembly/weld_rod/Del()
 	//src.part1 = null
 	qdel(src.part1)
 	//src.part2 = null
@@ -114,7 +104,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	return
 
 
-/obj/item/assembly/w_r_ignite/disposing()
+/obj/item/assembly/w_r_ignite/Del()
 
 	//src.part1 = null
 	qdel(src.part1)
@@ -125,7 +115,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	..()
 	return
 
-/obj/item/flamethrower/disposing()
+/obj/item/flamethrower/Del()
 
 	//src.part1 = null
 	qdel(src.part1)
@@ -137,7 +127,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	return
 
 /obj/item/assembly/weld_rod/attackby(obj/item/W as obj, mob/user as mob)
-	if (iswrenchingtool(W))
+	if (istype(W, /obj/item/wrench) )
 		var/turf/T = src.loc
 		if (ismob(T))
 			T = T.loc
@@ -183,9 +173,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	return
 
 /obj/item/assembly/w_r_ignite/attackby(obj/item/W as obj, mob/user as mob)
-	if (!W)
-		return
-	if (iswrenchingtool(W) && !(src.status))
+	if ((istype(W, /obj/item/wrench) && !( src.status )))
 		var/turf/T = src.loc
 		if (ismob(T))
 			T = T.loc
@@ -201,7 +189,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 
 		qdel(src)
 		return
-	if (isscrewingtool(W))
+	if (istype(W, /obj/item/screwdriver))
 		user.show_message("<span style=\"color:blue\">The igniter is now secured!</span>", 1)
 		var/obj/item/flamethrower/R = new /obj/item/flamethrower(src.loc)
 		var/obj/item/assembly/w_r_ignite/S = src
@@ -233,7 +221,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 		return null
 
 	var/turf/location = src.loc
-	if(ismob(location))
+	if(istype(location, /mob/))
 		var/mob/M = location
 		if(M.l_hand == src || M.r_hand == src)
 			location = M.loc
@@ -241,8 +229,8 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	if(isturf(location)) //start a fire if possible
 		location.hotspot_expose(700, 2)
 
-/obj/item/flamethrower/attackby(obj/item/W, mob/user as mob)
-	if (!W || user.stat || user.restrained() || user.lying)
+/obj/item/flamethrower/attackby(obj/W, mob/user as mob)
+	if(user.stat || user.restrained() || user.lying)
 		return
 	if (istype(W,/obj/item/tank/air) || istype(W,/obj/item/tank/oxygen))
 		if(src.part4)
@@ -259,7 +247,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 			fuel = "_fuel"
 		icon_state = "flamethrower_oxy[fuel]"
 
-	if (istype(W,/obj/item/reagent_containers/food/drinks/fueltank))
+	if(istype(W,/obj/item/reagent_containers/food/drinks/fueltank))
 		if(src.part5)
 			boutput(user, "<span style=\"color:red\">There already is a fuel tank loaded in the flamethrower!</span>")
 			return
@@ -275,7 +263,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 		icon_state = "flamethrower[oxy]_fuel"
 
 // PantsNote: Flamethrower disassmbly.
-	else if (isscrewingtool(W))
+	else if (istype(W, /obj/item/screwdriver))
 		var/obj/item/flamethrower/S = src
 		if (( S.part4 ))
 			return
@@ -310,16 +298,15 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 /obj/item/flamethrower/afterattack(atom/target, mob/user, inrange)
 	if (inrange)
 		return
-	user.lastattacked = src
 	src.flame_turf(getline(user, target), user, target)
 
 
 /obj/item/flamethrower/Topic(href,href_list[])
 	if (href_list["close"])
 		usr.machine = null
-		usr.Browse(null, "window=flamethrower")
+		usr << browse(null, "window=flamethrower")
 		return
-	if(usr.stat || usr.restrained() || usr.lying || src.loc != usr)
+	if(usr.stat || usr.restrained() || usr.lying)
 		return
 	usr.machine = src
 	if (href_list["light"])
@@ -328,7 +315,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 		if(lit)
 			icon_state = "flamethrower_ignite_on"
 			item_state = "flamethrower1"
-			force = 10
+			force = 17
 			damtype = "fire"
 			if (!(src in processing_items))
 				processing_items.Add(src)
@@ -351,7 +338,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 		icon_state = "flamethrower_no_oxy[fuel]"
 		item_state = "flamethrower0"
 		usr.machine = null
-		usr.Browse(null, "window=flamethrower")
+		usr << browse(null, "window=flamethrower")
 	if (href_list["removefuel"])
 		if(!src.part5)	return
 		var/obj/item/reagent_containers/food/drinks/fueltank/A = src.part5
@@ -367,7 +354,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 		icon_state = "flamethrower[oxy]_no_fuel"
 		item_state = "flamethrower0"
 		usr.machine = null
-		usr.Browse(null, "window=flamethrower")
+		usr << browse(null, "window=flamethrower")
 	if (href_list["mode"])
 		mode = text2num(href_list["mode"])
 	for(var/mob/M in viewers(1, src.loc))
@@ -407,7 +394,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	else
 		dat += "<a href='?src=\ref[src];mode=3'>Stream of 10 (dangerous)</a>"
 	dat += text("<BR><br><A HREF='?src=\ref[src];close=1'>Close</A></TT>")
-	user.Browse(dat, "window=flamethrower;size=600x300")
+	user << browse(dat, "window=flamethrower;size=600x300")
 	onclose(user, "flamethrower")
 	return
 
@@ -441,7 +428,6 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 		var/turf/T = get_turf(target)
 		if (T) //Wire: Fix for Cannot read null.x
 			logTheThing("combat", user, null, "fires a flamethrower [log_reagents(part5)] from [log_loc(user)], vector: ([T.x - user.x], [T.y - user.y]), dir: <I>[dir2text(get_dir(user, target))]</I>")
-			particleMaster.SpawnSystem(new /datum/particleSystem/chemspray(src.loc, T, part5.reagents))
 
 	if (mode == 1)
 		increment = turfs_to_spray > 1 ? (7.5 / (turfs_to_spray - 1)) : 0
@@ -491,7 +477,7 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 		var/obj/blob/B = locate() in currentturf
 		if(B)
 			if (B.opacity)
-				part5.reagents.reaction(B, TOUCH, reagentperturf, 0)
+				part5.reagents.reaction(B, TOUCH, reagentperturf)
 				part5.reagents.remove_any(reagentperturf)
 
 				halt = 1
@@ -542,14 +528,10 @@ GETLINEEEEEEEEEEEEEEEEEEEEE
 	if(!target.reagents)
 		target.create_reagents(50)
 	for(var/atom/A in target.contents)
-		copied.reaction(A, TOUCH, 0, 0)
+		copied.reaction(A, TOUCH)
 		if(A.reagents)
 			copied.copy_to(A.reagents, 1)
-	copied.reaction(target, TOUCH, 0, 0)
-	part5.reagents.trans_to(target, transferamt, 1, 0)
+	copied.reaction(target, TOUCH)
+	part5.reagents.trans_to(target, transferamt)
+	particleMaster.SpawnSystem(new /datum/particleSystem/chemspray(src.loc, target, part5.reagents))
 
-/obj/item/flamethrower/move_trigger(var/mob/M, kindof)
-	if (..())
-		for (var/obj/O in contents)
-			if (O.move_triggered)
-				O.move_trigger(M, kindof)

@@ -40,7 +40,7 @@
 		update_icon()
 
 	update_icon()
-		if(status & (BROKEN|NOPOWER))
+		if(stat & (BROKEN|NOPOWER))
 			icon_state = "circ[side]-p"
 		else if(last_pressure_delta > 0)
 			if(last_pressure_delta > ONE_ATMOSPHERE)
@@ -63,43 +63,13 @@
 	icon_state = "power"
 	density = 1
 	anchored = 1
-/chui/window/teg
-	name = "Thermoelectric Generator"
-	GetBody()
-		var/list/built = list("<B>Thermo-Electric Generator</B><HR>")
-		var/obj/machinery/power/generatorTemp/us = theAtom
-		if(!us || !istype(us)) return "?"
-		built += "Output: [template("powah", engineering_notation(us.lastgen))]W<BR><BR>"
 
-		built += "<B>Hot loop</B><BR>"
-		built += "Temperature Inlet: [template("hotInletTemp", round(us.circ1.air1.temperature, 0.1))] K Outlet: [template("hotOutletTemp", round(us.circ1.air2.temperature, 0.1))] K<BR>"//[] round(
-		built += "Pressure Inlet: [template("hotInletPres", round(us.circ1.air1.return_pressure(), 0.1))] kPa Outlet: [template("hotOutletPres", round(us.circ1.air2.return_pressure(), 0.1))] kPa<BR>"//[]
-
-		built += "<B>Cold loop</B><BR>"
-		built += "Temperature Inlet: [template("coldInletTemp", round(us.circ2.air1.temperature, 0.1))] K  Outlet: [template("coldOutletTemp", round(us.circ2.air2.temperature, 0.1))] K<BR>"
-		built += "Pressure Inlet: [template("coldInletPres", round(us.circ2.air1.return_pressure(), 0.1))] kPa  Outlet: [template("coldOutletPres", round(us.circ2.air2.return_pressure(), 0.1))] kPa<BR>"
-		return built.Join("")
-	proc/UpdateTEG()
-		var/obj/machinery/power/generatorTemp/us = theAtom
-		if(!us || !istype(us)) return "?"
-		SetVars(list(
-			"powah" = engineering_notation(us.lastgen),
-			"hotInletTemp" = round(us.circ1.air1.temperature, 0.1),
-			"hotOutletTemp" = round(us.circ1.air2.temperature, 0.1),
-			"hotInletPres" = round(us.circ1.air1.return_pressure(), 0.1),
-			"hotOutletPres" = round(us.circ1.air2.return_pressure(), 0.1),
-			"coldInletTemp" = round(us.circ2.air1.temperature, 0.1),
-			"coldOutletTemp" = round(us.circ2.air2.temperature, 0.1),
-			"coldInletPres" = round(us.circ2.air1.return_pressure(), 0.1),
-			"coldOutletPres" = round(us.circ2.air2.return_pressure(), 0.1)
-		))
 /obj/machinery/power/generatorTemp
 	name = "generator"
 	desc = "A high efficiency thermoelectric generator."
 	icon_state = "teg"
 	anchored = 1
 	density = 1
-	var/chui/window/teg/window
 	//var/lightsbusted = 0
 
 	var/obj/machinery/atmospherics/binary/circulatorTemp/circ1
@@ -140,19 +110,17 @@
 		light = new /datum/light/point
 		light.attach(src)
 
-		window = new(src)
-
-		SPAWN_DBG(5)
+		spawn(5)
 			circ1 = locate(/obj/machinery/atmospherics/binary/circulatorTemp) in get_step(src,WEST)
 			circ2 = locate(/obj/machinery/atmospherics/binary/circulatorTemp/right) in get_step(src,EAST)
 			if(!circ1 || !circ2)
-				status |= BROKEN
+				stat |= BROKEN
 
 			updateicon()
 
 	proc/updateicon()
 
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			overlays = null
 		else
 			overlays = null
@@ -210,20 +178,20 @@
 			// logTheThing("debug", null, null, "pre delta, cold temp = [cold_air.temperature], hot temp = [hot_air.temperature]")
 			// logTheThing("debug", null, null, "pre prod, delta : [delta_temperature], cold cap [cold_air_heat_capacity], hot cap [hot_air_heat_capacity]")
 			if(delta_temperature > 0 && cold_air_heat_capacity > 0 && hot_air_heat_capacity > 0)
-				// carnot efficiency * 65%
 				var/efficiency = (1 - cold_air.temperature/hot_air.temperature) * (efficiency_controller * 0.01) //controller expressed as a percentage
 
-				// energy transfer required to bring the hot and cold loops to thermal equilibrium (accounting for the energy removed by the engine)
-				var/energy_transfer = delta_temperature * hot_air_heat_capacity * cold_air_heat_capacity / (hot_air_heat_capacity + cold_air_heat_capacity - hot_air_heat_capacity*efficiency)
-				hot_air.temperature -= energy_transfer/hot_air_heat_capacity
+				var/energy_transfer = delta_temperature*hot_air_heat_capacity*cold_air_heat_capacity/(hot_air_heat_capacity+cold_air_heat_capacity)
 
+				var/heat = energy_transfer*(1-efficiency)
 				lastgen = energy_transfer*efficiency
-				add_avail(lastgen)
 
-				cold_air.temperature += energy_transfer*(1-efficiency)/cold_air_heat_capacity // pass the remaining energy through to the cold side
+				hot_air.temperature = hot_air.temperature - energy_transfer/hot_air_heat_capacity
+				cold_air.temperature = cold_air.temperature + heat/cold_air_heat_capacity
 
 				// uncomment to debug
 				//logTheThing("debug", null, null, "POWER: [lastgen] W generated at [efficiency*100]% efficiency and sinks sizes [cold_air_heat_capacity], [hot_air_heat_capacity]")
+
+				add_avail(lastgen)
 		// update icon overlays only if displayed level has changed
 
 		if(hot_air)
@@ -242,10 +210,9 @@
 			else if (genlev && !running)
 				playsound(src.loc, sound_tractorrev, 55, 0)
 				running = 1
-			SPAWN_DBG(5)
+			spawn(5)
 				spam_limiter = 0
-
-		window.UpdateTEG()
+		src.updateDialog()
 
 // engine looping sounds and hazards
 		if (lastgenlev > 0)
@@ -323,7 +290,7 @@
 					fireflash(src, firesize)
 					for(var/atom/movable/M in view(firesize, src.loc)) // fuck up those jerkbag engineers
 						if(M.anchored) continue
-						if(ismob(M)) if(hasvar(M,"weakened")) M:changeStatus("weakened", 80)
+						if(ismob(M)) if(hasvar(M,"weakened")) M:weakened += 8
 						if(ismob(M)) random_brute_damage(M, 10)
 						if(ismob(M))
 							var/atom/targetTurf = get_edge_target_turf(M, get_dir(src, get_step_away(M, src)))
@@ -349,7 +316,7 @@
 						W.smash()
 					for (var/mob/living/M in range(6, src.loc))
 						shake_camera(M, 3, 2)
-						M.changeStatus("weakened", 1 SECONDS)
+						M.weakened++
 					for (var/atom/A in range(rand(1,3), src.loc))
 						if (istype(A, /turf/simulated))
 							A.pixel_x = rand(-1,1)
@@ -407,12 +374,12 @@
 			var/list/affected = DrawLine(last, target, /obj/line_obj/elec ,'icons/obj/projectiles.dmi',"WholeLghtn",1,1,"HalfStartLghtn","HalfEndLghtn",OBJ_LAYER,1,PreloadedIcon='icons/effects/LghtLine.dmi')
 
 			for(var/obj/O in affected)
-				SPAWN_DBG(6) pool(O)
+				spawn(6) pool(O)
 
 			//var/turf/currTurf = get_turf(target)
 			//currTurf.hotspot_expose(2000, 400)
 
-			if(isliving(target)) //Probably unsafe.
+			if(istype(target, /mob/living)) //Probably unsafe.
 				target:TakeDamage("chest", 0, 20)
 
 			var/list/next = new/list()
@@ -425,7 +392,7 @@
 
 
 	attack_ai(mob/user)
-		if(status & (BROKEN|NOPOWER)) return
+		if(stat & (BROKEN|NOPOWER)) return
 
 		interact(user)
 
@@ -433,19 +400,42 @@
 
 		add_fingerprint(user)
 
-		if(status & (BROKEN|NOPOWER)) return
+		if(stat & (BROKEN|NOPOWER)) return
 
 		interact(user)
 
 	proc/interact(mob/user)
-		window.Subscribe(user.client)
+		if ( (get_dist(src, user) > 1 ) && (!istype(user, /mob/living/silicon/ai)))
+			user.machine = null
+			user << browse(null, "window=teg")
+			return
+
+		user.machine = src
+
+		var/t = "<PRE><B>Thermo-Electric Generator</B><HR>"
+
+		t += "Output : [engineering_notation(lastgen)]W<BR><BR>"
+
+		t += "<B>Hot loop</B><BR>"
+		t += "Temperature Inlet: [round(circ1.air1.temperature, 0.1)] K  Outlet: [round(circ1.air2.temperature, 0.1)] K<BR>"
+		t += "Pressure Inlet: [round(circ1.air1.return_pressure(), 0.1)] kPa  Outlet: [round(circ1.air2.return_pressure(), 0.1)] kPa<BR>"
+
+		t += "<B>Cold loop</B><BR>"
+		t += "Temperature Inlet: [round(circ2.air1.temperature, 0.1)] K  Outlet: [round(circ2.air2.temperature, 0.1)] K<BR>"
+		t += "Pressure Inlet: [round(circ2.air1.return_pressure(), 0.1)] kPa  Outlet: [round(circ2.air2.return_pressure(), 0.1)] kPa<BR>"
+
+		t += "<BR><HR><A href='?src=\ref[src];close=1'>Close</A>"
+
+		t += "</PRE>"
+		user << browse(t, "window=teg;size=460x300")
+		onclose(user, "teg")
 		return 1
 
 	Topic(href, href_list)
 		..()
 
 		if( href_list["close"] )
-			usr.Browse(null, "window=teg")
+			usr << browse(null, "window=teg")
 			usr.machine = null
 			return 0
 
@@ -578,15 +568,15 @@
 	var/datum/radio_frequency/radio_connection
 
 	attack_hand(mob/user)
-		if(status & (BROKEN | NOPOWER))
+		if(stat & (BROKEN | NOPOWER))
 			return
-		user << browse(return_text(),"window=computer;can_close=1")
+		user << browse(return_text(),"window=computer")
 		user.machine = src
 		onclose(user, "computer")
 
 	process()
 		..()
-		if(status & (BROKEN | NOPOWER))
+		if(stat & (BROKEN | NOPOWER))
 			return
 		//src.updateDialog()
 

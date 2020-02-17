@@ -16,11 +16,10 @@
 	name = "Gauntlet Staging Area"
 	icon_state = "purple"
 	virtual = 1
-	ambient_light = "#bfbfbf"
 
 	Entered(var/atom/movable/A)
 		..()
-		if (isliving(A))
+		if (istype(A, /mob/living))
 			if (gauntlet_controller.state >= 2)
 				A:gib()
 
@@ -28,7 +27,6 @@
 	name = "Gauntlet Spectator's Area"
 	icon_state = "green"
 	virtual = 1
-	ambient_light = "#bfbfbf"
 
 /mob/proc/is_near_gauntlet()
 	var/area/A = get_area(src)
@@ -114,8 +112,7 @@
 			boutput(M, rendered)
 		for (var/mob/M in gauntlet)
 			boutput(M, rendered)
-		for (var/mob/M in mobs)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/mob/M in world)
 			if (ismob(M.eye) && M.eye != M)
 				var/mob/N = M.eye
 				if (N.is_near_gauntlet())
@@ -130,7 +127,7 @@
 		moblist.len = 0
 		moblist_names = ""
 		for (var/obj/machinery/door/poddoor/buff/staging/S in staging)
-			SPAWN_DBG(0)
+			spawn(0)
 				S.close()
 		var/mobcount = 0
 		for (var/mob/living/M in staging)
@@ -181,15 +178,15 @@
 			D.used = 0
 		current_match_id++
 		var/spawned_match_id = current_match_id
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in gauntlet)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.open()
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in staging)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.open()
 		allow_processing = 1
-		SPAWN_DBG(1200)
+		spawn(1200)
 			if (state == 1 && current_match_id == spawned_match_id)
 				announceAll("Game did not start after 2 minutes. Resetting arena.")
 				resetArena()
@@ -198,12 +195,12 @@
 		if (state == 2)
 			return
 		state = 2
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in gauntlet)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.close()
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in staging)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.close()
 			for (var/mob/living/M in gauntlet)
 				if (M in moblist)
@@ -257,11 +254,11 @@
 					if (!live)
 						finishWave()
 					for (var/mob/living/M in gauntlet)
-						if (!isdead(M) && M.client)
+						if (M.stat != 2 && M.client)
 							pc++
 					for (var/obj/O in gauntlet)
 						for (var/mob/living/M in O)
-							if (!isdead(M) && M.client)
+							if (M.stat != 2 && M.client)
 								pc++
 					if (!pc)
 						state = 0
@@ -281,13 +278,13 @@
 		announceAll("The Critter Gauntlet match concluded at level [current_level].")
 		if (current_level > 50)
 			var/command_report = "A Critter Gauntlet match has concluded at level [current_level]. Congratulations to: [moblist_names]."
-			for (var/obj/machinery/communications_dish/C in comm_dishes)
+			for (var/obj/machinery/communications_dish/C in machines)
 				C.add_centcom_report("[command_name()] Update", command_report)
 
 			command_alert(command_report, "Critter Gauntlet match finished")
 		statlog_gauntlet(moblist_names, score, current_level)
 
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/obj/item/I in staging)
 				qdel(I)
 			for (var/obj/item/I in gauntlet)
@@ -307,13 +304,13 @@
 					qdel(D)
 
 			for (var/obj/machinery/door/poddoor/buff/staging/S in staging)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.open()
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in gauntlet)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.close()
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in staging)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.close()
 
 		if (current_event)
@@ -331,14 +328,14 @@
 	proc/spawnGear(var/turf/target, var/mob/forwhom)
 		new /obj/item/storage/backpack/NT(target)
 		new /obj/item/clothing/suit/armor/tdome/yellow(target)
-		var/list/masks = list(/obj/item/clothing/mask/batman, /obj/item/clothing/mask/clown_hat, /obj/item/clothing/mask/horse_mask, /obj/item/clothing/mask/moustache, /obj/item/clothing/mask/gas/swat, /obj/item/clothing/mask/owl_mask, /obj/item/clothing/mask/hunter, /obj/item/clothing/mask/skull, /obj/item/clothing/mask/spiderman)
+		var/list/masks = list(/obj/item/clothing/mask/batman, /obj/item/clothing/mask/clown_hat, /obj/item/clothing/mask/horse_mask, /obj/item/clothing/mask/moustache, /obj/item/clothing/mask/gas/swat, /obj/item/clothing/mask/owl_mask, /obj/item/clothing/mask/predator, /obj/item/clothing/mask/skull, /obj/item/clothing/mask/spiderman)
 		var/masktype = pick(masks)
 		new masktype(target)
 		new /obj/item/gun/energy/laser_gun/virtual(target)
 		new /obj/item/extinguisher/virtual(target)
 		new /obj/item/card/id/gauntlet(target, forwhom)
 		var/obj/item/artifact/activator_key/A = new /obj/item/artifact/activator_key(target)
-		SPAWN_DBG(25)
+		spawn(25)
 			A.name = "Artifact Activator Key"
 
 	proc/spawnMeds(var/turf/target)
@@ -361,11 +358,10 @@
 			critters_left -= name
 
 	New()
-		SPAWN_DBG(5)
+		spawn(5)
 			viewing = locate() in world
 			staging = locate() in world
 			for (var/area/gauntlet/G in world)
-				LAGCHECK(LAG_LOW)
 				if (G.type == /area/gauntlet)
 					gauntlet = G
 					break
@@ -373,13 +369,13 @@
 				if (!T.density)
 					spawnturfs += T
 
-			for (var/tp in childrentypesof(/datum/gauntletEvent))
+			for (var/tp in typesof(/datum/gauntletEvent) - /datum/gauntletEvent)
 				possible_events += new tp()
 
-			for (var/tp in childrentypesof(/datum/gauntletDrop))
+			for (var/tp in typesof(/datum/gauntletDrop) - /datum/gauntletDrop)
 				possible_drops += new tp()
 
-			for (var/tp in childrentypesof(/datum/gauntletWave) - /datum/gauntletWave/fallback)
+			for (var/tp in typesof(/datum/gauntletWave) - list(/datum/gauntletWave, /datum/gauntletWave/fallback))
 				possible_waves += new tp()
 
 			fallback = new()
@@ -600,7 +596,7 @@ var/global/datum/arena/gauntletController/gauntlet_controller = new()
 			var/T = pick(gauntlet_controller.spawnturfs)
 			var/obj/O = new ST(T)
 			showswirl(T)
-			SPAWN_DBG(5)
+			spawn(5)
 				O.ArtifactActivated()
 
 		forcewall
@@ -744,7 +740,7 @@ var/global/datum/arena/gauntletController/gauntlet_controller = new()
 		point_cost = -1
 		minimum_level = 10
 		max_amount = 1
-		supplies = list(/obj/item/robodefibrillator/vr)
+		supplies = list(/obj/item/robodefibrilator/vr)
 		only_once = 1
 
 	surgical
@@ -863,9 +859,9 @@ var/global/datum/arena/gauntletController/gauntlet_controller = new()
 			for (var/mob/living/M in gauntlet_controller.gauntlet)
 				M.bodytemperature = T0C + 120
 				if (prob(10))
-					if (!M.getStatusDuration("burning"))
+					if (!M.burning)
 						boutput(M, "<span style=\"color:red\">You spontaneously combust!</span>")
-					M.changeStatus("burning", 70)
+					M.update_burning(5)
 
 		tearDown()
 			for (var/turf/T in gauntlet_controller.gauntlet)
@@ -981,7 +977,7 @@ var/global/datum/arena/gauntletController/gauntlet_controller = new()
 					var/turf/target = pick(gauntlet_controller.spawnturfs)
 					target.overlays += marker
 
-					SPAWN_DBG(20)
+					spawn(20)
 						if (!D2)
 							return
 						D2.set_loc(target)
@@ -1210,12 +1206,17 @@ var/global/datum/arena/gauntletController/gauntlet_controller = new()
 		count = 10
 		types = list(/obj/critter/floateye)
 
-/proc/queryGauntletMatches(data)
-	if (islist(data) && data["data_hub_callback"])
+/proc/queryGauntletMatches(phase, data)
+	if (phase == 1)
+		var/list/query = list()
+		query["key"] = data
+		queryAPI("gauntlet/getPrevious", query)
+	else if (phase == 2)
 		logTheThing("<b>Marquesas/Gauntlet Query:</b> Invoked (data is [data])")
-		for (var/userkey in data["keys"])
+		var/list/ldata = data
+		for (var/userkey in ldata)
 			logTheThing("debug", null, null, "<b>Marquesas/Gauntlet Query:</b> Got key [userkey].")
-			var/matches = data[userkey]
+			var/matches = ldata[userkey]
 			logTheThing("debug", null, null, "<b>Marquesas/Gauntlet Query:</b> Matches for [userkey]: [matches].")
 			var/obj/item/card/id/gauntlet/G = locate("gauntlet-id-[userkey]") in world
 			if (G && istype(G))
@@ -1223,8 +1224,3 @@ var/global/datum/arena/gauntletController/gauntlet_controller = new()
 			else
 				logTheThing("debug", null, null, "<b>Marquesas/Gauntlet Query:</b> Could not locate ID 'gauntlet-id-[userkey]'.")
 				return 1
-
-	else
-		var/list/query = list()
-		query["key"] = data
-		apiHandler.queryAPI("gauntlet/getPrevious", query)

@@ -90,9 +90,6 @@
 /obj/item/circuitboard/genetics
 	name = "Circuit board (Genetics)"
 	computertype = "/obj/machinery/computer/genetics"
-/obj/item/circuitboard/tetris
-	name = "Circuit board (Robustris Pro)"
-	computertype = "/obj/machinery/computer/tetris"
 /obj/item/circuitboard/arcade
 	name = "Circuit board (Arcade)"
 	computertype = "/obj/machinery/computer/arcade"
@@ -136,7 +133,7 @@
 /obj/computerframe/attackby(obj/item/P as obj, mob/user as mob)
 	switch(state)
 		if (0)
-			if (iswrenchingtool(P))
+			if (istype(P, /obj/item/wrench))
 				playsound(src.loc, "sound/items/Ratchet.ogg", 50, 1)
 				if (do_after(user, 20))
 					boutput(user, "<span style=\"color:blue\">You wrench the frame into place.</span>")
@@ -151,11 +148,11 @@
 					if (src.material)
 						A.setMaterial(src.material)
 					else
-						var/datum/material/M = getMaterial("steel")
+						var/datum/material/M = getCachedMaterial("steel")
 						A.setMaterial(M)
 					qdel(src)
 		if (1)
-			if (iswrenchingtool(P))
+			if (istype(P, /obj/item/wrench))
 				playsound(src.loc, "sound/items/Ratchet.ogg", 50, 1)
 				if (do_after(user, 20))
 					boutput(user, "<span style=\"color:blue\">You unfasten the frame.</span>")
@@ -168,12 +165,12 @@
 				src.circuit = P
 				user.drop_item()
 				P.set_loc(src)
-			if (isscrewingtool(P) && circuit)
+			if (istype(P, /obj/item/screwdriver) && circuit)
 				playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 				boutput(user, "<span style=\"color:blue\">You screw the circuit board into place.</span>")
 				src.state = 2
 				src.icon_state = "2"
-			if (ispryingtool(P) && circuit)
+			if (istype(P, /obj/item/crowbar) && circuit)
 				playsound(src.loc, "sound/items/Crowbar.ogg", 50, 1)
 				boutput(user, "<span style=\"color:blue\">You remove the circuit board.</span>")
 				src.state = 1
@@ -181,7 +178,7 @@
 				circuit.set_loc(src.loc)
 				src.circuit = null
 		if (2)
-			if (isscrewingtool(P) && circuit)
+			if (istype(P, /obj/item/screwdriver) && circuit)
 				playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 				boutput(user, "<span style=\"color:blue\">You unfasten the circuit board.</span>")
 				src.state = 1
@@ -199,7 +196,7 @@
 					boutput(user, "<span style=\"color:red\">You need at least five pieces of cable to wire the computer.</span>")
 
 		if (3)
-			if (issnippingtool(P))
+			if (istype(P, /obj/item/wirecutters))
 				playsound(src.loc, "sound/items/Wirecutter.ogg", 50, 1)
 				boutput(user, "<span style=\"color:blue\">You remove the cables.</span>")
 				src.state = 2
@@ -215,8 +212,8 @@
 					if (S.amount >= 2)
 						playsound(src.loc, "sound/items/Deconstruct.ogg", 50, 1)
 						if (do_after(user, 20))
-							if (S) S.amount -= 2
-							if (P && P.amount < 1)
+							S.amount -= 2
+							if (P.amount < 1)
 								qdel(P)
 							boutput(user, "<span style=\"color:blue\">You put in the glass panel.</span>")
 							src.state = 4
@@ -226,14 +223,14 @@
 				else
 					boutput(user, "<span style=\"color:red\">This is the wrong kind of material. You'll need a type of glass or crystal.</span>")
 		if (4)
-			if (ispryingtool(P))
+			if (istype(P, /obj/item/crowbar))
 				playsound(src.loc, "sound/items/Crowbar.ogg", 50, 1)
 				boutput(user, "<span style=\"color:blue\">You remove the glass panel.</span>")
 				src.state = 3
 				src.icon_state = "3"
 				var/obj/item/sheet/glass/A = new /obj/item/sheet/glass( src.loc )
 				A.amount = 2
-			if (isscrewingtool(P))
+			if (istype(P, /obj/item/screwdriver))
 				playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 				boutput(user, "<span style=\"color:blue\">You connect the monitor.</span>")
 				var/B = new src.circuit.computertype ( src.loc )

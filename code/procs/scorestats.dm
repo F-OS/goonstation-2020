@@ -1,269 +1,235 @@
-var/datum/score_tracker/score_tracker
-
-/datum/score_tracker
-	// Nice to have somewhere to centralize this shit so w/e
-	var/score_calculated = 0
-	var/final_score_all = 0
-	var/grade = "The Aristocrats!"
-	// SECURITY DEPARTMENT
-	// var/score_crew_evacuation_rate = 0 save this for later to keep categories balanced
-	var/score_crew_survival_rate = 0
-	var/score_enemy_failure_rate = 0
-	var/final_score_sec = 0
-	// ENGINEERING DEPARTMENT
-	var/score_power_outages = 0
-	var/score_structural_damage = 0
-	var/final_score_eng = 0
-	// RESEARCH DEPARTMENT
-	// CIVILIAN DEPARTMENT
-	var/score_cleanliness = 0
-	var/score_expenses = 0
-	var/final_score_civ = 0
-	var/most_xp = "OH NO THIS IS BROKEN"
-	var/score_text = null
-	var/tickets_text = null
-
-	proc/calculate_score()
-		if (score_calculated != 0)
-			return
-		// Even if its the end of the round it'd probably be nice to just calculate this once and let players grab that
-		// instead of calculating it again every time a player wants to look at the score
-
-		// SECURITY DEPARTMENT SECTION
-		var/crew_count = 0
-		var/fatalities = 0
-		var/traitor_objectives = 0
-		var/traitor_objectives_failed = 0
-
-		for (var/datum/mind/M in ticker.minds)
-			if (M.current && istype(M.current,/mob/dead/observer/))
-				var/mob/dead/observer/O = M.current
-				if (O.observe_round)
-					continue
-			if (M in ticker.mode.traitors) // if you're an antag, you're not considered crew
-				continue
-
-			crew_count++ // good job you're one of the crew, get counted upon
-
-			if (!M.current || (M.current && isdead(M.current))) // DEAD
-				fatalities++
-
-		for (var/datum/mind/traitor in ticker.mode.traitors)
-			for (var/datum/objective/objective in traitor.objectives)
-				traitor_objectives++
-#ifdef CREW_OBJECTIVES
-				if (istype(objective, /datum/objective/crew)) continue
-#endif
-				if (istype(objective, /datum/objective/miscreant)) continue
-				if (!objective.check_completion())
-					traitor_objectives_failed++
-
-		// special case - if there were no antags for w/e reason you get a free pass i guess?
-		if (traitor_objectives == 0)
-			score_enemy_failure_rate = 100
-		else
-			score_enemy_failure_rate = get_percentage_of_fraction_and_whole(traitor_objectives_failed,traitor_objectives)
-
-		score_crew_survival_rate = get_percentage_of_fraction_and_whole(fatalities,crew_count)
-
-		score_crew_survival_rate = CLAMP(score_crew_survival_rate,0,100)
-		score_enemy_failure_rate = CLAMP(score_enemy_failure_rate,0,100)
-
-		final_score_sec = (score_crew_survival_rate + score_enemy_failure_rate) * 0.5
-
-		// ENGINEERING DEPARTMENT SECTION
-		// also civ cleanliness counted here cos fuck calling a world loop more than once
-		var/apc_count = 0
-		var/apcs_powered = 0
-		var/station_areas = 0
-		var/undamaged_areas = 0
-		var/clean_areas = 0
-
-		//checking power levels
-		for (var/obj/machinery/power/apc/A in machines)
-			if (!istype(A.area,/area/station/))
-				continue
-			apc_count++
-			for (var/obj/item/cell/C in A.contents)
-				if (get_percentage_of_fraction_and_whole(C.charge,C.maxcharge) >= 85)
-					apcs_powered++
-			//LAGCHECK(LAG_LOW)
-
-		//checking mess
-		for(var/area/station/AR in world)
-			station_areas++
-			if (get_percentage_of_fraction_and_whole(AR.calculate_structure_value(),AR.initial_structure_value) >= 50)
-				undamaged_areas++
-			if (AR.calculate_area_cleanliness() >= 80)
-				clean_areas++
-			//LAGCHECK(LAG_LOW)
-
-		score_power_outages = get_percentage_of_fraction_and_whole(apcs_powered,apc_count)
-		score_structural_damage = get_percentage_of_fraction_and_whole(undamaged_areas,station_areas)
-
-		score_power_outages = CLAMP(score_power_outages,0,100)
-		score_structural_damage = CLAMP(score_structural_damage,0,100)
-
-		final_score_eng = (score_power_outages + score_structural_damage) * 0.5
-
-		// RESEARCH DEPARTMENT SECTION
-		// yeah coming soon or w/e idgaf, fucking academics
-
-		// CIVILIAN DEPARTMENT SECTION
-		if (!istype(wagesystem))
-			// something glitched out and broke so give them a free pass on it
-			score_expenses = 100
-		else
-			var/profit_target = 300000
-			var/totalfunds = wagesystem.station_budget + wagesystem.research_budget + wagesystem.shipping_budget
-			if (totalfunds == 0)
-				score_expenses = 0
-			if (totalfunds != totalfunds) //let's see if someone sets the budget to -NaN!
-				score_expenses = 100
-			else
-				score_expenses = get_percentage_of_fraction_and_whole(totalfunds,profit_target)
-
-		score_cleanliness = get_percentage_of_fraction_and_whole(clean_areas,station_areas)
-
-		score_expenses = CLAMP(score_expenses,0,100)
-		score_cleanliness = CLAMP(score_cleanliness,0,100)
-		final_score_civ = (score_expenses + score_cleanliness) * 0.5
-
-		var/xp_winner = null
-		var/curr_xp = 0
-		for(var/x in xp_earned)
-			if(xp_earned[x] > curr_xp)
-				curr_xp = xp_earned[x]
-				xp_winner = x
-
-		if(xp_winner)
-			most_xp = "[xp_winner]!"
-		else
-			most_xp = "No one. Dang."
-
-		// AND THE WINNER IS.....
-
-		var/department_score_sum = 0
-		department_score_sum = final_score_sec + final_score_eng + final_score_civ
-
-		if (department_score_sum == 0 || department_score_sum != department_score_sum) //check for 0 and for NaN values
-			final_score_all = 0
-		else
-			final_score_all = round(department_score_sum / 3)
-
-		switch(final_score_all)
-			if (100 to INFINITY) grade = "NanoTrasen's Finest"
-			if (90 to 99) grade = "The Pride of Science Itself"
-			if (91 to 95) grade = "Ambassadors of Discovery"
-			if (86 to 90) grade = "Missionaries of Science"
-			if (81 to 85) grade = "Promotions for Everyone"
-			if (76 to 80) grade = "An Excellent Pursuit of Progress"
-			if (71 to 75) grade = "Lean Mean Machine Thirteen"
-			if (66 to 70) grade = "Best of a Good Bunch"
-			if (61 to 65) grade = "Worthy Citizens"
-			if (56 to 60) grade = "Ambiguously Ambivalent"
-			if (51 to 55) grade = "Not Bad, but Not Good"
-			if (46 to 50) grade = "Ambivalently Average"
-			if (41 to 45) grade = "Not Worthy of Praise"
-			if (36 to 40) grade = "Extremely Unsatisfactory"
-			if (31 to 35) grade = "A Bad Bunch"
-			if (26 to 30) grade = "The Undesireables"
-			if (21 to 25) grade = "Outclassed by Lab Monkeys"
-			if (16 to 20) grade = "A Wretched Heap of Scum and Incompetence"
-			if (11 to 15) grade = "A Waste of Perfectly Good Oxygen"
-			if (06 to 10) grade = "You're All Fired"
-			if (01 to 05) grade = "Engine Fodder"
-			if (-INFINITY to 0) grade = "Even the Engine Deserves Better"
-			else grade = "Somebody fucked something up."
-
-		score_calculated = 1
-		boutput(world, "<b>Final Rating: <font size='4'>[final_score_all]%</font></b>")
-		boutput(world, "<b>Grade: <font size='4'>[grade]</font></b>")
-
-		for(var/mob/E in mobs)
-			if(E.client)
-				if (E.client.preferences.view_score)
-					E.scorestats()
-
-		return
-
 /mob/proc/scorestats()
-	if (score_tracker.score_calculated == 0)
-		return
+	var/dat = {"<B>Round Statistics and Score</B><BR><HR>"}
+	if (ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/nuclear))
+		var/foecount = 0
+		var/crewcount = 0
+		var/bombdat = null
+		for(var/datum/mind/M in ticker.mode:syndicates)
+			foecount++
+		for(var/mob/living/C in mobs)
+			if (!istype(C,/mob/living/carbon/human) || !istype(C,/mob/living/silicon/robot) || !istype(C,/mob/living/silicon/ai)) continue
+			if (C.stat == 2) continue
+			if (!C.client) continue
+			crewcount++
+		dat += {"<B><U>MODE STATS</U></B><BR>
+		<B>Number of Operatives:</B> [foecount]<BR>
+		<B>Number of Surviving Crew:</B> [crewcount]<BR>
+		<B>Final Location of Nuke:</B> [bombdat]<BR><BR>
+		<B>Nuclear Disk Secure:</B> [score_disc ? "Yes" : "No"] ([score_disc * 500] Points)<BR>
+		<B>Operatives Arrested:</B> [score_arrested] ([score_arrested * 1000] Points)<BR>
+		<B>Operatives Killed:</B> [score_opkilled] ([score_opkilled * 250] Points)<BR>
+		<B>Station Destroyed:</B> [score_nuked ? "Yes" : "No"] (-10000 Points)<BR>
+		<B>All Operatives Arrested:</B> [score_allarrested ? "Yes" : "No"] (Score tripled)<BR>
+		<HR>"}
+	if (ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/revolution))
+		var/foecount = 0
+		var/comcount = 0
+		var/revcount = 0
+		var/loycount = 0
+		for(var/datum/mind/M in ticker.mode:head_revolutionaries)
+			if (M.current && M.current.stat != 2) foecount++
+		for(var/datum/mind/M in ticker.mode:revolutionaries)
+			if (M.current && M.current.stat != 2) revcount++
+		for(var/mob/living/carbon/human/player in mobs)
+			if(player.mind)
+				var/role = player.mind.assigned_role
+				if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director", "Medical Director"))
+					if (player.stat != 2) comcount++
+				else
+					if(player.mind in ticker.mode:revolutionaries) continue
+					loycount++
+		for(var/mob/living/silicon/X in mobs)
+			if (X.stat != 2) loycount++
+		var/revpenalty = 10000
+		dat += {"<B><U>MODE STATS</U></B><BR>
+		<B>Number of Surviving Revolution Heads:</B> [foecount]<BR>
+		<B>Number of Surviving Command Staff:</B> [comcount]<BR>
+		<B>Number of Surviving Revolutionaries:</B> [revcount]<BR>
+		<B>Number of Surviving Loyal Crew:</B> [loycount]<BR><BR>
+		<B>Revolution Heads Arrested:</B> [score_arrested] ([score_arrested * 1000] Points)<BR>
+		<B>Revolution Heads Slain:</B> [score_opkilled] ([score_opkilled * 500] Points)<BR>
+		<B>Command Staff Slain:</B> [score_deadcommand] (-[score_deadcommand * 500] Points)<BR>
+		<B>Revolution Successful:</B> [score_traitorswon ? "Yes" : "No"] (-[score_traitorswon * revpenalty] Points)<BR>
+		<B>All Revolution Heads Arrested:</B> [score_allarrested ? "Yes" : "No"] (Score tripled)<BR>
+		<HR>"}
+	var/totalfunds = wagesystem.station_budget + wagesystem.research_budget + wagesystem.shipping_budget
+	dat += {"<B><U>GENERAL STATS</U></B><BR>
+	<U>THE GOOD:</U><BR>
+	<B>Useful Items Shipped:</B> [score_stuffshipped] ([score_stuffshipped * 5] Points)<BR>
+	<B>Hydroponics Harvests:</B> [score_stuffharvested] ([score_stuffharvested * 5] Points)<BR>
+	<B>Ore Mined:</B> [score_oremined] ([score_oremined * 2] Points)<BR>
+	<B>Refreshments Prepared:</B> [score_meals] ([score_meals * 5] Points)<BR>
+	<B>Research Completed:</B> [score_researchdone] ([score_researchdone * 30] Points)<BR>
+	<B>Cyborgs Constructed:</B> [score_cyborgsmade] ([score_cyborgsmade * 50] Points)<BR>"}
+	if (emergency_shuttle.location == 2) dat += "<B>Shuttle Escapees:</B> [score_escapees] ([score_escapees * 25] Points)<BR>"
+	dat += {"<B>Random Events Endured:</B> [score_eventsendured] ([score_eventsendured * 50] Points)<BR>
+	<B>Whole Station Powered:</B> [score_powerbonus ? "Yes" : "No"] ([score_powerbonus * 2500] Points)<BR>
+	<B>Ultra-Clean Station:</B> [score_mess ? "No" : "Yes"] ([score_messbonus * 3000] Points)<BR><BR>
+	<U>THE BAD:</U><BR>
+	<B>Dead Bodies on Station:</B> [score_deadcrew] (-[score_deadcrew * 25] Points)<BR>
+	<B>Uncleaned Messes:</B> [score_mess] (-[score_mess] Points)<BR>
+	<B>Station Power Issues:</B> [score_powerloss] (-[score_powerloss * 20] Points)<BR>
+	<B>Rampant Diseases:</B> [score_disease] (-[score_disease * 30] Points)<BR>
+	<B>AI Destroyed:</B> [score_deadaipenalty ? "Yes" : "No"] (-[score_deadaipenalty * 250] Points)<BR><BR>
+	<U>THE WEIRD</U><BR>
+	<B>Final Station Budget:</B> $[num2text(totalfunds,50)]<BR>"}
+	var/profit = totalfunds - 100000
+	if (profit > 0) dat += "<B>Station Profit:</B> +[num2text(profit,50)]<BR>"
+	else if (profit < 0) dat += "<B>Station Deficit:</B> [num2text(profit,50)]<BR>"
+	dat += {"<B>Food Eaten:</b> [score_foodeaten]<BR>
+	<B>Shots Fired:</B> [game_stats.GetStat("gunfire")]<BR>
+	<B>Times a Clown was Abused:</B> [score_clownabuse]<BR><BR>"}
+	if (score_escapees)
+		dat += {"<B>Richest Escapee:</B> [score_richestname], [score_richestjob]: $[num2text(score_richestcash,50)] ([score_richestkey])<BR>
+		<B>Most Battered Escapee:</B> [score_dmgestname], [score_dmgestjob]: [score_dmgestdamage] damage ([score_dmgestkey])<BR>"}
+	else
+		if (emergency_shuttle.location != 2) dat += "The station wasn't evacuated!<BR>"
+		else dat += "No-one escaped!<BR>"
+	if (score_allstock_html)
+		dat += "<B>Stock market top 5:</B><BR>[score_allstock_html]<BR><BR>"
 
-	if (!score_tracker.score_text)
-		score_tracker.score_text = {"<B>Round Statistics and Score</B><BR><HR>"}
-		score_tracker.score_text += "<B><U>TOTAL SCORE: [round(score_tracker.final_score_all)]%</U></B><BR>"
-		score_tracker.score_text += "<B><U>GRADE: [score_tracker.grade]</U></B><BR>"
-		score_tracker.score_text += "<BR>"
+	dat += {"<HR><BR>
+	<B><U>FINAL SCORE: [score_crewscore]</U></B><BR>"}
+	var/score_rating = "The Aristocrats!"
+	switch(score_crewscore)
+		if(-99999 to -50000) score_rating = "Even the Engine Deserves Better"
+		if(-49999 to -5000) score_rating = "Engine Fodder"
+		if(-4999 to -1000) score_rating = "You're All Fired"
+		if(-999 to -500) score_rating = "A Waste of Perfectly Good Oxygen"
+		if(-499 to -250) score_rating = "A Wretched Heap of Scum and Incompetence"
+		if(-249 to -100) score_rating = "Outclassed by Lab Monkeys"
+		if(-99 to -21) score_rating = "The Undesirables"
+		if(-20 to 20) score_rating = "Ambivalently Average"
+		if(21 to 99) score_rating = "Not Bad, but Not Good"
+		if(100 to 249) score_rating = "Skillful Servants of Science"
+		if(250 to 499) score_rating = "Best of a Good Bunch"
+		if(500 to 999) score_rating = "Lean Mean Machine Thirteen"
+		if(1000 to 4999) score_rating = "Promotions for Everyone"
+		if(5000 to 9999) score_rating = "Ambassadors of Discovery"
+		if(10000 to 49999) score_rating = "The Pride of Science Itself"
+		if(50000 to INFINITY) score_rating = "NanoTrasen's Finest"
+	dat += "<B><U>RATING:</U></B> [score_rating]<BR>"
+	var/score_randomfact = "Somebody fucked something up."
+	var/factselector = rand(0,100)
+	if (factselector <= 30)
+		//Game and chat related facts. (0-30)
+		switch(factselector)
+			if(0 to 3) score_randomfact = "That game lasted [ (world.time) / 600] minutes."
+			if(4 to 7) score_randomfact = "[game_stats.GetStat("farts")] farts occurred during that game."
+			if(8 to 11) score_randomfact = "There were [game_stats.GetStat("violence")] acts of violence during that game."
+			if(12 to 15) score_randomfact = "[game_stats.GetStat("catches")] items were caught during that game."
+			if(16 to 18) score_randomfact = "[game_stats.GetStat("fornoreason")] people reportedly did something terrible 'for no reason' during that game."
+			if(19 to 22)
+				var/griefwrongsum = game_stats.GetStat("grife") + game_stats.GetStat("grif") + game_stats.GetStat("griff") + game_stats.GetStat("greif") + game_stats.GetStat("grief_other")
+				score_randomfact = "'Grief' was misspelled [griefwrongsum] times."
+				if(factselector > 20 && game_stats.GetStat("grief") > 0) score_randomfact += " Conversely, somebody got it right [game_stats.GetStat("grief")] times."
+			if(23 to 26) score_randomfact = "The AI was described using the French word for red a total of [game_stats.GetStat("rouge")] times."
+			if(27 to 30) score_randomfact = "The word 'verily' was uttered [game_stats.GetStat("verily")] times."
+	else if (factselector <= 60)
+		//Environment facts. (31-60)
+		if(factselector < 40)
+			//Monkeys!
+			var/fact_monkeycount = 0
+			var/fact_monkeysdead = 0
+			var/fact_monkeydiseases = 0
+			var/fact_monkeysescaped = 0
+			//Count all themonkeys.
+			for (var/mob/M in mobs)
+				if (!ismonkey(M))
+					continue
+				fact_monkeycount++
+				//Count the dead ones.
+				if (M.stat == 2) fact_monkeysdead++
+				//Count diseased ones.
+				if (M.ailments != null) fact_monkeydiseases++
+				//See how many escaped.
+				var/turf/location = get_turf(M.loc)
+				var/area/escape_zone = locate(/area/shuttle/escape/centcom)
+				if (location in escape_zone && M.stat != 2)
+					fact_monkeysescaped++
+				score_randomfact = "There were a total of [fact_monkeycount] monkeys in that game"
+			switch(factselector)
+				if(31 to 33) score_randomfact += "."
+				if(34 to 35) score_randomfact += ", [fact_monkeysdead] of them are dead."
+				if(36 to 37) score_randomfact += ", [fact_monkeydiseases] carried diseases."
+				if(38 to 39)
+					score_randomfact += ", [fact_monkeysescaped] safely made it to the escape shuttle. "
+					if (fact_monkeysescaped == 0) score_randomfact += "You monsters."
+		else if(factselector <= 50)
+			//Butts!
+			var/fact_butts = 0
+			for (var/obj/item/clothing/head/butt/B in world)
+				fact_butts++
+			score_randomfact = "There were [fact_butts] disembodied butts existing at the end of the round."
+		else
+			//Farts!
+			score_randomfact = "There were [game_stats.GetStat("farts")] farts during the round."
+	else
+		//Snail facts.
+		score_randomfact = pick("A snail can sleep for three years.",
+		"A snail can actually glide over the sharp edge of a knife or razor without harming itself. This has something to do with the mucus it produces.",
+		"A garden snail has thousands of tiny teeth located on a ribbon-like tongue. They work like a file and rip the food to bits.",
+		"Snails can gnaw through limestone. They eat the little bits of chalk in the rock which they need for their shells.",
+		"As a snail grows its shell grows too.",
+		"Snails can mate when they are about one year old.",
+		"Snails are hermaphrodites (one organism is both male and female). However, they need to exchange sperm with each other to reproduce.",
+		"Some snails can live up to 15 years.",
+		"Snails are gastropods, which means 'belly footed'.",
+		"Snails are one of around 50000 species of mollusc.",
+		"The largest land snail ever found was 15 inches long and weighed 2 pounds!",
+		"Snails rely mainly on touch and smell because they have very poor eyesight.",
+		"Snails cannot hear.",
+		"Snails are nocturnal animals which means they are more active at night.",
+		"The fastest snails are the speckled garden snails which can move up to 55 yards per hour compared 23 inches per hour of most other land snails.",
+		"Garden snails hibernate during the winter and live on their stored fat.",
+		"Garden snails breathe with lungs.",
+		"The largest land snail recorded was 12 inches long and weighed near 2 pounds.",
+		"Snails are nocturnal animals, which means most of their movements take place at night.",
+		"Snails don't like the brightness of sunlight, which is why you will find them out more on cloudy days.",
+		"Snails will die if you put salt on them.",
+		"The Giant African Land Snail is known to eat more than 500 different types of plants.",
+		"Snails are very strong and can lift up to 10 times their own body weight in a vertical position.",
+		"It is believed that there are at least 200,000 species of mollusks out there including snails. Although only 50,000 have been classified.")
 
-		score_tracker.score_text += "<B><U>SECURITY DEPARTMENT</U></B><BR>"
-		score_tracker.score_text += "<B>Crew Member Survival Rate:</B> [round(score_tracker.score_crew_survival_rate)]%<BR>"
-		score_tracker.score_text += "<B>Enemy Objective Failure Rate:</B> [round(score_tracker.score_enemy_failure_rate)]%<BR>"
-		score_tracker.score_text += "<B>Total Department Score:</B> [round(score_tracker.final_score_sec)]%<BR>"
-		score_tracker.score_text += "<BR>"
-
-		score_tracker.score_text += "<B><U>ENGINEERING DEPARTMENT</U></B><BR>"
-		score_tracker.score_text += "<B>Station Structural Integrity:</B> [round(score_tracker.score_structural_damage)]%<BR>"
-		score_tracker.score_text += "<B>Station Areas Powered:</B> [round(score_tracker.score_power_outages)]%<BR>"
-		score_tracker.score_text += "<B>Total Department Score:</B> [round(score_tracker.final_score_eng)]%<BR>"
-		score_tracker.score_text += "<BR>"
-
-		score_tracker.score_text += "<B><U>RESEARCH DEPARTMENT</U></B><BR>"
-		score_tracker.score_text += "Scores for this department are not done yet.<br>"
-		score_tracker.score_text += "<BR>"
-
-		score_tracker.score_text += "<B><U>CIVILIAN DEPARTMENT</U></B><BR>"
-		score_tracker.score_text += "<B>Overall Station Cleanliness:</B> [round(score_tracker.score_cleanliness)]%<BR>"
-		score_tracker.score_text += "<B>Profit Made from Initial Budget:</B> [round(score_tracker.score_expenses)]%<BR>"
-		score_tracker.score_text += "<B>Total Department Score:</B> [round(score_tracker.final_score_civ)]%<BR>"
-		score_tracker.score_text += "<BR>"
-	 /* until this is actually done or being worked on im just going to comment it out
-		score_tracker.score_text += "<B>Most Experienced:</B> [score_tracker.most_xp]<BR>"
-		*/
-		score_tracker.score_text += "<HR>"
-
-	src.Browse(score_tracker.score_text, "window=roundscore;size=500x700;title=Round Statistics")
+	dat += "<B>FACT: </B> [score_randomfact]"
+	src << browse(dat, "window=roundstats;size=500x650")
+	return
 
 /mob/proc/showtickets()
 	if(!data_core.tickets.len && !data_core.fines.len) return
 
-	if (!score_tracker.tickets_text)
-		logTheThing("debug", null, null, "Zamujasa/SHOWTICKETS: [world.timeofday] generating showtickets text")
+	var/dat = {"<B>Tickets</B><BR><HR>"}
 
-		score_tracker.tickets_text = {"<B>Tickets</B><BR><HR>"}
+	if(data_core.tickets.len)
+		var/list/people_with_tickets = list()
+		for (var/datum/ticket/T in data_core.tickets)
+			if(!(T.target in people_with_tickets))
+				people_with_tickets += T.target
 
-		if(data_core.tickets.len)
-			var/list/people_with_tickets = list()
-			for (var/datum/ticket/T in data_core.tickets)
-				if(!(T.target in people_with_tickets))
-					people_with_tickets += T.target
+		for(var/N in people_with_tickets)
+			dat += "<b>[N]</b><br><br>"
+			for(var/datum/ticket/T in data_core.tickets)
+				if(T.target == N)
+					dat += "[T.text]<br>"
+		dat += "<br>"
+	else
+		dat += "No tickets were issued!<br><br>"
 
-			for(var/N in people_with_tickets)
-				score_tracker.tickets_text += "<b>[N]</b><br><br>"
-				for(var/datum/ticket/T in data_core.tickets)
-					if(T.target == N)
-						score_tracker.tickets_text += "[T.text]<br>"
-			score_tracker.tickets_text += "<br>"
-		else
-			score_tracker.tickets_text += "No tickets were issued!<br><br>"
+	dat += {"<B>Fines</B><BR><HR>"}
 
-		score_tracker.tickets_text += {"<B>Fines</B><BR><HR>"}
+	if(data_core.fines.len)
+		var/list/people_with_fines = list()
+		for (var/datum/fine/F in data_core.fines)
+			if(!(F.target in people_with_fines))
+				people_with_fines += F.target
 
-		if(data_core.fines.len)
-			var/list/people_with_fines = list()
-			for (var/datum/fine/F in data_core.fines)
-				if(!(F.target in people_with_fines))
-					people_with_fines += F.target
+		for(var/N in people_with_fines)
+			dat += "<b>[N]</b><br><br>"
+			for(var/datum/fine/F in data_core.fines)
+				if(F.target == N)
+					dat += "[F.target]: [F.amount] credits<br>Reason: [F.reason]<br>[F.approver ? "[F.issuer != F.approver ? "Requested by: [F.issuer] - [F.issuer_job]<br>Approved by: [F.approver] - [F.approver_job]" : "Issued by: [F.approver] - [F.approver_job]"]" : "Not Approved"]<br>Paid: [F.paid_amount] credits<br><br>"
+	else
+		dat += "No fines were issued!"
 
-			for(var/N in people_with_fines)
-				score_tracker.tickets_text += "<b>[N]</b><br><br>"
-				for(var/datum/fine/F in data_core.fines)
-					if(F.target == N)
-						score_tracker.tickets_text += "[F.target]: [F.amount] credits<br>Reason: [F.reason]<br>[F.approver ? "[F.issuer != F.approver ? "Requested by: [F.issuer] - [F.issuer_job]<br>Approved by: [F.approver] - [F.approver_job]" : "Issued by: [F.approver] - [F.approver_job]"]" : "Not Approved"]<br>Paid: [F.paid_amount] credits<br><br>"
-		else
-			score_tracker.tickets_text += "No fines were issued!"
-		logTheThing("debug", null, null, "Zamujasa/SHOWTICKETS: [world.timeofday] done")
-
-	src.Browse(score_tracker.tickets_text, "window=tickets;size=500x650")
+	src << browse(dat, "window=roundstats;size=500x650")
 	return

@@ -4,17 +4,14 @@
 	icon_state = "window"
 	desc = "A window."
 	density = 1
-	stops_space_move = 1
 	dir = 5 //full tile
-	flags = FPRINT | USEDELAY | ON_BORDER | ALWAYS_SOLID_FLUID
-	event_handler_flags = USE_FLUID_ENTER | USE_CHECKEXIT | USE_CANPASS
-	object_flags = BOTS_DIRBLOCK
+	flags = FPRINT | USEDELAY | ON_BORDER
 	var/health = 30
 	var/health_max = 30
 	var/health_multiplier = 1
 	var/ini_dir = null
 	var/state = 2
-	var/hitsound = 'sound/impact_sounds/Glass_Hit_1.ogg'
+	var/hitsound = 'sound/effects/Glasshit.ogg'
 	var/shattersound = "shatter"
 	var/datum/material/reinforcement = null
 	var/blunt_resist = 0
@@ -28,18 +25,19 @@
 	var/deconstruct_time = 0//20
 	pressure_resistance = 4*ONE_ATMOSPHERE
 	anchored = 1
-	the_tuff_stuff
-		explosion_resistance = 3
+
 	New()
 		..()
+		if (map_setting == "COG2")
+			layer = COG2_WINDOW_LAYER
 		src.ini_dir = src.dir
 		update_nearby_tiles(need_rebuild=1)
 		var/datum/material/M
 		if (default_material)
-			M = getMaterial(default_material)
+			M = getCachedMaterial(default_material)
 			src.setMaterial(M)
 		if (default_reinforcement)
-			src.reinforcement = getMaterial(default_reinforcement)
+			src.reinforcement = getCachedMaterial(default_reinforcement)
 		onMaterialChanged()
 
 		// The health multiplier var wasn't implemented at all, apparently (Convair880)?
@@ -47,35 +45,18 @@
 			src.health_max = src.health_max * src.health_multiplier
 			src.health = src.health_max
 			//DEBUG ("[src.name] [log_loc(src)] has [health] health / [health_max] max health ([health_multiplier] multiplier).")
-		SPAWN_DBG(0)
-			src.set_layer_from_settings()
-			update_nearby_tiles(need_rebuild=1)
-		return
 
-	proc/set_layer_from_settings()
-		if (!map_settings)
-			return
-		if (src.dir == NORTH && map_settings.window_layer_north)
-			src.layer = map_settings.window_layer_north
-		else if (src.dir == SOUTH && map_settings.window_layer_south)
-			src.layer = map_settings.window_layer_south
-		else if (src.dir in ordinal && map_settings.window_layer_full)
-			src.layer = map_settings.window_layer_full
-		else
-			src.layer = initial(src.layer)
 		return
 
 	disposing()
 		density = 0
-		update_nearby_tiles(need_rebuild=1)
+		update_nearby_tiles()
 		..()
 
 	Move()
-		set_density(0) //mbc : icky but useful for fluids
-		update_nearby_tiles(need_rebuild=1, selfnotify = 1) //only selfnotify when density is 0, because i dont want windows to displace fluids every single move() step. would be slow probably
-		set_density(1)
-		..()
+		update_nearby_tiles(need_rebuild=1)
 
+		..()
 
 		src.dir = src.ini_dir
 		update_nearby_tiles(need_rebuild=1)
@@ -88,13 +69,14 @@
 		name = initial(name)
 
 		if (istype(src.material))
-			health_max = material.hasProperty("density") ? round(max(material.getProperty("density"), 100) * 1.5) : health_max
+			health_max = material.hasProperty(PROP_TOUGHNESS) ? material.getProperty(PROP_TOUGHNESS) : health
 			health = health_max
-			cut_resist = material.hasProperty("hard") ? material.getProperty("hard")*2 : cut_resist
-			blunt_resist = material.hasProperty("density") ? material.getProperty("density")*2 : blunt_resist
-			stab_resist = material.hasProperty("hard") ? material.getProperty("hard")*2 : stab_resist
+			cut_resist = material.hasProperty(PROP_SHEAR) ? material.getProperty(PROP_SHEAR) : cut_resist
+			blunt_resist = material.hasProperty(PROP_COMPRESSIVE) ? material.getProperty(PROP_COMPRESSIVE) : blunt_resist
+			stab_resist = material.hasProperty(PROP_HARDNESS) ? material.getProperty(PROP_HARDNESS) : stab_resist
 			if (blunt_resist != 0) blunt_resist /= 2
-			corrode_resist = material.hasProperty("corrosion") ? material.getProperty("corrosion") : corrode_resist
+			corrode_resist = material.hasProperty(PROP_CORROSION) ? material.getProperty(PROP_CORROSION) : corrode_resist
+			temp_resist = material.hasProperty(PROP_MELTING) ? material.getProperty(PROP_MELTING) : temp_resist
 
 			if (material.alpha > 220)
 				opacity = 1 // useless opaque window
@@ -104,16 +86,16 @@
 			name = "[getQualityName(material.quality)] [material.name] " + name
 
 		if (istype(reinforcement))
-			if(reinforcement.hasProperty("density"))
-				health_max += reinforcement.hasProperty("density") ? round(reinforcement.getProperty("density") / 2) : 0
+			if(reinforcement.hasProperty(PROP_TOUGHNESS))
+				health_max += reinforcement.hasProperty(PROP_TOUGHNESS) ? round(reinforcement.getProperty(PROP_TOUGHNESS) / 2) : 0
 				health = health_max
 			else
 				health_max += 30
 				health = health_max
-			cut_resist += reinforcement.hasProperty("hard") ? round(reinforcement.getProperty("hard") / 2) : 0
-			blunt_resist += reinforcement.hasProperty("density") ? round(reinforcement.getProperty("density") / 2) : 0
-			stab_resist += reinforcement.hasProperty("hard") ? round(reinforcement.getProperty("hard") / 2) : 0
-			corrode_resist += reinforcement.hasProperty("corrosion") ? round(reinforcement.getProperty("corrosion") / 2) : 0
+			cut_resist += reinforcement.hasProperty(PROP_SHEAR) ? round(reinforcement.getProperty(PROP_SHEAR) / 2) : 0
+			blunt_resist += reinforcement.hasProperty(PROP_COMPRESSIVE) ? round(reinforcement.getProperty(PROP_COMPRESSIVE) / 2) : 0
+			stab_resist += reinforcement.hasProperty(PROP_HARDNESS) ? round(reinforcement.getProperty(PROP_HARDNESS) / 2) : 0
+			corrode_resist += reinforcement.hasProperty(PROP_CORROSION) ? round(reinforcement.getProperty(PROP_CORROSION) / 2) : 0
 
 			name = "[reinforcement.name]-reinforced " + name
 
@@ -123,7 +105,7 @@
 		reinforcement = M
 		onMaterialChanged()
 
-	damage_blunt(var/amount, var/nosmash)
+	damage_blunt(var/amount)
 		if (!isnum(amount) || amount <= 0)
 			return
 
@@ -132,19 +114,16 @@
 		if (src.material)
 			armor = blunt_resist
 
-			if (src.material.getProperty("density") >= 10)
-				armor += round(src.material.getProperty("density") / 10)
-			else if (src.material.hasProperty("density") && src.material.getProperty("density") < 10)
+			if (src.material.getProperty(PROP_COMPRESSIVE) >= 25)
+				armor += round(src.material.getProperty(PROP_COMPRESSIVE) / 10)
+			else if (src.material.hasProperty(PROP_COMPRESSIVE) && src.material.getProperty(PROP_COMPRESSIVE) < 10)
 				amount += rand(1,3)
 
 		amount = get_damage_after_percentage_based_armor_reduction(armor,amount)
 
 		src.health = max(0,min(src.health - amount,src.health_max))
 
-		if (src.health == 0 && nosmash)
-			loc = null
-			qdel(src)
-		else if (src.health == 0 && !nosmash)
+		if (src.health == 0)
 			smash()
 
 	damage_slashing(var/amount)
@@ -188,7 +167,7 @@
 		if (src.health == 0)
 			smash()
 
-	damage_heat(var/amount, var/nosmash)
+	damage_heat(var/amount)
 		if (!isnum(amount) || amount <= 0)
 			return
 
@@ -201,28 +180,19 @@
 			return
 		src.health = max(0,min(src.health - amount,src.health_max))
 		if (src.health == 0)
-			if (nosmash)
-				loc = null
-				qdel(src)
-			else
-				smash()
+			smash()
 
 	ex_act(severity)
-		// Current windows have 30 HP
-		// Reinforced windows, about 130
-		// Plasma glass, 330 HP
-		// Basically, explosions will pop windows real good now.
-
 		switch(severity)
 			if(1)
-				src.damage_blunt(rand(150, 250), 1)
-				src.damage_heat(rand(150, 250), 1)
+				src.damage_blunt(40)
+				src.damage_heat(40)
 			if(2)
-				src.damage_blunt(rand(50, 100))
-				src.damage_heat(rand(50, 100))
+				src.damage_blunt(15)
+				src.damage_heat(15)
 			if(3)
-				src.damage_blunt(rand(10, 25))
-				src.damage_heat(rand(10, 25))
+				src.damage_blunt(7)
+				src.damage_heat(7)
 
 	meteorhit(var/obj/M)
 		if (istype(M, /obj/newmeteor/massive))
@@ -241,7 +211,10 @@
 		if (damage < 1)
 			return
 
-		if(src.material) src.material.triggerOnBullet(src, src, P)
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 		switch(P.proj_data.damage_type)
 			if(D_KINETIC)
@@ -261,7 +234,7 @@
 				damage_corrosive(volume / 4)
 			if("pacid")
 				damage_corrosive(volume / 2)
-			if("phlogiston")
+			if("napalm")
 				damage_heat(volume / 4)
 			if("infernite")
 				damage_heat(volume / 2)
@@ -314,9 +287,7 @@
 			damage_blunt(15)
 		else
 			var/obj/O = AM
-			if (O)
-				damage_blunt(O.throwforce)
-
+			damage_blunt(O.throwforce)
 		if (src && src.health <= 2 && !reinforcement)
 			src.anchored = 0
 			step(src, get_dir(AM, src))
@@ -324,10 +295,8 @@
 		return
 
 	attack_hand(mob/user as mob)
-		user.lastattacked = src
-		attack_particle(user,src)
 		if (user.a_intent == "harm")
-			if (user.is_hulk())
+			if (user.bioHolder && user.bioHolder.HasEffect("hulk"))
 				user.visible_message("<span style=\"color:red\"><b>[user]</b> punches the window.</span>")
 				playsound(src.loc, src.hitsound, 100, 1)
 				src.damage_blunt(10)
@@ -337,20 +306,17 @@
 				playsound(src.loc, src.hitsound, 100, 1)
 				return
 		else
-			if (ishuman(usr))
+			if (istype(usr, /mob/living/carbon/human))
 				src.visible_message("<span style=\"color:red\"><b>[usr]</b> knocks on [src].</span>")
 				playsound(src.loc, src.hitsound, 100, 1)
-				SPAWN_DBG(-1) //uhhh maybe let's not sleep() an attack_hand. fucky effects up the chain?
-					sleep(3)
-					playsound(src.loc, src.hitsound, 100, 1)
-					sleep(3)
-					playsound(src.loc, src.hitsound, 100, 1)
+				sleep(3)
+				playsound(src.loc, src.hitsound, 100, 1)
+				sleep(3)
+				playsound(src.loc, src.hitsound, 100, 1)
 				return
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		user.lastattacked = src
-
-		if (isscrewingtool(W))
+		if (istype(W, /obj/item/screwdriver))
 			if (state == 10)
 				return
 			else if (state >= 1)
@@ -383,15 +349,16 @@
 				user.show_text("You have [src.anchored ? "fastened the window to" : "unfastened the window from"] the floor.", "blue")
 				return 1
 
-		else if (ispryingtool(W) && state <= 1)
-			playsound(src.loc, "sound/items/Crowbar.ogg", 75, 1)
-			if (deconstruct_time)
-				user.show_text("You begin to [src.state ? "pry the window out of" : "pry the window into"] the frame...", "red")
-				if (!do_after(user, deconstruct_time))
-					boutput(user, "<span style=\"color:red\">You were interrupted.</span>")
-					return
-			state = 1 - state
-			user.show_text("You have [src.state ? "pried the window into" : "pried the window out of"] the frame.", "blue")
+		else if (istype(W, /obj/item/crowbar))
+			if (state <= 1)
+				playsound(src.loc, "sound/items/Crowbar.ogg", 75, 1)
+				if (deconstruct_time)
+					user.show_text("You begin to [src.state ? "pry the window out of" : "pry the window into"] the frame...", "red")
+					if (!do_after(user, deconstruct_time))
+						boutput(user, "<span style=\"color:red\">You were interrupted.</span>")
+						return
+				state = 1 - state
+				user.show_text("You have [src.state ? "pried the window into" : "pried the window out of"] the frame.", "blue")
 
 		else if (istype(W, /obj/item/grab))
 			var/obj/item/grab/G = W
@@ -401,9 +368,8 @@
 				playsound(src.loc, src.hitsound , 100, 1)
 				G.affecting:TakeDamage("head", 0, 5)
 				qdel(W)
-				src.damage_blunt(G.affecting.throwforce)
+				src.damage_blunt(2)
 		else
-			attack_particle(user,src)
 			playsound(src.loc, src.hitsound , 75, 1)
 			src.damage_blunt(W.force)
 			if (src.health <= 2)
@@ -413,19 +379,14 @@
 		return
 
 	proc/smash()
-		if (src.health < (src.health_max * -0.75))
-			// You managed to destroy it so hard you ERASED it.
-			qdel(src)
-			return
-		var/atom/movable/A
+		var/atom/A
 		// catastrophic event litter reduction
 		if(limiter.canISpawn(/obj/item/raw_material/shard))
-			A = unpool(/obj/item/raw_material/shard)
-			A.set_loc(src.loc)
+			A = new/obj/item/raw_material/shard(src.loc)
 			if(src.material)
 				A.setMaterial(src.material)
 			else
-				var/datum/material/M = getMaterial("glass")
+				var/datum/material/M = getCachedMaterial("glass")
 				A.setMaterial(M)
 		if(reinforcement && limiter.canISpawn(/obj/item/rods))
 			A = new /obj/item/rods(src.loc)
@@ -433,7 +394,7 @@
 		playsound(src, src.shattersound, 70, 1)
 		qdel(src)
 
-	proc/update_nearby_tiles(need_rebuild, var/selfnotify = 0)
+	proc/update_nearby_tiles(need_rebuild)
 		if(!air_master) return 0
 
 		var/turf/simulated/source = loc
@@ -453,23 +414,6 @@
 		else
 			if(istype(source)) air_master.queue_update_tile(source)
 			if(istype(target)) air_master.queue_update_tile(target)
-
-		if (map_currently_underwater)
-			var/turf/space/fluid/n = get_step(src,NORTH)
-			var/turf/space/fluid/s = get_step(src,SOUTH)
-			var/turf/space/fluid/e = get_step(src,EAST)
-			var/turf/space/fluid/w = get_step(src,WEST)
-			if(istype(n))
-				n.tilenotify(src.loc)
-			if(istype(s))
-				s.tilenotify(src.loc)
-			if(istype(e))
-				e.tilenotify(src.loc)
-			if(istype(w))
-				w.tilenotify(src.loc)
-
-		if (selfnotify && istype(source))
-			source.selftilenotify() //for fluids
 
 		return 1
 
@@ -497,47 +441,29 @@
 		update_nearby_tiles(need_rebuild=1)
 
 		src.ini_dir = src.dir
-
-		src.set_layer_from_settings()
 		return
-
-/obj/window/pyro
-	icon_state = "pyro"
 
 /obj/window/reinforced
 	icon_state = "rwindow"
 	default_reinforcement = "steel"
 	health = 50
 	health_max = 50
-	the_tuff_stuff
-		explosion_resistance = 5
 	//deconstruct_time = 30
-
-/obj/window/reinforced/pyro
-	icon_state = "rpyro"
 
 /obj/window/crystal
 	default_material = "plasmaglass"
-	hitsound = 'sound/impact_sounds/Crystal_Hit_1.ogg'
-	shattersound = 'sound/impact_sounds/Crystal_Shatter_1.ogg'
+	hitsound = 'sound/effects/crystalhit.ogg'
+	shattersound = 'sound/effects/crystalshatter.ogg'
 	health = 80
 	health_max = 80
-	explosion_resistance = 2
 	//deconstruct_time = 40
-
-/obj/window/crystal/pyro
-	icon_state = "pyro"
 
 /obj/window/crystal/reinforced
 	icon_state = "rwindow"
 	default_reinforcement = "steel"
 	health = 100
 	health_max = 100
-	explosion_resistance = 4
 	//deconstruct_time = 50
-
-/obj/window/crystal/reinforced/pyro
-	icon_state = "rpyro"
 
 //an unbreakable window
 /obj/window/bulletproof
@@ -548,9 +474,6 @@
 	health_multiplier = 100
 	//deconstruct_time = 100
 
-/obj/window/bulletproof/pyro
-	icon_state = "rpyro"
-/*
 /obj/window/supernorn
 	icon = 'icons/Testing/newicons/obj/NEWstructures.dmi'
 	dir = 5
@@ -562,7 +485,7 @@
 	New()
 		for (var/turf/simulated/wall/auto/T in orange(1))
 			T.update_icon()
-*/
+
 /obj/window/north
 	dir = NORTH
 
@@ -627,32 +550,17 @@
 	icon = 'icons/obj/window_pyro.dmi'
 	icon_state = "mapwin"
 	dir = 5
-	health_multiplier = 2
 	//deconstruct_time = 20
-	flags = FPRINT | USEDELAY | ON_BORDER | ALWAYS_SOLID_FLUID | IS_PERSPECTIVE_FLUID
-
 	var/mod = null
-	var/list/connects_to = list(/turf/simulated/wall/auto/supernorn, /turf/simulated/wall/auto/reinforced/supernorn, /turf/simulated/wall/auto/supernorn/wood, /turf/simulated/wall/auto/marsoutpost,
-		/turf/simulated/shuttle/wall, /turf/unsimulated/wall, /turf/simulated/wall/auto/shuttle, /obj/indestructible/shuttle_corner, 
-		/obj/machinery/door, /obj/window)
-	alpha = 160
-	the_tuff_stuff
-		explosion_resistance = 3
+	var/list/connects_to = list(/turf/simulated/wall/auto/supernorn, /turf/simulated/wall/auto/reinforced/supernorn,
+	/turf/simulated/shuttle/wall, /turf/simulated/shuttle/wall/escape, /obj/machinery/door,
+	/obj/window)
+
 	New()
 		..()
 		src.verbs -= /obj/window/verb/rotate
-
-		if (map_setting && ticker)
-			src.update_neighbors()
-
-		SPAWN_DBG(0)
+		spawn(0)
 			src.update_icon()
-
-	disposing()
-		..()
-
-		if (map_setting)
-			src.update_neighbors()
 
 	proc/update_icon()
 		if (!src.anchored)
@@ -662,9 +570,9 @@
 		var/builtdir = 0
 		for (var/dir in cardinal)
 			var/turf/T = get_step(src, dir)
-			if (T && T.type in connects_to)
+			if (T.type in connects_to)
 				builtdir |= dir
-			else if (islist(connects_to) && connects_to.len)
+			else if (connects_to)
 				for (var/i=1, i <= connects_to.len, i++)
 					var/atom/A = locate(connects_to[i]) in T
 					if (!isnull(A))
@@ -680,76 +588,18 @@
 		if (..(W, user))
 			src.update_icon()
 
-	proc/update_neighbors()
-		for (var/turf/simulated/wall/auto/T in orange(1,src))
-			T.update_icon()
-		for (var/obj/window/auto/O in orange(1,src))
-			O.update_icon()
-
 /obj/window/auto/reinforced
 	icon_state = "mapwin_r"
 	mod = "R"
 	default_reinforcement = "steel"
 	health = 50
 	health_max = 50
-	the_tuff_stuff
-		explosion_resistance = 5
 	//deconstruct_time = 30
-
-/obj/window/auto/reinforced/indestructible
-	desc = "A window. A particularly robust one at that."
-	extreme
-		name = "extremely indestructible window"
-		desc = "An EXTREMELY indestructible window. An absurdly robust one at that."
-		var/initialPos
-		anchored = 2
-		New()
-			..()
-			initialPos = loc
-		disposing()
-			SPAWN_DBG(0)
-				loc = initialPos
-				qdeled = 0// L   U    L
-		set_loc()
-			loc = initialPos
-			return
-		Del()
-			if(!initialPos)
-				return ..()
-			loc = initialPos//LULLE
-	New()
-		..()
-		SPAWN_DBG(1)
-			ini_dir = 5//gurgle
-			dir = 5//grumble
-	smash(var/actuallysmash)
-		if(actuallysmash)
-			return ..()
-	attackby()
-	attack_hand()
-		src.visible_message("<span style=\"color:red\"><b>[usr]</b> knocks on [src].</span>")
-		playsound(src.loc, src.hitsound, 100, 1)
-		sleep(3)
-		playsound(src.loc, src.hitsound, 100, 1)
-		sleep(3)
-		playsound(src.loc, src.hitsound, 100, 1)
-		return
-	hitby()
-	reagent_act()
-	bullet_act()
-	ex_act()
-	blob_act()
-	meteorhit()
-	damage_heat()
-	damage_corrosive()
-	damage_piercing()
-	damage_slashing()
-	damage_blunt()
 
 /obj/window/auto/crystal
 	default_material = "plasmaglass"
-	hitsound = 'sound/impact_sounds/Crystal_Hit_1.ogg'
-	shattersound = 'sound/impact_sounds/Crystal_Shatter_1.ogg'
+	hitsound = 'sound/effects/crystalhit.ogg'
+	shattersound = 'sound/effects/crystalshatter.ogg'
 	health = 80
 	health_max = 80
 	//deconstruct_time = 40
@@ -770,15 +620,6 @@
 	health_multiplier = 100
 	//deconstruct_time = 100
 
-/obj/window/auto/hardened
-	name = "hardened window"
-	desc = "A hardened external window reinforced with advanced materials."
-	icon_state = "mapwin_r"
-	default_material = "uqillglass"
-	default_reinforcement = "bohrum"
-	the_tuff_stuff
-		explosion_resistance = 5
-
 /obj/wingrille_spawn
 	name = "window grille spawner"
 	icon = 'icons/obj/window.dmi'
@@ -789,31 +630,24 @@
 	//layer = 99
 	pressure_resistance = 4*ONE_ATMOSPHERE
 	var/win_path = "/obj/window"
-	var/grille_path = "/obj/grille/steel"
 	var/full_win = 0 // adds a full window as well
-	var/no_dirs = 0 //ignore directional
 
 	New()
-		SPAWN_DBG(1)
+		spawn(1)
 			src.set_up()
-			SPAWN_DBG(10)
+			spawn(10)
 				qdel(src)
 
 	proc/set_up()
-		if (!locate(text2path(src.grille_path)) in get_turf(src))
-			var/obj/grille/new_grille = text2path(src.grille_path)
-			new new_grille(src.loc)
-
-		if (!no_dirs)
-			for (var/dir in cardinal)
-				var/turf/T = get_step(src, dir)
-				if (!locate(/obj/wingrille_spawn) in T)
-					var/obj/window/new_win = text2path("[src.win_path]/[dir2text(dir)]")
-					new new_win(src.loc)
+		if (!locate(/obj/grille/steel) in get_turf(src))
+			new /obj/grille/steel(src.loc)
+		for (var/dir in cardinal)
+			var/turf/T = get_step(src, dir)
+			if (!locate(/obj/wingrille_spawn) in T)
+				var/obj/window/new_win = text2path("[src.win_path]/[dir2text(dir)]")
+				new new_win(src.loc)
 		if (src.full_win)
-			if(!no_dirs || !locate(text2path(src.win_path)) in get_turf(src))
-				// if we have directional windows, there's already a window (or windows) from directional windows
-				// only check if there's no window if we're expecting there to be no window so spawn a full window
+			if (!locate(text2path(src.win_path)) in get_turf(src))
 				var/obj/window/new_win = text2path(src.win_path)
 				new new_win(src.loc)
 
@@ -854,109 +688,5 @@
 		win_path = "/obj/window/bulletproof"
 
 		full
-			name = "bulletproof window grille spawner"
-			icon_state = "br-wingrille"
 			icon_state = "b-wingrille_f"
 			full_win = 1
-
-	hardened
-		name = "hardened window grille spawner"
-		icon_state = "br-wingrille"
-		win_path = "/obj/window/hardened"
-
-		full
-			name = "hardened window grille spawner"
-			icon_state = "br-wingrille"
-			icon_state = "b-wingrille_f"
-			full_win = 1
-
-
-	auto
-		name = "reinforced autowindow grille spawner"
-		win_path = "/obj/window/auto/reinforced"
-		full_win = 1
-		no_dirs = 1
-		icon_state = "r-wingrille_f"
-
-		crystal
-			name = "crystal autowindow grille spawner"
-			win_path = "/obj/window/auto/crystal/reinforced"
-			icon_state = "p-wingrille_f"
-
-		tuff
-			name = "tuff stuff reinforced autowindow grille spawner"
-			win_path = "/obj/window/auto/reinforced/the_tuff_stuff"
-
-//Cubicle walls! Also for the crunch. - from halloween.dm
-/obj/window/cubicle
-	name = "cubicle panel"
-	desc = "The bland little uniform panels that make up the modern office place. It is within them that you will spend your adult life.  It is within them that you will die."
-	icon = 'icons/obj/structures.dmi'
-	icon_state = "cubicle"
-	opacity = 1
-	hitsound = 'sound/impact_sounds/Metal_Hit_Light_1.ogg'
-	shattersound = 'sound/impact_sounds/Metal_Hit_Light_1.ogg'
-
-	New()
-		return
-
-	examine()
-		set src in oview()
-		boutput(usr, desc)
-
-	smash()
-		if(health <= 0)
-			qdel(src)
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (isscrewingtool(W))
-			src.anchored = !( src.anchored )
-			playsound(src.loc, "sound/items/Screwdriver.ogg", 75, 1)
-			user << (src.anchored ? "You have fastened [src] to the floor." : "You have unfastened [src].")
-			return
-
-		else
-			..()
-
-	railing
-		name = "guard railing"
-		desc = "Doesn't look very sturdy, but it's better than nothing?"
-		opacity = 0
-		icon_state = "safetyrail"
-		layer = EFFECTS_LAYER_BASE
-		dir = 1
-		default_material = "metal"
-
-
-// Flockdrone BS goes here - cirr
-/obj/window/feather
-	icon = 'icons/misc/featherzone.dmi'
-	icon_state = "window"
-	default_material = "gnesisglass"
-	hitsound = 'sound/impact_sounds/Crystal_Hit_1.ogg'
-	shattersound = 'sound/impact_sounds/Crystal_Shatter_1.ogg'
-	health = 50 // as strong as reinforced glass, but not as strong as plasmaglass
-	health_max = 50
-	density = 1
-
-/obj/window/feather/special_desc(dist, mob/user)
-  if(isflock(user))
-    var/special_desc = "<span class='flocksay'><span class='bold'>###=-</span> Ident confirmed, data packet received."
-    special_desc += "<br><span class='bold'>ID:</span> Fibrewoven Window"
-    special_desc += "<br><span class='bold'>System Integrity:</span> [round((src.health/src.health_max)*100)]%" // todo: damageable walls
-    special_desc += "<br><span class='bold'>###=-</span></span>"
-    return special_desc
-  else
-    return null // give the standard description
-
-/obj/window/feather/north
-	dir = NORTH
-
-/obj/window/feather/east
-	dir = EAST
-
-/obj/window/feather/west
-	dir = WEST
-
-/obj/window/feather/south
-	dir = SOUTH

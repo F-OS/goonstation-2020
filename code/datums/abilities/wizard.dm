@@ -1,37 +1,25 @@
 //////////////////////////////////////////// Setup //////////////////////////////////////////////////
 
-/proc/equip_wizard(mob/living/carbon/human/wizard_mob, var/robe = 0, var/vr = 0)
+/proc/equip_wizard(mob/living/carbon/human/wizard_mob, var/robe = 0)
 	if (!ishuman(wizard_mob)) return
 
-	if (vr && wizard_mob.mind && wizard_mob.mind.is_wizard)
-		// you're already a wizard you shithead, get out of here
-		return
-
 	var/datum/abilityHolder/H = wizard_mob.add_ability_holder(/datum/abilityHolder/wizard)
-
-	if (!vr)
-		// normal spells for normal wizards
-		H.addAbility(/datum/targetable/spell/phaseshift)
-		H.addAbility(/datum/targetable/spell/magicmissile)
-		H.addAbility(/datum/targetable/spell/clairvoyance)
-	else
-		// vr wizards only get magic missile
-		H.addAbility(/datum/targetable/spell/magicmissile)
-
-
+	H.addAbility(/datum/targetable/spell/phaseshift)
+	H.addAbility(/datum/targetable/spell/magicmissile)
+	H.addAbility(/datum/targetable/spell/clairvoyance)
 
 	if (wizard_mob.mind)
 		wizard_mob.mind.is_wizard = H
 
-	SPAWN_DBG (25) // Don't remove.
-		if (wizard_mob) wizard_mob.assign_gimmick_skull() // For variety and hunters (Convair880).
+	spawn (25) // Don't remove.
+		if (wizard_mob) wizard_mob.assign_gimmick_skull() // For variety and predators (Convair880).
 
 	wizard_mob.bioHolder.mobAppearance.customization_first_color = "#FFFFFF"
 	wizard_mob.bioHolder.mobAppearance.customization_second_color = "#FFFFFF"
 	wizard_mob.cust_two_state = "wiz"
 	wizard_mob.set_face_icon_dirty()
 
-	var/obj/item/SWF_uplink/SB = new /obj/item/SWF_uplink(wizard_mob, in_vr = vr)
+	var/obj/item/SWF_uplink/SB = new /obj/item/SWF_uplink(wizard_mob)
 	if (wizard_mob.mind)
 		SB.wizard_key = wizard_mob.mind.key
 
@@ -45,25 +33,17 @@
 	if(robe) wizard_mob.equip_if_possible(new /obj/item/clothing/suit/wizrobe(wizard_mob), wizard_mob.slot_wear_suit)
 	wizard_mob.equip_if_possible(new /obj/item/clothing/under/shorts/black(wizard_mob), wizard_mob.slot_w_uniform)
 	wizard_mob.equip_if_possible(new /obj/item/clothing/head/wizard(wizard_mob), wizard_mob.slot_head)
-	if(wizard_mob.traitHolder && wizard_mob.traitHolder.hasTrait("deaf"))
-		wizard_mob.equip_if_possible(new /obj/item/device/radio/headset/deaf(wizard_mob), wizard_mob.slot_ears)
-	else
-		wizard_mob.equip_if_possible(new /obj/item/device/radio/headset(wizard_mob), wizard_mob.slot_ears)
+	wizard_mob.equip_if_possible(new /obj/item/device/radio/headset(wizard_mob), wizard_mob.slot_ears)
 	wizard_mob.equip_if_possible(new /obj/item/storage/backpack(wizard_mob), wizard_mob.slot_back)
 	wizard_mob.equip_if_possible(new /obj/item/clothing/shoes/sandal(wizard_mob), wizard_mob.slot_shoes)
 	wizard_mob.equip_if_possible(new /obj/item/staff(wizard_mob), wizard_mob.slot_r_hand)
+	wizard_mob.equip_if_possible(new /obj/item/teleportation_scroll(wizard_mob), wizard_mob.slot_l_hand)
 	wizard_mob.equip_if_possible(new /obj/item/paper/Wizardry101(wizard_mob), wizard_mob.slot_l_store)
-	if (vr)
-		wizard_mob.equip_if_possible(SB, wizard_mob.slot_l_hand)
-	else
-		wizard_mob.equip_if_possible(new /obj/item/teleportation_scroll(wizard_mob), wizard_mob.slot_l_hand)
-		wizard_mob.equip_if_possible(SB, wizard_mob.slot_belt)
-
+	wizard_mob.equip_if_possible(SB, wizard_mob.slot_belt)
 	wizard_mob.set_clothing_icon_dirty()
 
-	boutput(wizard_mob, "You're a wizard now. You have a few starting spells; use the [SB] to choose the rest!")
-	if (!vr)
-		SHOW_WIZARD_TIPS(wizard_mob)
+	boutput(wizard_mob, "The Space Wizards Federation has equipped you with a Spellbook on your belt with which to purchase your desired spells.")
+	wizard_mob << browse(grabResource("html/traitorTips/wizardTips.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
 	return
 
 ////////////////////////////////////////////// Helper procs ////////////////////////////////////////////////////
@@ -89,7 +69,7 @@
 	var/magcount = 0
 	for (var/obj/item/clothing/C in src.contents)
 		if (C.magical) magcount += 1
-	if (src.find_type_in_hand(/obj/item/staff))
+	if (src.find_in_hands(/obj/item/staff))
 		magcount += 2
 	if (magcount >= 4) return 1
 	else return 0
@@ -110,12 +90,10 @@
 		boutput(src, "You don't feel strong enough without a magical hat.")
 		return 0
 	var/area/getarea = get_area(src)
-	if(offensive && getarea.sanctuary)
-		boutput( src, "You cannot cast offensive spells in a sanctuary." )
-		return 0
 	if(getarea.name == "Chapel" || getarea.name == "Chapel Office")
-		boutput(src, "You cannot cast spells on hallowed ground!")// Maybe if the station were more corrupted...")
-		return 0
+		if (get_corruption_percent() < 40)
+			boutput(src, "You cannot cast spells on hallowed ground!")// Maybe if the station were more corrupted...")
+			return 0
 	if (offensive == 1 && src.bioHolder.HasEffect("arcane_shame"))
 		boutput(src, "You are too consumed with shame to cast that spell!")
 		return 0
@@ -125,24 +103,22 @@
 	if(src.stat)
 		boutput(src, "You can't cast spells while incapacitated.")
 		return 0
-//	if(!find_in_equipment(/obj/item/clothing/suit/wizrobe))
-//		boutput(src, "You don't feel strong enough without a magical robe.")
-//		return 0
+	if(!find_in_equipment(/obj/item/clothing/suit/wizrobe))
+		boutput(src, "You don't feel strong enough without a magical robe.")
+		return 0
 	if(!find_in_equipment(/obj/item/clothing/head/wizard))
 		boutput(src, "You don't feel strong enough without a magical hat.")
 		return 0
 	var/area/getarea = get_area(src)
-	if(offensive && getarea.sanctuary)
-		boutput( src, "You cannot cast spells in a sanctuary." )
-		return 0
 	if(getarea.name == "Chapel" || getarea.name == "Chapel Office")
-		boutput(src, "You cannot cast spells on hallowed ground!")// Maybe if the station were more corrupted...")
-		return 0
+		if (get_corruption_percent() < 40)
+			boutput(src, "You cannot cast spells on hallowed ground!")// Maybe if the station were more corrupted...")
+			return 0
 	return 1
 
 //////////////////////////////////////////// Ability holder /////////////////////////////////////////
 
-/obj/screen/ability/topBar/spell
+/obj/screen/ability/spell
 	clicked(params)
 		var/datum/targetable/spell/spell = owner
 		var/datum/abilityHolder/holder = owner.holder
@@ -171,18 +147,18 @@
 			usr.update_cursor()
 			return
 		var/mob/user = spell.holder.owner
-		if (!istype(spell, /datum/targetable/spell/prismatic_spray/admin) && !user.wizard_castcheck(spell.offensive))
+		if (!user.wizard_castcheck(spell.offensive))
 			return
 		if (spell.targeted)
 			usr:targeting_spell = owner
 			usr.update_cursor()
 		else
-			SPAWN_DBG(0)
+			spawn
 				spell.handleCast()
 
 /datum/abilityHolder/wizard
 	usesPoints = 0
-	topBarRendered = 1
+	topBarRendered = 0
 	tabName = "Wizard"
 
 /////////////////////////////////////////////// Wizard spell parent ////////////////////////////
@@ -195,9 +171,6 @@
 		cooldown_staff = 0
 		prepared_count = 0
 		casting_time = 0
-		voice_grim = null
-		voice_fem = null
-		voice_other = null
 
 	proc/calculate_cooldown()
 		var/cool = src.cooldown
@@ -218,10 +191,7 @@
 
 	doCooldown()
 		src.last_cast = world.time + calculate_cooldown()
-		SPAWN_DBG(calculate_cooldown() + 5)
-			holder.updateButtons()
 
-	//mbc : i don't see why the wizard needs a specialized tryCast() proc. someone fix it later for me!
 	tryCast(atom/target)
 		if (!holder || !holder.owner)
 			return 1
@@ -231,32 +201,16 @@
 			return 1 // ASSHOLES
 		if (src.last_cast > world.time)
 			return 1
-		if (isunconscious(holder.owner))
-			boutput(holder.owner, "<span style=\"color:red\">You cannot cast this ability while you are unconscious.</span>")
-			src.holder.locked = 0
-			return 999
-		if (!holder.cast_while_dead && isdead(holder.owner))
-			boutput(holder.owner, "<span style=\"color:red\">You cannot cast this ability while you are dead.</span>")
-			src.holder.locked = 0
-			return 999
-		if (!istype(src, /datum/targetable/spell/prismatic_spray/admin) && !H.owner.wizard_castcheck()) // oh god this is ugly but it's technically not duplicating code so it fixes to problem with the move to ability buttons
-			src.holder.locked = 0
-			return 999
-		var/turf/T = get_turf(holder.owner)
-		if( offensive && T.loc:sanctuary )
-			boutput(holder.owner, "<span style='color:red'>You cannot cast offensive spells on someone in a sanctuary.</span>")
 		if (src.restricted_area_check)
+			var/turf/T = get_turf(holder.owner)
 			if (!T || !isturf(T))
 				boutput(holder.owner, "<span style=\"color:red\">That ability doesn't seem to work here.</span>")
 				return 1
-
 			switch (src.restricted_area_check)
 				if (1)
 					if (isrestrictedz(T.z))
-						var/area/Arr = get_area(T)
-						if (!istype(Arr, /area/wizard_station))
-							boutput(holder.owner, "<span style=\"color:red\">That ability doesn't seem to work here.</span>")
-							return 1
+						boutput(holder.owner, "<span style=\"color:red\">That ability doesn't seem to work here.</span>")
+						return 1
 				if (2)
 					var/area/A = get_area(T)
 					if (A && istype(A, /area/sim))
@@ -274,7 +228,7 @@
 		if (!holder || !holder.owner)
 			qdel(src)
 		if (!src.object)
-			src.object = new /obj/screen/ability/topBar/spell()
+			src.object = new /obj/screen/ability/spell()
 		object.icon = src.icon
 		if (src.last_cast > world.time)
 			object.name = "[src.name] ([round((src.last_cast-world.time)/10)])"
@@ -285,14 +239,4 @@
 		object.owner = src
 
 	castcheck()
-		return !istype(src, /datum/targetable/spell/prismatic_spray/admin) && holder.owner.wizard_castcheck(src.offensive)
-
-	cast()
-		if(ishuman(holder.owner))
-			var/mob/living/carbon/human/O = holder.owner
-			if(O && istype(O.wear_suit, /obj/item/clothing/suit/wizrobe/necro) && istype(O.head, /obj/item/clothing/head/wizard/necro))
-				playsound(holder.owner.loc, voice_grim, 50, 0, -1)
-			else if(holder.owner.gender == "female")
-				playsound(holder.owner.loc, voice_fem, 50, 0, -1)
-			else
-				playsound(holder.owner.loc, voice_other, 50, 0, -1)
+		return holder.owner.wizard_castcheck(src.offensive)

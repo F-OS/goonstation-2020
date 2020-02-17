@@ -371,7 +371,7 @@ var/const/PHASER_SNIPER = 256
 
 		update_icon()
 
-		SPAWN_DBG(0)
+		spawn(0)
 
 			var/obj/phaser_projectile/O = new/obj/phaser_projectile(get_turf(src))
 			O.damage = prop_dmg
@@ -383,7 +383,7 @@ var/const/PHASER_SNIPER = 256
 			O.dest = get_turf(target)
 			O.origin = user
 			O.impactsounds = shot_impactsounds.Copy()
-			SPAWN_DBG(15) qdel(O)
+			spawn(15) qdel(O)
 
 			if(shot_overlays.len)
 				for(var/S in shot_overlays)
@@ -425,7 +425,7 @@ var/const/PHASER_SNIPER = 256
 						var/turf/myloc = O.loc
 						for(var/mob/living/M in view(2,O.loc))
 							if(M == O.origin) continue
-							SPAWN_DBG(0)
+							spawn(0)
 								step_towards(M,myloc)
 								sleep(5)
 								step_towards(M,myloc)
@@ -442,7 +442,7 @@ var/const/PHASER_SNIPER = 256
 							B.bullet_act(PLas)
 						if(O.upgrades & PHASER_CONC)
 							var/dir_old = O.dir
-							SPAWN_DBG(0)
+							spawn(0)
 								step(B,dir_old)
 								sleep(3)
 								step(B,dir_old)
@@ -451,7 +451,7 @@ var/const/PHASER_SNIPER = 256
 						C.bullet_act(PLas)
 						if(O.upgrades & PHASER_CONC)
 							var/dir_old = O.dir
-							SPAWN_DBG(0)
+							spawn(0)
 								step(C,dir_old)
 								sleep(3)
 								step(C,dir_old)
@@ -484,7 +484,7 @@ var/const/PHASER_SNIPER = 256
 
 						if(O.upgrades & PHASER_CONC)
 							var/dir_old = O.dir
-							SPAWN_DBG(0)
+							spawn(0)
 								M.weakened += 2
 								step(M,dir_old)
 								sleep(3)
@@ -496,7 +496,7 @@ var/const/PHASER_SNIPER = 256
 								var/obj/OV = unpool(/obj/effects/sparks)
 								OV.set_loc(T)
 								OV.dir = pick(alldirs)
-								SPAWN_DBG(20) if (OV) pool(OV)
+								spawn(20) if (OV) pool(OV)
 						if(34 to 66)
 							playsound(O.loc, "sound/effects/exlow.ogg", 65, 1)
 							for(var/turf/simulated/floor/T in view(O.range,O.loc))
@@ -504,7 +504,7 @@ var/const/PHASER_SNIPER = 256
 								OV.icon = 'icons/effects/effects.dmi'
 								OV.icon_state = "empdisable"
 								OV.dir = pick(alldirs)
-								SPAWN_DBG(3) qdel(OV)
+								spawn(3) qdel(OV)
 								if(prob(O.power/2) || !O.range)
 									T.burn_tile()
 						if(67 to 100)
@@ -554,7 +554,7 @@ var/const/PHASER_SNIPER = 256
 			boutput(usr, "<span style=\"color:red\">Your phaser overloads.</span>");
 			overloading = 1
 			playsound(usr, "sound/weapons/phaseroverload.ogg", 65, 1)
-			SPAWN_DBG(60)
+			spawn(60)
 				var/turf/curr = get_turf(src)
 				curr.hotspot_expose(700,125)
 				explosion(src, curr, 0, 0, 2, 4)

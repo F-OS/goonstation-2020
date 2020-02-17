@@ -36,19 +36,16 @@ steam.start() -- spawns the effect
 	location = loc
 
 /*
-/datum/effects/system/steam_spread/disposing()
+/datum/effects/system/steam_spread/Del()
 	pool(src)
 */
 
 /datum/effects/system/steam_spread/proc/attach(atom/atom)
 	holder = atom
 
-/datum/effects/system/steam_spread/proc/start(var/clear_holder = 0)
-	if (clear_holder)
-		src.location = get_turf(holder)
-		src.holder = null
+/datum/effects/system/steam_spread/proc/start()
 	for(var/i=0, i<src.number, i++)
-		SPAWN_DBG(0)
+		spawn(0)
 			if(holder)
 				src.location = get_turf(holder)
 			var/obj/effects/steam/steam = unpool(/obj/effects/steam)
@@ -61,7 +58,7 @@ steam.start() -- spawns the effect
 			for(var/j=0, j<pick(1,2,3), j++)
 				sleep(5)
 				step(steam,direction)
-			SPAWN_DBG(20)
+			spawn(20)
 				if (steam)
 					pool(steam)
 

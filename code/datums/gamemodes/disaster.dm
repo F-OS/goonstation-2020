@@ -28,14 +28,13 @@
 	emergency_shuttle.disabled = 1 //Disable the shuttle temporarily.
 
 	if(derelict_mode)
-		SPAWN_DBG(10)
+		spawn(10)
 			var/list/CORPSES = list()
 			var/list/JUNK = list()
 			JUNK = halloweenspawn.Copy()
-			for(var/obj/landmark/S in landmarks)//world)
+			for(var/obj/landmark/S in world)
 				if (S.name == "peststart")
 					CORPSES.Add(S.loc)
-				LAGCHECK(LAG_LOW)
 			if(CORPSES.len)
 				for(var/turf/T in CORPSES)
 					var/obj/decal/skeleton/S = new/obj/decal/skeleton(T)
@@ -54,18 +53,18 @@
 						if(3)
 							new/obj/critter/floateye(T)
 						if(4)
-							var/obj/item/device/light/glowstick/G = new/obj/item/device/light/glowstick(T)
-							SPAWN_DBG(20)
+							var/obj/item/device/glowstick/G = new/obj/item/device/glowstick(T)
+							spawn(20)
 								G.on = 1
 								G.icon_state = "glowstick-on"
 								G.light.enable()
 
 	var/start_wait = rand(waittime_l, waittime_h)
 
-	SPAWN_DBG (start_wait)
+	spawn (start_wait)
 		start_disaster()
 //
-	SPAWN_DBG (start_wait + shuttle_waittime)
+	spawn (start_wait + shuttle_waittime)
 		emergency_shuttle.disabled = 0
 		emergency_shuttle.incall()
 		if(derelict_mode)
@@ -75,37 +74,37 @@
 			command_alert("The shuttle has been called.","Emergency Shuttle Update")
 
 	if(derelict_mode) // ready up some effects and noises
-		SPAWN_DBG(2)
+		spawn(2)
 			for(var/mob/living/carbon/human/H in mobs)
 				H.flash(30)
 
-		SPAWN_DBG(100)
-			world << sound('sound/effects/creaking_metal1.ogg')
+		spawn(100)
+			world << sound('sound/ambience/creaking_metal.ogg')
 			for(var/mob/living/carbon/human/H in mobs)
 				shake_camera(H, 8, 3)
 				H.change_misstep_chance(5)
 
-		SPAWN_DBG(200)
+		spawn(200)
 			if(scarysounds && scarysounds.len)
 				world << sound(pick(scarysounds))
 
-		SPAWN_DBG(300)
+		spawn(300)
 			if(scarysounds && scarysounds.len)
 				world << sound(pick(scarysounds))
 
-		SPAWN_DBG(400)
-			world << sound('sound/effects/creaking_metal1.ogg')
+		spawn(400)
+			world << sound('sound/ambience/creaking_metal.ogg')
 			for(var/mob/living/carbon/human/H in mobs)
 				shake_camera(H, 8, 2)
 				H.change_misstep_chance(5)
 
-		SPAWN_DBG(600)
-			world << sound('sound/effects/creaking_metal1.ogg')
+		spawn(600)
+			world << sound('sound/ambience/creaking_metal.ogg')
 			for(var/mob/living/carbon/human/H in mobs)
 				shake_camera(H, 7, 1)
 				H.change_misstep_chance(5)
 
-		SPAWN_DBG(800)
+		spawn(800)
 			if(scarysounds && scarysounds.len)
 				world << sound(pick(scarysounds))
 
@@ -113,11 +112,11 @@
 
 /datum/game_mode/disaster/declare_completion()
 	var/list/survivors = list()
-	var/area/escape_zone = locate(map_settings.escape_centcom)
+	var/area/escape_zone = locate(/area/shuttle/escape/centcom)
 
 	for(var/mob/living/player in mobs)
 		if (player.client)
-			if (!isdead(player))
+			if (player.stat != 2)
 				var/turf/location = get_turf(player.loc)
 				if (location in escape_zone)
 					survivors[player.real_name] = "shuttle"
@@ -138,13 +137,9 @@
 	else
 		boutput(world, "<span style=\"color:blue\"><B>No one survived the [disaster_name] event!</B></span>")
 
-#ifdef RP_MODE // if rp do not set to secret
-		world.save_mode("extended")
-		master_mode = "extended"
-#else
-		world.save_mode("secret") // set back to normal rotation
-		master_mode = "secret"
-#endif
+	world.save_mode("secret") // set back to normal rotation
+	master_mode = "secret"
+
 	return 1
 
 
@@ -157,8 +152,8 @@
 
 	if(derelict_mode)
 		command_alert("[disaster_name] eve## de####ed on **e stat!on. **$00AA curren#_ unava!l4ble due t0 [contrived_excuse]. All per#############ERR","Haz4rD*## Ev##_ A**Rt")
-		world << sound('sound/machines/siren_generalquarters_quiet.ogg')
-		SPAWN_DBG(5)
+		world << sound('sound/machines/siren_generalquarters.ogg')
+		spawn(5)
 			random_events.announce_events = 0
 			random_events.force_event("Power Outage","Scripted Disaster Mode Event")
 
@@ -167,12 +162,11 @@
 
 	for(var/turf/T in world)
 		if(prob(21) && T.z == 1 && istype(T,/turf/simulated/floor))
-			SPAWN_DBG(50+rand(0,6250))
+			spawn(50+rand(0,6250))
 				var/obj/vortex/P = new /obj/vortex( T )
 				P.name = disaster_name
 				if(prob(6) && scarysounds && scarysounds.len)
 					world << sound(pick(scarysounds))
-		LAGCHECK(LAG_LOW)
 
 	return
 

@@ -1,6 +1,6 @@
 ///// FOR EXPORTING DATA TO A SERVER /////
-var/global/stat_server = "http://stub"
-var/global/server_token = "stub"
+var/global/stat_server = ""
+var/global/server_token = ""
 
 // Called in world.dm at new()
 /proc/round_start_data()
@@ -9,8 +9,7 @@ var/global/server_token = "stub"
 	var/message[] = new()
 	message["token"] = md5(server_token)
 	message["round_name"] = url_encode(station_name())
-	message["round_server"]  = config.server_id
-	message["round_server_number"] = "[serverKey]"
+	message["round_server"]  = "[(world.port % 1000) / 100]"
 	message["round_status"] = "start"
 
 	world.Export("[stat_server][list2params(message)]")
@@ -21,9 +20,7 @@ var/global/server_token = "stub"
 
 	var/message[] = new()
 	message["token"] = md5(server_token)
-	message["round_name"] = url_encode(station_name())
-	message["round_server"]  = config.server_id
-	message["round_server_number"] = "[serverKey]"
+	message["round_server"]  = "[(world.port % 1000) / 100]"
 	message["round_status"] = "end"
 	message["end_reason"] = reason
 	message["game_type"] = ticker && ticker.mode ? ticker.mode.name : "pre"

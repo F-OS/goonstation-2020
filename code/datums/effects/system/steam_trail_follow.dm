@@ -21,22 +21,22 @@
 		src.processing = 1
 	if(src.processing)
 		src.processing = 0
-		SPAWN_DBG(0)
+		spawn(0)
 			if(src.number < 3)
 				var/obj/effects/steam/I = unpool(/obj/effects/steam)
 				I.set_loc(src.oldposition)
 				src.number++
 				src.oldposition = get_turf(holder)
 				I.dir = src.holder.dir
-				SPAWN_DBG(10)
+				spawn(10)
 					if (I && !I.disposed) pool(I)
 					src.number--
-				SPAWN_DBG(2)
+				spawn(2)
 					if(src.on)
 						src.processing = 1
 						src.start()
 			else
-				SPAWN_DBG(2)
+				spawn(2)
 					if(src.on)
 						src.processing = 1
 						src.start()

@@ -10,12 +10,12 @@
 
 /obj/item/device/radio/intercom/attack_ai(mob/user as mob)
 	src.add_fingerprint(user)
-	SPAWN_DBG (0)
+	spawn (0)
 		attack_self(user)
 
 /obj/item/device/radio/intercom/attack_hand(mob/user as mob)
 	src.add_fingerprint(user)
-	SPAWN_DBG (0)
+	spawn (0)
 		attack_self(user)
 
 /obj/item/device/radio/intercom/send_hear()
@@ -126,51 +126,6 @@
 	frequency = R_FREQ_INTERCOM_BRIDGE
 	broadcasting = 1
 	device_color = "#339933"
-	pixel_y = 24
-
-	initialize()
-		set_frequency(frequency)
-
-
-////// adventure area intercoms
-
-/obj/item/device/radio/intercom/adventure/owlery
-	name = "Owlery Intercom"
-	frequency = R_FREQ_INTERCOM_OWLERY
-	broadcasting = 0
-	device_color = "#3344AA"
-	pixel_y = 24
-
-	initialize()
-		set_frequency(frequency)
-
-/obj/item/device/radio/intercom/adventure/syndcommand
-	name = "Suspicious Intercom"
-	frequency = R_FREQ_INTERCOM_SYNDCOMMAND
-	broadcasting = 1
-	device_color = "#BB3333"
-	pixel_y = 24
-
-	initialize()
-		set_frequency(frequency)
-
-
-/obj/item/device/radio/intercom/adventure/terra8
-	name = "Facility Intercom"
-	frequency = R_FREQ_INTERCOM_TERRA8
-	broadcasting = 0
-	device_color = "#3344AA"
-	pixel_y = 24
-
-	initialize()
-		set_frequency(frequency)
-
-
-/obj/item/device/radio/intercom/adventure/wizards
-	name = "SWF Intercom"
-	frequency = R_FREQ_INTERCOM_WIZARD
-	broadcasting = 1
-	device_color = "#3333AA"
 	pixel_y = 24
 
 	initialize()

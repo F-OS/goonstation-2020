@@ -2,7 +2,7 @@
 chui/window/chem
 	var/global/list/CHEMS = list( "Aluminium", "Bromine", "Copper", "Sugar", "Water" )
 	var/list/chems = list()
-	name = "Chemical Dispenser"
+	name = "Chemical Dispensor"
 	New()
 		..()
 	OnClick( var/client/who, var/id )
@@ -56,7 +56,7 @@ world/New()
 	chems = new
 
 client/verb/chemicals()
-	set name = "Chem Dispenser"
+	set name = "Chem Dispensor"
 	set category = "chui"
 	if( chems.IsSubscribed( src ) )
 		chems.Unsubscribe( src )

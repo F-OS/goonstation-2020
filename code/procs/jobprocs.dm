@@ -16,13 +16,8 @@
 
 	var/list/candidates = list()
 
-	var/datum/job/J = find_job_in_controller_by_string(job)
-	if(!J)
-		CRASH("FindOccupationCandidates called with invalid job name: [job] at level: [level]")
 	for (var/mob/new_player/player in unassigned)
-		if(!player.client || !player.client.preferences) //Well shit.
-			continue
-		var/datum/preferences/P  = player.client.preferences
+		var/datum/job/J = find_job_in_controller_by_string(job)
 		if(checktraitor(player))
 			if ((ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/revolution)) && J.cant_spawn_as_rev)
 				// Fixed AI, security etc spawning as rev heads. The special job picker doesn't care about that var yet,
@@ -30,21 +25,30 @@
 				continue
 			else if((ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/gang)) && (job != "Staff Assistant"))
 				continue
-
-		if (!J.allow_traitors && player.mind.special_role || !J.allow_spy_theft && player.mind.special_role == "spy_thief")
+		if (!J.allow_traitors && player.mind.special_role)
 			continue
 		if (J.requires_whitelist && !NT.Find(ckey(player.mind.key)))
 			continue
-		if (jobban_isbanned(player, job) || P.jobs_unwanted.Find(J.name) )
+		if (jobban_isbanned(player, job) || job in player.client.preferences.jobs_unwanted)
 			continue
-		if (level == 1 && P.job_favorite == J.name)
+		if (level == 1 && player.client.preferences.job_favorite == job)
 			candidates += player
-		else if (level == 2 && P.jobs_med_priority.Find(J.name))
+		else if (level == 2 && job in player.client.preferences.jobs_med_priority)
 			candidates += player
-		else if (level == 3 && P.jobs_low_priority.Find(J.name))
+		else if (level == 3 && job in player.client.preferences.jobs_low_priority)
 			candidates += player
 
 	return candidates
+
+/proc/PickOccupationCandidate(list/candidates)
+	if (candidates.len > 0)
+//		var/list/randomcandidates = shuffle(candidates) //Is there really any need to use shuffle() when it just uses pick internally anyway, and you throw away all but one result?
+//		candidates -= randomcandidates[1]
+//		return randomcandidates[1]
+		return pick(candidates)
+
+//
+	return null
 
 /proc/DivideOccupations()
 	set background = 1
@@ -75,11 +79,6 @@
 	// This list is for jobs like staff assistant which have no limits, or other special-case
 	// shit to hand out to people who didn't get one of the main limited slot jobs
 	var/list/low_priority_jobs = list()
-
-	var/list/medical_staff = list()
-	var/list/engineering_staff = list()
-	var/list/research_staff = list()
-
 
 	for(var/datum/job/JOB in job_controls.staple_jobs)
 		// If it's hi-pri, add it to that list. Simple enough
@@ -165,18 +164,11 @@
 			continue
 		if (JOB.requires_whitelist && !NT.Find(ckey(player.mind.key)))
 			continue
-		if (!JOB.allow_traitors && player.mind.special_role ||  !JOB.allow_spy_theft && player.mind.special_role == "spy_thief")
+		if (!JOB.allow_traitors && player.mind.special_role)
 			continue
 		// If there's an open job slot for it, give the player the job and remove them from
 		// the list of unassigned players, hey presto everyone's happy (except clarks probly)
 		if (JOB.limit < 0 || !(JOB.assigned >= JOB.limit))
-			if (istype(JOB, /datum/job/engineering/engineer))
-				engineering_staff += player
-			else if (istype(JOB, /datum/job/research/scientist))
-				research_staff += player
-			else if (istype(JOB, /datum/job/research/medical_doctor))
-				medical_staff += player
-
 			logTheThing("debug", null, null, "<b>I Said No/Jobs:</b> [player] took [JOB.name] from favorite selector")
 			player.mind.assigned_role = JOB.name
 			logTheThing("debug", player, null, "assigned job: [player.mind.assigned_role]")
@@ -196,13 +188,6 @@
 		// Now loop through the candidates in order of priority, and elect them to the
 		// job position if possible - if at any point the job is filled, break the loops
 		for(var/mob/new_player/candidate in pick2)
-			if (istype(JOB, /datum/job/engineering/engineer))
-				engineering_staff += candidate
-			else if (istype(JOB, /datum/job/research/scientist))
-				research_staff += candidate
-			else if (istype(JOB, /datum/job/research/medical_doctor))
-				medical_staff += candidate
-
 			if (JOB.assigned >= JOB.limit || unassigned.len == 0)
 				break
 			logTheThing("debug", null, null, "<b>I Said No/Jobs:</b> [candidate] took [JOB.name] from Level 2 Job Picker")
@@ -224,13 +209,6 @@
 
 		pick3 = FindOccupationCandidates(unassigned,JOB.name,3)
 		for(var/mob/new_player/candidate in pick3)
-			if (istype(JOB, /datum/job/engineering/engineer))
-				engineering_staff += candidate
-			else if (istype(JOB, /datum/job/research/scientist))
-				research_staff += candidate
-			else if (istype(JOB, /datum/job/research/medical_doctor))
-				medical_staff += candidate
-
 			if (JOB.assigned >= JOB.limit || unassigned.len == 0) break
 			logTheThing("debug", null, null, "<b>I Said No/Jobs:</b> [candidate] took [JOB.name] from Level 3 Job Picker")
 			candidate.mind.assigned_role = JOB.name
@@ -238,46 +216,24 @@
 			unassigned -= candidate
 			JOB.assigned++
 
-	/////////////////////////////////////////////////
-	///////////COMMAND PROMOTIONS////////////////////
-	/////////////////////////////////////////////////
-
-	//Find the command jobs, if they are unfilled, pick a random person from within that department to be that command officer
-	for(var/datum/job/JOB in available_job_roles)
-		//cheaper to discout this first than type check here *I think*
-		if (JOB.limit > 0 && JOB.assigned < JOB.limit)
-			//Promote Chief Engineer
-			if (istype(JOB, /datum/job/command/chief_engineer))
-				var/list/picks = FindPromotionCandidates(engineering_staff, JOB)
-				if (!picks || !picks.len)
-					continue
-				var/mob/new_player/candidate = pick(picks)
-				logTheThing("debug", null, null, "<b>kyle:</b> [candidate] took [JOB.name] from Job Promotion Picker")
-				candidate.mind.assigned_role = JOB.name
-				logTheThing("debug", candidate, null, "reassigned job: [candidate.mind.assigned_role]")
-				JOB.assigned++
-			//Promote Research Director
-			else if (istype(JOB, /datum/job/command/research_director))
-				var/list/picks = FindPromotionCandidates(research_staff, JOB)
-				if (!picks || !picks.len)
-					continue
-				var/mob/new_player/candidate = pick(picks)
-				logTheThing("debug", null, null, "<b>kyle:</b> [candidate] took [JOB.name] from Job Promotion Picker")
-				candidate.mind.assigned_role = JOB.name
-				logTheThing("debug", candidate, null, "reassigned job: [candidate.mind.assigned_role]")
-				JOB.assigned++
-			//Promote Medical Director
-			else if (istype(JOB, /datum/job/command/medical_director))
-				var/list/picks = FindPromotionCandidates(medical_staff, JOB)
-				if (!picks || !picks.len)
-					continue
-				var/mob/new_player/candidate = pick(picks)
-				logTheThing("debug", null, null, "<b>kyle:</b> [candidate] took [JOB.name] from Job Promotion Picker")
-				candidate.mind.assigned_role = JOB.name
-				logTheThing("debug", candidate, null, "reassigned job: [candidate.mind.assigned_role]")
-				JOB.assigned++
-
-
+/* commenting this out because it's causing people to randomly become monkeys and shit and I guess it was set up before special jobs were enabled on default
+	// If there are any special jobs that have been made available pre-round, sort any
+	// remaining players into them
+	if (job_controls.allow_special_jobs)
+		for(var/datum/job/JOB in job_controls.special_jobs)
+			if (unassigned.len == 0)
+				break
+			if (JOB.limit == 0)
+				continue
+			if (JOB.limit > 0 && JOB.assigned >= JOB.limit)
+				continue
+			var/mob/new_player/candidate = pick(unassigned)
+			logTheThing("debug", null, null, "<b>I Said No/Jobs:</b> [candidate] took [JOB.name] from special job picker")
+			candidate.mind.assigned_role = JOB.name
+			logTheThing("debug", candidate, null, "assigned job: [candidate.mind.assigned_role]")
+			unassigned -= candidate
+			JOB.assigned++
+*/
 	// If there's anyone left without a job after this, lump them with a randomly
 	// picked low priority role and be done with it
 	if (!low_priority_jobs.len)
@@ -290,18 +246,7 @@
 
 	return 1
 
-//Given a list of candidates returns candidates that are acceptable to be promoted based on their medium/low priorities
-//ideally JOB should only be a command position. eg. CE, RD, MD
-/proc/FindPromotionCandidates(list/staff, var/datum/job/JOB)
-	var/list/picks = FindOccupationCandidates(staff,JOB.name,2)
-
-	//If there are no acceptable candidates (no inappropriate antags, no job bans) who have it in their medium priority list
-	if (!picks.len)
-		picks = FindOccupationCandidates(staff,JOB.name,3)
-	return picks
-
-//hey i changed this from a /human/proc to a /living/proc so that critters (from the job creator) would latejoin properly	-- MBC
-/mob/living/proc/Equip_Rank(rank, joined_late, no_special_spawn)
+/mob/living/carbon/human/proc/Equip_Rank(rank, joined_late)
 
 	var/datum/job/JOB = find_job_in_controller_by_string(rank)
 	if (!JOB)
@@ -311,8 +256,7 @@
 	//if(JOB.name == "Captain")
 		//boutput(world, "<b>[src] is the Captain!</b>")
 	if (JOB.announce_on_join)
-		SPAWN_DBG(10)
-			boutput(world, "<b>[src.name] is the [JOB.name]!</b>")
+		boutput(world, "<b>[src] is the [JOB.name]!</b>")
 	boutput(src, "<B>You are the [JOB.name].</B>")
 	src.job = JOB.name
 	src.mind.assigned_role = JOB.name
@@ -329,8 +273,7 @@
 						if (!(locate(/mob) in S.loc))
 							break
 			else
-				for (var/obj/landmark/start/sloc in landmarks)//world)
-					LAGCHECK(LAG_LOW)
+				for (var/obj/landmark/start/sloc in world)
 					if (sloc.name != JOB.name)
 						continue
 					if (locate(/mob) in sloc.loc)
@@ -349,106 +292,11 @@
 	if (time2text(world.realtime, "MM DD") == "12 25")
 		src.unlock_medal("A Holly Jolly Spacemas")
 
-	if (ishuman(src))
-		var/mob/living/carbon/human/H = src
-		H.Equip_Job_Slots(JOB)
-
-	var/possible_new_mob = JOB.special_setup(src, no_special_spawn) //If special_setup creates a new mob for us, it should return the new mob!
-
-
-	if (ishuman(src))
-		// Manifest stuff
-		var/sec_note = ""
-		var/med_note = ""
-		if(src.client && src.client.preferences)
-			sec_note = src.client.preferences.security_note
-			med_note = src.client.preferences.medical_note
-		data_core.addManifest(src, sec_note, med_note)
-
-	//Equip_Bank_Purchase AFTER special_setup() call, because they might no longer be a human after that
-	if (possible_new_mob)
-		var/mob/living/newmob = possible_new_mob
-		newmob.Equip_Bank_Purchase(newmob.mind.purchased_bank_item)
-	else
-		src.Equip_Bank_Purchase(src.mind.purchased_bank_item)
-
-	SPAWN_DBG(0)
-		if (ishuman(src))
-			if (src.traitHolder && !src.traitHolder.hasTrait("immigrant"))
-				src:spawnId(rank)
-			else if (src.traitHolder)
-				//Has the immigrant trait - they're hiding in a random locker
-				var/list/obj/storage/SL = list()
-				for(var/obj/storage/S in lockers_and_crates)
-					// Only closed, unsecured lockers/crates on Z1 that are not inside the listening post
-					if(S.z == 1 && !S.open && !istype(S, /obj/storage/secure) && !istype(S, /obj/storage/crate/loot) && !istype(get_area(S), /area/listeningpost))
-						var/turf/simulated/T = S.loc
-						//Simple checks done, now do some environment checks to make sure it's survivable
-						if(istype(T) && T.air && T.air.oxygen >= (MOLES_O2STANDARD - 1) && T.air.temperature >= T0C)
-							SL.Add(S)
-
-				if(SL.len > 0)
-					src.set_loc(pick(SL))
-
-			if (prob(10) && islist(random_pod_codes) && random_pod_codes.len)
-				var/obj/machinery/vehicle/V = pick(random_pod_codes)
-				random_pod_codes -= V
-				if (V && V.lock && V.lock.code)
-					boutput(src, "<span style=\"color:blue\">The unlock code to your pod ([V]) is: [V.lock.code]</span>")
-					if (src.mind)
-						src.mind.store_memory("The unlock code to your pod ([V]) is: [V.lock.code]")
-
-			if (istraitor(src) && src.mind.late_special_role == 1)
-				//put this here because otherwise it's called before they have a PDA
-				equip_traitor(src)
-
-		set_clothing_icon_dirty()
-		sleep(1)
-		update_icons_if_needed()
-
-		if (joined_late == 1 && map_settings && map_settings.arrivals_type != MAP_SPAWN_CRYO)//!ismap("DESTINY") && !ismap("CLARION"))
-			if (src.mind && src.mind.assigned_role) //ZeWaka: I'm adding this back here because hell if I know where it goes.
-				for (var/obj/machinery/computer/announcement/A in machines)
-					if (!A.status && A.announces_arrivals)
-						if (src.mind.assigned_role == "MODE") //ZeWaka: Fix for alien invasion dudes. Possibly not needed now.
-							return
-						else
-							A.announce_arrival(src.real_name, src.mind.assigned_role)
-	return
-
-/mob/living/carbon/human/proc/Equip_Job_Slots(var/datum/job/JOB)
 	if (JOB.slot_back)
 		src.equip_if_possible(new JOB.slot_back(src), slot_back)
 		if (JOB.items_in_backpack.len && istype(src.back, /obj/item/storage))
 			for (var/X in JOB.items_in_backpack)
 				src.equip_if_possible(new X(src), slot_in_backpack)
-			if(JOB.receives_disk)
-				var/obj/item/disk/data/floppy/D = new /obj/item/disk/data/floppy(src)
-				src.equip_if_possible(D, slot_in_backpack)
-				var/datum/data/record/R = new /datum/data/record(  )
-				R.fields["ckey"] = ckey(src.key)
-				R.fields["name"] = src.real_name
-				R.fields["id"] = copytext(md5(src.real_name), 2, 6)
-
-				var/datum/bioHolder/B = new/datum/bioHolder(null)
-				B.CopyOther(src.bioHolder)
-
-				R.fields["holder"] = B
-
-				R.fields["abilities"] = null
-				if (src.abilityHolder)
-					var/datum/abilityHolder/A = src.abilityHolder.deepCopy()
-					R.fields["abilities"] = A
-
-				R.fields["traits"] = list()
-				if(src.traitHolder && src.traitHolder.traits.len)
-					R.fields["traits"] = src.traitHolder.traits.Copy()
-
-				R.fields["imp"] = null
-				R.fields["mind"] = src.mind
-				D.data = R.fields
-				D.data_type = "cloning_record"
-				D.name = "data disk - '[src.real_name]'"
 
 	if (JOB.slot_jump)
 		src.equip_if_possible(new JOB.slot_jump(src), slot_w_uniform)
@@ -496,26 +344,15 @@
 	var/T = pick(trinket_safelist)
 	var/obj/item/trinket = null
 
-	if (src.traitHolder && src.traitHolder.hasTrait("pawnstar"))
-		trinket = null //You better stay null, you hear me!
-	else if (src.traitHolder && src.traitHolder.hasTrait("loyalist"))
+	if (src.traitHolder && src.traitHolder.hasTrait("loyalist"))
 		trinket = new/obj/item/clothing/head/NTberet(src)
 	else if (src.traitHolder && src.traitHolder.hasTrait("petasusaphilic"))
-		var/picked = pick(childrentypesof(/obj/item/clothing/head) - list(/obj/item/clothing/head/power, /obj/item/clothing/head/fancy)) //IM A MONSTER DONT LOOK AT ME. NOOOOOOOOOOO
+		var/picked = pick(typesof(/obj/item/clothing/head) - list(/obj/item/clothing/head, /obj/item/clothing/head/power, /obj/item/clothing/head/fancy, /obj/item/clothing/head/monkey, /obj/item/clothing/head/monkey/paper_hat) ) //IM A MONSTER DONT LOOK AT ME. NOOOOOOOOOOO
 		trinket = new picked(src)
-	else if (src.traitHolder && src.traitHolder.hasTrait("beestfriend"))
-		if (prob(15))
-			trinket = new/obj/item/reagent_containers/food/snacks/ingredient/egg/bee/buddy(src)
-		else
-			trinket = new/obj/item/reagent_containers/food/snacks/ingredient/egg/bee(src)
-	else if (src.traitHolder && src.traitHolder.hasTrait("smoker"))
-		trinket = new/obj/item/device/light/zippo(src)
 	else
 		trinket = new T(src)
 
 	if (trinket) // rewrote this a little bit so hopefully people will always get their trinket
-		src.trinket = trinket
-		src.trinket.event_handler_flags |= IS_TRINKET
 		trinket.name = "[src.real_name][pick(trinket_names)] [trinket.name]"
 		trinket.quality = rand(5,80)
 		var/equipped = 0
@@ -536,12 +373,35 @@
 			if (!equipped) // we've tried most available storage solutions here now so uh just put it on the ground
 				trinket.set_loc(get_turf(src))
 
+	JOB.special_setup(src)
+
+	// Manifest stuff
+	data_core.addManifest(src)
+
+	spawn(0)
+		if (src.traitHolder && !src.traitHolder.hasTrait("immigrant"))
+			spawnId(rank)
+
+		if (prob(10) && islist(random_pod_codes) && random_pod_codes.len)
+			var/obj/machinery/vehicle/V = pick(random_pod_codes)
+			random_pod_codes -= V
+			if (V && V.lock && V.lock.code)
+				boutput(src, "<span style=\"color:blue\">The unlock code to your pod ([V]) is: [V.lock.code]</span>")
+				if (src.mind)
+					src.mind.store_memory("The unlock code to your pod ([V]) is: [V.lock.code]")
+
+		if (src.mind && src.mind.late_special_role == 1 && src.mind.special_role == "traitor")
+			//put this here because otherwise it's called before they have a PDA
+			equip_traitor(src)
+
+		set_clothing_icon_dirty()
+		sleep(1)
+		update_icons_if_needed()
+
 	return
 
 /mob/living/carbon/human/proc/spawnId(rank)
 	var/obj/item/card/id/C = null
-	if(istype(get_area(src),/area/afterlife))
-		rank = "Captain"
 	var/datum/job/JOB = find_job_in_controller_by_string(rank)
 	if (!JOB || !JOB.slot_card)
 		return null
@@ -552,12 +412,12 @@
 		var/realName = src.real_name
 
 		if(src.traitHolder && src.traitHolder.hasTrait("clericalerror"))
-			realName = replacetext(realName, "a", "o")
-			realName = replacetext(realName, "e", "i")
-			realName = replacetext(realName, "u", pick("a", "e"))
-			if(prob(50)) realName = replacetext(realName, "n", "m")
-			if(prob(50)) realName = replacetext(realName, "t", pick("d", "k"))
-			if(prob(50)) realName = replacetext(realName, "p", pick("b", "t"))
+			realName = dd_replacetext(realName, "a", "o")
+			realName = dd_replacetext(realName, "e", "i")
+			realName = dd_replacetext(realName, "u", pick("a", "e"))
+			if(prob(50)) realName = dd_replacetext(realName, "n", "m")
+			if(prob(50)) realName = dd_replacetext(realName, "t", pick("d", "k"))
+			if(prob(50)) realName = dd_replacetext(realName, "p", pick("b", "t"))
 
 			var/datum/data/record/B = FindBankAccountByName(src.real_name)
 			if (B && B.fields["name"])
@@ -578,7 +438,6 @@
 
 	for (var/obj/item/device/pda2/PDA in src.contents)
 		PDA.owner = src.real_name
-		PDA.ownerAssignment = JOB.name
 		PDA.name = "PDA-[src.real_name]"
 
 	boutput(src, "<span style=\"color:blue\">Your pin to your ID is: [C.pin]</span>")
@@ -586,14 +445,7 @@
 		src.mind.store_memory("Your pin to your ID is: [C.pin]")
 
 	if (wagesystem.jobs[JOB.name])
-		var/cashModifier = 1.0
-		if (src.traitHolder && src.traitHolder.hasTrait("pawnstar"))
-			cashModifier = 1.25
-
-		var/obj/item/spacecash/S = unpool(/obj/item/spacecash)
-		S.setup(src,wagesystem.jobs[JOB.name] * cashModifier)
-
-		src.equip_if_possible(S, slot_r_store)
+		src.equip_if_possible(new /obj/item/spacecash(src,wagesystem.jobs[JOB.name]), slot_r_store)
 	else
 		var/shitstore = rand(1,3)
 		switch(shitstore)
@@ -603,69 +455,21 @@
 				src.equip_if_possible(new /obj/item/reagent_containers/food/drinks/water(src), slot_r_store)
 
 
-/mob/living/carbon/human/proc/JobEquipSpawned(rank, no_special_spawn)
-	var/datum/job/JOB = find_job_in_controller_by_string(rank)
-	if (!JOB)
-		boutput(src, "<span style=\"color:red\"><b>UH OH, the game couldn't find your job to set it up! Report this to a coder.</b></span>")
-		return
-
-	if (JOB.slot_back)
-		src.equip_if_possible(new JOB.slot_back(src), slot_back)
-	if (JOB.slot_back && JOB.items_in_backpack.len)
-		for (var/X in JOB.items_in_backpack)
-			src.equip_if_possible(new X(src), slot_in_backpack)
-	if (JOB.slot_jump)
-		src.equip_if_possible(new JOB.slot_jump(src), slot_w_uniform)
-	if (JOB.slot_belt)
-		src.equip_if_possible(new JOB.slot_belt(src), slot_belt)
-	if (JOB.slot_foot)
-		src.equip_if_possible(new JOB.slot_foot(src), slot_shoes)
-	if (JOB.slot_suit)
-		src.equip_if_possible(new JOB.slot_suit(src), slot_wear_suit)
-	if (JOB.slot_ears)
-		src.equip_if_possible(new JOB.slot_ears(src), slot_ears)
-	if (JOB.slot_mask)
-		src.equip_if_possible(new JOB.slot_mask(src), slot_wear_mask)
-	if (JOB.slot_glov)
-		src.equip_if_possible(new JOB.slot_glov(src), slot_gloves)
-	if (JOB.slot_eyes)
-		src.equip_if_possible(new JOB.slot_eyes(src), slot_glasses)
-	if (JOB.slot_head)
-		src.equip_if_possible(new JOB.slot_head(src), slot_head)
-	if (JOB.slot_poc1)
-		src.equip_if_possible(new JOB.slot_poc1(src), slot_l_store)
-	if (JOB.slot_poc2)
-		src.equip_if_possible(new JOB.slot_poc2(src), slot_r_store)
-	if (JOB.slot_rhan)
-		src.equip_if_possible(new JOB.slot_rhan(src), slot_r_hand)
-	if (JOB.slot_lhan)
-		src.equip_if_possible(new JOB.slot_lhan(src), slot_l_hand)
-
-	if (ishuman(src) && JOB.name != "Syndicate") // Sorry!
-		src.spawnId(rank)
-
-	JOB.special_setup(src, no_special_spawn)
-
-	update_clothing()
-	update_inhands()
-
-	return
-
 //////////////////////////////////////////////
 // cogwerks - personalized trinkets project //
 /////////////////////////////////////////////
 
-var/list/trinket_safelist = list(/obj/item/basketball,/obj/item/instrument/bikehorn, /obj/item/brick, /obj/item/clothing/glasses/eyepatch,
+var/list/trinket_safelist = list(/obj/item/basketball,/obj/item/bikehorn, /obj/item/brick, /obj/item/clothing/glasses/eyepatch,
 /obj/item/clothing/glasses/regular, /obj/item/clothing/glasses/sunglasses, /obj/item/clothing/gloves/boxing,
 /obj/item/clothing/mask/horse_mask, /obj/item/clothing/mask/clown_hat, /obj/item/clothing/head/cowboy, /obj/item/clothing/shoes/cowboy, /obj/item/clothing/shoes/moon,
 /obj/item/clothing/suit/sweater, /obj/item/clothing/suit/sweater/red, /obj/item/clothing/suit/sweater/green, /obj/item/clothing/suit/sweater/grandma, /obj/item/clothing/under/shorts,
-/obj/item/clothing/under/suit/pinstripe, /obj/item/cigpacket, /obj/item/coin, /obj/item/crowbar, /obj/item/pen/crayon/lipstick,
-/obj/item/dice, /obj/item/dice/d20, /obj/item/device/light/flashlight, /obj/item/device/key/random, /obj/item/extinguisher, /obj/item/firework,
-/obj/item/football, /obj/item/material_piece/gold, /obj/item/instrument/harmonica, /obj/item/horseshoe,
+/obj/item/clothing/under/suit/pinstripe, /obj/item/cigpacket, /obj/item/coin, /obj/item/crowbar,
+/obj/item/dice, /obj/item/dice/d20, /obj/item/device/flashlight, /obj/item/device/key/random, /obj/item/extinguisher, /obj/item/firework,
+/obj/item/football, /obj/item/material_piece/gold, /obj/item/harmonica, /obj/item/horseshoe,
 /obj/item/kitchen/utensil/knife, /obj/item/raw_material/rock, /obj/item/pen/fancy, /obj/item/pen/odd, /obj/item/plant/herb/cannabis/spawnable,
-/obj/item/razor_blade,/obj/item/rubberduck, /obj/item/instrument/saxophone, /obj/item/scissors, /obj/item/screwdriver, /obj/item/skull, /obj/item/stamp,
-/obj/item/instrument/vuvuzela, /obj/item/wrench, /obj/item/device/light/zippo, /obj/item/reagent_containers/food/drinks/bottle/beer, /obj/item/reagent_containers/food/drinks/bottle/vintage,
-/obj/item/reagent_containers/food/drinks/bottle/vodka, /obj/item/reagent_containers/food/drinks/bottle/rum, /obj/item/reagent_containers/food/drinks/bottle/hobo_wine/safe,
+/obj/item/razor_blade,/obj/item/rubberduck, /obj/item/saxophone, /obj/item/scissors, /obj/item/screwdriver, /obj/item/skull, /obj/item/stamp,
+/obj/item/vuvuzela, /obj/item/wrench, /obj/item/zippo, /obj/item/reagent_containers/food/drinks/bottle/beer, /obj/item/reagent_containers/food/drinks/bottle/vintage,
+/obj/item/reagent_containers/food/drinks/bottle/vodka, /obj/item/reagent_containers/food/drinks/rum, /obj/item/reagent_containers/food/drinks/bottle/hobo_wine/safe,
 /obj/item/reagent_containers/food/snacks/burger, /obj/item/reagent_containers/food/snacks/burger/cheeseburger,
 /obj/item/reagent_containers/food/snacks/burger/moldy,/obj/item/reagent_containers/food/snacks/candy/chocolate, /obj/item/reagent_containers/food/snacks/chips,
 /obj/item/reagent_containers/food/snacks/cookie,/obj/item/reagent_containers/food/snacks/ingredient/egg,
@@ -678,8 +482,7 @@ var/list/trinket_safelist = list(/obj/item/basketball,/obj/item/instrument/bikeh
 /obj/item/spraybottle,/obj/item/staple_gun,/obj/item/clothing/head/NTberet,/obj/item/clothing/head/biker_cap, /obj/item/clothing/head/black, /obj/item/clothing/head/blue,
 /obj/item/clothing/head/chav, /obj/item/clothing/head/det_hat, /obj/item/clothing/head/green, /obj/item/clothing/head/helmet/hardhat, /obj/item/clothing/head/merchant_hat,
 /obj/item/clothing/head/mj_hat, /obj/item/clothing/head/red, /obj/item/clothing/head/that, /obj/item/clothing/head/wig, /obj/item/clothing/head/turban, /obj/item/dice/magic8ball,
-/obj/item/reagent_containers/food/drinks/mug/random_color, /obj/item/reagent_containers/food/drinks/skull_chalice, /obj/item/pen/marker/random, /obj/item/pen/crayon/random,
-/obj/item/clothing/gloves/yellow/unsulated, /obj/item/reagent_containers/food/snacks/fortune_cookie)
+/obj/item/reagent_containers/food/drinks/mug/random_color, /obj/item/reagent_containers/food/drinks/skull_chalice, /obj/item/pen/marker/random, /obj/item/pen/crayon/random)
 
 var/list/trinket_names = list("'s dad's","'s mom's", "'s grampa's", "'s grandma's", "'s favorite", "'s trusty", "'s favorite", "'s heirloom", "'s pet",
 "'s beloved", "'s lucky", "'s best", "'s antique", "'s old", "'s ol'", "'s prized", "'s neat", "'s good old", "'s good ol'", "'s son's", "'s daughter's",

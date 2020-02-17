@@ -25,32 +25,26 @@
 		return 0
 	.=..()
 
-/obj/effects/water/proc/spray_at(var/turf/target, var/datum/reagents/R, var/try_connect_fluid = 0)
+/obj/effects/water/proc/spray_at(var/turf/target, var/datum/reagents/R)
 	if (!target || !R)
 		pool(src)
 		return
 
+	src.reagents = R
+	R.my_atom = src
+	src.reagents.trans_to(src,1)
 	var/turf/T
 	for(var/b=0, b<5, b++)
-		step_towards(src,target)
 		T = get_turf(src)
-		if(!R || !R.total_volume)
+		step_towards(src,target)
+		if(!src.reagents)
 			break
-		R.reaction(T,TOUCH,1)
-		if (!R || !R.total_volume) //i guess they can get removed after the first reaction
-			break
+		src.reagents.reaction(T)
 		for(var/atom/atm in T)
-			R.reaction(atm,TOUCH,1)
-		R.remove_any(1)
-
-		sleep(2)
-
-		if (try_connect_fluid && T && T.active_liquid)
-			T.active_liquid.try_connect_to_adjacent()
-
+			src.reagents.reaction(atm)
 		if(src.loc == target)
 			break
-
+		sleep(2)
 		if (disposed)
 			break
 

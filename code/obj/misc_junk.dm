@@ -36,7 +36,7 @@
 		..()
 		if (istype(src.material))
 			clarity = 80 + initial(clarity) - ((src.material.alpha / 255) * 100)
-			if(material.hasProperty("reflective")) focal_strength = 80 + initial(focal_strength) - (material.hasProperty("reflective") ? material.getProperty("reflective") : 15)
+			if(material.hasProperty(PROP_SCATTER)) focal_strength = 80 + initial(focal_strength) - (material.hasProperty(PROP_SCATTER) ? material.getProperty(PROP_SCATTER) : 15)
 		return
 
 /obj/item/coil
@@ -67,36 +67,6 @@
 	stamina_damage = 40
 	stamina_cost = 40
 	stamina_crit_chance = 5
-	var/last_laugh = 0
-
-	New()
-		..()
-		processing_items.Add(src)
-
-	attack_self(mob/user as mob)
-		if(last_laugh + 50 < world.time)
-			user.visible_message("<span style='color: blue'><b>[user]</b> hugs Gnome Chompski!</span>","<span style='color: blue'>You hug Gnome Chompski!</span>")
-			playsound(src.loc,"sound/misc/gnomechuckle.ogg" ,50,1)
-			last_laugh = world.time
-
-	process()
-		if(prob(75)) // Takes around 12 seconds for ol chompski to vanish
-			return
-		// No teleporting if youre in a crate
-		if(istype(src.loc,/obj/storage) || istype(src.loc,/mob/living))
-			return
-		// Nobody can ever see Chompski move
-		for(var/mob/M in viewers(src))
-			if(M.mind) // Only players. Monkeys and NPCs are fine. Chompski trusts them.
-				return
-		//oh boy time to move
-		playsound(src.loc,"sound/misc/gnomechuckle.ogg" ,50,1)
-		var/obj/crate = lockers_and_crates[rand(lockers_and_crates.len + 1)]
-		while(crate.z != 1)
-			crate = lockers_and_crates[rand(lockers_and_crates.len + 1)]
-		src.loc = crate
-
-
 
 /obj/item/c_tube
 	name = "cardboard tube"
@@ -112,41 +82,10 @@
 	stamina_damage = 1
 	stamina_cost = 1
 
-	New()
-		..()
-		src.setItemSpecial(/datum/item_special/swipe)
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if(issnippingtool(W))
-			boutput(user, __blue("You cut [src] horizontally across and flatten it out."))
-			new /obj/item/c_sheet(get_turf(src))
-			qdel(src)
-
-	custom_suicide = 1
 	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
-		user.visible_message("<span style='color:red'><b>[user] attempts to beat [him_or_her(user)]self to death with the cardboard tube, but fails!</b></span>")
+		user.visible_message("<span style=\"color:red\"><b>[user] attempts to beat \himself to death with the cardboard tube, but fails!</b></span>")
 		user.suiciding = 0
 		return 1
-
-/obj/item/c_sheet
-	name = "cardboard sheet"
-	icon = 'icons/obj/items.dmi'
-	icon_state = "c_sheet"
-	throwforce = 1
-	w_class = 1.0
-	throw_speed = 4
-	throw_range = 5
-	desc = "A sheet of creased cardboard."
-	w_class = 1.0
-	stamina_damage = 1
-	stamina_cost = 1
-
-	attack_self(mob/user as mob)
-		boutput(user, __blue("You deftly fold [src] into a party hat!."))
-		user.put_in_hand_or_drop(new /obj/item/clothing/head/party(src.loc))
-		qdel(src)
 
 /obj/item/disk
 	name = "disk"
@@ -241,7 +180,7 @@
 	stamina_damage = 40
 	stamina_cost = 35
 	stamina_crit_chance = 5
-/*
+
 /obj/item/saxophone
 	name = "saxophone"
 	desc = "NEVER GONNA DANCE AGAIN, GUILTY FEET HAVE GOT NO RHYTHM"
@@ -252,7 +191,7 @@
 	force = 1
 	throwforce = 5
 	var/spam_flag = 0
-	var/list/sounds_sax = list('sound/musical_instruments/Saxophone_CarelessWhisper.ogg', 'sound/musical_instruments/Saxophone_RunAway.ogg','sound/musical_instruments/Saxophone_BakerStreet.ogg','sound/musical_instruments/Saxophone_ComeSunday.ogg','sound/musical_instruments/Saxophone_GodOnlyKnows.ogg')
+	var/list/sounds_sax = list('sound/items/sax.ogg', 'sound/items/sax2.ogg','sound/items/sax3.ogg','sound/items/sax4.ogg','sound/items/sax5.ogg')
 	stamina_damage = 10
 	stamina_cost = 10
 	stamina_crit_chance = 5
@@ -271,7 +210,7 @@
 			if (prob(60))
 				G.howl()
 		src.add_fingerprint(user)
-		SPAWN_DBG(100)
+		spawn(100)
 			spam_flag = 0
 	return
 
@@ -286,7 +225,7 @@
 	force = 1
 	throwforce = 5
 	var/spam_flag = 0
-	var/list/sounds_bagpipe = list('sound/musical_instruments/Bagpipes_1.ogg', 'sound/musical_instruments/Bagpipes_2.ogg','sound/musical_instruments/Bagpipes_3.ogg')
+	var/list/sounds_bagpipe = list('sound/items/bagpipe.ogg', 'sound/items/bagpipe2.ogg','sound/items/bagpipe3.ogg')
 	stamina_damage = 10
 	stamina_cost = 10
 	stamina_crit_chance = 5
@@ -305,7 +244,7 @@
 			if (prob(60))
 				G.howl()
 		src.add_fingerprint(user)
-		SPAWN_DBG(100)
+		spawn(100)
 			spam_flag = 0
 	return
 
@@ -337,7 +276,7 @@
 				if (prob(60))
 					G.howl()
 			src.add_fingerprint(user)
-			SPAWN_DBG(100)
+			spawn(100)
 				fiddling = 0
 
 	proc/satanic_home_run(var/mob/living/some_poor_fucker)
@@ -355,7 +294,7 @@
 			ghost_to_toss.loc = soul_stuff
 
 		soul_stuff.throw_at(., 10, 1)
-		SPAWN_DBG (10)
+		spawn (10)
 			if (soul_stuff && ghost_to_toss)
 				ghost_to_toss.loc = soul_stuff.loc
 
@@ -374,7 +313,7 @@
 	force = 1
 	throwforce = 5
 	var/spam_flag = 0
-//	var/list/sounds_trumpet = list('sound/items/trumpet.ogg', 'sound/musical_instruments/Trumpet_2.ogg','sound/musical_instruments/Trumpet_3.ogg','sound/musical_instruments/Trumpet_4.ogg','sound/items/trumpet5.ogg')
+//	var/list/sounds_trumpet = list('sound/items/trumpet.ogg', 'sound/items/trumpet2.ogg','sound/items/trumpet3.ogg','sound/items/trumpet4.ogg','sound/items/trumpet5.ogg')
 	stamina_damage = 10
 	stamina_cost = 10
 	stamina_crit_chance = 5
@@ -395,7 +334,7 @@
 				if (prob(60))
 					G.howl()
 			src.add_fingerprint(user)
-			SPAWN_DBG(100)
+			spawn(100)
 				spam_flag = 0
 		return
 
@@ -413,11 +352,11 @@
 	else
 		S.visible_message("<span style=\"color:red\"><b>[S.name]'s skeleton rips itself free upon hearing the song of its people!</b></span>")
 		if (S.gender == "female")
-			playsound(get_turf(S), 'sound/voice/screams/female_scream.ogg', 50, 0)
+			playsound(get_turf(S), 'sound/voice/female_fallscream.ogg', 50, 0)
 		else
-			playsound(get_turf(S), 'sound/voice/screams/male_scream.ogg', 50, 0)
+			playsound(get_turf(S), 'sound/voice/male_fallscream.ogg', 50, 0)
 		playsound(get_turf(S), 'sound/effects/bubbles.ogg', 50, 0)
-		playsound(get_turf(S), 'sound/impact_sounds/Flesh_Tear_2.ogg', 50, 0)
+		playsound(get_turf(S), 'sound/misc/loudcrunch2.ogg', 50, 0)
 		var/bdna = null // For forensics (Convair880).
 		var/btype = null
 		if (S.bioHolder.Uid && S.bioHolder.bloodType)
@@ -432,6 +371,7 @@
 		S.UpdateName()
 		return
 
+
 /obj/item/trumpet/dootdoot/attack_self(var/mob/living/carbon/human/user as mob)
 	if (spam_flag == 1)
 		boutput(user, "<span style=\"color:red\">The trumpet needs time to recharge its spooky strength!</span>")
@@ -443,21 +383,21 @@
 			if (H.sims)
 				H.sims.affectMotive("fun", 200) //because come on this shit's hilarious
 		user.visible_message("<B>[user]</B> doots a [pick("spooky", "scary", "boney", "creepy", "squawking", "squeaky", "low-quality", "compressed")] tune on \his trumpet!")
-		playsound(get_turf(src), 'sound/musical_instruments/Bikehorn_2.ogg', 50, 1)
+		playsound(get_turf(src), 'sound/items/dootdoot.ogg', 50, 1)
 		for(var/obj/critter/dog/george/G in range(user,6))
 			if (prob(60))
 				G.howl()
 		src.add_fingerprint(user)
-		SPAWN_DBG (5)
+		spawn (5)
 		for(var/mob/living/carbon/L in viewers(user, null))
 			if (L == user)
 				continue
 			else
 				src.dootize(L)
-		SPAWN_DBG(100)
+		spawn(100)
 			spam_flag = 0
 	return
-*/
+
 /obj/item/emeter
 	name = "E-Meter"
 	desc = "A device for measuring Body Thetan levels."
@@ -465,12 +405,17 @@
 	icon_state = "forensic0"
 
 	attack(mob/M as mob, mob/user as mob, def_zone)
-		if (ismob(M))
-			user.visible_message("<b>[user]</b> takes a reading with the [src].",\
-			"[M]'s Thetan Level: [user == M ? 0 : rand(1,10)]")
+		var/reading = rand(1,10)
+		if (user == M)
+			boutput(user, "[user]'s Thetan Level: 0")
+			for(var/mob/O in viewers(user, null))
+				O.show_message(text("<b>[]</b> takes a reading with the [].", user, src), 1)
 			return
 		else
-			return ..()
+			boutput(user, "[M]'s Thetan Level: [reading]")
+			for(var/mob/O in viewers(user, null))
+				O.show_message(text("<b>[]</b> takes a reading with the [].", user, src), 1)
+			return
 /*
 /obj/head_surgeon
 	name = "cardboard box - 'Head Surgeon'"
@@ -538,7 +483,7 @@
 			if (M != user)
 				M.change_misstep_chance(50)
 
-		SPAWN_DBG(60)
+		spawn(60)
 			spam_flag = 0
 
 /obj/item/rubber_hammer
@@ -552,283 +497,6 @@
 	attack(mob/M as mob, mob/user as mob)
 		src.add_fingerprint(user)
 
-		playsound(get_turf(M), "sound/musical_instruments/Bikehorn_1.ogg", 50, 1, -1)
-		playsound(get_turf(M), "sound/misc/boing/[rand(1,6)].ogg", 20, 1)
-		user.visible_message("<span style='color:red'><B>[user] bonks [M] on the head with [src]!</B></span>",\
-							"<span style='color:red'><B>You bonk [M] on the head with [src]!</B></span>",\
-							"<span style='color:red'>You hear something squeak.</span>")
-
-
-	earthquake
-
-		New()
-			..()
-			src.setItemSpecial(/datum/item_special/slam)
-
-
-/obj/item/reagent_containers/vape //yeet
-	name = "e-cigarette"
-	desc = "The pinacle of human technology. An electronic cigarette!"
-	icon = 'icons/obj/cigarettes.dmi'
-	inhand_image_icon = 'icons/obj/cigarettes.dmi'
-	initial_volume = 50
-	initial_reagents = "nicotine"
-	item_state = "ecig"
-	icon_state = "ecig"
-	mats = 6
-	flags = FPRINT | TABLEPASS | OPENCONTAINER | ONBELT | NOSPLASH
-	var/emagged = 0
-	var/last_used = 0
-	var/list/safe_smokables = list("nicotine", "THC")
-	var/datum/effects/system/bad_smoke_spread/smoke
-	var/range = 1
-
-	New()
-		..()
-		if (usr && usr.loc)
-			src.smoke = new /datum/effects/system/bad_smoke_spread/
-			src.smoke.attach(src)
-			src.smoke.set_up(1, 0, usr.loc)
-		if (prob(5))
-			src.reagents.clear_reagents()
-			src.reagents.add_reagent("THC", 50) //blaze it
-
-
-	proc/check_whitelist(var/mob/user as mob)
-		if (src.emagged || !src.safe_smokables || (islist(src.safe_smokables) && !src.safe_smokables.len))
-			return
-
-		var/found = 0
-		for (var/reagent_id in src.reagents.reagent_list)
-			if (!src.safe_smokables.Find(reagent_id))
-				src.reagents.del_reagent(reagent_id)
-				found = 1
-		if (found)
-			if (usr)
-				usr.show_text("[src] identifies and removes a non-smokable substance.", "red")
-			else if (ismob(src.loc))
-				var/mob/M = src.loc
-				M.show_text("[src] identifies and removes a non-smokable substance.", "red")
-			else
-				src.visible_message("<span style=\"color:red\">[src] identifies and removes a non-smokable substance.</span>")
-
-
-	on_reagent_change(add)
-		if (!src.emagged && add)
-			src.check_whitelist()
-
-	emag_act(var/mob/user, var/obj/item/card/emag/E)
-		if (src.emagged)
-			if (user)
-				user.show_text("[src]'s safeties have been enabled.", "blue")
-			src.emagged = 0
-		else
-			if (user)
-				user.show_text("[src]'s safeties have been disabled.", "red")
-			src.emagged = 1
-		return 1
-
-	attackby(obj/item/reagent_containers/ecig_refill_cartridge/E, mob/usr) //you may call this redundantly overdoing it. I say fuck you
-		if (istype(E, /obj/item/reagent_containers/ecig_refill_cartridge))
-			if (!E.reagents.total_volume)
-				usr.show_text("\The [src] is empty.", "red")
-				return
-			usr.show_text("You refill the [src] with the cartridge.", "red")
-			E.reagents.trans_to(src, 50)
-			src.reagents.add_reagent("nicotine", 50)
-			qdel(E) //this technically implies that vapes infinitely eat these refills. I say the catriges are made of pure nicotine and are slowly absorbed
-
-	attack_self()
-		if(world.time - last_used <= 60)
-			usr.show_text("It's still resetting, be patient!", "red")
-			return
-		if (!reagents.total_volume)
-			usr.show_text("You breathe in nothing and exhale nothing. You feel really lame!", "red") //wamp wamp
-			return
-		else
-			var/datum/reagents/R = new /datum/reagents(5)
-			var/target_loc = src.loc
-			var/obj/item/phone_handset/PH = null
-			if(istype(usr.l_hand,/obj/item/phone_handset) || istype(usr.r_hand,/obj/item/phone_handset)) // You can vape over the phone now. Why am I doing this.
-				if(istype(usr.l_hand,/obj/item/phone_handset))
-					PH = usr.l_hand
-				else
-					PH = usr.r_hand
-				if(PH.parent.linked && PH.parent.linked.handset && PH.parent.linked.handset.holder)
-					target_loc = PH.parent.linked.handset.holder.loc
-
-
-			R.my_atom = src
-			src.reagents.trans_to(usr, 5)
-			src.reagents.trans_to_direct(R, 5)
-			if(PH && PH.parent.linked && PH.parent.linked.handset && PH.parent.linked.handset.holder)
-				smoke_reaction(R, range, get_turf(PH.parent.linked.handset.holder))
-			else
-				smoke_reaction(R, range, get_turf(usr))
-			particleMaster.SpawnSystem(new /datum/particleSystem/blow_cig_smoke(target_loc, NORTH))
-			particleMaster.SpawnSystem(new /datum/particleSystem/blow_cig_smoke(target_loc, SOUTH))
-			particleMaster.SpawnSystem(new /datum/particleSystem/blow_cig_smoke(target_loc, EAST))
-			particleMaster.SpawnSystem(new /datum/particleSystem/blow_cig_smoke(target_loc, WEST))
-			usr.restrain_time = world.timeofday + 40
-			src.smoke.set_up(1, 0, target_loc,null,R.get_average_color())
-			src.smoke.attach(target_loc)
-			SPAWN_DBG (0) //vape is just the best for not annoying crowds I swear
-				src.smoke.start()
-				sleep(10)
-
-			if(!PH)
-				usr.visible_message("<span style='color:red'><B>[usr] blows a cloud of smoke with their [prob(90) ? "ecig" : "mouth fedora"]! They look [pick("really lame", "like a total dork", "unbelievably silly", "a little ridiculous", "kind of pathetic", "honestly pitiable")]. </B></span>",\
-				"<span style='color:red'>You puff on the ecig and let out a cloud of smoke. You feel [pick("really cool", "totally awesome", "completely euphoric", "like the coolest person in the room", "like everybody respects you", "like the latest trend-setter")].</span>")
-			else
-				usr.visible_message("<span style='color:red'><B>[usr] blows a cloud of smoke right into the phone! They look [pick("really lame", "like a total dork", "unbelievably silly", "a little ridiculous", "kind of pathetic", "honestly pitiable")]. </B></span>",\
-				"<span style='color:red'>You puff on the ecig and blow a cloud of smoke right into the phone. You feel [pick("really cool", "totally awesome", "completely euphoric", "like the coolest person in the room", "like everybody respects you", "like the latest trend-setter")].</span>")
-				if(PH.parent.linked && PH.parent.linked.handset && PH.parent.linked.handset.holder)
-					boutput(PH.parent.linked.handset.holder,"<span style='color:red'><B>[usr] blows a cloud of smoke right through the phone! What a total [pick("dork","loser","dweeb","nerd","useless piece of shit","dumbass")]!</B></span>")
-
-			logTheThing("combat", usr, null, "vapes a cloud of [log_reagents(src)] at [log_loc(target_loc)].")
-			last_used = world.time
-
-/obj/item/reagent_containers/vape/medical //medical cannabis got nothing on this!!
-	name = "Medi-Vape"
-	desc = "Smoking, now in a doctor approved form!"
-	initial_reagents = "nicotine"
-	item_state = "medivape"
-	icon_state = "medivape"
-
-	var/list/medical_cannabis = list("antihol", "charcoal", "epinephrine", "insulin", "mutadone", "teporone",\
-"silver_sulfadiazine", "salbutamol", "perfluorodecalin", "omnizine", "stimulants", "synaptizine", "anti_rad",\
-"oculine", "mannitol", "penteticacid", "styptic_powder", "methamphetamine", "spaceacillin", "saline",\
-"salicylic_acid", "cryoxadone", "nicotine", "THC")
-
-	New()
-		..()
-		safe_smokables = medical_cannabis
-		src.reagents.clear_reagents()
-		src.reagents.add_reagent(pick("antihol", "charcoal", "epinephrine", "insulin", "mutadone", "teporone",\
-"silver_sulfadiazine", "salbutamol", "perfluorodecalin", "omnizine", "synaptizine", "anti_rad",\
-"oculine", "mannitol", "penteticacid", "styptic_powder", "methamphetamine", "spaceacillin", "saline",\
-"salicylic_acid", "cryoxadone", "nicotine", "THC"), 50)
-
-/obj/item/reagent_containers/vape/medical/o2 //sweet oxygen
-	desc = "Smoking, now in a doctor approved form! This one comes preloaded with salbutamol."
-
-	New()
-		..()
-		src.reagents.clear_reagents()
-		src.reagents.add_reagent("salbutamol", 50)
-
-
-/obj/item/reagent_containers/ecig_refill_cartridge
-	name = "e-cigarette refill cartridge"
-	desc = "A small black box full of nicotine"
-	icon = 'icons/obj/cigarettes.dmi'
-	inhand_image_icon = 'icons/obj/cigarettes.dmi'
-	initial_volume = 50
-	initial_reagents = "nicotine"
-	item_state = "ecigrefill"
-	icon_state = "ecigrefill"
-	flags = FPRINT | TABLEPASS
-
-/obj/item/wrestlingbell
-	name = "Wrestling bell"
-	desc = "A bell used to signal the start of a wrestling match"
-	anchored = 1
-	density = 1
-	icon = 'icons/obj/wrestlingbell.dmi'
-	icon_state = "wrestlingbell"
-	var/last_ring = 0
-
-	attack_hand(mob/user as mob)
-		if(last_ring + 20 >= world.time)
-			return
-		else
-			last_ring = world.time
-			playsound(src.loc,"sound/misc/Boxingbell.ogg",50,1)
-
-/obj/item/trophy
-	name = "Solarium Trophy"
-	desc = "Awarded for bravely solving the Solarium after 42 people got to it first"
-	anchored = 1
-	density = 1
-	icon = 'icons/obj/32x64.dmi'
-	icon_state = "trophy"
-
-/obj/item/battlepass
-	icon = 'icons/obj/card.dmi'
-	icon_state = "id"
-	name = "Battle Pass"
-	desc = "Lets you know in advance where supply drops are happening. Also allows you to use 3 10 second long shields by clicking it in you hand"
-	var/uses = 3
-
-	attack_self(mob/user as mob)
-		if(uses <= 0)
-			boutput(user, "<span style=\"color:red\">Your pass has no more uses!</span>")
-			return
-		if(user.spellshield == 1)
-			boutput(user, "<span style=\"color:red\">You already have a shield up, nerd.</span>")
-			return
-		uses--
-		var/shield_overlay = image('icons/effects/effects.dmi', user, "enshield", MOB_LAYER+1)
-		user.underlays += shield_overlay
-		playsound(user,"sound/effects/MagShieldUp.ogg",50,1)
-		boutput(user, "<span style=\"color:blue\"><b>You are surrounded by a BATTLE BARRIER!</b></span>")
-		user.visible_message("<span style=\"color:red\">[user] is encased in a protective shield.</span>")
-		user.spellshield = 1
-		SPAWN_DBG(100)
-			user.spellshield = 0
-			boutput(user, "<span style=\"color:blue\"><b>Your magical barrier fades away!</b></span>")
-			user.visible_message("<span style=\"color:red\">The shield protecting [user] fades away.</span>")
-			user.underlays -= shield_overlay
-			shield_overlay = null
-			playsound(user,"sound/effects/MagShieldDown.ogg", 50, 1)
-
-/obj/item/ass_day_artifact
-	name = "Ass Day Artifact"
-	desc = "Gives the power of new life, but only on the most holy of days"
-	icon = 'icons/misc/racing.dmi'
-	icon_state = "superbuttshell"
-	w_class = 4.0
-	var/mob/living/carbon/human/owner = null
-	var/changed = 0
-	var/pickup_time = 0
-
-	New()
-		..()
-		name = "The [pick("Most Holey","Sacred","Hallowed","Divine")] relic of [pick("Azzdey","Ah Sday","Ahsh dei","A s'dai","Ahes d'hei")]"
-		processing_items.Add(src)
-
-	pickup(mob/user as mob)
-		if(user != owner)
-			user.bioHolder.AddEffect("fire_resist")
-			if(owner && owner.bioHolder.HasEffect("fire_resist"))
-				owner.bioHolder.RemoveEffect("fire_resist")
-			pickup_time = world.time
-			boutput(user, "<h3><span style=\"color:red\">You have captured [src.name]!</span></h3>")
-			boutput(user, "<h3><span style=\"color:red\">Don't let anyone else pick it up for 30 seconds and you'll respawn!</span></h3>")
-			if(owner)
-				boutput(owner, "<h2>You have lost [src.name]!</h2>")
-			owner = user
-			DEBUG_MESSAGE("The new artifact owner is [owner.name]")
-		..()
-
-	process()
-		if(!owner) return
-		if(world.time - pickup_time >= 300)
-			boutput(owner, "<h3><span style=\"color:red\">You have held [src.name] long enough! Good job!</span></h3>")
-			if(owner && owner.client)
-				src.set_loc(pick(ass_arena_spawn).loc)
-				owner.client.respawn_target(owner,1)
-				DEBUG_MESSAGE("[owner.name] has been ass arena respawned!")
-				owner.gib()
-				owner = null
-
-
-	disposing()
-		if(owner && owner.bioHolder.HasEffect("fire_resist"))
-			owner.bioHolder.RemoveEffect("fire_resist")
-		DEBUG_MESSAGE("Heck someone broke the artifact")
-		var/obj/item/ass_day_artifact/next_artifact
-		next_artifact = new /obj/item/ass_day_artifact
-		next_artifact.set_loc(pick(ass_arena_spawn).loc)
-		processing_items.Remove(src)
-		..()
+		playsound(src.loc, "sound/items/bikehorn.ogg", 50, 1, -1)
+		for(var/mob/O in viewers(M))
+			if (O.client)	O.show_message("<span style=\"color:red\"><B>[user] bonks [M] on the head with the rubber hammer!</B></span>", 1, "<span style=\"color:red\">You hear something squeak.</span>", 2)

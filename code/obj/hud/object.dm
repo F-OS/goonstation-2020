@@ -17,16 +17,10 @@
 
 	//WIRE TOOLTIPS
 	MouseEntered(location, control, params)
-		if (usr.client.tooltipHolder)
-			usr.client.tooltipHolder.showHover(src, list(
-				"params" = params, 
-				"title" = src.name, 
-				"content" = (src.desc ? src.desc : null)
-			))
+		usr.client.tooltip.show(src, params, title = src.name, content = (src.desc ? src.desc : null))
 
 	MouseExited()
-		if (usr.client.tooltipHolder)
-			usr.client.tooltipHolder.hideHover()
+		usr.client.tooltip.hide()
 
 /obj/hud/proc/object_hud()
 	mymob.zone_sel = new(mymob, "SOUTH,EAST")

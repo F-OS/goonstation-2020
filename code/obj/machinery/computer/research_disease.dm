@@ -14,10 +14,6 @@
 	var/temp = null
 	var/printing = null
 
-	lr = 1
-	lg = 0.3
-	lb = 0.9
-
 /obj/machinery/computer/research/disease/attack_ai(user as mob)
 	return src.attack_hand(user)
 
@@ -92,7 +88,7 @@ Confirm Identity: <A href='?src=\ref[src];scan=1'>[src.scan ? src.scan.name : "-
 				else
 		else
 			dat += text("<A href='?src=\ref[src];login=1'>{Log In}</A>")
-	user.Browse(text("<HEAD><TITLE>Disease Research</TITLE></HEAD><TT>[]</TT>", dat), "window=dis_res")
+	user << browse(text("<HEAD><TITLE>Disease Research</TITLE></HEAD><TT>[]</TT>", dat), "window=dis_res")
 	onclose(user, "dis_res")
 	return
 
@@ -103,7 +99,7 @@ Confirm Identity: <A href='?src=\ref[src];scan=1'>[src.scan ? src.scan.name : "-
 		src.active1 = null
 	if (!( data_core.medical.Find(src.active2) ))
 		src.active2 = null
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 		if (href_list["temp"])
 			src.temp = null
@@ -117,20 +113,13 @@ Confirm Identity: <A href='?src=\ref[src];scan=1'>[src.scan ? src.scan.name : "-
 					usr.drop_item()
 					I.set_loc(src)
 					src.scan = I
-				else if (istype(I, /obj/item/magtractor))
-					var/obj/item/magtractor/mag = I
-					if (istype(mag.holding, /obj/item/card/id))
-						I = mag.holding
-						mag.dropItem(0)
-						I.set_loc(src)
-						src.scan = I
 		else if (href_list["logout"])
 			src.authenticated = null
 			src.screen = null
 			src.active1 = null
 			src.active2 = null
 		else if (href_list["login"])
-			if ((issilicon(usr) || isAI(usr)) && !isghostdrone(usr))
+			if (issilicon(usr) && !isghostdrone(usr))
 				src.active1 = null
 				src.active2 = null
 				src.authenticated = 1

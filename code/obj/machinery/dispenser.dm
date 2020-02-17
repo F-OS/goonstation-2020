@@ -65,20 +65,20 @@
 	return src.attack_hand(user)
 
 /obj/machinery/dispenser/attack_hand(mob/user as mob)
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		return
 	user.machine = src
 	var/dat = text("<TT><B>Loaded Tank Dispensing Unit</B><BR><br><FONT color = 'blue'><B>Oxygen</B>: []</FONT> []<BR><br><FONT color = 'orange'><B>Plasma</B>: []</FONT> []<BR><br></TT>", src.o2tanks, (src.o2tanks ? text("<A href='?src=\ref[];oxygen=1'>Dispense</A>", src) : "empty"), src.pltanks, (src.pltanks ? text("<A href='?src=\ref[];plasma=1'>Dispense</A>", src) : "empty"))
-	user.Browse(dat, "window=dispenser")
+	user << browse(dat, "window=dispenser")
 	onclose(user, "dispenser")
 	return
 
 /obj/machinery/dispenser/Topic(href, href_list)
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		return
 	if(usr.stat || usr.restrained())
 		return
-	if (isAI(usr))
+	if (istype(usr, /mob/living/silicon/ai))
 		boutput(usr, "<span style=\"color:red\">You are unable to dispense anything, since the controls are physical levers which don't go through any other kind of input.</span>")
 		return
 
@@ -88,27 +88,25 @@
 			if (text2num(href_list["oxygen"]))
 				if (src.o2tanks > 0)
 					use_power(5)
-					var/newtank = new /obj/item/tank/oxygen(src.loc)
-					usr.put_in_hand_or_eject(newtank)
+					new /obj/item/tank/oxygen( src.loc )
 					src.o2tanks--
-			if (ismob(src.loc))
+			if (istype(src.loc, /mob))
 				attack_hand(src.loc)
 		else
 			if (href_list["plasma"])
 				if (text2num(href_list["plasma"]))
 					if (src.pltanks > 0)
 						use_power(5)
-						var/newtank = new /obj/item/tank/plasma(src.loc)
-						usr.put_in_hand_or_eject(newtank)
+						new /obj/item/tank/plasma( src.loc )
 						src.pltanks--
-				if (ismob(src.loc))
+				if (istype(src.loc, /mob))
 					attack_hand(src.loc)
 		src.add_fingerprint(usr)
 		for(var/mob/M in viewers(1, src))
 			if ((M.client && M.machine == src))
 				src.attack_hand(M)
 	else
-		usr.Browse(null, "window=dispenser")
+		usr << browse(null, "window=dispenser")
 		return
 	return
 
@@ -161,7 +159,7 @@
 		return src.attack_hand(user)
 
 	attack_hand(mob/user as mob)
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			return
 		user.machine = src
 
@@ -194,7 +192,7 @@
 		else
 			dat += "No Test Tube Loaded<BR>"
 
-		user.Browse(dat, "window=dis_dispenser")
+		user << browse(dat, "window=dis_dispenser")
 		onclose(user, "dis_dispenser")
 		return
 
@@ -230,11 +228,11 @@
 
 
 	Topic(href, href_list)
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			return
 		if(usr.stat || usr.restrained())
 			return
-		if (isAI(usr))
+		if (istype(usr, /mob/living/silicon/ai))
 			boutput(usr, "<span style=\"color:red\">You are unable to dispense anything, since the controls are physical levers which don't go through any other kind of input.</span>")
 			return
 
@@ -295,7 +293,7 @@
 				if ((M.client && M.machine == src))
 					src.attack_hand(M)
 		else
-			usr.Browse(null, "window=dis_dispenser")
+			usr << browse(null, "window=dis_dispenser")
 			return
 		return
 

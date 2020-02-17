@@ -5,7 +5,7 @@
 	return src.attack_hand(user)
 
 /obj/machinery/noise_switch/attack_hand(mob/user as mob)
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 	use_power(5)
 	for(var/obj/machinery/noise_maker/M in machines)
@@ -43,7 +43,7 @@
 	src.add_fingerprint(user)
 
 /obj/machinery/noise_maker/attackby(obj/item/W, mob/user)
-	if (issnippingtool(W))
+	if(istype(W, /obj/item/wirecutters))
 		playsound(src.loc, "sound/items/Wirecutter.ogg", 60, 1)
 		if(broken)
 			broken = 0
@@ -64,12 +64,14 @@
 	if(broken == 0)
 //		if(((src.last_shot + src.fire_delay) <= world.time))
 //			src.last_shot = world.time
-		if(sound == 1)
+		if(sound == 0)
+			playsound(src.loc, "sound/misc/null.ogg", 100, 1)
+		else if(sound == 1)
 			playsound(src.loc, "sound/effects/screech.ogg", 100, 1)
 		else if(sound == 2)
-			playsound(src.loc, "sound/voice/burp.ogg", 100, 1)
+			playsound(src.loc, "sound/misc/burp.ogg", 100, 1)
 		else if(sound == 3)
 			playsound(src.loc, "sound/effects/screech2.ogg", 100, 5,0)
 	if(containment_fail == 1)
-		SPAWN_DBG(90)
+		spawn(90)
 		emittsound()

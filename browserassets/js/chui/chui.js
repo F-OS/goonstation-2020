@@ -5,34 +5,10 @@ chui = {
 };
 
 var escaper = encodeURIComponent || escape;
-var decoder = decodeURIComponent || unescape;
 
 var CHUI_FLAG_SIZABLE = 1;
 var CHUI_FLAG_MOVABLE = 2;
 var CHUI_FLAG_FADEIN = 4;
-var CHUI_FLAG_CLOSABLE = 8;
-
-chui.setCookie = function(cname, cvalue, exdays) {
-    cvalue = escaper(cvalue);
-    var d = new Date();
-    d.setTime(d.getTime() + (exdays*24*60*60*1000));
-    var expires = 'expires='+d.toUTCString();
-    var cookie = cname + '=' + cvalue + '; ' + expires + '; path=/';
-    document.cookie = cookie;
-}
-
-chui.getCookie = function(cname) {
-    var name = cname + '=';
-    var ca = document.cookie.split(';');
-    for(var i=0; i < ca.length; i++) {
-    var c = ca[i];
-    while (c.charAt(0)==' ') c = c.substring(1);
-        if (c.indexOf(name) === 0) {
-            return decoder(c.substring(name.length,c.length));
-        }
-    }
-    return '';
-}
 
 chui.setLabel = function( id, label ){
 	$("a").contents().filter(function() {return this.nodeType === 3;})[0].textContent = label;
@@ -52,9 +28,7 @@ chui.close = function( ){
 chui.winset = function( key, value ){
 	document.location = "byond://winset?" + chui.window + "." + key + "=" + escape( value );
 };
-chui.winsets = function(kvs){
-	document.location = "byond://winset?id=" + chui.window + "&" + $.param(kvs);
-}
+
 chui.setPos = function( x, y ){
 	chui.winset( "pos", x + "," + y );
 };
@@ -63,14 +37,6 @@ chui.setSize = function( w, h ){
 	chui.winset( "size", w + "," + h );
 };
 
-chui.setPosSize = function( x, y, w, h ){
-	document.location = "byond://winset?" + chui.window + ".size=" + escape( w+","+h ) + "&"+chui.window+".pos="+escape(x+","+y);
-};
-
-
-chui.chatDebug = function(msg){
-	document.location = "byond://winset?command=" + escaper( ".output browseroutput:output " + escaper(msg) );
-}
 chui.initialize = function(){
 	chui.data = {};
 	
@@ -89,49 +55,24 @@ chui.initialize = function(){
 	
 //Window Movement
 ///////ALIGNMENT
+	//Check for offset cookie
 	//Save opening position
 	var prevX = window.screenLeft;
 	var prevY = window.screenTop;
-
-	//If the offset data exists in a cookie, just get it from there, otherwise generate it
-	var offsetCookie = chui.getCookie('chuiOffset');
-	//prompt("cook" + offsetCookie, offsetCookie);
-	if (offsetCookie) {
-		var offsetData = $.parseJSON(offsetCookie);
-		chui.offsetX = offsetData.offsetX;
-		chui.offsetY = offsetData.offsetY;
-	}//else
-	{
-		//Put the window at top left
-		chui.setPos( 0, 0 );
-		//Get any offsets still present
-		chui.offsetX = window.screenLeft;
-		chui.offsetY = window.screenTop;
-	}
-
-	//Clamp the window into the viewport
-	var clampedX = prevX - chui.offsetX;
-	var clampedY = prevY - chui.offsetY;
-	clampedX = clampedX < chui.offsetX ? 0 : clampedX;
-	clampedY = clampedY < chui.offsetY ? 0 : clampedY;
-
-	//Save the offset data to a cookie
-	if (!offsetCookie) {
-		var cookieOffsetData = {
-			offsetX: chui.offsetX,
-			offsetY: chui.offsetY
-		};
-		chui.setCookie('chuiOffset',  JSON.stringify(cookieOffsetData), 0.333); //0.333 days is approx 8 hour expiry
-	}
+	//Put the window at top left
+	chui.setPos( 0, 0 );
+	//Get any offsets still present
+	chui.offsetX = window.screenLeft;
+	chui.offsetY = window.screenTop;
 	
 	//Put the window back where it came from
-	chui.setPos( clampedX, clampedY );
+	chui.setPos( prevX - chui.offsetX, prevY - chui.offsetY );
 ///////ALIGNMENT FIN
 
 ////Titlebar
 	$('body').on('mousemove', '#titlebar', function(ev) {
 		ev = ev || window.event;
-		if (chui.lastX === undefined) {
+		if (!chui.lastX) {
 			chui.lastX = ev.screenX;
 			chui.lastY = ev.clientY;
 		}
@@ -162,7 +103,7 @@ chui.initialize = function(){
 			if (chui.resizeWorking) {return;}
 			chui.resizeWorking = true;
 			ev = ev || window.event;
-			if (chui.lastX === undefined) {
+			if (!chui.lastX) {
 				chui.lastX = ev.screenX - chui.offsetX;
 				chui.lastY = ev.screenY - chui.offsetY;
 			}
@@ -190,7 +131,8 @@ chui.initialize = function(){
 				newW = Math.max( chui.minWidth, newW );
 				newH = Math.max( chui.minHeight, newH );
 				
-				chui.setPosSize(newX, newY, newW, newH);
+				chui.setPos( newX, newY );
+				chui.setSize( newW, newH );
 			}
 			chui.lastX = ev.screenX - chui.offsetX;
 			chui.lastY = ev.screenY - chui.offsetY;
@@ -211,13 +153,7 @@ chui.initialize = function(){
 //FIN Window Movement
 
 	$('body').on('click', 'a.button', function() {
-		var info = null;
-		try {
-			info = this.dataset.info;
-		} catch (err) {
-			info = this.getAttribute('data-info');
-		}
-		chui.bycall( "click", {id:this.id, data:info} );
+		chui.bycall( "click", {id: this.id} );
 	});
 	
 	$(".close").click(function(){
@@ -226,16 +162,8 @@ chui.initialize = function(){
 		else
 			chui.close();
 	});
-	$(".close").attr("href", "#");
-
-	chui.bycall("register");
-
 	if( chui.flags & CHUI_FLAG_FADEIN )
 		chui.fadeIn();
-	
-	if(chui.data.needstitle)
-		$("#windowtitle").text($('title').text() || " ");
-
 };
 
 chui.fadeIn = function(){
@@ -253,12 +181,10 @@ chui.fadeIn = function(){
 			duration: 1000,
 			step: function( val ){
 				//prompt(""+val);
+				chui.winset( "alpha", 255 * val );
 				var neg = 1 - val;
-				chui.winsets( {
-					"alpha": 255*val,
-					"size": (width + 80 * neg) + ","+(height + 80 * neg),
-					"pos": (x - 40 * neg)+","+(y - 40 * neg)
-				});
+				chui.setSize( width + 80 * neg, height + 80 * neg );
+				chui.setPos( x - 40 * neg, y - 40 * neg );
 			}
 		});
 	}, 1000 );
@@ -275,12 +201,10 @@ chui.fadeOut = function(){
 			duration: 1000,
 			step: function( val ){
 				//prompt(""+val);
+				chui.winset( "alpha", 255 * val );
 				var neg = 1 - val;
-				chui.winsets( {
-					"alpha": 255*val,
-					"size": (width + 80 * neg) + ","+(height + 80 * neg),
-					"pos": (x - 40 * neg)+","+(y - 40 * neg)
-				});
+				chui.setSize( width + 80 * neg, height + 80 * neg );
+				chui.setPos( x - 40 * neg, y - 40 * neg );
 			},
 			complete: function(){
 				chui.close();
@@ -296,15 +220,6 @@ chui.templateSet = function( id, value ){
 	templateItem.innerText = value;
 };
 
-chui.templateBulk = function( elements ){
-	var els = JSON.parse(elements);
-	if(!els) return;//rude
-	for(var elem in els){
-		var element = document.getElementById("chui-tmpl-" + elem);
-		if(element)
-			element.innerText = els[elem];
-	}
-}
 var activeRequests = [];
 var reqID          = 0;
 chui.request = function( path, data, callback ){

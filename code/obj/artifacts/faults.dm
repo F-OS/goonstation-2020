@@ -34,7 +34,7 @@
 		if (..())
 			return
 		boutput(user, "<span style=\"color:red\">You feel strange.</span>")
-		user.changeStatus("radiation", (src.rads_amount)*10, 3)
+		user.irradiate(src.rads_amount)
 
 /datum/artifact_fault/shutdown
 	// deactivates the artifact
@@ -69,7 +69,7 @@
 	deploy(var/obj/O,var/mob/living/user)
 		if (..())
 			return
-		if (isitem(src))
+		if (istype(src,/obj/item/))
 			var/obj/item/I = src
 			if (I.loc == user)
 				user.u_equip(I)
@@ -89,7 +89,7 @@
 			return
 		var/turf/T = get_turf(O)
 		T.visible_message("<span style=\"color:red\">The [O.name] suddenly explodes!</span>")
-		if (isitem(src))
+		if (istype(src,/obj/item/))
 			var/obj/item/I = src
 			user.u_equip(I)
 			I.dropped()
@@ -108,8 +108,8 @@
 		var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 		s.set_up(4, 1, user)
 		s.start()
-		user.changeStatus("stunned", 2 SECONDS)
-		user.changeStatus("weakened", 150)
+		user.stunned += 15
+		user.weakened += 15
 		user.stuttering += 30
 
 /datum/artifact_fault/messager

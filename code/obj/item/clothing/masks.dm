@@ -7,15 +7,10 @@
 	inhand_image_icon = 'icons/mob/inhand/hand_headgear.dmi'
 	var/obj/item/voice_changer/vchange = 0
 	body_parts_covered = HEAD
-	compatible_species = list("human", "monkey", "werewolf")
-	var/is_muzzle = 0
-	var/use_bloodoverlay = 1
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 5)
-		setProperty("heatprot", 5)
-		setProperty("meleeprot", 2)
+	compatible_species = list("human", "monkey")
+	armor_value_melee = 2
+	cold_resistance = 5
+	heat_resistance = 5
 
 	attackby(obj/item/W as obj, mob/user as mob)
 		if (istype(W, /obj/item/voice_changer))
@@ -35,7 +30,7 @@
 				W.set_loc(src)
 				user.u_equip(W)
 				return
-		else if (issnippingtool(W))
+		else if (istype(W, /obj/item/wirecutters))
 			if (src.vchange)
 				user.show_text("You begin removing [src.vchange] from [src].", "blue")
 				if (!do_after(user, 20))
@@ -54,19 +49,13 @@
 	name = "gas mask"
 	desc = "A close-fitting mask that can filter some environmental toxins or be connected to an air supply."
 	icon_state = "gas_mask"
-	c_flags = SPACEWEAR | COVERSMOUTH | COVERSEYES | MASKINTERNALS | BLOCKSMOKE
+	c_flags = SPACEWEAR | COVERSMOUTH | COVERSEYES | MASKINTERNALS
 	w_class = 3.0
 	see_face = 0.0
 	item_state = "gas_mask"
+	protective_temperature = 500
+	heat_transfer_coefficient = 0.01
 	permeability_coefficient = 0.01
-	color_r = 0.8 // green tint
-	color_g = 1
-	color_b = 0.8
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 7)
-		setProperty("heatprot", 7)
 
 /obj/item/clothing/mask/moustache
 	name = "fake moustache"
@@ -77,18 +66,8 @@
 	w_class = 1.0
 	is_syndicate = 1
 	mats = 2
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 10)
-		setProperty("meleeprot", 3)
-
-/obj/item/clothing/mask/moustache/safe
-	name = "discount fake moustache"
-	desc = "Almost as good as a REAL fake moustache."
-	icon_state = "moustache"
-	item_state = "moustache"
-	see_face = 1
+	armor_value_melee = 3
+	cold_resistance = 10
 
 /obj/item/clothing/mask/gas/emergency
 	name = "emergency gas mask"
@@ -99,6 +78,7 @@
 	name = "SWAT Mask"
 	desc = "A close-fitting tactical mask that can filter some environmental toxins or be connected to an air supply."
 	icon_state = "swat"
+	armor_value_melee = 1
 
 /obj/item/clothing/mask/gas/voice
 	name = "gas mask"
@@ -127,51 +107,15 @@
 	item_state = "breath"
 	c_flags = COVERSMOUTH | MASKINTERNALS
 	w_class = 2
+	protective_temperature = 420
+	heat_transfer_coefficient = 0.90
 	permeability_coefficient = 0.50
-
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (istype(W,/obj/item/tank))
-			src.auto_setup(W,user)
-		else
-			..()
-
-	proc/auto_setup(atom/target_tank, mob/user as mob)
-		if (istype(target_tank,/obj/item/tank))
-			var/obj/item/tank/T = target_tank
-
-			if (user.find_in_hand(src))
-				if ((user.hand && user.r_hand == src) || (!user.hand && user.l_hand == src))
-					user.swap_hand(!user.hand)
-				user.hotkey("equip")	//wear mask
-			else if (can_reach(user,src))
-				if (user.equipped())
-					user.swap_hand(!user.hand)
-					if (!user.equipped())
-						src.attack_hand(user)
-						user.hotkey("equip")
-
-
-			if (!user.find_in_hand(T))		//pickup tank
-				T.attack_hand(user)
-
-			if (!T.using_internal())//set tank ON
-				T.toggle_valve()
-
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 5)
-		setProperty("heatprot", 5)
 
 /obj/item/clothing/mask/gas/death_commando
 	name = "Death Commando Mask"
 	icon_state = "death_commando_mask"
 	item_state = "death_commando_mask"
-	setupProperties()
-		..()
-		setProperty("meleeprot", 4)
-
+	armor_value_melee = 5
 
 /obj/item/clothing/mask/clown_hat
 	name = "clown wig and mask"
@@ -196,7 +140,6 @@
 	c_flags = COVERSMOUTH
 	w_class = 2
 	desc = "You'd probably say something like 'Hello Clarice.' if you could talk while wearing this."
-	is_muzzle = 1
 
 /obj/item/clothing/mask/surgical
 	name = "sterile mask"
@@ -214,6 +157,8 @@
 	item_state = "surgicalshield"
 	w_class = 2
 	c_flags = COVERSMOUTH | COVERSEYES
+	protective_temperature = 420
+	heat_transfer_coefficient = 0.90
 	permeability_coefficient = 0.50
 
 /obj/item/paper_mask
@@ -296,40 +241,3 @@
 	icon_state = "anime"
 	item_state = "anime"
 	see_face = 0.0
-
-/obj/item/clothing/mask/gas/plague
-	name = "plague doctor mask"
-	desc = "A beak-shaped mask filled with pleasant-smelling herbs to help protect you from miasma, the leading cause of the spread of disease*.<br><small><i>*This information may be slightly outdated, please use caution if using mask later than the 17th century.</i></small>"
-	icon_state = "plague"
-	item_state = "plague"
-	color_r = 0.95 // darken just a little
-	color_g = 0.95
-	color_b = 0.95
-
-/obj/item/clothing/mask/chicken
-	name = "chicken mask"
-	desc = "Just your ordinary chicken mask that induces no violent feelings towards anyone or anything."
-	icon_state = "chicken"
-	item_state = "chicken"
-	see_face = 0
-
-/obj/item/clothing/mask/jester
-	name = "jester's mask"
-	desc = "The mask of a not-so-funny-clown."
-	icon_state = "jester"
-	item_state = "jester"
-	see_face = 0
-
-/obj/item/clothing/mask/hastur
-	name = "cultist mask"
-	desc = "The mask of a cultist who has seen the yellow sign and answered its call.."
-	icon_state = "hasturmask"
-	item_state = "hasturmask"
-	see_face = 0
-
-/obj/item/clothing/mask/kitsune
-	name = "kitsune mask"
-	desc = "The mask of a mythical fox creature from folklore."
-	icon_state = "kitsune"
-	item_state = "kitsune"
-	see_face = 0

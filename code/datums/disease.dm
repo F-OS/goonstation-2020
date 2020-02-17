@@ -1,30 +1,19 @@
 /datum/ailment
 	// all the vars that don't change/are defaults go in here - these will be in a central list for referencing
 	var/name = "ailment"
-	var/scantype = "Ailment"			// what type this shows up as on scanners
-	var/cure = "Unknown"				// how do we get rid of it
-	var/spread = "Unknown"				// how does it spread
-	var/info = null						// info related to the thing to show on health scanners
-	var/print_name = null				// printed name for health scanners
-	var/max_stages = 0					// how many stages the disease has overall
-	var/stage_prob = 5					// % chance per tick it'll advance a stage
-	var/list/affected_species = list()	// what kind of mobs does this disease affect
-	var/tmp/DNA = null					// no fuckin idea
-	var/list/reagentcure = list()		// which reagents cure this disease...
-	// these can be: a list of reagent strings - ex: list("reag1", "reag2") - in which case recureprob is used for them
-	// or a list of strings with numbers associated with them - ex: list("reag1"=5, "reag2"=10) - which will use the associated number to determine % chance to cure
-	// or a list of strings with lists associated with them - ex: list("reag1"=list(1,10), "reag2"=list(1,1)) - which will use both numbers to determine chance to cure, in case 1% chance isn't low enough for you!
-	// or any combination of the above!
-	var/recureprob = 8					// ...and how likely % they are per tick to do so (unless a number or list is associated with the reagent as above)
-	var/temperature_cure = 406			// bodytemperature >= this will purge the infection
-	var/detectability = 0				// detectors must >= this to pick up the disease
-	var/resistance_prob = 0				// how likely this disease is to grant immunity once cured
-	var/max_stacks = 1					// how many times at once you can have this ailment
-
-	//MALADY STUFF ONLY
-	var/min_advance_ticks = 0//delay the evolution of stuff like shock if it rolls badly for us
-	var/tickcount = 0
-	//IM SORRY
+	var/scantype = "Ailment"           // what type this shows up as on scanners
+	var/cure = "Unknown"               // how do we get rid of it
+	var/print_name = null              // printed name for health scanners
+	var/max_stages = 0                 // how many stages the disease has overall
+	var/stage_prob = 5                 // % chance per tick it'll advance a stage
+	var/list/affected_species = list() // what kind of mobs does this disease affect
+	var/tmp/DNA = null                 // no fuckin idea
+	var/list/reagentcure = list()      // which reagents cure this disease...
+	var/recureprob = 8                 // ...and how likely % they are per tick to do so
+	var/temperature_cure = 406         // bodytemperature >= this will purge the infection
+	var/detectability = 0              // detectors must >= this to pick up the disease
+	var/resistance_prob = 0            // how likely this disease is to grant immunity once cured
+	var/max_stacks = 1                 // how many times at once you can have this ailment
 
 	proc/stage_act(var/mob/living/affected_mob,var/datum/ailment_data/D)
 		if (!affected_mob || !D)
@@ -61,6 +50,7 @@
 	cure = "Unknown"
 	var/virulence = 100
 	var/develop_resist = 0
+	var/spread = "Unknown"
 	var/associated_reagent = null // associated reagent, duh
 
 	var/list/disease_data = list() // A list of things for people to research about the disease to make it
@@ -72,21 +62,18 @@
 	// these will be the local thing on mobs that does all the effecting, and they store unique vars so we can still
 	// have unique strains of disease and whatnot
 	/////////////////////////////////////////////////////////////////////////
-	var/datum/ailment/master = null			// we reference back to the ailment itself to get effects and static vars
-	var/tmp/mob/living/affected_mob = null	// the poor sod suffering from the disease
-	var/name = null							// an override - uses the base disease name if null - if not, it uses this
-	var/scantype = null						// same as above but for scantype
-	var/detectability = 0					// scans must >= this to detect the disease
-	var/cure = "Unknown"					// how do we get rid of it
-	var/spread = "Unknown" 					// how does this disease transmit itself around?
-	var/info = null							// info related to the thing to show on health scanners
-	var/stage = 1							// what stage the disease is currently at
-	var/state = "Active"					// what is this disease currently doing
-	var/stage_prob = 5						// how likely is this disease to advance to the next stage
-	var/list/reagentcure = list()			// list of reagents that can cure this disease (see above for details on associations in this list)
-	var/recureprob = 8						// probability per tick that the reagent will cure the disease
-	var/temperature_cure = 406				// this temp or higher will cure the disease
-	var/resistance_prob = 0					// how likely this disease is to grant immunity once cured
+	var/datum/ailment/master = null // we reference back to the ailment itself to get effects and static vars
+	var/tmp/mob/living/affected_mob = null // the poor sod suffering from the disease
+	var/name = null                 // an override - uses the base disease name if null - if not, it uses this
+	var/detectability = 0           // scans must >= this to detect the disease
+	var/cure = "Unknown"            // how do we get rid of it
+	var/stage = 1                   // what stage the disease is currently at
+	var/state = "Active"            // what is this disease currently doing
+	var/stage_prob = 5              // how likely is this disease to advance to the next stage
+	var/list/reagentcure = list()   // list of reagents that can cure this disease
+	var/recureprob = 8              // probability per tick that the reagent will cure the disease
+	var/temperature_cure = 406      // this temp or higher will cure the disease
+	var/resistance_prob = 0         // how likely this disease is to grant immunity once cured
 
 	disposing()
 		if (affected_mob)
@@ -118,16 +105,15 @@
 		return 0
 
 	proc/scan_info()
-		var/text = "<span style='color:red'><b>"
-		if (istype(src.master,/datum/ailment/disease) || istype(src.master,/datum/ailment/malady))
+		var/text = "<span style=\"color:red\"><b>"
+		if (istype(src.master,/datum/ailment/disease))
 			text += "[src.state] "
-		text += "[src.scantype ? src.scantype : src.master.scantype]:"
+		text += "[src.master.scantype]:"
 
 		text += " [src.name ? src.name : src.master.name]</b> <small>(Stage [src.stage]/[src.master.max_stages])<br>"
-		if (src.info)
-			text += "Info: [src.info]<br>"
-		if (istype(src.master,/datum/ailment/disease) && src.spread)
-			text += "Spread: [src.spread]<br>"
+		if (istype(src.master,/datum/ailment/disease))
+			var/datum/ailment_data/disease/AD = src
+			text += "Spread: [AD.spread]<br>"
 		if (src.cure == "Incurable")
 			text += "Infection is incurable. Suggest quarantine measures."
 		else if (src.cure == "Unknown")
@@ -149,6 +135,7 @@
 /datum/ailment_data/disease
 	var/virulence = 100    // how likely is this disease to spread
 	var/develop_resist = 0 // can you develop a resistance to this?
+	var/spread = "Unknown" // how does this disease transmit itself around?
 	var/cycles = 0         // does this disease have a cyclical nature? if so, how many cycles have elapsed?
 
 	stage_act()
@@ -195,7 +182,7 @@
 				state = "Remissive"
 				return 1
 
-			else if (cure == "Burnings" && (affected_mob.get_burn_damage() >= 40 || affected_mob.getStatusDuration("burning")))
+			else if (cure == "Burnings" && (affected_mob.get_burn_damage() >= 40 || affected_mob.burning))
 				state = "Remissive"
 				return 1
 
@@ -204,33 +191,16 @@
 				return 1
 
 			if (reagentcure.len && affected_mob.reagents)
-				for (var/current_id in affected_mob.reagents.reagent_list)
+				for(var/current_id in affected_mob.reagents.reagent_list)
 					if (reagentcure.Find(current_id))
-						var/we_are_cured = 0
-						var/reagcure_prob = reagentcure[current_id]
-						if (isnum(reagcure_prob))
-							if (prob(reagcure_prob))
-								we_are_cured = 1
-						else if (islist(reagcure_prob)) // we want to roll more than one prob() in order to succeed, aka we want a very low chance
-							var/list/cureprobs = reagcure_prob
-							var/success = 1
-							for (var/thing in cureprobs)
-								if (!isnum(thing))
-									continue
-								if (!prob(thing))
-									success = 0
-							if (success)
-								we_are_cured = 1
-						else if (prob(recureprob))
-							we_are_cured = 1
-						if (we_are_cured)
+						if (prob(recureprob))
 							state = "Remissive"
 							return 1
 
 		if (state == "Asymptomatic" || state == "Dormant")
 			return 1
 
-		SPAWN_DBG(rand(1,5))
+		spawn(rand(1,5))
 			// vary it up a bit so the processing doesnt look quite as transparent
 			if (master)
 				master.stage_act(affected_mob,src)
@@ -241,7 +211,6 @@
 	var/associated_reagent = null
 	var/last_reagent_dose = 0
 	var/withdrawal_duration = 4800
-	var/max_severity = "HIGH"
 
 	New()
 		..()
@@ -266,7 +235,7 @@
 			affected_mob.cure_disease(src)
 			return
 
-		if (!ismind(source))
+		if (!istype(source, /datum/mind))
 			affected_mob.cure_disease(src)
 			return
 
@@ -287,59 +256,80 @@
 
 /mob/living/proc/disease_resistance_check(var/ailment_path, var/ailment_name)
 	if (!src)
+		// no mob (somehow), so fuck this shit!
+		return 0
+
+	if (!ispath(ailment_path) && !istext(ailment_name))
+		// didn't specify a disease to check against
+		return 0
+
+	var/datum/ailment/A = null
+	if (ailment_name)
+		A = get_disease_from_name(ailment_name)
+	else
+		A = get_disease_from_path(ailment_path)
+
+	if (!istype(A,/datum/ailment/))
+		// can't find shit, captain!
+		return 0
+
+	if (src.resistances.Find(A.type))
+		// If we've already got this disease or are resistant to it, then NOPE
+		// duplicate strain checking is in the main loop because otherwise bypass resistance ignores it
+		return 0
+
+	var/mob_type = null
+	if (ismonkey(src))
+		mob_type = "Monkey"
+	else if (ishuman(src))
+		//Current thought: It's really weird for a base mob proc to run istypes on itself.
+		var/mob/living/carbon/human/H = src
+		if (H.mutantrace && !H.mutantrace.human_compatible)
+			mob_type = capitalize(H.mutantrace.name)
+		else
+			mob_type = "Human"
+	if (!A.affected_species.Find(mob_type))
+		// Only valid vector species can get a disease.
+		return 0
+
+	if (src.stat == 2 && !istype(A,/datum/ailment/parasite))
+		//Dead folks cannot get non-parasitoid infections.
 		return 0
 
 	var/resist_prob = 0
+	if (istype(A,/datum/ailment/disease/))
+		var/datum/ailment/disease/D = A
+		resist_prob -= D.virulence
+		if (istype(src,/mob/living/carbon/human))
+			var/mob/living/carbon/human/H = src
+			if (D.spread == "Airborne")
+				if (src.wear_mask)
+					if (H.internal)
+						resist_prob += 100
+						// if you don't breathe it in, you're fine
+					else
+						resist_prob += 20
+						// mask but no air supply - still better than nothing
 
-	if (ishuman(src))
-		var/mob/living/carbon/human/H = src
-		resist_prob = H.get_disease_protection(ailment_path, ailment_name)
-	else
-		for(var/obj/item/clothing/C in src.get_equipped_items())
-			resist_prob += C.getProperty("viralprot")
+			else if (D.spread == "Sight")
+				if (H.eyes_protected_from_light())
+					resist_prob += 190
 
-	if (ispath(ailment_path) || istext(ailment_name))
-		var/datum/ailment/A = null
-		if (ailment_name)
-			A = get_disease_from_name(ailment_name)
-		else
-			A = get_disease_from_path(ailment_path)
+			for (var/obj/item/clothing/C in H.get_equipped_items())
+				resist_prob += C.disease_resistance
 
-		if (!istype(A,/datum/ailment/))
-			return 0
-
-		if (src.resistances.Find(A.type))
-			return 0
-
-		if (A.affected_species.len)
-			var/mob_type = null
-			if (ismonkey(src))
-				mob_type = "Monkey"
-			else if (ishuman(src))
-				var/mob/living/carbon/human/H = src
-				if (H.mutantrace && !H.mutantrace.human_compatible)
-					mob_type = capitalize(H.mutantrace.name)
-				else
-					mob_type = "Human"
-			if (!A.affected_species.Find(mob_type))
-				return 0
-
-		if (isdead(src) && !istype(A,/datum/ailment/parasite))
-			return 0
-
-		if (istype(A,/datum/ailment/disease/))
-			var/datum/ailment/disease/D = A
-			resist_prob -= D.virulence
-
+	resist_prob = max(0,min(resist_prob,100))
 	if (prob(resist_prob))
+		// we successfully resisted it
 		return 0
-	else
-		return 1 // you caught the virus! do you want to give the captured virus a nickname? virus has been recorded in lurgydex
+
+	// you caught the virus! do you want to give the captured virus a nickname? virus has been recorded in lurgydex
+	return 1
 
 /mob/living/proc/contract_disease(var/ailment_path, var/ailment_name, var/datum/ailment_data/disease/strain, bypass_resistance = 0)
 	if (!src)
 		return null
-	if (!ailment_path && !ailment_name && !(istype(strain,/datum/ailment_data/disease) || istype(strain,/datum/ailment_data/malady))) // maladies use strain to transfer specific instances of their selves via organ transplant/etc
+	if (!ailment_path && !ailment_name && !istype(strain,/datum/ailment_data/disease/))
 		return null
 
 	var/datum/ailment/A = null
@@ -386,7 +376,7 @@
 			AD.detectability = strain.detectability
 			AD.develop_resist = strain.develop_resist
 			AD.cure = strain.cure
-			AD.info = strain.info
+			AD.spread = strain.spread
 			AD.resistance_prob = strain.resistance_prob
 			AD.temperature_cure = strain.temperature_cure
 		else
@@ -398,7 +388,7 @@
 			AD.detectability = D.detectability
 			AD.develop_resist = D.develop_resist
 			AD.cure = D.cure
-			AD.info = D.info
+			AD.spread = D.spread
 			AD.resistance_prob = D.resistance_prob
 			AD.temperature_cure = D.temperature_cure
 
@@ -411,41 +401,6 @@
 			AD.state = "Asymptomatic"
 			// carrier - will spread it but won't suffer from it
 		return AD
-
-	else if (istype(A, /datum/ailment/malady))
-		var/datum/ailment/malady/M = A
-		var/datum/ailment_data/malady/AD = new /datum/ailment_data/malady
-		if (istype(strain,/datum/ailment_data/malady))
-			if (strain.name)
-				AD.name = strain.name
-			else
-				AD.name = M.name
-			AD.stage_prob = strain.stage_prob
-			AD.reagentcure = strain.reagentcure
-			AD.recureprob = strain.recureprob
-			AD.detectability = strain.detectability
-			AD.cure = strain.cure
-			AD.spread = strain.spread
-			AD.info = strain.info
-			AD.resistance_prob = strain.resistance_prob
-			AD.temperature_cure = strain.temperature_cure
-		else
-			AD.name = M.name
-			AD.stage_prob = M.stage_prob
-			AD.reagentcure = M.reagentcure
-			AD.recureprob = M.recureprob
-			AD.detectability = M.detectability
-			AD.cure = M.cure
-			AD.spread = M.spread
-			AD.info = M.info
-			AD.resistance_prob = M.resistance_prob
-			AD.temperature_cure = M.temperature_cure
-		src.ailments += AD
-		AD.master = A
-		AD.affected_mob = src
-		AD.on_infection()
-		return AD
-
 	else
 		var/datum/ailment_data/AD = new /datum/ailment_data
 		AD.name = A.name
@@ -480,13 +435,12 @@
 	return
 
 /mob/living/proc/cure_disease(var/datum/ailment_data/AD)
-	if (!istype(AD) || !AD.master)
+	if (!AD.master || !istype(AD,/datum/ailment_data/))
 		return 0
 
 	if (prob(AD.resistance_prob))
 		src.resistances += AD.master.type
-	if (src.ailments) //ZeWaka: Fix for null.ailments
-		src.ailments -= AD
+	src.ailments -= AD
 	AD.master.on_remove(src,AD)
 	qdel(AD)
 	return 1
@@ -543,37 +497,37 @@
 	if (src.organHolder.heart && src.organHolder.heart.robotic && src.organHolder.heart.emagged && !src.organHolder.heart.broken)
 		src.add_stam_mod_regen("heart_shock", 5)
 		src.add_stam_mod_max("heart_shock", 20)
-		SPAWN_DBG(9000)
+		spawn(9000)
 			src.remove_stam_mod_regen("heart_shock")
 			src.remove_stam_mod_max("heart_shock")
 		if (prob(numHigh))
-			boutput(src, "<span style='color:red'>Your cyberheart spasms violently!</span>")
+			boutput(src, "<span style=\"color:red\">Your cyberheart spasms violently!</span>")
 			random_brute_damage(src, numHigh)
 		if (prob(numHigh))
-			boutput(src, "<span style='color:red'>Your cyberheart shocks you painfully!</span>")
+			boutput(src, "<span style=\"color:red\">Your cyberheart shocks you painfully!</span>")
 			random_burn_damage(src, numHigh)
 		if (prob(numMid))
-			boutput(src, "<span style='color:red'>Your cyberheart lurches awkwardly!</span>")
-			src.contract_disease(/datum/ailment/malady/heartfailure, null, null, 1)
+			boutput(src, "<span style=\"color:red\">Your cyberheart lurches awkwardly!</span>")
+			src.contract_disease(/datum/ailment/disease/heartfailure, null, null, 1)
 		if (prob(numMid))
-			boutput(src, "<span style='color:red'><B>Your cyberheart stops beating!</B></span>")
-			src.contract_disease(/datum/ailment/malady/flatline, null, null, 1)
+			boutput(src, "<span style=\"color:red\"><B>Your cyberheart stops beating!</B></span>")
+			src.contract_disease(/datum/ailment/disease/flatline, null, null, 1)
 		if (prob(numLow))
-			boutput(src, "<span style='color:red'><B>Your cyberheart shuts down!</B></span>")
+			boutput(src, "<span style=\"color:red\"><B>Your cyberheart shuts down!</B></span>")
 			src.organHolder.heart.broken = 1
-			src.contract_disease(/datum/ailment/malady/flatline, null, null, 1)
+			src.contract_disease(/datum/ailment/disease/flatline, null, null, 1)
 	else if (src.organHolder.heart && src.organHolder.heart.robotic && !src.organHolder.heart.emagged && !src.organHolder.heart.broken)
 		src.add_stam_mod_regen("heart_shock", 1)
 		src.add_stam_mod_max("heart_shock", 10)
-		SPAWN_DBG(9000)
+		spawn(9000)
 			src.remove_stam_mod_regen("heart_shock")
 			src.remove_stam_mod_max("heart_shock")
 		if (prob(numMid))
-			boutput(src, "<span style='color:red'>Your cyberheart spasms violently!</span>")
+			boutput(src, "<span style=\"color:red\">Your cyberheart spasms violently!</span>")
 			random_brute_damage(src, numMid)
 		if (prob(numMid))
-			boutput(src, "<span style='color:red'>Your cyberheart shocks you painfully!</span>")
+			boutput(src, "<span style=\"color:red\">Your cyberheart shocks you painfully!</span>")
 			random_burn_damage(src, numMid)
 		if (prob(numLow))
-			boutput(src, "<span style='color:red'>Your cyberheart lurches awkwardly!</span>")
-			src.contract_disease(/datum/ailment/malady/heartfailure, null, null, 1)
+			boutput(src, "<span style=\"color:red\">Your cyberheart lurches awkwardly!</span>")
+			src.contract_disease(/datum/ailment/disease/heartfailure, null, null, 1)

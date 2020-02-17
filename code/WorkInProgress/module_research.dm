@@ -189,8 +189,8 @@
 		cost = 5
 		size = 1
 		research_requirements = list("audio" = 1)
-		item_path = /obj/item/instrument/vuvuzela
-		additional_requirements = list("subtype" = list(/obj/item/instrument/vuvuzela = "Vuvuzela"))
+		item_path = /obj/item/vuvuzela
+		additional_requirements = list("subtype" = list(/obj/item/vuvuzela = "Vuvuzela"))
 
 	bikehorn
 		name = "Bike Horn"
@@ -198,8 +198,8 @@
 		cost = 5
 		size = 1
 		research_requirements = list("audio" = 1)
-		item_path = /obj/item/instrument/bikehorn
-		additional_requirements = list("subtype" = list(/obj/item/instrument/bikehorn = "Bike Horn"))
+		item_path = /obj/item/bikehorn
+		additional_requirements = list("subtype" = list(/obj/item/bikehorn = "Bike Horn"))
 
 	dramahorn
 		name = "Dramatic Horn"
@@ -207,7 +207,7 @@
 		cost = 10
 		size = 1
 		research_requirements = list("audio" = 15)
-		item_path = /obj/item/instrument/bikehorn/dramatic
+		item_path = /obj/item/bikehorn/dramatic
 
 	synthesizer
 		name = "Sound Synthesizer"
@@ -223,7 +223,7 @@
 		cost = 5
 		size = 1
 		research_requirements = list("audio" = 7)
-		item_path = /obj/item/instrument/whistle
+		item_path = /obj/item/whistle
 
 	harmonica
 		name = "Harmonica"
@@ -231,7 +231,7 @@
 		cost = 5
 		size = 1
 		research_requirements = list("audio" = 7, "engineering" = 2)
-		item_path = /obj/item/instrument/whistle
+		item_path = /obj/item/whistle
 
 	saxophone
 		name = "Saxophone"
@@ -239,7 +239,7 @@
 		cost = 10
 		size = 1.5
 		research_requirements = list("audio" = 15, "metals" = 10)
-		item_path = /obj/item/instrument/saxophone
+		item_path = /obj/item/saxophone
 
 	hellsax
 		name = "Precursor Saxophone"
@@ -333,21 +333,21 @@
 		item_path = /obj/item/rcd/cyborg
 		additional_requirements = list("subtype" = list(/obj/item/rcd = "RCD"))
 
-	defibrillator
-		name = "defibrillator"
+	defibrilator
+		name = "Defibrilator"
 		desc = "A human revival tool."
 		cost = 35
 		size = 2.5
 		research_requirements = list("devices" = 15, "medicine" = 15)
-		item_path = /obj/item/robodefibrillator
+		item_path = /obj/item/robodefibrilator
 
-	defibrillator_e
-		name = "defibrillator (malfunctioning)"
+	defibrilator_e
+		name = "Defibrilator (malfunctioning)"
 		desc = "A human un-revival tool."
 		cost = 200
 		size = 2.5
 		research_requirements = list("devices" = 15, "medicine" = 15, "malfunction" = 25)
-		item_path = /obj/item/robodefibrillator/emagged
+		item_path = /obj/item/robodefibrilator/emagged
 		hidden = 1
 
 	plant_analyzer
@@ -364,7 +364,7 @@
 		cost = 10
 		size = 1
 		research_requirements = list("analysis" = 8, "medicine" = 5, "devices" = 5)
-		item_path = /obj/item/device/analyzer/healthanalyzer
+		item_path = /obj/item/device/healthanalyzer
 
 	health_analyzer_a
 		name = "Advanced Health Analyzer"
@@ -372,7 +372,7 @@
 		cost = 20
 		size = 1
 		research_requirements = list("analysis" = 16, "medicine" = 10, "devices" = 10)
-		item_path = /obj/item/device/analyzer/healthanalyzer/borg
+		item_path = /obj/item/device/healthanalyzer/borg
 
 	reagentscanner
 		name = "Reagent Scanner"
@@ -388,7 +388,7 @@
 		cost = 10
 		size = 1
 		research_requirements = list("analysis" = 8, "atmospherics" = 5, "devices" = 5)
-		item_path = /obj/item/device/analyzer/atmospheric
+		item_path = /obj/item/device/analyzer
 
 	t_scanner
 		name = "T-Scanner"
@@ -531,7 +531,7 @@
 		if (!needs_setup)
 			return
 		needs_setup = 0
-		for (var/tech in childrentypesof(/datum/module_tech))
+		for (var/tech in typesof(/datum/module_tech) - /datum/module_tech)
 			var/datum/module_tech/T = new tech()
 			for (var/research_type in T.research_requirements)
 				if (!(research_type in research_state) && !(research_type in secret_topics))
@@ -636,7 +636,7 @@ var/global/datum/module_research_controller/module_control = new
 	var/boosted = 0
 	var/power_level = 1
 	var/research_object = ""
-	var/list/grumps = list('sound/machines/mixer.ogg', 'sound/impact_sounds/Slimy_Splat_1.ogg','sound/impact_sounds/Liquid_Slosh_1.ogg','sound/effects/zhit.wav','sound/impact_sounds/Slimy_Hit_3.ogg','sound/impact_sounds/Slimy_Hit_4.ogg','sound/impact_sounds/Flesh_Stab_1.ogg')
+	var/list/grumps = list('sound/machines/mixer.ogg', 'sound/effects/splat.ogg','sound/effects/slosh.ogg','sound/effects/zhit.wav','sound/effects/attackblob.ogg','sound/effects/blobattack.ogg','sound/effects/bloody_stab.ogg')
 	var/list/to_add = list()
 	var/list/current_module = list()
 	var/module_name = "unnamed module"
@@ -658,7 +658,7 @@ var/global/datum/module_research_controller/module_control = new
 			user.u_equip(W)
 			W.loc = src
 			return
-		if ((!islist(W.module_research) || !W.module_research.len) && !W.artifact)
+		if (!W.module_research.len && !W.artifact)
 			boutput(user, "<span style=\"color:red\">That item cannot be researched!</span>")
 			return
 		user.u_equip(W)
@@ -693,36 +693,33 @@ var/global/datum/module_research_controller/module_control = new
 				module_control.add_points(to_add)
 				to_add.len = 0
 				icon_state = "moduler-off"
-				SPAWN_DBG(0)
+				spawn(0)
 					check_unlocks()
 			update_all_users()
 
 	Topic(href, href_list)
-		if (!(usr in view(1)) && !issilicon(usr))
+		if (!(usr in view(1)) && !istype(usr, /mob/living/silicon))
 			return
 		if (!researching)
 			if (href_list["menu"])
 				machine_state = text2num(href_list["menu"])
 			if (href_list["locked"])
 				machine_state = MR_MACHINE_STATE_LOCKED
-				substate = locate(href_list["locked"]) in module_control.locked_tech
+				substate = locate(href_list["locked"])
 			if (href_list["unlocked"])
 				machine_state = MR_MACHINE_STATE_UNLOCKED
-				substate = locate(href_list["unlocked"]) in module_control.unlocked_tech
+				substate = locate(href_list["unlocked"])
 			if (href_list["researched"])
 				machine_state = MR_MACHINE_STATE_RESEARCHED
 				substate = text2path(href_list["researched"])
-				if (!module_control.worth.Find(substate))
-					substate = null
 			if (href_list["eject"])
-				var/obj/item/I = locate(href_list["eject"]) in src
+				var/obj/item/I = locate(href_list["eject"])
 				if (I && I.loc == src)
 					I.loc = src.loc
-					usr.put_in_hand_or_drop(I) // try to eject it into the users hand, if we can
 					objects -= I
 					modules -= I
 			if (href_list["shred"])
-				var/obj/item/I = locate(href_list["shred"]) in src
+				var/obj/item/I = locate(href_list["shred"])
 				if (I && I.loc == src)
 					researching = 1
 					visible_message("<b>[src]</b> powers up and begins its research process!")
@@ -765,7 +762,7 @@ var/global/datum/module_research_controller/module_control = new
 				else
 					boutput(usr, "<span style=\"color:red\">You cannot afford to purchase [amt] data points for [cost] credits!</span>")
 			if (href_list["add"])
-				var/datum/module_tech/T = locate(href_list["add"]) in module_control.unlocked_tech
+				var/datum/module_tech/T = locate(href_list["add"])
 				if (T && (T in module_control.unlocked_tech))
 					current_module += T
 			if (href_list["remove"])
@@ -775,7 +772,7 @@ var/global/datum/module_research_controller/module_control = new
 			if (href_list["name"])
 				var/nn = input("Module name", "Module name", null) as text|null
 				if (nn)
-					module_name = strip_html(nn)
+					module_name = nn
 					if (length(module_name) > 32)
 						module_name = copytext(module_name, 1, 33)
 					module_name = "[module_name] module"
@@ -840,7 +837,7 @@ var/global/datum/module_research_controller/module_control = new
 
 	proc/update_all_users()
 		for (var/mob/M in users)
-			if (!(M.machine == src && ((M in viewers(1, src)) || issilicon(M))))
+			if (!(M.machine == src && ((M in viewers(1, src)) || istype(M, /mob/living/silicon))))
 				users -= M
 		if (!users.len)
 			return
@@ -879,7 +876,7 @@ var/global/datum/module_research_controller/module_control = new
 		onclose(user, "module_res", src)
 
 	proc/show_interface(var/mob/user)
-		if (!(user in range(1)) && !issilicon(user))
+		if (!(user in range(1)) && !istype(user, /mob/living/silicon))
 			return
 		var/interface = generate_interface()
 		show_to_user(user, interface)

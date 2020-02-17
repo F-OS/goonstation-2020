@@ -25,7 +25,7 @@
 		O.anchored = 1
 		for(var/turf/T in circular_range(O,field_radius))
 			new /obj/darkness_field(T,field_time)
-		SPAWN_DBG(field_time)
+		spawn(field_time)
 			if (O)
 				O.anchored = 0
 				O.ArtifactDeactivated()
@@ -47,7 +47,7 @@
 	New(var/loc,var/duration)
 		..()
 		animate(src, time = 20, alpha = 255, easing = LINEAR_EASING)
-		SPAWN_DBG(duration)
+		spawn(duration)
 			animate(src, time = 20, alpha = 0, easing = LINEAR_EASING)
-			SPAWN_DBG(0)
+			spawn(0)
 				qdel(src)

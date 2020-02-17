@@ -49,13 +49,13 @@ Contains:
 		I.left = 10
 	for(var/obj/item/device/infra/I in range(src.loc))
 		I.visible = 1
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			if ((I && I.first))
 				I.first.vis_spread(1)
 			return
 	for(var/obj/item/assembly/rad_infra/I in range(src.loc))
 		I.part2.visible = 1
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			if ((I.part2 && I.part2.first))
 				I.part2.first.vis_spread(1)
 			return
@@ -64,7 +64,7 @@ Contains:
 /obj/item/device/infra_sensor/attack_self(mob/user as mob)
 	user.machine = src
 	var/dat = text("<TT><B>Infrared Sensor</B><BR><br><B>Passive Emitter</B>: []<BR><br><B>Active Emitter</B>: <A href='?src=\ref[];active=0'>Burst Fire</A><br></TT>", (src.passive ? text("<A href='?src=\ref[];passive=0'>On</A>", src) : text("<A href='?src=\ref[];passive=1'>Off</A>", src)), src)
-	user.Browse(dat, "window=infra_sensor")
+	user << browse(dat, "window=infra_sensor")
 	onclose(user, "infra_sensor")
 	return
 
@@ -79,18 +79,18 @@ Contains:
 			if(passive && !(src in processing_items))
 				processing_items.Add(src)
 		if (href_list["active"])
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				src.burst()
 				return
 		if (!( src.master ))
-			if (ismob(src.loc))
+			if (istype(src.loc, /mob))
 				attack_self(src.loc)
 			else
 				for(var/mob/M in viewers(1, src))
 					if (M.client)
 						src.attack_self(M)
 		else
-			if (ismob(src.master.loc))
+			if (istype(src.master.loc, /mob))
 				src.attack_self(src.master.loc)
 			else
 				for(var/mob/M in viewers(1, src.master))
@@ -98,14 +98,14 @@ Contains:
 						src.attack_self(M)
 		src.add_fingerprint(usr)
 	else
-		usr.Browse(null, "window=infra_sensor")
+		usr << browse(null, "window=infra_sensor")
 		onclose(usr, "infra_sensor")
 		return
 	return
 
 /obj/item/device/infra/proc/hit()
 	if (src.master)
-		SPAWN_DBG(0)
+		spawn()
 			var/datum/signal/signal = new
 			signal.data["message"] = "ACTIVATE"
 			src.master.receive_signal(signal)
@@ -125,16 +125,16 @@ Contains:
 		var/obj/beam/i_beam/I = new /obj/beam/i_beam( (src.master ? src.master.loc : src.loc) )
 		//boutput(world, "infra spawning beam : \ref[I]")
 		I.master = src
-		I.set_density(1)
+		I.density = 1
 		I.dir = src.dir
 		step(I, I.dir)
 		if (I)
 			//boutput(world, "infra: beam at [I.x] [I.y] [I.z]")
-			I.set_density(0)
+			I.density = 0
 			src.first = I
 			//boutput(world, "infra : vis_spread")
 			I.vis_spread(src.visible)
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				if (I)
 					//boutput(world, "infra: setting limit")
 					I.limit = 20
@@ -168,7 +168,7 @@ Contains:
 /obj/item/device/infra/attack_self(mob/user as mob)
 	user.machine = src
 	var/dat = text("<TT><B>Infrared Laser</B><br><B>Status</B>: []<BR><br><B>Visibility</B>: []<BR><br></TT>", (src.state ? text("<A href='?src=\ref[];state=0'>On</A>", src) : text("<A href='?src=\ref[];state=1'>Off</A>", src)), (src.visible ? text("<A href='?src=\ref[];visible=0'>Visible</A>", src) : text("<A href='?src=\ref[];visible=1'>Invisible</A>", src)))
-	user.Browse(dat, "window=infra")
+	user << browse(dat, "window=infra")
 	onclose(user, "infra")
 	return
 
@@ -187,12 +187,12 @@ Contains:
 				processing_items.Add(src)
 		if (href_list["visible"])
 			src.visible = !( src.visible )
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				if (src.first)
 					src.first.vis_spread(src.visible)
 				return
 		if (!( src.master ))
-			if (ismob(src.loc))
+			if (istype(src.loc, /mob))
 				attack_self(src.loc)
 			else
 				for(var/mob/M in viewers(1, src))
@@ -200,7 +200,7 @@ Contains:
 						src.attack_self(M)
 					//Foreach goto(211)
 		else
-			if (ismob(src.master.loc))
+			if (istype(src.master.loc, /mob))
 				src.attack_self(src.master.loc)
 			else
 				for(var/mob/M in viewers(1, src.master))
@@ -208,7 +208,7 @@ Contains:
 						src.attack_self(M)
 					//Foreach goto(287)
 	else
-		usr.Browse(null, "window=infra")
+		usr << browse(null, "window=infra")
 		onclose(usr, "infra")
 		return
 	return
@@ -244,22 +244,21 @@ Contains:
 	var/obj/item/device/radio/signaler/part1 = null
 	var/obj/item/device/infra/part2 = null
 	status = null
-	flags = FPRINT | TABLEPASS | CONDUCT
+	flags = FPRINT | TABLEPASS| CONDUCT
 
 /obj/item/assembly/rad_infra/c_state(n)
 	src.icon_state = text("infrared-radio[]", n)
 	return
 /*
-/obj/item/assembly/rad_infra/disposing()
+/obj/item/assembly/rad_infra/Del()
 	qdel(src.part1)
 	qdel(src.part2)
 	..()
 	return
 
 /obj/item/assembly/rad_infra/attackby(obj/item/W as obj, mob/user as mob)
-	if (!W)
-		return
-	if (iswrenchingtool(W) && !(src.status))
+
+	if ((istype(W, /obj/item/wrench) && !( src.status )))
 		var/turf/T = src.loc
 		if (ismob(T))
 			T = T.loc
@@ -272,14 +271,14 @@ Contains:
 		//SN src = null
 		qdel(src)
 		return
-	if (!isscrewingtool(W))
+	if (!( istype(W, /obj/item/screwdriver) ))
 		return
-	src.status = !(src.status)
+	src.status = !( src.status )
 	if (src.status)
 		user.show_message("<span style=\"color:blue\">The infrared laser is now secured!</span>", 1)
 	else
 		user.show_message("<span style=\"color:blue\">The infrared laser is now unsecured!</span>", 1)
-	src.part1.b_stat = !(src.status)
+	src.part1.b_stat = !( src.status )
 	src.add_fingerprint(user)
 	return
 

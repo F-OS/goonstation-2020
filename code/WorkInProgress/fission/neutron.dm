@@ -16,7 +16,7 @@
 		return
 
 	proc/updateicon()
-		if(status & NOPOWER)
+		if(stat & NOPOWER)
 			icon_state = "neutinj"
 			return
 		if(insertedRod)
@@ -27,7 +27,7 @@
 	process()
 		updateicon()
 
-		if(status & NOPOWER)
+		if(stat & NOPOWER)
 			return
 
 		if(insertedRod)

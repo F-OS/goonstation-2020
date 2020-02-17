@@ -45,7 +45,6 @@ var/list/hex_digit_values = list("0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 4, "5
 
 	New()
 		..()
-		verbs -= /obj/item/mechanics/verb/setvalue
 		mechanics.addInput("input 1", "fire1")
 		mechanics.addInput("input 2", "fire2")
 		mechanics.addInput("input 3", "fire3")
@@ -54,7 +53,6 @@ var/list/hex_digit_values = list("0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 4, "5
 		mechanics.addInput("input 6", "fire6")
 		mechanics.addInput("input 7", "fire7")
 		//mechanics.addInput("input 8", "fire8")
-
 
 
 	process()
@@ -69,7 +67,7 @@ var/list/hex_digit_values = list("0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 4, "5
 
 		updateUsrDialog()
 
-		SPAWN_DBG (0)
+		spawn (0)
 			for (var/i = INSTRUCTIONS_PER_PROCESS, i > 0, i--)
 				if (!running || !level)
 					break
@@ -89,7 +87,6 @@ var/list/hex_digit_values = list("0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 4, "5
 				sleep(1)
 
 	attack_hand(mob/user as mob)
-		if (!istype(src.loc, /turf/)) return
 		if (!src.level)
 			return ..()
 
@@ -100,7 +97,7 @@ var/list/hex_digit_values = list("0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 4, "5
 
 		. = user_interface(user)
 		if (.)
-			user.Browse(., "window=mcu14500b")
+			user << browse(., "window=mcu14500b")
 			onclose(user, "mcu14500b")
 
 	proc/user_interface(mob/user as mob)
@@ -165,8 +162,7 @@ function update_mem_lights(mem)
 		set src in view(1)
 		set name = "\[Set ROM\]"
 		set desc = "Configure the ROM by thinking really hard at the floating-gate transistors inside.  Really, really hard."
-		set category = "Local"
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -181,20 +177,18 @@ function update_mem_lights(mem)
 			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
 			return
 
-		. = uppertext(copytext(ckey(.), 1, 1+MAX_ROM_SIZE))
-		if (length(.)%2 || !is_hex(.))
+		. = uppertext(copytext(ckey(.), 1, 65))
+		if (length(.)%2 || !ishex(.))
 			boutput(usr, "<span style=\"color:red\">Invalid ROM values.  Great job, knucklehead!!</span>")
 
 		ROM = .
-
 
 	verb/goofy_power_debug()
 		set src in view(1)
 		set name = "\[Toggle Active\]"
 		set desc = "Toggle whether this is on or not.  Doing stuff."
-		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -206,7 +200,6 @@ function update_mem_lights(mem)
 		IEN = 0
 		OEN = 0
 		RR = 0
-		program_counter = 0
 		src.ioPins = 1 //All zero except the !RR section.
 		src.icon_state = "genericsmall[src.running ? 1 : 0]"
 
@@ -333,7 +326,7 @@ function update_mem_lights(mem)
 					program_counter += (4 * (. - 7)) - 2
 
 				else
-					program_counter -= (4 * (. + 1)) + 2
+					program_counter -= (4 * (. + 1)) - 2
 
 				. = length(ROM)
 				if (program_counter < 0)

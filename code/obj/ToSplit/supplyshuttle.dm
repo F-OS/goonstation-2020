@@ -18,29 +18,23 @@ var/door_id = "qm_dock"
 /area/supply/spawn_point //the area supplies are spawned at and fired from
 	name = "supply spawn point"
 	icon_state = "shuttle3"
+	luminosity = 1
+	RL_Lighting = 0
 	requires_power = 0
-
-	#ifdef UNDERWATER_MAP
-	color = OCEAN_COLOR
-	#endif
 
 /area/supply/delivery_point //the area supplies are fired at
 	name = "supply target point"
 	icon_state = "shuttle3"
+	luminosity = 1
+	RL_Lighting = 0
 	requires_power = 0
-
-	#ifdef UNDERWATER_MAP
-	color = OCEAN_COLOR
-	#endif
 
 /area/supply/sell_point //the area where supplies move from the station z level
 	name = "supply sell region"
 	icon_state = "shuttle3"
+	luminosity = 1
+	RL_Lighting = 0
 	requires_power = 0
-
-	#ifdef UNDERWATER_MAP
-	color = OCEAN_COLOR
-	#endif
 
 	Entered(var/atom/movable/AM)
 		..()
@@ -60,16 +54,11 @@ var/door_id = "qm_dock"
 	density = 0
 	anchored = 1
 	layer = EFFECTS_LAYER_UNDER_1
-	event_handler_flags = USE_FLUID_ENTER | USE_CANPASS
 
 /obj/plasticflaps/CanPass(atom/A, turf/T)
-	if (isliving(A)) // You Shall Not Pass!
+	if (istype(A, /mob/living)) // You Shall Not Pass!
 		var/mob/living/M = A
-		if (isghostdrone(M)) // except for drones
-			return 1
-		else if (istype(A,/mob/living/critter/changeling/handspider) || istype(A,/mob/living/critter/changeling/eyespider))
-			return 1
-		else if(!M.lying) // or you're lying down
+		if(!M.lying)			// unless you're lying down
 			return 0
 	return ..()
 
@@ -94,18 +83,18 @@ var/door_id = "qm_dock"
 
 /proc/supply_ticker()
 	wagesystem.shipping_budget += SUPPLY_POINTSPER
-	SPAWN_DBG(SUPPLY_POINTDELAY) supply_ticker()
+	spawn(SUPPLY_POINTDELAY) supply_ticker()
 
 /proc/can_sell(var/obj/storage/crate/sellcrate)
 	/*var/filterdead = 0
 	if (shippingmarket.trader)
 		if (shippingmarket.trader:goodsname == "corpses") filterdead = 1
 		for(var/mob/living/M in sellcrate)
-			if(filterdead && isdead(M)) continue
+			if(filterdead && M.stat == 2) continue
 			return 0
 		for(var/atom/ATM in sellcrate)
 			for(var/mob/living/N in ATM:contents)
-				if(filterdead && isdead(N)) continue
+				if(filterdead && N.stat == 2) continue
 				return 0*/
 	// Is this even necessary anymore?
 
@@ -114,7 +103,7 @@ var/door_id = "qm_dock"
 /proc/sell_crate(var/obj/storage/crate/sell_crate)
 	if (istype(sell_crate, /obj/storage/crate/biohazard/cdc))
 		for (var/R in sell_crate)
-			if (istype(R, /obj/item/reagent_containers) || ishuman(R)) //heh
+			if (istype(R, /obj/item/reagent_containers) || istype(R, /mob/living/carbon/human)) //heh
 				var/obj/item/reagent_containers/RC = R
 				var/list/patho = RC.reagents.aggregate_pathogens()
 				for (var/uid in patho)
@@ -220,6 +209,7 @@ var/door_id = "qm_dock"
 			//wagesystem.shipping_budget += amount
 			duckets += amount
 			//boutput(world, "<b> [C] NEVER SOLD RIGHT, FUCKIN HELL</b>")
+		score_stuffshipped += amount
 	if(scan && account)
 		wagesystem.shipping_budget += duckets / 2
 		account.fields["current_money"] += duckets / 2
@@ -261,9 +251,9 @@ var/door_id = "qm_dock"
 		account = sellcrate.account
 	var/duckets = 0
 	var/itemchecklimit = 0
-	for(var/obj/M in sellcrate.contents)
+	for(var/obj/M in sellcrate:contents)
 		itemchecklimit++
-		if (itemchecklimit > 100)
+		if (itemchecklimit > 50)
 			break
 		if (!the_trader)
 			break
@@ -293,15 +283,9 @@ var/door_id = "qm_dock"
 			if (istype(M,C.comtype))
 				amount = hasvar(M, "amount") && M:amount > 1 ? M:amount : 1
 				duckets += amount * C.price
+				score_stufftraded += amount
 				sellcount++
-
-				if (istype(M,/obj/item/raw_material) || istype(M,/obj/item/material_piece) || istype(M,/obj/item/plant) || istype(M,/obj/item/reagent_containers/food/snacks/plant))
-					pool(M)	////things we pool that are prob sold in very high quantity (i'm sorry!!!!)
-				else
-					qdel(M)
-			LAGCHECK(100)//lollll
-
-		LAGCHECK(LAG_REALTIME)
+				qdel(M)
 
 	qdel(sellcrate)
 
@@ -338,7 +322,7 @@ var/door_id = "qm_dock"
 	var/sellmax = shippingmarket.trader:limit
 	for(var/mob/living/carbon/I in sellcrate)
 		if (sellmax && (sellcount >= sellmax)) break
-		if (!isdead(I))
+		if (I.stat != 2)
 			shippingmarket.trader = null
 			var/datum/radio_frequency/transmit_connection = radio_controller.return_frequency("1149")
 			var/datum/signal/pdaSignal = get_free_signal()
@@ -354,7 +338,7 @@ var/door_id = "qm_dock"
 			if(I.client) I:client:mob = newmob
 			I.mind.transfer_to(newmob)
 
-			SPAWN_DBG(0)
+			spawn(0)
 				qdel(I)
 	qdel(sellcrate)
 	if (sellcount)
@@ -369,19 +353,6 @@ var/door_id = "qm_dock"
 // fuck it doing this with more globals
 var/crate_firing = 0
 
-
-//These should be #defines probably
-/proc/supplyshuttle_open_spawn_time()
-	if (ismap("CHIRON"))
-		return 40
-	return 10
-/proc/supplyshuttle_close_spawn_time()
-	if (ismap("CHIRON"))
-		return 180
-	return 130
-
-
-
 /proc/buy_thing(var/atom/movable/O as obj|mob)
 	var/turf/spawnpoint
 	for(var/turf/T in get_area_turfs(/area/supply/spawn_point))
@@ -393,7 +364,7 @@ var/crate_firing = 0
 		target = T
 		break
 
-	SPAWN_DBG(0)
+	spawn(0)
 		while(crate_firing)
 			sleep(20)
 
@@ -406,7 +377,7 @@ var/crate_firing = 0
 			return
 
 		crate_firing = 1
-		SPAWN_DBG(80)
+		spawn(80)
 			crate_firing = 0
 
 		O.set_loc(spawnpoint)
@@ -417,17 +388,17 @@ var/crate_firing = 0
 		pdaSignal.transmission_method = TRANSMISSION_RADIO
 		transmit_connection.post_signal(src, pdaSignal)
 
-		for(var/obj/machinery/door/poddoor/P in doors)
+		for(var/obj/machinery/door/poddoor/P)
 			if (P.id == door_id)
 				playsound(P.loc, "sound/machines/bellalert.ogg", 50, 0)
-				SPAWN_DBG(supplyshuttle_open_spawn_time())
+				spawn(10)
 					if (P && P.density)
 						P.open()
-				SPAWN_DBG(supplyshuttle_close_spawn_time())
+				spawn(130)
 					if (P && !P.density)
 						P.close()
 
-		SPAWN_DBG(20)
+		spawn(20)
 			O.throw_at(target, 100, 1)
 
 /proc/buy_from_trader(var/datum/trader/the_trader)
@@ -447,7 +418,7 @@ var/crate_firing = 0
 		return
 
 	the_trader.currently_selling = 1
-	SPAWN_DBG(0)
+	spawn(0)
 		var/sanity = 0
 		while(crate_firing && sanity < 30) // give up after 1 minute, should only take 15 seconds at most
 			sleep(20)
@@ -469,7 +440,7 @@ var/crate_firing = 0
 			return
 
 		crate_firing = 1
-		SPAWN_DBG(80)
+		spawn(80)
 			crate_firing = 0
 
 		var/atom/movable/A = new /obj/storage/crate(spawnpoint)
@@ -513,20 +484,20 @@ var/crate_firing = 0
 		pdaSignal.transmission_method = TRANSMISSION_RADIO
 		transmit_connection.post_signal(src, pdaSignal)
 
-		for(var/obj/machinery/door/poddoor/P in doors)
+		for(var/obj/machinery/door/poddoor/P)
 			if (P.id == door_id)
 				playsound(P.loc, "sound/machines/bellalert.ogg", 50, 0)
-				SPAWN_DBG(supplyshuttle_open_spawn_time())
+				spawn(10)
 					if (P && P.density)
 						P.open()
-				SPAWN_DBG(supplyshuttle_close_spawn_time())
+				spawn(130)
 					if (P && !P.density)
 						P.close()
 
-		SPAWN_DBG(20)
+		spawn(20)
 			A.throw_at(target, 100, 1)
 
-/proc/process_supply_order(var/datum/supply_order/SO,var/mob/orderer)
+/proc/process_supply_order(var/datum/supply_order/SO)
 	//could be multiple possible spawn turfs
 	var/turf/spawnpoint
 	for(var/turf/T in get_area_turfs(/area/supply/spawn_point))
@@ -539,7 +510,7 @@ var/crate_firing = 0
 		target = T
 		break
 
-	SPAWN_DBG(0)
+	spawn(0)
 		var/sanity = 0
 		while(crate_firing && sanity < 30) // give up after 1 minute, should only take 15 seconds at most
 			sleep(20)
@@ -558,22 +529,22 @@ var/crate_firing = 0
 			return
 
 		crate_firing = 1
-		SPAWN_DBG(80)
+		spawn(80)
 			crate_firing = 0
 
-		var/atom/movable/A = SO.create(spawnpoint, orderer)
+		var/atom/movable/A = SO.create(spawnpoint)
 
-		for(var/obj/machinery/door/poddoor/P in doors)
+		for(var/obj/machinery/door/poddoor/P)
 			if (P.id == door_id)
 				playsound(P.loc, "sound/machines/bellalert.ogg", 50, 0)
-				SPAWN_DBG(supplyshuttle_open_spawn_time())
+				spawn(10)
 					if (P && P.density)
 						P.open()
-				SPAWN_DBG(supplyshuttle_close_spawn_time())
+				spawn(130)
 					if (P && !P.density)
 						P.close()
 
-		SPAWN_DBG(20)
+		spawn(20)
 			if (A)
 				A.throw_at(target, 100, 1)
 /*
@@ -596,7 +567,7 @@ proc/prisontothestation()
 		for(var/turf/T in dstturfs)
 			var/turf/D = locate(T.x, throwy - 1, 1)
 			for(var/atom/movable/AM as mob|obj in T)
-				if(isobserver(AM))
+				if(istype(AM, /mob/dead))
 					continue
 				AM.Move(D)
 			if(istype(T, /turf/simulated))

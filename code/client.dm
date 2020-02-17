@@ -1,15 +1,28 @@
 /client
 	preload_rsc = 1
-	var/datum/player/player = null
 	var/datum/admins/holder = null
 	var/datum/preferences/preferences = null
+	var/move_delay = 1
+	var/moving = null
+	var/vote = null
+	var/showvote = null
 	var/deadchat = 0
 	var/changes = 0
+	var/canplaysound = 1
+	var/ambience_playing = null
 	var/area = null
+	var/played = 0
+	var/team = null
+	var/datum/buildmode_holder/buildmode = null
+	var/lastbuildtype = 0
+	var/lastbuildvar = 0
+	var/lastbuildval = 0
+	var/lastbuildobj = 0
+	var/lastadvbuilder = 0
 	var/stealth = 0
 	var/stealth_hide_fakekey = 0
 	var/alt_key = 0
-	var/flourish = 0
+	var/theater = 0
 	var/pray_l = 0
 	var/fakekey = null
 	var/suicide = 0
@@ -22,41 +35,26 @@
 	var/only_local_looc = 0
 	var/deadchatoff = 0
 	var/local_deadchat = 0
+	var/djmode = 0
+	var/mentor = 0
+	var/mentor_authed = 0
+	var/see_mentor_pms = 1
 	var/last_adminhelp = 0
+	var/list/keys = list()
+	var/use_azerty = 0
 	var/queued_click = 0
 	var/joined_date = null
-	var/adventure_view = 0
-
-	var/datum/buildmode_holder/buildmode = null
-	var/lastbuildtype = 0
-	var/lastbuildvar = 0
-	var/lastbuildval = 0
-	var/lastbuildobj = 0
-	var/lastadvbuilder = 0
-
-	var/djmode = 0
 	var/non_admin_dj = 0
+	var/adventure_view = 0
+	var/isbanned = 0 //just, in general
 
-	var/last_soundgroup = null
-
-	var/widescreen = 0
-	var/vert_split = 1
-
-	var/tg_controls = 0
-	var/tg_layout = 0
-
-	var/use_chui = 1
-	var/use_chui_custom_frames = 1
-
-	var/ignore_sound_flags = 0
+	var/hellbanned = 0 //The intention here is to basically make the game stealthily unplayable, prevents you from getting randomly picked as traitor, silently drops some Move() and Click() calls, etc.
+	var/click_drops = 40
+	var/move_drops = 30
+	var/spiking = 0
 
 	var/antag_tokens //Number of antagonist tokens available to the player
 	var/using_antag_token = 0 //Set when the player readies up at round start, and opts to redeem a token.
-
-	var/persistent_bank = 0 //cross-round persistent cash value (is increased as a function of job paycheck + station score)
-	var/persistent_bank_item = 0 //Name of a bank item that may have persisted from a previous round. (Using name because I'm assuming saving a string is better than saving a whole datum)
-
-	var/datum/reputations/reputations = null
 
 	var/list/datum/compid_info_list = list()
 
@@ -72,45 +70,11 @@
 
 	var/datum/chatOutput/chatOutput = null
 	var/resourcesLoaded = 0 //Has this client done the mass resource downloading yet?
-	var/datum/tooltipHolder/tooltipHolder = null
-
-	var/delete_state = DELETE_STOP
-
-	var/list/cloudsaves
-	var/list/clouddata
-
-	var/turf/stathover = null
-	var/turf/stathover_start = null//forgive me
-
-	var/list/qualifiedXpRewards = null
-
-	var/datum/interfaceSizeHelper/screen/screenSizeHelper = null
-	var/datum/interfaceSizeHelper/map/mapSizeHelper = null
-
-/client/proc/audit(var/category, var/message, var/target)
-	if(src.holder && (src.holder.audit & category))
-		logTheThing("audit", src, target, message)
-
-/client/proc/updateXpRewards()
-	if(qualifiedXpRewards == null)
-		qualifiedXpRewards = list()
-
-	for(var/X in xpRewards)
-		var/datum/jobXpReward/R = xpRewards[X]
-		if(R)
-			if(R.qualifies(src.key))
-				qualifiedXpRewards.Add(X)
-				qualifiedXpRewards[X] = R
-
-	return
+	var/datum/tooltip/tooltip = null
 
 /client/Del()
-	if (current_state < GAME_STATE_FINISHED)
+	if (ticker && ticker.current_state < GAME_STATE_FINISHED)
 		ircbot.event("logout", src.key)
-
-	logTheThing("admin", src, null, " has disconnected.")
-
-	src.images.Cut() //Probably not needed but eh.
 
 	clients -= src
 	if(src.holder)
@@ -119,103 +83,28 @@
 		src.holder = null
 	return ..()
 
-/client/New()
-	logTheThing("diary", null, src, "Login attempt: [src.ckey] from [src.address] via [src.connection], compid [src.computer_id]", "access")
+var/global/list/hellbans = null
 
+/client/New()
 	if(findtext(src.key, "Telnet @"))
 		boutput(src, "Sorry, this game does not support Telnet.")
 		sleep(50)
 		del(src)
 		return
 
-	if (IsGuestKey(src.key))
-		if(!src.address || src.address == world.host)
-			world.log << ("Hello host or developer person! You're not logged into BYOND. Fix this so you can test your feature turned bug!")
-		SPAWN_DBG(0)//so, the below will only show if they're ingame so the spawn isn't a guarantee; for dev purposes shove an alert to solve some confusion. hence the above
-			var/gueststring = {"
-							<!doctype html>
-							<html>
-								<head>
-									<title>No guest logins allowed!</title>
-									<style>
-										h1, .banreason {
-											font-color:#F00;
-										}
-
-									</style>
-								</head>
-								<body>
-									<h1>No guest logins.</h1>
-									Don't forget to log in to your byond account prior to connecting to this server.
-								</body>
-							</html>
-						"}
-			src.Browse(gueststring, "window=getout")
-			if (src)
-				del(src)
-			return
-
-
-
-	//We're limiting connected players to a whitelist of ckeys (but let active admins in)
-	if (config.whitelistEnabled && !(admins.Find(src.ckey) && admins[src.ckey] != "Inactive"))
-		//Key not in whitelist, show them a vaguely sassy message and boot them
-		if (!(src.ckey in whitelistCkeys))
-			SPAWN_DBG(0)
-				var/whitelistString = {"
-								<!doctype html>
-								<html>
-									<head>
-										<title>Server Whitelist Enabled</title>
-										<style>
-											h1, .banreason {
-												font-color:#F00;
-											}
-
-										</style>
-									</head>
-									<body>
-										<h1>Server whitelist enabled</h1>
-										This server is currently limiting connections to specific players, and you aren't one of them. Goodbye!
-									</body>
-								</html>
-							"}
-				src.Browse(whitelistString, "window=whiteout")
-				if (src)
-					del(src)
-				return
-
-	logTheThing("admin", src, null, " has connected.")
-
-	player = find_player(key)
-	if (!player)
-		player = make_player(key)
-	player.client = src
+	if (config && config.env == "dev" && (!src.address || src.address == "127.0.0.1"))
+		winshow(src, "runtimes", 1)
 
 	//Assign custom interface datums
 	src.chatOutput = new /datum/chatOutput(src)
 	//src.chui = new /datum/chui(src)
+	src.tooltip = new /datum/tooltip(src)
 
-	//Should eliminate any local resource loading issues with chui windows
-	if (!cdn)
-		var/list/chuiResources = list(
-			"browserassets/js/jquery.min.js",
-			"browserassets/js/jquery.nanoscroller.min.js",
-			"browserassets/js/chui/chui.js",
-			"browserassets/js/errorHandler.js",
-			"browserassets/css/fonts/fontawesome-webfont.eot",
-			"browserassets/css/fonts/fontawesome-webfont.svg",
-			"browserassets/css/fonts/fontawesome-webfont.ttf",
-			"browserassets/css/fonts/fontawesome-webfont.woff",
-			"browserassets/css/font-awesome.css"
-		)
-		src.loadResourcesFromList(chuiResources)
-
-	var/isbanned = checkBan(src.ckey, src.computer_id, src.address, record = 1)
+	src.isbanned = checkBan(src.ckey, src.computer_id, src.address)
 	if (isbanned)
 		logTheThing("diary", null, src, "Failed Login: %target% - Banned", "access")
 		if (announce_banlogin) message_admins("<span style=\"color:blue\">Failed Login: <a href='?src=%admin_ref%;action=notes;target=[src.ckey]'>[src]</a> - Banned (IP: [src.address], ID: [src.computer_id])</span>")
-		SPAWN_DBG(0)
+		spawn(0)
 			var/banstring = {"
 								<!doctype html>
 								<html>
@@ -231,34 +120,34 @@
 									<body>
 										<h1>You have been banned.</h1>
 										<span class='banreason'>Reason: [isbanned].</span><br>
-										If you believe you were unjustly banned, head to <a href=\"https://forum.ss13.co\">the forums</a> and post an appeal.
+										If you believe you were unjustly banned, head to <a href=\"http://forum.ss13.co\">the forums</a> and post an appeal.
 									</body>
 								</html>
 							"}
-			src.mob.Browse(banstring, "window=ripyou")
+			src.mob << browse(banstring, "window=ripyou")
 
 			if (src)
 				del(src)
 			return
 
-	if (!istype(src.mob, /mob/new_player))
-		src.loadResources()
+	if (!hellbans)
+		hellbans = dd_file2list("strings/hellbans.txt")
+	if (hellbans && src.ckey in hellbans)
+		hellbanned = 1
 
 /*
-	SPAWN_DBG(rand(4,18))
+	spawn(rand(4,18))
 		if(proxy_check(src.address))
 			logTheThing("diary", null, src, "Failed Login: %target% - Using a Tor Proxy Exit Node", "access")
 			if (announce_banlogin) message_admins("<span style=\"color:blue\">Failed Login: [src] - Using a Tor Proxy Exit Node (IP: [src.address], ID: [src.computer_id])</span>")
 			boutput(src, "You may not connect through TOR.")
-			SPAWN_DBG(0) del(src)
+			spawn(0) del(src)
 			return
 */
 
-	//if (((world.address == src.address || !(src.address)) && !(host)))
-		//host = src.key
-		//src.holder = new /datum/admins(src)
-		//src.holder.rank = "Host"
-		//world.update_status()
+	if (((world.address == src.address || !(src.address)) && !(host)))
+		host = src.key
+		world.update_status()
 
 	if(player_capa)
 		var/howmany = 0
@@ -274,12 +163,17 @@
 	if (join_motd)
 		boutput(src, "<div class=\"motd\">[join_motd]</div>")
 
-	if (init_admin())
-		boutput(src, "<span class='ooc adminooc'>You are an admin! Time for crime.</span>")
-	else if (player.mentor)
-		boutput(src, "<span class='ooc mentorooc'>You are a mentor!</span>")
-		if (!src.holder)
-			src.verbs += /client/proc/toggle_mentorhelps
+	src.authorize()
+
+	if (admins.Find(src.ckey))
+		src.holder = new /datum/admins(src)
+		src.holder.rank = admins[src.ckey]
+		update_admins(admins[src.ckey])
+		onlineAdmins.Add(src)
+
+	else if (NT.Find(ckey(src.ckey)) || mentors.Find(ckey(src.ckey)))
+		src.mentor = 1
+		src.mentor_authed = 1
 
 	..()
 
@@ -289,39 +183,20 @@
 
 	clients += src
 
-	src.initSizeHelpers()
-
-	src.tooltipHolder = new /datum/tooltipHolder(src)
-	src.tooltipHolder.clearOld()
-
-	for(var/key in globalImages)
-		var/image/I = globalImages[key]
-		src.images += I
-
-	SPAWN_DBG(0)
-		updateXpRewards()
-
-	SPAWN_DBG(30)
+	spawn(30)
 		// new player logic, moving some of the preferences handling procs from new_player.Login
 		if (!preferences)
 			preferences = new
 		if (istype(src.mob, /mob/new_player))
-			//Load the preferences up here instead.
-			if(!preferences.savefile_load(src.mob))
-				//preferences.randomizeLook()
-				preferences.ShowChoices(src.mob)
-				boutput(src, "<span class='alert'>Welcome! You don't have a character profile saved yet, so please create one. If you're new, check out the <a href='https://wiki.ss13.co/Getting_Started#Fundamentals'>quick-start guide</a> for how to play!</span>")
-				//hey maybe put some 'new player mini-instructional' prompt here
-				//ok :)
-
+			if (noir)
+				animate_fade_grayscale(src, 50)
+			if(!preferences.savefile_load(src))
+				preferences.ShowChoices(src)
 			else if(!src.holder)
 				preferences.sanitize_name()
 
-			if (noir)
-				animate_fade_grayscale(src, 50)
-#ifndef IM_TESTING_SHIT_STOP_BARFING_CHANGELOGS_AT_ME
 			if (!changes && preferences.view_changelog)
-				if (!cdn)
+				if (!CDN_ENABLED || config.env == "dev")
 					src << browse_rsc(file("browserassets/images/changelog/postcardsmall.jpg"))
 					src << browse_rsc(file("browserassets/images/changelog/somerights20.png"))
 					src << browse_rsc(file("browserassets/images/changelog/88x31.png"))
@@ -329,32 +204,16 @@
 
 			if (src.holder && rank_to_level(src.holder.rank) >= LEVEL_MOD) // No admin changelog for goat farts (Convair880).
 				admin_changes()
-#endif
-			if (it_is_ass_day)
-				src.verbs += /client/proc/cmd_ass_day_rules
-				src.cmd_ass_day_rules()
-
-
-			if (src.byond_version < 513 || src.byond_build < 1500)
-				if (alert(src, "Please update BYOND to version 513! Would you like to be taken to the download page? Make sure to download the beta and not the stable release.", "ALERT", "Yes", "No") == "Yes")
+			load_antag_tokens()
+			if (src.byond_version < 509)
+				if (alert(src, "Please update BYOND to version 509! Would you like to be taken to the download page?", "ALERT", "Yes", "No") == "Yes")
 					src << link("http://www.byond.com/download/")
-				else
-					alert(src, "You won't be able to play without updating, sorry!")
-					del(src)
-					return
-
-			//if (src.byond_build == 1468)	//MBC : BAD CODE TO BANDAID A BROKEN BYOND THING. REMOVE THIS AS SOON AS LUMMOX FIXES IT
-			//	if (alert(src, "Warning! The version of BYOND you are running (512.1468) is bugged. You will lose items that you try to place on tables or throw if you continue with this version. Would you like a link to a .zip of the last working version?", "ALERT", "Yes", "No") == "Yes")
-			//		src << link("http://www.byond.com/download/build/512/512.1467_byond.zip")
-
-
 		else
 			if (noir)
 				animate_fade_grayscale(src, 1)
 			preferences.savefile_load(src)
 			load_antag_tokens()
-			load_persistent_bank()
-
+			src.loadResources()
 
 		src.update_world()
 
@@ -364,30 +223,10 @@
 			alert(src, "Hardware rendering is disabled.  This may cause errors displaying lighting, manifesting as BIG WHITE SQUARES.\nPlease enable hardware rendering from the byond preferences menu.","Potential Rendering Issue")
 
 		ircbot.event("login", src.key)
-#if defined(RP_MODE) && !defined(IM_TESTING_SHIT_STOP_BARFING_CHANGELOGS_AT_ME)
-		src.verbs += /client/proc/cmd_rp_rules
-		if (istype(src.mob, /mob/new_player))
-			src.cmd_rp_rules()
-#endif
-		//Cloud data
-		var/http[] = world.Export( "http://spacebee.goonhub.com/api/cloudsave?list&ckey=[ckey]&api_key=[config.ircbot_api]" )
-		if( !http )
-			logTheThing( "debug", src, null, "failed to have their cloud data loaded: Couldn't reach Goonhub" )
-
-		var/list/ret = json_decode(file2text( http[ "CONTENT" ] ))
-		if( ret["status"] == "error" )
-			logTheThing( "debug", src, null, "failed to have their cloud data loaded: [ret["error"]["error"]]" )
-		else
-			cloudsaves = ret["saves"]
-			clouddata = ret["cdata"]
-			load_antag_tokens()
-			load_persistent_bank()
-			var/decoded = cloud_get("audio_volume")
-			if(decoded)
-				var/cur = volumes.len
-				volumes = json_decode(decoded)
-				volumes.len = cur
-
+		if (map_setting == "DESTINY")
+			src.verbs += /client/proc/cmd_rp_rules
+			if (istype(src.mob, /mob/new_player))
+				src.cmd_rp_rules()
 
 /*	if (ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/sandbox))
 		if(src.holder  && (src.holder.level >= 3))
@@ -397,100 +236,10 @@
 		do_computerid_test(src) //Will ban yonder fucker in case they are prix
 		check_compid_list(src) 	//Will analyze their computer ID usage patterns for aberrations
 
-
-	//WIDESCREEN STUFF
-	var/splitter_value = text2num(winget( src, "mainwindow.mainvsplit", "splitter" ))
-
-	var/widescreen_checked = winget( src, "menu.set_wide", "is-checked" ) == "true"
-	if (widescreen_checked)
-		if (splitter_value < 67.0)
-			src.set_widescreen(1)
-
-	var/is_vert_splitter = winget( src, "menu.horiz_split", "is-checked" ) != "true"
-
-	if (is_vert_splitter)
-
-		if (splitter_value >= 67.0) //Was this client using widescreen last time? save that!
-			src.set_widescreen(1, splitter_value)
-
-		src.screenSizeHelper.registerOnLoadCallback(CALLBACK(src, "checkScreenAspect"))
-	else
-
-		set_splitter_orientation(0, splitter_value)
-		src.set_widescreen(1, splitter_value)
-		winset( src, "menu", "horiz_split.is-checked=true" )
-
-	//End widescreen stuff
-
-	//blendmode stuff
-
-	var/distort_checked = winget( src, "menu.zoom_distort", "is-checked" ) == "true"
-
-	winset( src, "mapwindow.map", "zoom-mode=[distort_checked ? "distort" : "normal"]" )
-
-	//blendmode end
-
-
-	//tg controls stuff
-
-	tg_controls = winget( src, "menu.tg_controls", "is-checked" ) == "true"
-	tg_layout = winget( src, "menu.tg_layout", "is-checked" ) == "true"
-
-	//tg controls end
-
-	use_chui = winget( src, "menu.use_chui", "is-checked" ) == "true"
-	use_chui_custom_frames = winget( src, "menu.use_chui_custom_frames", "is-checked" ) == "true"
-
-	//wow its the future we can choose between 2 fps values omg
-	src.tick_lag = CLIENTSIDE_TICK_LAG_SMOOTH
-	src.tick_lag = (winget( src, "menu.fps_chunky", "is-checked" ) == "true") ? CLIENTSIDE_TICK_LAG_CHUNKY : CLIENTSIDE_TICK_LAG_SMOOTH
-
-	//sound
-	if (winget( src, "menu.speech_sounds", "is-checked" ) == "true")
-		ignore_sound_flags |= SOUND_SPEECH
-	if (winget( src, "menu.all_sounds", "is-checked" ) == "true")
-		ignore_sound_flags |= SOUND_ALL
-	if (winget( src, "menu.vox_sounds", "is-checked" ) == "true")
-		ignore_sound_flags |= SOUND_VOX
-
-	src.reputations = new(src)
-
 /*
 /client/proc/write_gauntlet_matches()
 	return
 */
-
-/client/proc/init_admin()
-	if(!address)
-		admins[src.ckey] = "Host"
-	if (admins.Find(src.ckey) && !src.holder)
-		src.holder = new /datum/admins(src)
-		src.holder.rank = admins[src.ckey]
-		update_admins(admins[src.ckey])
-		onlineAdmins |= (src)
-		if (!NT.Find(src.ckey))
-			NT.Add(src.ckey)
-		if(src.holder.rank in list("Host", "Coder"))
-			control_freak = 0
-		return 1
-
-	return 0
-
-/client/proc/clear_admin()
-	if(src.holder)
-		src.holder.dispose()
-		src.holder = null
-		src.clear_admin_verbs()
-		src.update_admins(null)
-		onlineAdmins -= src
-
-/client/proc/checkScreenAspect(list/params)
-	if (params.len)
-		if ((params["screenW"]/params["screenH"]) == (4/3))
-			SPAWN_DBG(60)
-				if(alert(src, "You appear to be using a 4:3 aspect ratio! The Horizontal Split option is reccomended for your display. Activate Horizontal Split?",,"Yes","No") == "Yes")
-					set_splitter_orientation(0)
-					winset( src, "menu", "horiz_split.is-checked=true" )
 
 /client/Command(command)
 	command = html_encode(command)
@@ -498,115 +247,22 @@
 
 /client/proc/load_antag_tokens()
 	var/savefile/AT = LoadSavefile("data/AntagTokens.sav")
-	if (!AT)
-		if( cloud_available() )
-			antag_tokens = cloud_get( "antag_tokens" ) ? text2num(cloud_get( "antag_tokens" )) : 0
-		return
-
+	if (!AT) return
 	var/ATtoken
 	AT[ckey] >> ATtoken
 	if (!ATtoken)
-		antag_tokens = cloud_get( "antag_tokens" ) ? text2num(cloud_get( "antag_tokens" )) : 0
-		return
+		antag_tokens = 0
 	else
 		antag_tokens = ATtoken
-	if( cloud_available() )
-		antag_tokens += text2num( cloud_get( "antag_tokens" ) || "0" )
-		var/failed = cloud_put( "antag_tokens", antag_tokens )
-		if( failed )
-			logTheThing( "debug", src, null, "Failed to store antag tokens in the ~cloud~: [failed]" )
-		else
-			AT[ckey] << null
 
 /client/proc/set_antag_tokens(amt as num)
-	antag_tokens = amt
-	if( cloud_available() )
-		cloud_put( "antag_tokens", amt )
-	/*
 	var/savefile/AT = LoadSavefile("data/AntagTokens.sav")
 	if (!AT) return
 	if (antag_tokens < 0) antag_tokens = 0
-	AT[ckey] << antag_tokens*/
+	AT[ckey] << antag_tokens
 
 /client/proc/use_antag_token()
 	src.set_antag_tokens(--antag_tokens)
-
-
-/client/proc/load_persistent_bank()
-	//var/savefile/PB = LoadSavefile("data/PersistentBank.sav")
-	//if (!PB)
-	//	if( cloud_available() )
-	//		persistent_bank = cloud_get( "persistent_bank" ) ? text2num(cloud_get( "persistent_bank" )) : 0
-	//	return
-
-	//var/bank = 0
-	//PB[ckey] >> bank
-	//if (!bank)
-	persistent_bank = cloud_get( "persistent_bank" ) ? text2num(cloud_get( "persistent_bank" )) : 0
-	//	return
-	//else
-	//	persistent_bank = bank
-	if( !persistent_bank && cloud_available() )
-		logTheThing( "debug", src, null, "first cloud_get failed but cloud is available!" )
-		persistent_bank += text2num( cloud_get( "persistent_bank" ) || "0" )
-		var/failed = cloud_put( "persistent_bank", persistent_bank )
-		if( failed )
-			logTheThing( "debug", src, null, "Failed to store persistent cash in the ~cloud~: [failed]" )
-		//else
-		//	PB[ckey] << null
-
-	persistent_bank_item = cloud_get( "persistent_bank_item" )
-
-	if( !persistent_bank_item && cloud_available() )
-		persistent_bank_item = cloud_get( "persistent_bank_item" )
-		var/failed = cloud_put( "persistent_bank_item", persistent_bank_item )
-		if( failed )
-			logTheThing( "debug", src, null, "Failed to store persistent bank item in the ~cloud~: [failed]" )
-
-//MBC TODO : PERSISTENTBANK_VERSION_MIN, MAX FOR BANKING SO WE CAN WIPE AWAY EVERYONE'S HARD WORK WITH A SINGLE LINE OF CODE CHANGE
-// defines are already set, just do the checks here ok
-// ok in retrospect i don't think we need this so I'm not doing it. leaving this comment here though! for fun! (in case SOMEONE changes their mind)
-
-/client/proc/set_last_purchase(datum/bank_purchaseable/purchase)
-	if (!purchase || purchase == 0)
-		persistent_bank_item = "none"
-		if( cloud_available() )
-			cloud_put( "persistent_bank_item", "none" )
-	else
-		persistent_bank_item = purchase.name
-		if( cloud_available() )
-			cloud_put( "persistent_bank_item", persistent_bank_item )
-
-/client/proc/set_persistent_bank(amt as num)
-	persistent_bank = amt
-	if( cloud_available() )
-		cloud_put( "persistent_bank", amt )
-	/*
-	var/savefile/PB = LoadSavefile("data/PersistentBank.sav")
-	if (!PB) return
-	PB[ckey] << amt
-	*/
-
-//MBC TODO : DO SOME LOGGING ON ADD_TO_BANK() AND TRY_BANK_PURCHASE()
-/client/proc/add_to_bank(amt as num)
-	var/new_bank_value = persistent_bank + amt
-	src.set_persistent_bank(new_bank_value)
-
-/client/proc/sub_from_bank(datum/bank_purchaseable/purchase)
-	add_to_bank(-purchase.cost)
-
-/client/proc/bank_can_afford(amt as num)
-	var/new_bank_value = persistent_bank - amt
-	if (new_bank_value >= 0)
-		return 1
-	else
-		return 0
-
-/client/proc/is_mentor()
-	return player.mentor
-
-/client/proc/can_see_mentor_pms()
-	return (player.mentor || src.holder) && player.see_mentor_pms
 
 var/global/curr_year = null
 var/global/curr_month = null
@@ -642,7 +298,7 @@ var/global/curr_day = null
 		var/addr = address
 		var/ck = ckey
 		var/cid = computer_id
-		SPAWN_DBG(0)
+		spawn(0)
 			if (geoip_check(addr))
 				var/addData[] = new()
 				addData["ckey"] = ck
@@ -655,7 +311,7 @@ var/global/curr_day = null
 				logTheThing("admin", null, null, "Evasion geoip autoban triggered on [key], will execute in [slt / 10] seconds.")
 				message_admins("Autobanning evader [key] in [slt / 10] seconds.")
 				sleep(slt)
-				addBan(addData)
+				addBan(1, addData)
 
 /proc/geoip_check(var/addr)
 	set background = 1
@@ -691,6 +347,175 @@ var/global/curr_day = null
 		jd_warning(joined_date)
 	return
 
+/client/proc/install_macros()
+	for(var/key in list("alt", "shift", "ctrl"))
+		src.keys[key] = 0
+		for(var/macro in params2list(winget(src, null, "macro")))
+			winset(src, "[macro][key]down", "parent=[macro];name=[key];command=\".keydown [key]\"")
+			winset(src, "[macro][key]up", "parent=[macro];name=[key]+UP;command=\".keyup [key]\"")
+
+///client/Southwest()
+	//
+	//return
+
+/client/Northeast()
+	if (isobj(src.mob.loc))
+		var/obj/O = src.mob.loc
+		if (O.override_northeast(src.mob))
+			return
+	if (isliving(src.mob))
+		var/mob/living/L = src.mob
+		L.swap_hand()
+
+/client/Southeast()
+	if (isobj(src.mob.loc))
+		var/obj/O = src.mob.loc
+		if (O.override_southeast(src.mob))
+			return
+	var/obj/item/W = src.mob.equipped()
+	if (src.mob.stat != 2)
+		if (isitem(W) && ((!disable_next_click && world.time >= src.mob.next_click) || disable_next_click))
+			W.attack_self(src.mob)
+	if (!W)
+		src.mob.south_east()
+
+/client/Northwest()
+	if (isobj(src.mob.loc))
+		var/obj/O = src.mob.loc
+		if (O.override_northwest(src.mob))
+			return
+	src.mob.drop_item_v()
+
+/client/proc/check_key(key)
+	return !!src.keys[key]
+
+/client/verb/savetraits()
+	set hidden = 1
+	set name = ".savetraits"
+	set instant = 1
+
+	if(preferences)
+		if(preferences.traitPreferences.isValid())
+			preferences.ShowChoices(usr)
+		else
+			alert(usr, "Invalid trait setup. Please make sure you have 0 or more points available.")
+			preferences.traitPreferences.showTraits(usr)
+	return
+
+/client/verb/keydown(key as text)
+	set hidden = 1
+	set name = ".keydown"
+	set instant = 1
+	if (src.keys.Find(key))
+		src.keys[key] = 1
+		mob.key_down(key)
+
+/client/verb/keyup(key as text)
+	set hidden = 1
+	set name = ".keyup"
+	set instant = 1
+	if (src.keys.Find(key))
+		src.keys[key] = 0
+		mob.key_up(key)
+
+/client/verb/hotkey(key as text)
+	set hidden = 1
+	set name = ".hotkey"
+	set instant = 1
+	mob.hotkey(key)
+
+/client/verb/action(action as num)
+	set hidden = 1
+	set name = ".action"
+	set instant = 1
+	usr.action(action)
+
+/client/verb/togglethrow()
+	set hidden = 1
+	if (!src.mob.stat && (ishuman(src.mob) || istype(src.mob, /mob/living/critter)) && isturf(src.mob.loc) && !src.mob.restrained())
+		src.mob:toggle_throw_mode()
+	return
+
+/client/verb/togglepoint(force_off as num) // force_off is set to 1 when the button for this is released in WASD mode (currently B), else it's 0
+	set hidden = 1
+	if (!src.mob.stat && isliving(src.mob) && !src.mob.restrained())
+		src.mob:toggle_point_mode(force_off)
+	return
+
+/client/verb/togglewasdzqsd()
+	set hidden = 1
+	if (src.use_azerty)
+		src.togglezqsd()
+	else
+		src.togglewasd()
+
+/client/verb/toggle_between_wasd_zqsd()
+	set name = "Toggle AZERTY Hotkey Layout"
+	set desc = "For WASD/ZQSD users: toggles between use of the WASD or ZQSD hotkey sets. You may have to disable and then re-enable WASD/ZQSD mode for it to change."
+	set category = "Toggles"
+
+	src.use_azerty = !(src.use_azerty)
+	boutput(src, "<span style=\"color:blue\">[src.use_azerty ? "ZQSD" : "WASD"] hotkey layout enabled.</span>")
+
+/client/verb/togglewasd()
+	set hidden = 1
+	var/current = winget(src, "mainwindow", "macro")
+	if (current == "macro" || current == "zqsd")
+		winset(src, "mainwindow", "macro=wasd")
+		// ctrl+t for admin say
+		if (src.holder)
+			winset(src, "wasd.wasd-asay", "is-disabled=false")
+			winset(src, "wasd.wasd-dsay", "is-disabled=false")
+		else
+			winset(src, "wasd.wasd-asay", "is-disabled=true")
+			winset(src, "wasd.wasd-dsay", "is-disabled=true")
+		boutput(src, "<span style=\"color:blue\">WASD hotkeys enabled.</span>")
+	else
+		winset(src, "mainwindow", "macro=macro")
+		boutput(src, "<span style=\"color:blue\">WASD hotkeys disabled.</span>")
+	src.install_macros()
+
+/client/verb/togglezqsd()
+	set hidden = 1
+	var/current = winget(src, "mainwindow", "macro")
+	if (current == "macro" || current == "wasd")
+		winset(src, "mainwindow", "macro=zqsd")
+		// ctrl+t for admin say
+		if (src.holder)
+			winset(src, "zqsd.zqsd-asay", "is-disabled=false")
+			winset(src, "zqsd.zqsd-dsay", "is-disabled=false")
+		else
+			winset(src, "zqsd.zqsd-asay", "is-disabled=true")
+			winset(src, "zqsd.zqsd-dsay", "is-disabled=true")
+		boutput(src, "<span style=\"color:blue\">ZQSD hotkeys enabled.</span>")
+	else
+		winset(src, "mainwindow", "macro=macro")
+		boutput(src, "<span style=\"color:blue\">ZQSD hotkeys disabled.</span>")
+	src.install_macros()
+
+/client/verb/toggletogglewasd()
+	set name = "Toggle Tab WASD/ZQSD"
+	set desc = "Enables/disables the Tab key WASD/ZQSD keyboard shortcut"
+	set category = "Toggles"
+
+	var/current = winget(usr, "macro.togglewasd", "is-disabled")
+	if (current == "true")
+		winset(usr, "macro.togglewasd", "is-disabled=false")
+		winset(usr, "wasd.togglewasd", "is-disabled=false")
+		winset(usr, "zqsd.togglewasd", "is-disabled=false")
+		boutput(usr, "<span style=\"color:blue\">Tab now toggles WASD/ZQSD.</span>")
+	else
+		winset(usr, "macro.togglewasd", "is-disabled=true")
+		winset(usr, "wasd.togglewasd", "is-disabled=true")
+		boutput(usr, "<span style=\"color:blue\">Tab no longer toggles WASD/ZQSD.</span>")
+
+/client/verb/equip()
+	set name = "Equip"
+	set desc = "Equips the item in your active hand."
+	if (!(istype(usr, /mob/living/carbon/human/))) return
+	var/mob/living/carbon/human/H = usr
+	H.hud.clicked("invtoggle", list()) // this is incredibly dumb, it's also just as dumb as what was here previously
+
 /client/verb/ping()
 	set name = "Ping"
 	boutput(usr, "Pong")
@@ -698,26 +523,269 @@ var/global/curr_day = null
 /*
 /client/verb/Newcastcycle()
 	set hidden = 1
-	if (!(ishuman(usr))) return
+	if (!(istype(usr, /mob/living/carbon/human/))) return
 	var/mob/living/carbon/human/H = usr
 	if (istype(H.wear_suit, /obj/item/clothing/suit/wizrobe/abuttontest))
 		var/obj/screen/ability_button/spell/U = H.wear_suit.ability_buttons[2]
 		U.execute_ability()
 */
 
+/*
+/client/Center()
+	if (isobj(src.mob.loc))
+		var/obj/O = src.mob.loc
+		if (src.mob.canmove)
+			return O.relaymove(src.mob, 16)
+	return
+*/
+
+/client/Move(n, direct)
+	if(hellbanned && prob(move_drops))
+		if(prob(1) && prob(25)) fake_lagspike()
+		return
+	if(istype(mob, /mob/living/carbon/human/pixel))
+		mob.Move(n, direct)
+		return
+	if(istype(src.mob, /mob/dead/observer) || istype(src.mob, /mob/dead/hhghost)) //what the shit
+		return src.mob.Move(n,direct)
+	if (src.moving)
+		return 0
+	if (!( src.mob ))
+		return
+	if (src.mob.stat == 2 && !istype(src.mob, /mob/wraith))
+		return
+	if (world.time < src.move_delay)
+		src.mob.dir = direct
+		return
+	if(istype(src.mob, /mob/living/silicon/ai))
+		return AIMove(n,direct,src.mob)
+//	if(istype(src.mob, /mob/living/silicon/hive_mainframe))
+//		return MainframeMove(n,direct,src.mob)
+	if(istype(src.mob, /mob/living/silicon/hivebot/drone))
+		return DroneMove(n,direct,src.mob)
+	if (src.mob.transforming)
+		return
+
+	var/is_monkey = ismonkey(src.mob)
+	if (locate(/obj/item/grab, locate(/obj/item/grab, src.mob.grabbed_by.len)))
+		var/list/grabbing = list(  )
+		if (istype(src.mob.l_hand, /obj/item/grab))
+			var/obj/item/grab/G = src.mob.l_hand
+			grabbing += G.affecting
+		if (istype(src.mob.r_hand, /obj/item/grab))
+			var/obj/item/grab/G = src.mob.r_hand
+			grabbing += G.affecting
+		for(var/obj/item/grab/G in src.mob.grabbed_by)
+			if (G.state == 0)
+				if (!( grabbing.Find(G.assailant) ))
+					qdel(G)
+			else
+				if (G.state == 1)
+					src.move_delay = world.time + 10
+					if ((prob(25) && (!( is_monkey ) || prob(25))))
+						mob.visible_message("<span style=\"color:red\">[mob] has broken free of [G.assailant]'s grip!</span>")
+						qdel(G)
+					else
+						return
+				else
+					if (G.state == 2)
+						src.move_delay = world.time + 10
+						if ((prob(5) && !( is_monkey ) || prob(25)))
+							mob.visible_message("<span style=\"color:red\">[mob] has broken free of [G.assailant]'s headlock!</span>")
+							qdel(G)
+						else
+							return
+	if (src.mob.canmove)
+
+		if(src.mob.m_intent == "face")
+			src.mob.dir = direct
+
+		var/j_pack = 0
+		if ((istype(src.mob.loc, /turf/space)) && !src.mob.is_spacefaring())
+			src.mob.dir = direct
+			if(ishuman(src.mob))
+				if(istype(src.mob:wear_suit, /obj/item/clothing/suit/space/emerg))
+					var/obj/item/clothing/suit/space/emerg/E = src.mob:wear_suit
+					if (E.rip != -1)
+						E.rip ++
+						E.ripcheck(src.mob)
+			if (!( src.mob.restrained() ))
+				var/list/our_oview = oview(1, src.mob)
+				if (!( (locate(/obj/grille) in our_oview) || (locate(/turf/simulated) in our_oview) || (locate(/turf/unsimulated) in our_oview) || (locate(/obj/lattice) in our_oview) ))
+					if (istype(src.mob.back, /obj/item/tank/jetpack))
+						var/obj/item/tank/jetpack/J = src.mob.back
+						j_pack = J.allow_thrust(0.01, src.mob)
+						if(j_pack)
+							src.mob.inertia_dir = 0
+						if (!( j_pack ))
+							return 0
+					else if(isrobot(src.mob) || isghostdrone(src.mob))
+						if(src.mob:jetpack)
+							if(!src.mob:jeton)
+								src.mob.inertia_dir = 0
+								if(!isnull(src.mob:ion_trail))
+									src.mob:ion_trail.start()
+									src.mob:jeton = 1
+						else
+							return 0
+					else if(ishivebot(src.mob))
+						if(src.mob:jetpack)
+							src.mob.inertia_dir = 0
+						else
+							return 0
+				//	else if(isalien(src.mob))
+				//		src.mob.inertia_dir = 0
+					else
+						return 0
+			else
+				return 0
+
+
+		if (isturf(src.mob.loc))
+			if(isrobot(src.mob))
+				if(src.mob:jetpack)
+					if(src.mob:jeton)
+						if(!isnull(src.mob:ion_trail))
+							src.mob:ion_trail.stop()
+							src.mob:jeton = 0
+			src.move_delay = world.time
+			if ((j_pack && j_pack < 1))
+				src.move_delay += 2
+			switch(src.mob.m_intent)
+				if("run")
+					if (src.mob.drowsyness > 0)
+						src.move_delay += 6
+					src.move_delay += 2.00 // 3.20
+				if("face")
+					src.mob.dir = direct
+					return
+				if("walk")
+					src.move_delay += 8
+
+			if(istype (src.mob, /mob/living/carbon/human/))
+				var/mob/living/carbon/human/H = src.mob
+				if (H.find_ailment_by_type(/datum/ailment/disease/vamplague))
+					src.move_delay += 3
+				if (H.buckled && H.canmove && !H.buckled.anchored)
+					return H.buckled.relaymove(H, direct)
+
+			src.move_delay += src.mob.movement_delay()
+			if(src.mob.reagents)
+				if(src.mob.reagents.has_reagent("methamphetamine")) src.move_delay = max(src.move_delay-10,0)
+
+			if (src.mob.restrained())
+				for(var/mob/M in range(src.mob, 1))
+					if (((M.pulling == src.mob && (!( M.restrained() ) && M.stat == 0)) || locate(/obj/item/grab, src.mob.grabbed_by.len)))
+						boutput(src, "<span style=\"color:blue\">You're restrained! You can't move!</span>")
+						return 0
+			src.moving = 1
+			if (locate(/obj/item/grab, src.mob))
+				src.move_delay = max(src.move_delay, world.time + 7)
+				var/list/L = src.mob.ret_grab()
+				if (islist(L))
+					if (L.len == 2)
+						L -= src.mob
+						var/mob/M = L[1]
+						if ((get_dist(src.mob, M) <= 1 || M.loc == src.mob.loc))
+							var/turf/T = src.mob.loc
+							. = ..()
+							if (isturf(M.loc))
+								var/diag = get_dir(src.mob, M)
+								if ((diag - 1) & diag)
+								else
+									diag = null
+								if ((get_dist(src.mob, M) > 1 || diag))
+									M.inertia_dir = get_dir(M.loc, T)
+									step(M, get_dir(M.loc, T))
+					else
+						for(var/mob/M in L)
+							M.other_mobs = 1
+							if (src.mob != M)
+								M.animate_movement = 3
+						for(var/mob/M in L)
+							spawn( 0 )
+								if (isturf(M.loc))
+									step(M, direct)
+								return
+							spawn( 1 )
+								M.other_mobs = null
+								M.animate_movement = 2
+								return
+			else
+				if(istype(src.mob,/mob/living/))
+					var/mob/living/L = src.mob
+					if (!isturf(src.mob.loc))
+						return
+					if (prob(L.misstep_chance))
+						step(src.mob, pick(cardinal))
+					else
+						. = ..()
+				else
+					. = ..()
+			src.moving = null
+			return
+		// If the person is inside an object .
+		else
+			if (isobj(src.mob.loc) || ismob(src.mob.loc))
+				var/atom/O = src.mob.loc
+				if (src.mob.canmove)
+					return O.relaymove(src.mob, direct)
+	else
+		return
+	return
+
+
+/client/Click(atom/object, location, control, params)
+	if(hellbanned && prob(click_drops)) //Drop some of their clicks
+		if(prob(2)) fake_lagspike()
+		return
+
+	if(src.buildmode)
+		if (src.buildmode.is_active)
+			..() // temp fix for buildmode buttons
+			buildmode.build_click(object, location, control, params)
+			return
+
+	var/list/parameters = params2list(params)
+	var/mob/user = usr
+
+	for (var/key in list("alt", "ctrl", "shift"))
+		if (parameters.Find(key))
+			if (!src.keys[key]) src.keydown(key)
+		else
+			if (src.keys[key]) src.keyup(key)
+
+	// super shit hack for examining over the HUD, please replace this then murder me
+	if (istype(object, /obj/screen) && !parameters["middle"])
+		if (istype(usr, /mob/dead/target_observer))
+			return
+		var/obj/screen/S = object
+		S.clicked(parameters)
+		return
+
+	if(user.traitHolder && istype(user, /mob/living/carbon) && isturf(object.loc) && prob(10) && user.traitHolder.hasTrait("clutz"))
+		var/list/filtered = list()
+		for(var/atom/movable/A in view(get_dist(src.mob, object), src.mob))
+			if(A == object || !isturf(A.loc)) continue
+			filtered.Add(A)
+		if(filtered.len) object = pick(filtered)
+
+	if(isturf(location) || isobj(location) || ismob(location))
+		actions.interrupt(user, INTERRUPT_ACT) //Definitely not the best place for this.
+
+	var/next = user.click(object, parameters)
+
+	if (isnum(next) && src.preferences.use_click_buffer && !src.queued_click)
+		src.queued_click = 1
+		spawn(next+1)
+			if(location && (isturf(location) || isobj(location) || ismob(location)))
+				actions.interrupt(user, INTERRUPT_ACT) //Definitely not the best place for this.
+			user.click(object, parameters)
+	. = ..()
+
 /client/Stat()
 	. = ..()
-	if(src.stathover)
-		if(get_turf(mob) != stathover_start || get_dist( stathover, get_turf(mob) ) >= 5)
-			stathover = null
-			return
-		stat( stathover )//tg makes a new panel, thats ugly tho
-		for( var/atom/A in stathover )
-			if( !A.mouse_opacity || A.invisibility > mob.see_invisible ) continue
-			stat( A )
-
-	if (!src.holder)//todo : maybe give admins a toggle
-		sleep(12) //and make this number larger
+	sleep(1) // yeah lets call this thing EVERY TICK, jesus fuck byond
 
 /client/Topic(href, href_list)
 	if (!usr || isnull(usr.client))
@@ -726,7 +794,10 @@ var/global/curr_day = null
 	var/mob/M
 	if (href_list["target"])
 		var/targetCkey = href_list["target"]
-		M = whois_ckey_to_mob_reference(targetCkey)
+		for (var/mob/allM in mobs)
+			if (allM.ckey == targetCkey)
+				M = allM
+				break
 
 	switch(href_list["action"])
 		if ("priv_msg_irc")
@@ -739,8 +810,6 @@ var/global/curr_day = null
 			if (!( t ))
 				return
 			boutput(usr, "<span style=\"color:blue\" class=\"bigPM\">Admin PM to-<b>[target] (IRC)</b>: [t]</span>")
-			logTheThing("admin_help", src, null, "<b>PM'd [target]</b>: [t]")
-			logTheThing("diary", src, null, "PM'd [target]: [t]", "ahelp")
 
 			var/ircmsg[] = new()
 			ircmsg["key"] = usr && usr.client ? usr.client.key : ""
@@ -759,7 +828,46 @@ var/global/curr_day = null
 						boutput(K, "<font color='blue'><b>PM: [key_name(usr,0,0)][(usr.real_name ? "/"+usr.real_name : "")] <A HREF='?src=\ref[K.client.holder];action=adminplayeropts;targetckey=[usr.ckey]' class='popt'><i class='icon-info-sign'></i></A> <i class='icon-arrow-right'></i> [target] (IRC)</b>: [t]</font>")
 
 		if ("priv_msg")
-			do_admin_pm(M.ckey, usr) // See \admin\adminhelp.dm, changed to work off of ckeys instead of mobs.
+			if(M)
+				if (!( ismob(M) ))
+					return
+				if (!usr || !usr.client)
+					return
+				if (!usr.client.holder && !(M.client && M.client.holder))
+					return
+				var/t = input("Message:", text("Private message to [admin_key(M.client, 1)]")) as null|text
+				if(!(usr.client.holder && usr.client.holder.rank in list("Host", "Coder")))
+					t = strip_html(t,500)
+				if (!( t ))
+					return
+				if (usr.client.holder)
+					boutput(M, "<span style=\"color:red\" class=\"bigPM\">Admin PM from-<b>[key_name(usr, 0, 0)]</b>: [t]</span>")
+					boutput(usr, "<span style=\"color:blue\" class=\"bigPM\">Admin PM to-<b>[key_name(M, 0, 0)][(M.real_name ? "/"+M.real_name : "")] <A HREF='?src=\ref[usr.client.holder];action=adminplayeropts;targetckey=[M.ckey]' class='popt'><i class='icon-info-sign'></i></A></b>: [t]</span>")
+				else
+					if (M.client && M.client.holder)
+						boutput(M, "<span style=\"color:blue\" class=\"bigPM\">Reply PM from-<b>[key_name(usr, 0, 0)][(usr.real_name ? "/"+usr.real_name : "")] <A HREF='?src=\ref[M.client.holder];action=adminplayeropts;targetckey=[usr.ckey]' class='popt'><i class='icon-info-sign'></i></A></b>: [t]</span>")
+					else
+						boutput(M, "<span style=\"color:red\" class=\"bigPM\">Reply PM from-<b>[key_name(usr, 0, 0)]</b>: [t]</span>")
+					boutput(usr, "<span style=\"color:blue\" class=\"bigPM\">Reply PM to-<b>[key_name(M, 0, 0)]</b>: [t]</span>")
+
+				logTheThing("admin_help", src, M, "<b>PM'd %target%</b>: [t]")
+				logTheThing("diary", src, M, "PM'd %target%: [t]", "ahelp")
+
+				var/ircmsg[] = new()
+				ircmsg["key"] = usr && usr.client ? usr.client.key : ""
+				ircmsg["name"] = usr.real_name
+				ircmsg["key2"] = (M != null && M.client != null && M.client.key != null) ? M.client.key : ""
+				ircmsg["name2"] = (M != null && M.real_name != null) ? M.real_name : ""
+				ircmsg["msg"] = html_decode(t)
+				ircbot.export("pm", ircmsg)
+
+				//we don't use message_admins here because the sender/receiver might get it too
+				for (var/mob/K in mobs)
+					if(K && K.client && K.client.holder && K.key != usr.key && (M && K.key != M.key))
+						if (K.client.player_mode && !K.client.player_mode_ahelp)
+							continue
+						else
+							boutput(K, "<font color='blue'><b>PM: [key_name(usr,0,0)][(usr.real_name ? "/"+usr.real_name : "")] <A HREF='?src=\ref[K.client.holder];action=adminplayeropts;targetckey=[usr.ckey]' class='popt'><i class='icon-info-sign'></i></A> <i class='icon-arrow-right'></i> [key_name(M,0,0)][(M.real_name ? "/"+M.real_name : "")] <A HREF='?src=\ref[K.client.holder];action=adminplayeropts;targetckey=[M.ckey]' class='popt'><i class='icon-info-sign'></i></A></b>: [t]</font>")
 
 		if ("mentor_msg_irc")
 			if (!usr || !usr.client)
@@ -771,8 +879,6 @@ var/global/curr_day = null
 			if (!( t ))
 				return
 			boutput(usr, "<span style='color:[mentorhelp_text_color]'><b>MENTOR PM: TO [target] (IRC)</b>: <span class='message'>[t]</span></span>")
-			logTheThing("mentor_help", src, null, "<b>Mentor PM'd [target]</b>: [t]")
-			logTheThing("diary", src, null, "Mentor PM'd [target]: [t]", "admin")
 
 			var/ircmsg[] = new()
 			ircmsg["key"] = usr && usr.client ? usr.client.key : ""
@@ -784,7 +890,7 @@ var/global/curr_day = null
 
 			//we don't use message_admins here because the sender/receiver might get it too
 			for (var/mob/K in mobs)
-				if (K && K.client && K.client.can_see_mentor_pms() && K.key != usr.key && (M && K.key != M.key))
+				if (K && K.client && ((K.client.mentor && K.client.see_mentor_pms) || K.client.holder) && K.key != usr.key && (M && K.key != M.key))
 					if (K.client.holder)
 						if (K.client.player_mode && !K.client.player_mode_mhelp)
 							continue
@@ -805,9 +911,6 @@ var/global/curr_day = null
 					t = strip_html(t,500)
 				if (!( t ))
 					return
-				if (!usr || !usr.client) //ZeWaka: Fix for null.client
-					return
-
 				if (usr.client.holder)
 					boutput(M, "<span style='color:[mentorhelp_text_color]'><b>MENTOR PM: FROM [key_name(usr,0,0,1)]</b>: <span class='message'>[t]</span></span>")
 					boutput(usr, "<span style='color:[mentorhelp_text_color]'><b>MENTOR PM: TO [key_name(M,0,0,1)][(M.real_name ? "/"+M.real_name : "")] <A HREF='?src=\ref[usr.client.holder];action=adminplayeropts;targetckey=[M.ckey]' class='popt'><i class='icon-info-sign'></i></A></b>: <span class='message'>[t]</span></span>")
@@ -830,7 +933,7 @@ var/global/curr_day = null
 				ircbot.export("mentorpm", ircmsg)
 
 				for (var/mob/K in mobs)
-					if (K && K.client && K.client.can_see_mentor_pms() && K.key != usr.key && (M && K.key != M.key))
+					if (K && K.client && ((K.client.mentor && K.client.see_mentor_pms) || K.client.holder) && K.key != usr.key && (M && K.key != M.key))
 						if (K.client.holder)
 							if (K.client.player_mode && !K.client.player_mode_mhelp)
 								continue
@@ -843,7 +946,7 @@ var/global/curr_day = null
 			var/window = href_list["window"]
 			var/t1 = text("window=[window]")
 			usr.machine = null
-			usr.Browse(null, t1)
+			usr << browse(null, t1)
 			//Special cases
 			switch (window)
 				if ("aialerts")
@@ -858,8 +961,13 @@ var/global/curr_day = null
 
 		if("resourcePreloadComplete")
 			bout(src, "<span style='color:blue;'><b>Preload completed.</b></span>")
-			src.Browse(null, "window=resourcePreload")
+			src << browse(null, "window=resourcePreload")
 			return
+
+		/* For debug
+		if ("out")
+			out(src, href_list["msg"])
+		*/
 
 	..()
 	return
@@ -882,23 +990,21 @@ var/global/curr_day = null
 		return 0
 	return (src.ckey in muted_keys) && muted_keys[src.ckey]
 
+/client/proc/fake_lagspike()
+	if(!src.hellbanned || src.spiking) return
+	//Let's significantly increase the dropped clicks / moves for some time
+	var/duration = rand(10, 80) //1 - 8 seconds
 
-//drsingh, don't read the rest of this comment; BELOW: CLOUD STUFFS
-//Sets and uploads cloud data on the client
-//Try to avoid calling often, as it contacts Goonhub and uses the dreaded spawn.
-//TODO: Pool puts, determine value of doing as such.
-/client/proc/cloud_put( var/key, var/value )
-	if( !clouddata )
-		return "Failed to talk to Goonhub; try rejoining."//oh no
-	clouddata[key] = "[value]"
-	SPAWN_DBG(0)//I do not advocate this! So basically hide your eyes for one line of code.
-		world.Export( "http://spacebee.goonhub.com/api/cloudsave?dataput&api_key=[config.ircbot_api]&ckey=[ckey]&key=[url_encode(key)]&value=[url_encode(clouddata[key])]" )//If it fails, oh well...
-//Returns some cloud data on the client
-/client/proc/cloud_get( var/key, var/value )
-	return clouddata ? clouddata[key] : null
-//Returns 1 if you can set or retrieve cloud data on the client
-/client/proc/cloud_available()
-	return !!clouddata
+	move_drops = min(move_drops + rand(30, 80), 100)
+	click_drops = min(click_drops + rand(30, 80), 100)
+
+	spiking = 1
+	spawn(duration)
+		move_drops = initial(move_drops)
+		click_drops = initial(click_drops)
+		spiking = 0
+
+	return duration
 
 /proc/add_test_screen_thing()
 	var/client/C = input("For who", "For who", null) in clients
@@ -955,227 +1061,42 @@ var/global/curr_day = null
 
 	C.screen += M
 
+/client/verb/changes()
+	set category = "Commands"
+	set name = "Changelog"
+	set desc = "Show or hide the changelog"
 
-/client/verb/apply_depth_shadow()
-	set hidden = 1
-	set name ="apply-depth-shadow"
-
-	apply_depth_filter() //see _plane.dm
-
-/client/proc/set_view_size(var/x, var/y)
-	//These maximum values make for a near-fullscreen game view at 32x32 tile size, 1920x1080 monitor resolution.
-	x = min(59,x)
-	y = min(30,y)
-
-	x = max(15,x)
-	y = max(15,y)
-
-	src.view = "[x]x[y]"
-
-/client/proc/reset_view()
-	if (widescreen)
-		src.view = "[WIDE_TILE_WIDTH]x[SQUARE_TILE_WIDTH]"
+	if (winget(src, "changes", "is-visible") == "true")
+		src.Browse(null, "window=changes")
 	else
-		src.view = 7
+		var/changelogHtml = grabResource("html/changelog.html")
+		var/data = changelog:html
+		changelogHtml = dd_replacetext(changelogHtml, "<!-- HTML GOES HERE -->", "[data]")
+		src.Browse(changelogHtml, "window=changes;size=500x650;title=Changelog;")
+		src.changes = 1
 
-/client/proc/set_widescreen(var/wide, var/splitter_value = 0)
-	if (widescreen == wide)
-		return
-	widescreen = wide
-	if (widescreen)
-		src.view = "[WIDE_TILE_WIDTH]x[SQUARE_TILE_WIDTH]"
-		winset( src, "menu", "set_wide.is-checked=true" )
-		if (vert_split)
-			winset( src, "mainwindow.mainvsplit", "splitter=[splitter_value ? splitter_value : 70]" )
+/client/verb/wiki()
+	set category = "Commands"
+	set name = "Wiki"
+	set desc = "Open the Wiki in your browser"
+	set hidden = 1
+	src << link("http://wiki.ss13.co")
+
+/client/verb/map()
+	set category = "Commands"
+	set name = "Map"
+	set desc = "Open an interactive map in your browser"
+	set hidden = 1
+	if (map_setting == "COG2")
+		src << link("http://goonhub.com/maps/cogmap2")
+	else if (map_setting == "DESTINY")
+		src << link("http://goonhub.com/maps/destiny")
 	else
-		src.view = 7
-		winset( src, "menu", "set_wide.is-checked=false" )
-		if (vert_split)
-			winset( src, "mainwindow.mainvsplit", "splitter=[splitter_value ? splitter_value : 50]" )
+		src << link("http://goonhub.com/maps/cogmap")
 
-/client/verb/set_wide_view()
+/client/verb/forum()
+	set category = "Commands"
+	set name = "Forum"
+	set desc = "Open the Forum in your browser"
 	set hidden = 1
-	set name = "set-wide-view"
-
-	src.set_widescreen(1)
-
-/client/verb/set_square_view()
-	set hidden = 1
-	set name = "set-square-view"
-
-	src.set_widescreen(0)
-
-/client/proc/set_splitter_orientation(var/vert, var/splitter_value = 0)
-	vert_split = vert
-	if (vert)
-		winset( src, "mainwindow.mainvsplit", "is-vert=true" )
-		winset( src, "rpane.rpanewindow", "is-vert=false" )
-		winset( src, "mainwindow.mainvsplit", "[splitter_value ? splitter_value : 70]" )
-	else
-		winset( src, "mainwindow.mainvsplit", "is-vert=false" )
-		winset( src, "rpane.rpanewindow", "is-vert=true" )
-		winset( src, "mainwindow.mainvsplit", "[splitter_value ? splitter_value : 70]" )
-
-/client/verb/set_vertical_split()
-	set hidden = 1
-	set name = "set-vertical-split"
-
-	src.set_splitter_orientation(1)
-
-/client/verb/set_horizontal_split()
-	set hidden = 1
-	set name = "set-horizontal-split"
-
-	src.set_splitter_orientation(0)
-
-
-/client/proc/set_controls(var/tg)
-	tg_controls = tg
-	winset( src, "menu", "tg_controls.is-checked=[tg ? "true" : "false"]" )
-
-	src.mob.update_keymap()
-
-/client/verb/set_tg_controls()
-	set hidden = 1
-	set name = "set-tg-controls"
-	SPAWN_DBG(1)
-		set_controls(!tg_controls)
-
-
-/client/proc/set_layout(var/tg)
-	tg_layout = tg
-	winset( src, "menu", "tg_layout.is-checked=[tg ? "true" : "false"]" )
-
-	if (istype(mob,/mob/living/carbon/human))
-		var/mob/living/carbon/human/H = mob
-		H.detach_hud(H.hud)
-
-		//delete old hud and spawn a new one
-		// this probably is fine lol
-		var/datum/hud/human/HUD = new(H)
-		HUD.mobs = H.hud.mobs
-		HUD.clients = H.hud.clients
-		HUD.objects = H.hud.objects
-		HUD.click_check = 1
-
-		H.hud.master = null
-		qdel(H.hud)
-		qdel(H.zone_sel)
-		qdel(H.stamina_bar)
-
-		H.hud = new(H)
-		H.attach_hud(H.hud)
-		H.zone_sel = new(H)
-		H.attach_hud(H.zone_sel)
-		H.stamina_bar = new(H)
-		H.hud.add_object(H.stamina_bar, HUD_LAYER+1, "EAST-1, NORTH")
-
-/client/verb/set_tg_layout()
-	set hidden = 1
-	set name = "set-tg-layout"
-	SPAWN_DBG(1)
-		set_layout(!tg_layout)
-
-/client/verb/set_fps()
-	set hidden = 1
-	set name = "set-fps"
-	src.tick_lag = (winget( src, "menu.fps_smooth", "is-checked" ) == "true") ? CLIENTSIDE_TICK_LAG_SMOOTH : CLIENTSIDE_TICK_LAG_CHUNKY
-
-/client/verb/set_wasd_controls()
-	set hidden = 1
-	set name = "set-wasd-controls"
-	src.do_action("togglewasd")
-
-
-/client/verb/set_chui()
-	set hidden = 1
-	set name = "set-chui"
-	if (src.use_chui)
-		src.use_chui = 0
-	else
-		src.use_chui = 1
-
-/client/verb/set_chui_custom_frames()
-	set hidden = 1
-	set name = "set-chui-custom-frames"
-	if (src.use_chui_custom_frames)
-		src.use_chui_custom_frames = 0
-	else
-		src.use_chui_custom_frames = 1
-
-
-/client/verb/set_speech_sounds()
-	set hidden = 1
-	set name = "set-speech-sounds"
-	if (src.ignore_sound_flags & SOUND_SPEECH)
-		src.ignore_sound_flags &= ~SOUND_SPEECH
-	else
-		src.ignore_sound_flags |= SOUND_SPEECH
-
-/client/verb/set_all_sounds()
-	set hidden = 1
-	set name = "set-all-sounds"
-	if (src.ignore_sound_flags & SOUND_ALL)
-		src.ignore_sound_flags &= ~SOUND_ALL
-	else
-		src.ignore_sound_flags |= SOUND_ALL
-
-/client/verb/set_vox_sounds()
-	set hidden = 1
-	set name = "set-vox-sounds"
-	if (src.ignore_sound_flags & SOUND_VOX)
-		src.ignore_sound_flags &= ~SOUND_VOX
-	else
-		src.ignore_sound_flags |= SOUND_VOX
-
-//These size helpers are invisible browser windows that help with getting client screen dimensions
-/client/proc/initSizeHelpers()
-	src.screenSizeHelper = new(src)
-	src.mapSizeHelper = new(src)
-
-/client/verb/windowResizeEvent()
-	set hidden = 1
-	set name = "window-resize-event"
-
-	src.resizeTooltipEvent()
-
-	//tell the interface helpers to recompute data
-	src.mapSizeHelper.update()
-
-/client/verb/autoscreenshot()
-	set hidden = 1
-	set name = ".autoscreenshot"
-
-	winset(src, null, "command=\".screenshot auto\"")
-	boutput(src, "<B>Screenshot taken!</B>")
-
-//NYI: Move this to use config.cdn
-/client/proc/showCinematic(var/name, var/removeOnFinish = 0)
-	winshow(src, "pregameBrowser", 1)
-	src << browse({"
-		<!doctype HTML>
-<html>
-<head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<style type="text/css">
-* { margin: 0px; padding: 0px; width: 100%; height: 100%; }
-</style>
-</head>
-<body>
-<video autoplay style="position:fixed;top:0px;right:0px;left:0px;bottom:0px">
-<source src="http://cdn.goonhub.com/misc/cinematics/[name].mp4" type="video/mp4">
-</video>
-
-<script type="text/javascript">
-document.onclick = document.oncontextmenu = document.onkeydown = document.onkeyup = function(e){e.preventDefault(); document.location='byond://winset?map.focus=true'; return false;};
-if([removeOnFinish])
-	document.getElementsByTagName("video")\[0\].addEventListener('ended',function(){
-		setTimeout(function(){document.location='byond://winset?pregameBrowser.is-visible=false';}, [removeOnFinish]);
-	});
-</script>
-</body>
-</html>
-	"}, "window=pregameBrowser")
-/world/proc/showCinematic(var/name, var/removeOnFinish = 0)
-	for(var/client/C)
-		C.showCinematic(name, removeOnFinish)
+	src << link("http://forum.ss13.co")

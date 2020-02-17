@@ -1,49 +1,23 @@
-* {
-	box-sizing: border-box;
-}
-
-html, body {
+body, html {
 	margin: 0;
 	padding: 0;
 	overflow: hidden;
-	background: #ff00e4;
-	font: bold 12px 'Helvetica Neue', Arial, Helvetica, sans-serif;
 }
 
 .wrap {
 	position: absolute;
 	top: 0;
 	left: 0;
-	max-width: 300px;
-	border: 2px solid #000;
+	max-width: 298px;
+	border: 2px solid #1B2967;
 }
 
 .content {
-	height: 100%;
-	line-height: 1.2;
+	font: bold 12px Arial, 'Helvetica Neue', Helvetica, sans-serif;
 	color: #ffffff;
-	padding: 6px;
-	border: 2px solid #222;
-	background: #333;
-}
-
-.pinned .wrap .title {
-	padding-right: 15px;
-}
-
-.wrap > .close-tip {
-	position: absolute;
-	display: block;
-	top: 2px;
-	right: 5px;
-	font-size: 14px;
-	color: #fff;
-	text-decoration: none;
-	line-height: 1;
-}
-
-a {
-	color: #fff;
+	padding: 8px;
+	border: 2px solid #0033CC;
+	background: #005CB8;
 }
 
 h1 {
@@ -57,30 +31,12 @@ p {
 	line-height: 1.2;
 }
 
-.icon {
-	display: inline-block;
-	margin-right: 3px;
-}
-
-
-/* Themes */
-.default .wrap {border-color: #1B2967;}
-.default .content {border-color: #0033CC; background-color: #005CB8;}
-
-.item .wrap {border-color: #2b7ada;}
-.item .content {border-color: #182730; background-color: #47545f;}
-
+/* Custom Themes */
 .blob .wrap {border-color: #009900;}
 .blob .content {border-color: #66FF00; background-color: #475E13;}
 
 .wraith .wrap {border-color: #492136;}
 .wraith .content {border-color: #331726; background-color: #471962;}
-
-.overmind .wrap {border-color: #80AD32;}
-.overmind .content {border-color: #352956; background-color: #5240A5;}
-
-.flock .wrap {border-color: #40e8c4;}
-.flock .content {border-color: #40e8c4; background-color: #60a092;}
 
 .pod .wrap {border-color: #052401;}
 .pod .content {border-color: #326D29; background-color: #569F4B;}
@@ -124,7 +80,7 @@ p {
 
 /* Bodytemp indicator */
 
-.tempInd .content {border-color: #233b25;}
+.tempInd .content {border-color: #233b25;} 
 .tempInd0 .wrap, .tempInd1 .wrap, .tempInd4 .wrap, .tempIndF .wrap, .tempInd-1 .wrap, .tempInd-4 .wrap {border-color: #2b7ada;}
 .tempInd2 .wrap, .tempInd3 .wrap, .tempInd-2 .wrap, .tempInd-3 .wrap {border-color: #fefe00;}
 
@@ -143,36 +99,3 @@ p {
 
 .stamina .wrap {border-color: #2b7ada;}
 .stamina .content {border-color: #182730; background-color: #47545f;}
-
-/* You didn't see nothing */
-.rainbow {animation:rainbow 1s infinite alternate;}
-
-@keyframes rainbow {
-0% {color: red;}
-20% {color: orange;}
-40% {color: yellow;}
-60% {color: green;}
-80% {color: aqua;}
-100% {color: blue;}
-}
-
-/* Fancy newhud */
-
-.newhud .wrap {border-color: #1c5567;}
-.newhud .wrap:before, .newhud .wrap:after {
-	content: '';
-	position: absolute;
-	width: 15px;
-	height: 15px;
-}
-.newhud .wrap:before {
-	top: -2px; /* #wrap border width */
-	left: -2px; /* #wrap border width */
-	background: url({{resource("images/tooltips/newhud-tl.gif")}});
-}
-.newhud .wrap:after {
-	bottom: -2px; /* #wrap border width */
-	right: -2px; /* #wrap border width */
-	background: url({{resource("images/tooltips/newhud-br.gif")}});
-}
-.newhud .content {padding: 6px 10px; border-color: #0a131a; background: #0a131a url({{resource("images/tooltips/newhud-lines.gif")}});}

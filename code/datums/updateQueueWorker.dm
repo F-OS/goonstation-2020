@@ -56,10 +56,10 @@ datum/updateQueueWorker/proc/doWork()
 
 		uq_dbg("tick went into overtime with world.cpu = [world.cpu], deferred next update to next tick [1+(world.time / world.tick_lag)]")
 
-		SPAWN_DBG(1)
+		spawn(1)
 			doWork()
 	else
-		SPAWN_DBG(0) // Execute anonymous function immediately as if we were in a while loop...
+		spawn(0) // Execute anonymous function immediately as if we were in a while loop...
 			doWork()
 
 datum/updateQueueWorker/proc/finished()
@@ -86,12 +86,12 @@ datum/updateQueueWorker/proc/kill()
 	 * we'll forcibly delete it, causing the anonymous function it was
 	 * running to be terminated. Hasta la vista, baby.
 	 */
-	SPAWN_DBG(300)
+	spawn(300)
 		del(src)
 
 datum/updateQueueWorker/proc/start()
 	uq_dbg("updateQueueWorker started.")
-	SPAWN_DBG(0)
+	spawn(0)
 		doWork()
 
 

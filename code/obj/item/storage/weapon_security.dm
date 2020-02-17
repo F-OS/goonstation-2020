@@ -31,9 +31,8 @@
 	icon_state = "handcuff"
 	desc = "Essential security supplies. Keep out of reach of the clown."
 	spawn_contents = list(/obj/item/handcuffs = 3,\
-	/obj/item/ammo/power_cell/med_power,\
 	/obj/item/device/flash,\
-	/obj/item/instrument/whistle)
+	/obj/item/whistle)
 
 /* -------------------- Guns & Ammo -------------------- */
 
@@ -124,20 +123,13 @@
 	icon_state = "flashbang"
 	spawn_contents = list(/obj/item/old_grenade/emp = 5)
 
-/obj/item/storage/box/stinger_kit
-	name = "stinger grenade box"
-	desc = "<FONT color=red><B>WARNING: Do not use without reading these preautions!</B></FONT><br><B>These devices are extremely dangerous and can cause limbs to experience severe damage!</B><br>Excercise extreme care when detonating in closed spaces.<br>&emsp;Make an attempt to not to detonate closer than 2 meters of the intended target. It is imperative<br>&emsp;that the targets visit a medical professional after usage. <B>EXERCISE CAUTION REGARDLESS OF CIRCUMSTANCES</B><br>Operating Directions:<br>&emsp;1. Pull detonnation pin. <B>ONCE THE PIN IS PULLED THE GRENADE CAN NOT BE DISARMED!</B><br>&emsp;2. Throw grenade. <br>&emsp;3. The grenade will detonate 3 seconds after being primed. <br><B>Never prime another grenade until after the first is detonated</B><br>Default 3 second wait till from prime to detonation. This can be switched with a screwdriver to 6 seconds.<br>Copyright of Nanotrasen Industries- Military Armnaments Division"
-	icon_state = "flashbang"
-	spawn_contents = list(/obj/item/old_grenade/stinger = 7)
-
 /obj/item/storage/box/tactical_kit // cogwerks - tactical as heck
 	name = "tactical grenade box"
 	desc = "A box of assorted special-ops grenades."
 	icon_state = "flashbang"
 	spawn_contents = list(/obj/item/chem_grenade/incendiary = 2,\
 	/obj/item/chem_grenade/shock,\
-	/obj/item/old_grenade/smoke = 1,\
-	/obj/item/old_grenade/stinger/frag,\
+	/obj/item/old_grenade/smoke = 2,\
 	/obj/item/chem_grenade/flashbang,\
 	/obj/item/old_grenade/gravaton)
 
@@ -178,8 +170,7 @@
 	icon_state = "flashbang"
 	spawn_contents = list(/obj/item/chem_grenade/pepper = 2,\
 	/obj/item/old_grenade/smoke = 2,\
-	/obj/item/chem_grenade/flashbang,\
-	/obj/item/old_grenade/stinger,\
+	/obj/item/chem_grenade/flashbang = 2,\
 	/obj/item/chem_grenade/shock)
 
 // For QM crate "Experimental Weapons" (Convair880).
@@ -191,13 +182,6 @@
 	/obj/item/chem_grenade/incendiary = 3,\
 	/obj/item/chem_grenade/cryo = 3)
 
-// Wasp grenades for traitor botanists
-/obj/item/storage/box/wasp_grenade_kit
-	name = "experimental biological grenade box"
-	desc = "A box of experimental biological grenades."
-	icon_state = "flashbang"
-	spawn_contents = list(/obj/item/old_grenade/banana/wasp = 5)
-
 /* -------------------- Traitor Gear -------------------- */
 
 /obj/item/storage/bowling
@@ -207,20 +191,6 @@
 	max_wclass = 3 // The bowling ball won't fit into the bowling bag!
 	spawn_contents = list(/obj/item/clothing/under/gimmick/bowling,\
 	/obj/item/bowling_ball = 4)
-
-/obj/item/storage/football
-	name = "space-american football kit"
-	desc = "This kit contains everything you need to become a great football player. Wearing all of the equipment inside will grant you the ability to rush down and tackle anyone who stands in your way!"
-	icon_state = "box"
-	max_wclass = 3
-	spawn_contents = list(/obj/item/clothing/suit/armor/football,/obj/item/clothing/head/helmet/football,\
-	/obj/item/clothing/under/football,/obj/item/clothing/shoes/cleats, /obj/item/football = 2)
-
-	New()
-		if (prob(50))
-			spawn_contents = list(/obj/item/clothing/suit/armor/football/red,/obj/item/clothing/head/helmet/football/red,\
-			/obj/item/clothing/under/football/red,/obj/item/clothing/shoes/cleats, /obj/item/football = 2)
-		..()
 
 /obj/item/storage/box/syndibox
 	name = "stealth storage"
@@ -243,7 +213,7 @@
 		if(src.cloaked == 1)
 			..()
 		else
-			if (!isitem(W) || isnull(initial(W.icon)) || isnull(initial(W.icon_state)) || !W.icon || !W.icon_state)
+			if (!istype(W, /obj/item) || isnull(initial(W.icon)) || isnull(initial(W.icon_state)) || !W.icon || !W.icon_state)
 				user.show_text("The [W.name] is not compatible with this device.", "red")
 				return
 			src.name = W.name
@@ -324,10 +294,3 @@
 	/obj/item/ammo/bullets/bullet_22,\
 	/obj/item/card/id/syndicate,\
 	/obj/item/device/spy_implanter)
-
-// Boxes for Nuke Ops Class Crates
-
-/obj/item/storage/box/demo_grenade_kit
-	name = "demolition grenade box"
-	icon_state = "flashbang"
-	spawn_contents = list(/obj/item/chem_grenade/fcleaner = 5)

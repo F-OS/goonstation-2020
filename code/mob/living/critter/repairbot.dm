@@ -48,7 +48,7 @@
 		switch (act)
 			if ("scream")
 				if (src.emote_check(voluntary, 50))
-					playsound(get_turf(src), "sound/voice/screams/robot_scream.ogg" , 80, 1)
+					playsound(get_turf(src), "sound/voice/robot_scream.ogg" , 80, 1)
 					return "<b>[src]</b> screams!"
 		return null
 

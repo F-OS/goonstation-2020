@@ -13,7 +13,6 @@
 	var/mechanics_type_override = null //Fix for children of scannable items being reproduced in mechanics
 	var/artifact = null
 	var/move_triggered = 0
-	var/object_flags = 0
 
 	proc/move_trigger(var/mob/M, var/kindof)
 		var/atom/movable/x = loc
@@ -60,10 +59,6 @@
 		qdel(src)
 		return
 
-	New()
-		setupProperties()
-		. = ..()
-
 	ex_act(severity)
 		if(src.material)
 			src.material.triggerExp(src, severity)
@@ -100,8 +95,8 @@
 	onMaterialChanged()
 		..()
 		if(istype(src.material))
-			pressure_resistance = round((material.getProperty("density") + material.getProperty("density")) / 2)
-			throwforce = round(max(material.getProperty("hard"),1) / 8)
+			pressure_resistance = round((material.getProperty(PROP_COMPRESSIVE) + material.getProperty(PROP_TENSILE)) / 2)
+			throwforce = round(max(material.getProperty(PROP_HARDNESS),7) / 7)
 			quality = src.material.quality
 			if(initial(src.opacity) && src.material.alpha <= MATERIAL_ALPHA_OPACITY)
 				src.opacity = 0
@@ -111,10 +106,14 @@
 
 	disposing()
 		mats = null
-		if (artifact && !isnum(artifact))
-			artifact:holder = null
 		..()
 
+	proc/override_southeast(var/mob/user)
+		return 0
+	proc/override_northeast(var/mob/user)
+		return 0
+	proc/override_northwest(var/mob/user)
+		return 0
 	proc/client_login(var/mob/user)
 		return
 
@@ -132,7 +131,7 @@
 		O.pixel_y = pixel_y
 		O.color = color
 		O.anchored = anchored
-		O.set_density(density)
+		O.density = density
 		O.opacity = opacity
 		if (material)
 			O.setMaterial(material)
@@ -142,40 +141,20 @@
 	proc/pixelaction(atom/target, params, mob/user, reach)
 		return 0
 
-	assume_air(datum/air_group/giver)
-		if (loc)
-			return loc.assume_air(giver)
-		else
-			return null
-
-	remove_air(amount)
-		if (loc)
-			return loc.remove_air(amount)
-		else
-			return null
-
-	return_air()
-		if (loc)
-			return loc.return_air()
-		else
-			return null
-
 	proc/handle_internal_lifeform(mob/lifeform_inside_me, breath_request)
 		//Return: (NONSTANDARD)
 		//		null if object handles breathing logic for lifeform
 		//		datum/air_group to tell lifeform to process using that breath return
 		//DEFAULT: Take air from turf to give to have mob process
-		if (breath_request>0)
-			var/datum/gas_mixture/environment = return_air()
-			if (environment)
-				var/breath_moles = environment.total_moles()*BREATH_PERCENTAGE
-				return remove_air(breath_moles)
-			else
-				return remove_air(breath_request)
+		if(breath_request>0)
+			return remove_air(breath_request)
 		else
 			return null
 
 	proc/initialize()
+
+	proc/hotkey(var/mob/user, var/key)
+		return
 
 	attackby(obj/item/I as obj, mob/user as mob)
 // grabsmash
@@ -189,15 +168,10 @@
 
 	MouseDrop(atom/over_object as mob|obj|turf)
 		..()
-		if (iswraith(usr))
-			if(!src.anchored && isitem(src))
-				src.throw_at(over_object, 7, 1)
-				logTheThing("combat", usr, null, "throws \the [src] with wraith telekinesis.")
-
-		else if(usr.bioHolder && usr.bioHolder.HasEffect("telekinesis_drag") && istype(src, /obj) && isturf(src.loc) && isalive(usr)  && usr.canmove && get_dist(src,usr) <= 7 )
+		if(usr.bioHolder && usr.bioHolder.HasEffect("telekinesis_drag") && istype(src, /obj) && isturf(src.loc) && usr.stat == 0  && usr.canmove && get_dist(src,usr) <= 7 )
 			var/datum/bioEffect/TK = usr.bioHolder.GetEffect("telekinesis_drag")
 
-			if(!src.anchored && (isitem(src) || TK.variant == 2))
+			if(!src.anchored && (istype(src, /obj/item) || TK.variant == 2))
 				src.throw_at(over_object, 7, 1)
 				logTheThing("combat", usr, null, "throws \the [src] with telekinesis.")
 
@@ -236,26 +210,15 @@
 	deserialize_postprocess()
 		return
 
-/obj/proc/get_movement_controller(mob/user)
-	return
-
 /obj/proc/updateUsrDialog()
 	var/list/nearby = viewers(1, src)
 	for(var/mob/M in nearby)
 		if ((M.client && M.machine == src))
-			if(istype(src, /obj/npc/trader)) //This is not great. But making dialogues and trader windows work together is tricky. Needs a better solution.
-				var/obj/npc/trader/T = src
-				T.openTrade(M)
-			else
-				src.attack_hand(M)
-	if (issilicon(usr))
+			src.attack_hand(M)
+	if (istype(usr, /mob/living/silicon))
 		if (!(usr in nearby))
 			if (usr.client && usr.machine==src) // && M.machine == src is omitted because if we triggered this by using the dialog, it doesn't matter if our machine changed in between triggering it and this - the dialog is probably still supposed to refresh.
 				src.attack_ai(usr)
-	if (isAIeye(usr))
-		var/mob/dead/aieye/E = usr
-		if (E.client)
-			src.attack_ai(E)
 
 /obj/proc/updateDialog()
 	var/list/nearby = viewers(1, src)
@@ -264,32 +227,20 @@
 			src.attack_hand(M)
 	AutoUpdateAI(src)
 
-/obj/item/proc/updateSelfDialogFromTurf()	//It's weird, yes. only used for spy stickers as of now
-	var/list/nearby = viewers(1, get_turf(src))
-	for(var/mob/M in nearby)
-		if (isAI(M)) //Eyecam handling
-			var/mob/living/silicon/ai/AI = M
-			if (AI.deployed_to_eyecam)
-				M = AI.eyecam
-		if ((M.client && M.machine == src))
-			src.attack_self(M)
-
-	for(var/mob/living/silicon/ai/M in mobs)
-		var/mob/AI = M
-		if (M.deployed_to_eyecam)
-			AI = M.eyecam
-		if ((AI.client && AI.machine == src))
-			src.attack_self(AI)
-
 /obj/item/proc/updateSelfDialog()
 	var/mob/M = src.loc
-	if(istype(M))
-		if (isAI(M)) //Eyecam handling
-			var/mob/living/silicon/ai/AI = M
-			if (AI.deployed_to_eyecam)
-				M = AI.eyecam
-		if(M.client && M.machine == src)
-			src.attack_self(M)
+	if(istype(M) && M.client && M.machine == src)
+		src.attack_self(M)
+
+/obj/mark
+		icon = 'icons/misc/mark.dmi'
+		icon_state = "blank"
+
+		anchored = 1
+		layer = 99
+		mouse_opacity = 0
+
+		var/mark = ""
 
 /obj/bedsheetbin
 	name = "linen bin"
@@ -306,14 +257,10 @@
 		return
 
 	attack_hand(mob/user as mob)
-		add_fingerprint(user)
 		if (src.amount >= 1)
 			src.amount--
 			new /obj/item/clothing/suit/bedsheet(src.loc)
-			if (src.amount <= 0)
-				src.icon_state = "bedbin0"
-		else
-			boutput(user, "There's no bedsheets left in [src]!")
+			add_fingerprint(user)
 
 	get_desc()
 		. += "There's [src.amount ? src.amount : "no"] bedsheet[s_es(src.amount)] in [src]."
@@ -333,17 +280,25 @@
 		return
 
 	attack_hand(mob/user as mob)
-		add_fingerprint(user)
 		if (src.amount >= 1)
 			src.amount--
 			new /obj/item/clothing/under/towel(src.loc)
-			if (src.amount <= 0)
-				src.icon_state = "bedbin0"
-		else
-			boutput(user, "There's no towels left in [src]!")
+			add_fingerprint(user)
 
 	get_desc()
 		. += "There's [src.amount ? src.amount : "no"] towel[s_es(src.amount)] in [src]."
+
+/obj/equip_e
+	name = "equip e"
+	var/mob/source = null
+	var/s_loc = null
+	var/t_loc = null
+	var/obj/item/item = null
+	var/place = null
+
+/obj/equip_e/human
+	name = "human"
+	var/mob/living/carbon/human/target = null
 
 /obj/securearea
 	desc = "A warning sign which reads 'SECURE AREA'"
@@ -391,7 +346,6 @@
 	icon = 'icons/obj/structures.dmi'
 	icon_state = "lattice"
 	density = 0
-	stops_space_move = 1
 	anchored = 1.0
 	layer = LATTICE_LAYER
 	//	flags = CONDUCT
@@ -422,7 +376,7 @@
 
 			C:build(get_turf(src))
 			C:amount--
-			playsound(src.loc, "sound/impact_sounds/Generic_Stab_1.ogg", 50, 1)
+			playsound(src.loc, "sound/weapons/Genhit.ogg", 50, 1)
 			C.add_fingerprint(user)
 
 			if (C:amount < 1)
@@ -456,7 +410,7 @@
 
 	proc/barricade_damage(var/hitstrength)
 		strength -= hitstrength
-		playsound(src.loc, "sound/impact_sounds/Metal_Hit_Light_1.ogg", 50, 1)
+		playsound(src.loc, "sound/effects/grillehit.ogg", 50, 1)
 		if (strength < 1)
 			src.visible_message("The barricade breaks!")
 			if (prob(50)) new /obj/item/rods/steel(src.loc)
@@ -496,9 +450,8 @@
 				return
 		else
 			if (W.force > 8)
-				user.lastattacked = src
 				src.barricade_damage(W.force / 8)
-				playsound(src.loc, "sound/impact_sounds/Metal_Hit_Light_1.ogg", 50, 1)
+				playsound(src.loc, "sound/effects/grillehit.ogg", 50, 1)
 			..()
 
 	ex_act(severity)
@@ -516,50 +469,82 @@
 	meteorhit()
 		src.barricade_damage(1)
 
+/obj/list_container
+	name = "list container"
+
+/obj/list_container/mobl
+	name = "mobl"
+	var/master = null
+
+	var/list/container = list(  )
+
+/obj/manifest
+	name = "manifest"
+	icon = 'icons/mob/screen1.dmi'
+	icon_state = "x"
+
 /obj/overlay
 	name = "overlay"
 	mat_changename = 0
 	mat_changedesc = 0
-	event_handler_flags = IMMUNE_MANTA_PUSH
-
 	updateHealth()
 		return
 
 	meteorhit(obj/M as obj)
-		if (isrestrictedz(src.z))
+		if (src.z == 2)
 			return
 		else
 			return ..()
 
 	ex_act(severity)
-		if (isrestrictedz(src.z))
+		if (src.z == 2)
 			return
 		else
 			return ..()
-
-	track_blood()
-		src.tracked_blood = null
-		return
 
 /obj/overlay/self_deleting
 	New(newloc, deleteTimer)
 		..()
 		if (deleteTimer)
-			SPAWN_DBG(deleteTimer)
+			spawn(deleteTimer)
 				qdel(src)
 
 /obj/projection
 	name = "Projection"
 	anchored = 1.0
 
+
+
+/obj/shut_controller
+	name = "shut controller"
+	var/moving = null
+	var/list/parts = list(  )
+
 /obj/deskclutter
 	name = "desk clutter"
-	icon = 'icons/obj/stationobjs.dmi'
+	icon = 'icons/obj/items.dmi'
 	icon_state = "deskclutter"
 	desc = "What a mess..."
 	anchored = 1
 
+
+
 /obj/item/mouse_drag_pointer = MOUSE_ACTIVE_POINTER
+
+// TODO: robust mixology system! (and merge with beakers, maybe)
+//obj/item/glass
+//	name = "empty glass"
+//	icon = 'icons/obj/kitchen.dmi'
+//	icon_state = "glass_empty"
+//	item_state = "beaker"
+//	flags = FPRINT | TABLEPASS | OPENCONTAINER
+//	var/datum/substance/inside = null
+//	throwforce = 5
+//	g_amt = 100
+//	New()
+//		..()
+//		src.pixel_x = rand(-5, 5)
+//		src.pixel_y = rand(-5, 5)
 
 /obj/proc/alter_health()
 	return 1
@@ -572,14 +557,14 @@
 	set desc = "Dick move."
 	set category = "Special Verbs"
 	if (alert("Are you sure? This will irreversibly replace this object with a copy that gibs the first person trying to touch it!", "Replace with explosive", "Yes", "No") == "Yes")
-		message_admins("[key_name(usr)] replaced [O] ([showCoords(O.x, O.y, O.z)]) with an explosive replica.")
-		logTheThing("admin", usr, null, "replaced [O] ([showCoords(O.x, O.y, O.z)]) with an explosive replica.")
+		message_admins("[key_name(usr)] replaced [src] ([showCoords(O.x, O.y, O.z)]) with an explosive replica.")
+		logTheThing("admin", usr, null, "replaced [src] ([showCoords(O.x, O.y, O.z)]) with an explosive replica.")
 		var/obj/replica = new /obj/item/card/id/captains_spare/explosive(O.loc)
 		replica.icon = O.icon
 		replica.icon_state = O.icon_state
 		replica.name = O.name
 		replica.desc = O.desc
-		replica.set_density(O.density)
+		replica.density = O.density
 		replica.opacity = O.opacity
 		replica.anchored = O.anchored
 		replica.layer = O.layer - 0.05
@@ -592,169 +577,6 @@
 /obj/disposing()
 	for(var/mob/M in src.contents)
 		M.set_loc(src.loc)
+	set_loc(null)
 	tag = null
 	..()
-
-/obj/proc/place_on(obj/item/W as obj, mob/user as mob, params)
-	if (W && !issilicon(user)) // no ghost drones should not be able to do this either, not just borgs
-		if (user && !(W.cant_drop || W.cant_self_remove))
-			user.drop_item()
-		if (W && W.loc)
-			W.set_loc(src.loc)
-			if (islist(params) && params["icon-y"] && params["icon-x"])
-				W.pixel_x = text2num(params["icon-x"]) - 16
-				W.pixel_y = text2num(params["icon-y"]) - 16
-			return 1
-	return 0
-
-/obj/proc/receive_silicon_hotkey(var/mob/user)
-	//A wee stub to handle other objects implementing the AI keys
-	//DEBUG_MESSAGE("[src] got a silicon hotkey from [user], containing: [user.client.check_key(KEY_OPEN) ? "KEY_OPEN" : ""] [user.client.check_key(KEY_BOLT) ? "KEY_BOLT" : ""] [user.client.check_key(KEY_SHOCK) ? "KEY_SHOCK" : ""]")
-	return 0
-
-
-/obj/verb/interact_verb()
-	set name = "Interact"
-	set src in oview(1)
-	set category = "Local"
-
-	if (isdead(usr) || (!iscarbon(usr) && !iscritter(usr)))
-		return
-
-	if (!istype(src.loc, /turf) || usr.stat || usr.getStatusDuration("paralysis") || usr.getStatusDuration("stunned") || usr.getStatusDuration("weakened") || usr.restrained())
-		return
-
-	if (!can_reach(usr, src))
-		return
-
-	if (usr.client)
-		usr.client.Click(src,get_turf(src))
-
-/obj/proc/mob_flip_inside(var/mob/user)
-	user.show_text("<span style=\"color:red\">You leap and slam against the inside of [src]! Ouch!</span>")
-	user.changeStatus("paralysis", 40)
-	user.changeStatus("weakened", 4 SECONDS)
-	src.visible_message("<span style=\"color:red\"><b>[src]</b> emits a loud thump and rattles a bit.</span>")
-	playsound(user.loc, "sound/impact_sounds/Metal_Hit_Heavy_1.ogg", 50, 1)
-
-	var/wiggle = 6
-	SPAWN_DBG(-1)
-		while(wiggle > 0)
-			wiggle--
-			src.pixel_x = rand(-3,3)
-			src.pixel_y = rand(-3,3)
-			sleep(1)
-		src.pixel_x = 0
-		src.pixel_y = 0
-
-/obj/handcuffdispenser
-	name = "handcuff dispenser"
-	desc = "A handy dispenser for handcuffs."
-	icon = 'icons/obj/stationobjs.dmi'
-	icon_state = "dispenser_handcuffs"
-	pixel_y = 28
-	var/amount = 3
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (istype(W, /obj/item/handcuffs))
-			user.u_equip(W)
-			qdel(W)
-			src.amount++
-			boutput(user, "<span style=\"color:blue\">You put a pair of handcuffs in the [src]. [amount] left in the dispenser.</span>")
-			src.icon_state = "dispenser_handcuffs"
-		return
-
-	attack_hand(mob/user as mob)
-		add_fingerprint(user)
-		if (src.amount >= 1)
-			src.amount--
-			user.put_in_hand_or_drop(new/obj/item/handcuffs, user.hand)
-			boutput(user, "<span style=\"color:red\">You take a pair of handcuffs from the [src]. [amount] left in the dispenser.</span>")
-			if (src.amount <= 0)
-				src.icon_state = "dispenser_handcuffs0"
-		else
-			boutput(user, "<span style=\"color:red\">There's no handcuffs left in the [src]!</span>")
-
-/obj/latexglovesdispenser
-	name = "latex gloves dispenser"
-	desc = "A handy dispenser for latex gloves."
-	icon = 'icons/obj/stationobjs.dmi'
-	icon_state = "dispenser_gloves"
-	pixel_y = 28
-	var/amount = 3
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (istype(W, /obj/item/clothing/gloves/latex))
-			user.u_equip(W)
-			qdel(W)
-			src.amount++
-			boutput(user, "<span style=\"color:blue\">You put a pair of latex gloves in the [src]. [amount] left in the dispenser.</span>")
-			src.icon_state = "dispenser_gloves"
-		return
-
-	attack_hand(mob/user as mob)
-		add_fingerprint(user)
-		if (src.amount >= 1)
-			src.amount--
-			user.put_in_hand_or_drop(new/obj/item/clothing/gloves/latex, user.hand)
-			boutput(user, "<span style=\"color:red\">You take a pair of latex gloves from the [src]. [amount] left in the dispenser.</span>")
-			if (src.amount <= 0)
-				src.icon_state = "dispenser_gloves0"
-		else
-			boutput(user, "<span style=\"color:red\">There's no latex gloves left in the [src]!</span>")
-
-/obj/medicalmaskdispenser
-	name = "medical mask dispenser"
-	desc = "A handy dispenser for medical masks."
-	icon = 'icons/obj/stationobjs.dmi'
-	icon_state = "dispenser_mask"
-	pixel_y = 28
-	var/amount = 3
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (istype(W, /obj/item/clothing/mask/medical))
-			user.u_equip(W)
-			qdel(W)
-			src.amount++
-			boutput(user, "<span style=\"color:blue\">You put a pair of medical masks in the [src]. [amount] left in the dispenser.</span>")
-			src.icon_state = "dispenser_mask"
-		return
-
-	attack_hand(mob/user as mob)
-		add_fingerprint(user)
-		if (src.amount >= 1)
-			src.amount--
-			user.put_in_hand_or_drop(new/obj/item/clothing/mask/medical, user.hand)
-			boutput(user, "<span style=\"color:red\">You take a pair of medical masks from the [src]. [amount] left in the dispenser.</span>")
-			if (src.amount <= 0)
-				src.icon_state = "dispenser_mask0"
-		else
-			boutput(user, "<span style=\"color:red\">There's no medical masks left in the [src]!</span>")
-
-/obj/glassesdispenser
-	name = "prescription glass dispenser"
-	desc = "A handy dispenser for prescription glasses."
-	icon = 'icons/obj/stationobjs.dmi'
-	icon_state = "dispenser_glasses"
-	pixel_y = 28
-	var/amount = 3
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (istype(W, /obj/item/clothing/glasses/regular))
-			user.u_equip(W)
-			qdel(W)
-			src.amount++
-			boutput(user, "<span style=\"color:blue\">You put a pair of prescription glass in the [src]. [amount] left in the dispenser.</span>")
-			src.icon_state = "dispenser_glasses"
-		return
-
-	attack_hand(mob/user as mob)
-		add_fingerprint(user)
-		if (src.amount >= 1)
-			src.amount--
-			user.put_in_hand_or_drop(new/obj/item/clothing/glasses/regular, user.hand)
-			boutput(user, "<span style=\"color:red\">You take a pair of prescription glass from the [src]. [amount] left in the dispenser.</span>")
-			if (src.amount <= 0)
-				src.icon_state = "dispenser_glasses0"
-		else
-			boutput(user, "<span style=\"color:red\">There's no prescription glass left in the [src]!</span>")

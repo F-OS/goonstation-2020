@@ -2,9 +2,8 @@
 	name = "cloaking device"
 	icon = 'icons/obj/device.dmi'
 	icon_state = "shield0"
-	uses_multiple_icon_states = 1
 	var/active = 0.0
-	flags = FPRINT | TABLEPASS| CONDUCT | NOSHIELD
+	flags = FPRINT | TABLEPASS| CONDUCT
 	item_state = "electronic"
 	throwforce = 10.0
 	throw_speed = 2
@@ -12,11 +11,10 @@
 	w_class = 2.0
 	is_syndicate = 1
 	mats = 15
-	desc = "An illegal device that bends light around the user, rendering them invisible to regular vision."
+	desc = "An illegal device that bends light around the user, rendering them invislbe to regular vision."
 	stamina_damage = 10
 	stamina_cost = 10
 	stamina_crit_chance = 15
-	contraband = 6
 
 	attack_self(mob/user as mob)
 		src.add_fingerprint(user)
@@ -57,7 +55,7 @@
 	// Fix for the backpack exploit. Spawn call is necessary for some reason (Convair880).
 	dropped(var/mob/user)
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			if (!src) return
 			if (!user)
 				src.deactivate()
@@ -82,16 +80,3 @@
 		usr.visible_message("<span style=\"color:blue\"><b>[usr]'s cloak is disrupted!</b></span>")
 		src.deactivate(usr)
 		return
-
-	limited
-		name = "limited-use cloaking device"
-		desc = "A man-portable cloaking device, miniturization has reduced it's total uses to five."
-		var/min_charges = 1
-		var/charges = 5
-
-		activate(mob/user as mob)
-			if(charges <= min_charges)
-				user.show_text("[src] is out of charge!", "red")
-				return
-			charges -= 1
-			..()

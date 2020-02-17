@@ -48,12 +48,6 @@ var/list/mechanics_telepads = new/list()
 	var/outputSignal = "1"
 	var/triggerSignal = "1"
 
-	disposing()
-		wipeIncoming()
-		wipeOutgoing()
-		master = null
-		..()
-
 	//Adds an input "slot" to the holder /w a proc mapping.
 	proc/addInput(var/name, var/toCall)
 		if(inputs.Find(name)) inputs.Remove(name)
@@ -65,7 +59,7 @@ var/list/mechanics_telepads = new/list()
 	proc/fireInput(var/name, var/datum/mechanicsMessage/msg)
 		if(!inputs.Find(name)) return
 		var/path = inputs[name]
-		SPAWN_DBG(1) call(master, path)(msg)
+		spawn(1) call(master, path)(msg)
 		return
 
 	//Fire an outgoing connection with given value. Try to re-use incoming messages for outgoing signals whenever possible!
@@ -112,13 +106,17 @@ var/list/mechanics_telepads = new/list()
 
 	//Helper proc to check if a mob is allowed to change connections. Right now you only need a multitool.
 	proc/allowChange(var/mob/M)
-		if (istype(M) && M.find_tool_in_hand(TOOL_PULSING))
-			return 1
+		if(hasvar(M, "l_hand") && istype(M:l_hand, /obj/item/device/multitool)) return 1
+		if(hasvar(M, "r_hand") && istype(M:r_hand, /obj/item/device/multitool)) return 1
+		if(hasvar(M, "module_states"))
+			for(var/atom/A in M:module_states)
+				if(istype(A, /obj/item/device/multitool))
+					return 1
 		return 0
 
 	//Called when a component is dragged onto another one.
 	proc/dropConnect(obj/O, null, var/src_location, var/control_orig, var/control_new, var/params)
-		if(!O || O == master || !O.mechanics) return //ZeWaka: Fix for null.mechanics
+		if(O == master || !O.mechanics) return
 
 		var/typesel = input(usr, "Use [master] as:", "Connection Type") in list("Trigger", "Receiver", "*CANCEL*")
 		if(typesel == "*CANCEL*") return
@@ -136,7 +134,6 @@ var/list/mechanics_telepads = new/list()
 					connected_outgoing[O] = selected_input
 					O.mechanics.connected_incoming.Add(master)
 					boutput(usr, "<span style=\"color:green\">You connect the [master.name] to the [O.name].</span>")
-					logTheThing("station", usr, null, "connects a <b>[master.name]</b> to a <b>[O.name]</b> at [log_loc(src_location)].")
 				else
 					boutput(usr, "<span style=\"color:red\">[O] has no input slots. Can not connect [master] as Trigger.</span>")
 
@@ -152,7 +149,6 @@ var/list/mechanics_telepads = new/list()
 					O.mechanics.connected_outgoing[master] = selected_input
 					connected_incoming.Add(O)
 					boutput(usr, "<span style=\"color:green\">You connect the [master.name] to the [O.name].</span>")
-					logTheThing("station", usr, null, "connects a <b>[master.name]</b> to a <b>[O.name]</b> at [log_loc(src_location)].")
 				else
 					boutput(usr, "<span style=\"color:red\">[master] has no input slots. Can not connect [O] as Trigger.</span>")
 
@@ -190,7 +186,7 @@ var/list/mechanics_telepads = new/list()
 			cutParticles()
 			return
 
-		if(mechanics && particles.len != mechanics.connected_outgoing.len)
+		if(particles.len != mechanics.connected_outgoing.len)
 			cutParticles()
 			for(var/atom/X in mechanics.connected_outgoing)
 				particles.Add(particleMaster.SpawnSystem(new /datum/particleSystem/mechanic(src.loc, X.loc)))
@@ -199,43 +195,27 @@ var/list/mechanics_telepads = new/list()
 
 	attack_hand(mob/user as mob)
 		if(level == 1) return
-		if(issilicon(user) || isAI(user)) return
+		if(issilicon(user)) return
 		else return ..(user)
 
 	attack_ai(mob/user as mob)
 		return src.attack_hand(user)
-	proc/secure()
-	proc/loosen()
+
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (iswrenchingtool(W))
+		if(istype(W,/obj/item/wrench))
 			switch(level)
 				if(1) //Level 1 = wrenched into place
 					boutput(user, "You detach the [src] from the underfloor and deactivate it.")
-					logTheThing("station", usr, null, "detaches a <b>[src]</b> from the underfloor and deactivates it at [log_loc(src)].")
 					level = 2
 					anchored = 0
-					loosen()
 				if(2) //Level 2 = loose
 					if(!isturf(src.loc))
 						boutput(usr, "<span style=\"color:red\">[src] needs to be on the ground for that to work.</span>")
 						return 0
-					//var/turf/T = src.loc
-					//var/can_deploy = 1
-					/*if (T.density) // a wall or something
-						can_deploy = 0
-					else if (T.z == 2)
-						for (var/obj/O in T)
-							if (O.density)
-								can_deploy = 0
-								break
-					if (!can_deploy)
-						boutput(usr, "<span style=\"color:red\">There's something in the way of [src], it can't be attached here!</span>")
-						return 0*///why. why.
 					boutput(user, "You attach the [src] to the underfloor and activate it.")
-					logTheThing("station", usr, null, "attaches a <b>[src]</b> to the underfloor  at [log_loc(src)].")
+					logTheThing("station", user, src, "placed a %target% at [showCoords(src.x, src.y, src.z)]")
 					level = 1
 					anchored = 1
-					secure()
 
 			var/turf/T = src.loc
 			if(isturf(T))
@@ -261,7 +241,7 @@ var/list/mechanics_telepads = new/list()
 
 	MouseDrop(obj/O, null, var/src_location, var/control_orig, var/control_new, var/params)
 
-		if(!isliving(usr))
+		if(!istype(usr, /mob/living))
 			return
 
 		if(level == 2 || (istype(O, /obj/item/mechanics) && O.level == 2))
@@ -289,7 +269,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Disconnects all devices connected to this device."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -308,7 +288,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the signal that is sent when this device is triggered."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -365,6 +345,7 @@ var/list/mechanics_telepads = new/list()
 		if(..(W, user)) return
 		else if (istype(W, /obj/item/spacecash) && ready)
 			ready = 0
+			spawn(30) ready = 1
 			current_buffer += W.amount
 			if (src.price <= 0)
 				src.price = initial(src.price)
@@ -381,20 +362,17 @@ var/list/mechanics_telepads = new/list()
 				current_buffer = 0
 
 				usr.drop_item()
-				pool(W)
+				del(W)
 
 				var/datum/mechanicsMessage/msg = mechanics.newSignal(mechanics.outputSignal)
 				mechanics.fireOutgoing(msg)
 				flick("comp_money1", src)
-
-				ready = 1
 		return
 
 
 	proc/ejectmoney()
 		if(collected)
-			var/obj/item/spacecash/random/tourist/S = unpool(/obj/item/spacecash/random/tourist)
-			S.setup(get_turf(src), collected)
+			new /obj/item/spacecash(get_turf(src), collected)
 			collected = 0
 		return
 
@@ -403,7 +381,7 @@ var/list/mechanics_telepads = new/list()
 		set name = "\[Set Price\]"
 		set desc = "Sets the price."
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -438,7 +416,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Ejects the collected money."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -459,7 +437,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets code that is required to eject money and set prices."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -485,7 +463,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the Thank-string."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -525,8 +503,7 @@ var/list/mechanics_telepads = new/list()
 					trunk.linked = src
 					air_contents = unpool(/datum/gas_mixture)
 			else if (src.level == 2) //loose
-				if (trunk) //ZeWaka: Fix for null.linked
-					trunk.linked = null
+				trunk.linked = null
 				if(air_contents)
 					pool(air_contents)
 				air_contents = null
@@ -538,15 +515,15 @@ var/list/mechanics_telepads = new/list()
 		if(input && input.signal && ready && trunk)
 			ready = 0
 			for(var/atom/movable/M in src.loc)
-				if(M == src || M.anchored || isAI(M)) continue
+				if(M == src || M.anchored) continue
 				M.set_loc(src)
 			flushit()
-			SPAWN_DBG(20) ready = 1
+			spawn(20) ready = 1
 		return
 
 	proc/flushit()
 		if(!trunk) return
-		var/obj/disposalholder/H = unpool(/obj/disposalholder)
+		var/obj/disposalholder/H = new()
 
 		H.init(src)
 
@@ -568,12 +545,12 @@ var/list/mechanics_telepads = new/list()
 
 			AM.set_loc(src.loc)
 			AM.pipe_eject(0)
-			SPAWN_DBG(1)
+			spawn(1)
 				if(AM)
 					AM.throw_at(target, 5, 1)
 
 		H.vent_gas(loc)
-		pool(H)
+		qdel(H)
 
 /obj/item/mechanics/thprint
 	name = "Thermal printer"
@@ -591,7 +568,7 @@ var/list/mechanics_telepads = new/list()
 		if(level == 2 || !ready) return
 		if(input)
 			ready = 0
-			SPAWN_DBG(50) ready = 1
+			spawn(50) ready = 1
 			flick("comp_tprint1",src)
 			playsound(src.loc, "sound/machines/printer_thermal.ogg", 60, 0)
 			var/obj/item/paper/thermal/P = new/obj/item/paper/thermal(src.loc)
@@ -612,7 +589,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the name of the printed paper."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -651,7 +628,7 @@ var/list/mechanics_telepads = new/list()
 				boutput(user, "<span style=\"color:red\">This scanner only accepts thermal paper.</span>")
 				return
 			ready = 0
-			SPAWN_DBG(30) ready = 1
+			spawn(30) ready = 1
 			flick("comp_pscan1",src)
 			playsound(src.loc, "sound/machines/twobeep2.ogg", 90, 0)
 			var/obj/item/paper/P = W
@@ -668,7 +645,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets whether the scanner consumes the paper used on it or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -686,7 +663,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets whether the scanner only accepts thermal paper or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -698,110 +675,6 @@ var/list/mechanics_telepads = new/list()
 		boutput(usr, "[thermal_only ? "Now accepting only thermal paper":"Now accepting any paper"]")
 		return
 
-//todo: merge with the secscanner?
-/obj/mechbeam
-	//Would use the /obj/beam but its not extensible enough.
-	name = "trip laser"
-	desc = "A beam of light that will trigger a device when passed."
-	icon = 'icons/obj/projectiles.dmi'
-	icon_state = "ibeam"
-	anchored = 1
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
-
-	New(var/loc, var/obj/item/mechanics/triplaser/t)
-		holder = t
-		..()
-
-	var/obj/item/mechanics/triplaser/holder
-
-	proc/tripped()
-		if( !holder )
-			qdel( src )
-		else
-			holder.tripped()
-
-	HasEntered(atom/movable/AM as mob|obj)
-		if( isobserver(AM) || !AM.density ) return
-		if(!istype( AM, /obj/mechbeam ))
-			SPAWN_DBG(0) tripped()
-
-/obj/item/mechanics/triplaser
-	name = "Trip laser"
-	desc = "Fires a signal when someone passes through the beam."
-	icon = 'icons/obj/networked.dmi'
-	icon_state = "secdetector0"
-	var/range = 5
-	var/list/beamobjs = new/list(5)//just to avoid someone doing something dumb and making it impossible for us to clear out the beams
-	var/active = 0
-	var/sendstr = "1"
-	New()
-		..()
-		mechanics.addInput("toggle", "toggle")
-	proc/toggle()
-		if(active)
-			loosen()
-		else
-			secure()
-	loosen()
-		active = 0
-		for(var/beam in beamobjs)
-			qdel(beam)
-	secure()
-		rebeam()
-	disposing()
-		loosen()
-	verb/setrange()
-		set src in view(1)
-		set name = "\[Set Range\]"
-		set desc = "Sets the beam range. Probably."
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-
-		var/rng = input("Range is limited between 1-5.", "Enter a new range", range) as num
-		range = CLAMP(rng, 1, 5)
-		boutput( usr, "<span style='color:blue'>Range set to [range]!</span>" )
-		if( level == 1 )
-			rebeam()
-
-	proc/tripped()
-		mechanics.fireOutgoing(mechanics.newSignal(mechanics.outputSignal))
-
-	afterattack(atom/target as mob|obj|turf|area, mob/user as mob)
-		if(level == 2 && get_dist(src, target) == 1)
-			if(isturf(target) && target.density)
-				user.drop_item()
-				src.loc = target
-		return
-	verb/setdir()
-		set src in view(1)
-		set name = "\[Rotate\]"
-		set desc = "Rotates the object"
-		set category = "Local"
-		if (usr.stat)
-			return
-		src.dir = turn(src.dir, 90)
-		if( level == 1 )
-			rebeam()
-		return
-	proc/rebeam()
-		loosen()
-		active = 1
-		beamobjs = list()
-		var/turf/lastturf = get_step( get_turf(src), dir )
-		for(var/i = 1, i<range, i++)
-			if( lastturf.opacity || !lastturf.canpass() )
-				break
-			var/obj/mechbeam/newbeam = new( lastturf, src )
-			newbeam.dir = src.dir
-			beamobjs[++beamobjs.len] = newbeam
-			lastturf = get_step( lastturf, dir )
 /obj/item/mechanics/hscan
 	name = "Hand scanner"
 	desc = ""
@@ -815,9 +688,9 @@ var/list/mechanics_telepads = new/list()
 
 	attack_hand(mob/user as mob)
 		if(level != 2 && ready)
-			if(ishuman(user) && user.bioHolder)
+			if(istype(user, /mob/living/carbon/human) && user.bioHolder)
 				ready = 0
-				SPAWN_DBG(30) ready = 1
+				spawn(30) ready = 1
 				flick("comp_hscan1",src)
 				playsound(src.loc, "sound/machines/twobeep2.ogg", 90, 0)
 				var/sendstr = (send_name ? user.real_name : md5(user.bioHolder.Uid))
@@ -841,7 +714,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles between the different signal modes."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -859,7 +732,6 @@ var/list/mechanics_telepads = new/list()
 	desc = ""
 	icon_state = "comp_accel"
 	var/active = 0
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	New()
 		..()
@@ -875,19 +747,18 @@ var/list/mechanics_telepads = new/list()
 			if(M == src) continue
 			throwstuff(M)
 			if(count > 50) return
-			if(world.tick_usage > 100) return //fuck it, failsafe
 
 	proc/activateproc(var/datum/mechanicsMessage/input)
 		if(level == 2) return
 		if(input)
 			if(active) return
 			particleMaster.SpawnSystem(new /datum/particleSystem/gravaccel(src.loc, src.dir))
-			SPAWN_DBG(0)
+			spawn(0)
 				if(src)
 					icon_state = "[under_floor ? "u":""]comp_accel1"
 					active = 1
-					SPAWN_DBG(0) drivecurrent()
-					SPAWN_DBG(5) drivecurrent()
+					spawn(0) drivecurrent()
+					spawn(5) drivecurrent()
 				sleep(30)
 				if(src)
 					icon_state = "[under_floor ? "u":""]comp_accel"
@@ -898,7 +769,7 @@ var/list/mechanics_telepads = new/list()
 		if(level == 2 || AM.anchored || AM == src) return
 		if(AM.throwing) return
 		var/atom/target = get_edge_target_turf(AM, src.dir)
-		SPAWN_DBG(0) AM.throw_at(target, 50, 1)
+		spawn(0) AM.throw_at(target, 50, 1)
 		return
 
 	HasEntered(atom/movable/AM as mob|obj)
@@ -940,7 +811,7 @@ var/list/mechanics_telepads = new/list()
 		if(level == 2) return
 		if(input)
 			if(active) return
-			SPAWN_DBG(0)
+			spawn(0)
 				if(src)
 					icon_state = "[under_floor ? "u":""]comp_wait1"
 					active = 1
@@ -957,7 +828,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the delay"
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1006,7 +877,7 @@ var/list/mechanics_telepads = new/list()
 			inp2 = 0
 			return
 
-		SPAWN_DBG(timeframe)
+		spawn(timeframe)
 			inp1 = 0
 
 		return
@@ -1024,7 +895,7 @@ var/list/mechanics_telepads = new/list()
 			inp2 = 0
 			return
 
-		SPAWN_DBG(timeframe)
+		spawn(timeframe)
 			inp2 = 0
 
 		return
@@ -1035,7 +906,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the Time Frame during which the second Signal needs to arrive."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1085,7 +956,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the signal that causes this component to fire."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1132,7 +1003,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the Trigger Field that causes this component to forward the Value of that Field."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1155,75 +1026,35 @@ var/list/mechanics_telepads = new/list()
 	name = "RegEx Replace Component"
 	desc = ""
 	icon_state = "comp_regrep"
-	var/expression = "original/replacement/g"
-	var/expressionpatt = "original"
-	var/expressionrepl = "replacement"
-	var/expressionflag = "g"
+	var/expression = "/original/replacement/g"
 
 	get_desc()
-		. += "<span style=\"color:blue\">Current Expression: [html_encode(expression)]</span><br/>"
-		. += "<span style=\"color:blue\">Current Replacement: [html_encode(expressionrepl)]</span><br/>"
-		. += "Your replacement string can contain $0-$9 to insert that matched group (things between parenthesis)<br/>"
-		. += "$` will be replaced with the text that came before the match, and $' will be replaced by the text after the match.<br/>"
-		. += "$0 or $& will be the entire matched string."
+		. += "<br><span style=\"color:blue\">Current Expression: [sanitize(html_encode(expression))]</span>"
 
 	New()
 		..()
 		mechanics.addInput("replace string", "checkstr")
-		mechanics.addInput("set regex", "setregex")
-		mechanics.addInput("set regex replacement", "setregexreplace")
 		return
 
 	proc/checkstr(var/datum/mechanicsMessage/input)
-		if(level == 2 || !length(expressionpatt)) return
-		var/regex/R = new(expressionpatt,expressionflag)
+		if(level == 2 || !length(expression)) return
+		var/regex/R = new(expression)
 
 		if(!R) return
 
-		var/mod = R.Replace(input.signal, expressionrepl)
-		mod = strip_html(sanitize(html_encode(mod)))//U G H
+		var/mod = R.Replace(input.signal)
+		mod = strip_html(sanitize(html_encode(mod)))
 
 		if(mod)
 			input.signal = mod
 			mechanics.fireOutgoing(input)
 
 		return
-	proc/setregex(var/datum/mechanicsMessage/input)
-		expression = input.signal
 
-	proc/setregexreplace(var/datum/mechanicsMessage/input)
-		expressionrepl = input.signal
-
-	verb/setregexr1()
+	verb/setregexr()
 		set src in view(1)
-		set name = "\[Set Pattern\]"
-		set desc = "Sets the expression pattern for searching and replacing"
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-
-		var/inp = input(usr,"Please enter Expression Pattern:","Expression setting", expressionpatt) as text
-		if(inp != null)
-			//var/regex/R = new(inp) // How would you even check this anymore?
-			//if(!R)
-			//	boutput(usr, "<span style=\"color:red\">Bad regex</span>")
-			//else
-			expressionpatt = inp
-			inp = sanitize(html_encode(inp))
-			expression = ("[expressionpatt]/[expressionrepl]/[expressionflag]")
-			boutput(usr, "Expression Pattern set to [inp], Current Expression: [sanitize(html_encode(expression))]")
-		return
-
-	verb/setregexr2()
-		set src in view(1)
-		set name = "\[Set Replacement\]"
-		set desc = "Sets the expression replacement for searching and replacing"
+		set name = "\[Set Regular Expression\]"
+		set desc = "Sets the expression for searching and replacing"
 		set category = "Local"
 
 		if (!istype(usr, /mob/living))
@@ -1234,55 +1065,15 @@ var/list/mechanics_telepads = new/list()
 			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
 			return
 
-		var/inp = input(usr,"Please enter Expression Replacement:","Expression setting", expressionrepl) as text
-		if(inp != null)
-			expressionrepl = inp
-			inp = sanitize(html_encode(inp))
-			expression = ("[expressionpatt]/[expressionrepl]/[expressionflag]")
-			boutput(usr, "Expression Replacement set to [inp], Current Expression: [sanitize(html_encode(expression))]")
-		return
-
-	verb/setregexr3()
-		set src in view(1)
-		set name = "\[Set Flags\]"
-		set desc = "Sets the expression flags for searching and replacing"
-		set category = "Local"
-
-		if (!istype(usr, /mob/living))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-
-		var/inp = input(usr,"Please enter Expression Flags:","Expression setting", expressionflag) as text
-		if(inp != null)
-			expressionflag = inp
-			inp = sanitize(html_encode(inp))
-			expression = ("[expressionpatt]/[expressionrepl]/[expressionflag]")
-			boutput(usr, "Expression Flags set to [inp], Current Expression: [sanitize(html_encode(expression))]")
-		return
-
-
-	verb/setregexrepl()
-		set src in view(1)
-		set name = "\[Set Regular Expression Replacement\]"
-		set desc = "Sets the replacement string"
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-
-		var/inp = input(usr,"Please enter Replacement:","Replacement setting", expressionrepl) as text
+		var/inp = input(usr,"Please enter Expression:","Expression setting", expression) as text
 		if(length(inp))
-			expressionrepl = inp
-			boutput(usr, "Replacement set to [html_encode(inp)]")
+			var/regex/R = new(inp)
+			if(R.error)
+				boutput(usr, "<span style=\"color:red\">[R.error]</span>")
+			else
+				inp = sanitize(html_encode(inp))
+				expression = inp
+				boutput(usr, "Expression set to [inp]")
 		return
 
 	updateIcon()
@@ -1295,8 +1086,6 @@ var/list/mechanics_telepads = new/list()
 	icon_state = "comp_regfind"
 	var/replacesignal = 0
 	var/expression = "/\[a-Z\]*/"
-	var/expressionpatt
-	var/expressionflag
 
 	get_desc()
 		. += {"<br><span style=\"color:blue\">Current Expression: [sanitize(html_encode(expression))]<br>
@@ -1305,13 +1094,11 @@ var/list/mechanics_telepads = new/list()
 	New()
 		..()
 		mechanics.addInput("check string", "checkstr")
-		mechanics.addInput("set regex", "setregex")
 		return
-	proc/setregex(var/datum/mechanicsMessage/input)
-		expression = input.signal
+
 	proc/checkstr(var/datum/mechanicsMessage/input)
 		if(level == 2 || !length(expression)) return
-		var/regex/R = new(expressionpatt, expressionflag)
+		var/regex/R = new(expression)
 
 		if(!R) return
 
@@ -1319,36 +1106,14 @@ var/list/mechanics_telepads = new/list()
 			if(replacesignal)
 				input.signal = mechanics.outputSignal
 			else
-				input.signal = R.match
+				input.signal = copytext(input.signal, R.match, R.index)
 			mechanics.fireOutgoing(input)
 
 		return
 
-	verb/setregexf1()
+	verb/setregexf()
 		set src in view(1)
-		set name = "\[Set Expression Pattern\]"
-		set desc = "Sets the expression pattern that the component will look for."
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-
-		var/inp = input(usr,"Please enter Expression Pattern:","Expression setting", expressionpatt) as text
-		if(inp != null)
-			expressionpatt = inp
-			expression = ("[expressionpatt]/[expressionflag]")
-			inp = sanitize(html_encode(inp))
-			boutput(usr, "Expression Pattern set to [inp], Current Expression: [sanitize(html_encode(expression))]")
-		return
-
-	verb/setregexf2()
-		set src in view(1)
-		set name = "\[Set Expression Flags\]"
+		set name = "\[Set Regular Expression\]"
 		set desc = "Sets the expression that the component will look for."
 		set category = "Local"
 
@@ -1360,12 +1125,15 @@ var/list/mechanics_telepads = new/list()
 			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
 			return
 
-		var/inp = input(usr,"Please enter Expression Flags:","Expression setting", expressionflag) as text
-		if(inp != null)
-			expressionflag = inp
-			expression = ("[expressionpatt]/[expressionflag]")
-			inp = sanitize(html_encode(inp))
-			boutput(usr, "Expression Flags set to [inp], Current Expression: [sanitize(html_encode(expression))]")
+		var/inp = input(usr,"Please enter Expression:","Expression setting", expression) as text
+		if(length(inp))
+			var/regex/R = new(inp)
+			if(R.error)
+				boutput(usr, "<span style=\"color:red\">[R.error]</span>")
+			else
+				expression = inp
+				inp = sanitize(html_encode(inp))
+				boutput(usr, "Expression set to [inp]")
 		return
 
 	verb/toggleregfrep()
@@ -1374,7 +1142,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles whether the component will send its own signal or the found string."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1405,7 +1173,6 @@ var/list/mechanics_telepads = new/list()
 	New()
 		..()
 		mechanics.addInput("check string", "checkstr")
-		mechanics.addInput("set trigger", "settrigger")
 		return
 
 	proc/checkstr(var/datum/mechanicsMessage/input)
@@ -1420,16 +1187,13 @@ var/list/mechanics_telepads = new/list()
 				mechanics.fireOutgoing(input)
 		return
 
-	proc/settrigger(var/datum/mechanicsMessage/input)
-		mechanics.triggerSignal = input.signal
-
 	verb/setscsig()
 		set src in view(1)
 		set name = "\[Set Trigger-String\]"
 		set desc = "Sets the string that causes this component to fire."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1450,7 +1214,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Switches between triggering on a Match or triggering when it can NOT find the string."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1468,7 +1232,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles whether the Component will change the Signal to its own or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1536,7 +1300,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets an optional string that will be put at the beginning of each new String before everything else."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1556,7 +1320,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets an optional string that will be put at the end of each String before sending it."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1592,11 +1356,11 @@ var/list/mechanics_telepads = new/list()
 	proc/relay(var/datum/mechanicsMessage/input)
 		if(level == 2 || !ready) return
 		ready = 0
-		SPAWN_DBG(30) ready = 1
+		spawn(30) ready = 1
 		flick("[under_floor ? "u":""]comp_relay1", src)
 		if(changesig)
 			input.signal = mechanics.outputSignal
-		SPAWN_DBG(0)
+		spawn(0)
 			mechanics.fireOutgoing(input)
 		return
 
@@ -1610,7 +1374,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles whether the relay component will change the Signal to its own or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1667,7 +1431,7 @@ var/list/mechanics_telepads = new/list()
 		if(!converted.len || !ready) return
 
 		ready = 0
-		SPAWN_DBG(30) ready = 1
+		spawn(30) ready = 1
 
 		var/datum/signal/sendsig = get_free_signal()
 
@@ -1677,10 +1441,8 @@ var/list/mechanics_telepads = new/list()
 
 		for(var/X in converted)
 			sendsig.data["[X]"] = "[converted[X]]"
-			if(X == "command" && converted[X] == "text_message")
-				logTheThing("pdamsg", usr, null, "sends a PDA message <b>[input.signal]</b> using a wifi component at [log_loc(src)].")
 
-		SPAWN_DBG(0) src.radio_connection.post_signal(src, sendsig, src.range)
+		spawn(0) src.radio_connection.post_signal(src, sendsig, src.range)
 
 		animate_flash_color_fill(src,"#FF0000",2, 2)
 		return
@@ -1707,7 +1469,7 @@ var/list/mechanics_telepads = new/list()
 				pingsignal.data["data"] = "Wifi Component"
 				pingsignal.transmission_method = TRANSMISSION_RADIO
 
-				SPAWN_DBG(5) //Send a reply for those curious jerks
+				spawn(5) //Send a reply for those curious jerks
 					src.radio_connection.post_signal(src, pingsignal, src.range)
 
 			else if(signal.data["command"] == "sendmsg" && signal.data["data"])
@@ -1741,7 +1503,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the frequency."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1762,7 +1524,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles whether the Component will only react to Radio Messages directed at it or to *all* Messages on the Frequency."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1780,7 +1542,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles whether the Component will forward ALL radio Messages without processing them or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1885,7 +1647,7 @@ var/list/mechanics_telepads = new/list()
 		if(random) input.signal = pick(signals)
 		else input.signal = signals[current_index]
 
-		SPAWN_DBG(0)
+		spawn(0)
 			mechanics.fireOutgoing(input)
 		return
 
@@ -1947,7 +1709,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Defines the List of Signals to be used by this Component."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -1976,47 +1738,13 @@ var/list/mechanics_telepads = new/list()
 				boutput(usr, a)
 		return
 
-	verb/setsignals2()
-		set src in view(1)
-		set name = "\[Set Signal List (Delimeted)\]"
-		set desc = "Defines the List of Signals to be used by this Component via a Delimited string."//whats with This Case like This
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-		var/newsigs = ""
-		while(1)
-			newsigs = input(usr, "Enter a string delimited by ; for every item you want in the list.", "Enter a thing. Max length is 2048 characters", newsigs)
-			if( !newsigs )
-				boutput( usr, "<span style='color:blue'>Signals remain unchanged!</span>" )
-				break
-			if(length( newsigs ) >= 2048)
-				alert( usr, "That's far too long. Trim it down some!" )
-				continue
-			var/list/built = splittext( newsigs, ";" )
-			var/done = 1
-			for( var/i = 1, i <= built.len, i++ )
-				if( !built[i] )
-					done = 0
-					alert( usr, "You have an empty signal in there, try again! (todo, just remove these)" )
-					break
-			if( done )
-				signals = built
-				current_index = 1
-				boutput( usr, "<span style='color:blue'>There are now [signals.len] signals in the list.</span>" )
-				break
 	verb/toggleannouncement()
 		set src in view(1)
 		set name = "\[Toggle Announcements\]"
 		set desc = "Toggles wether the Component will say its selected item out loud or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2034,7 +1762,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles whether the Component will pick an Item at random or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2077,7 +1805,7 @@ var/list/mechanics_telepads = new/list()
 		on = 1
 		input.signal = signal_on
 		updateIcon()
-		SPAWN_DBG(0)
+		spawn(0)
 			mechanics.fireOutgoing(input)
 		return
 
@@ -2086,7 +1814,7 @@ var/list/mechanics_telepads = new/list()
 		on = 0
 		input.signal = signal_off
 		updateIcon()
-		SPAWN_DBG(0)
+		spawn(0)
 			mechanics.fireOutgoing(input)
 		return
 
@@ -2095,14 +1823,14 @@ var/list/mechanics_telepads = new/list()
 		on = !on
 		input.signal = (on ? signal_on : signal_off)
 		updateIcon()
-		SPAWN_DBG(0)
+		spawn(0)
 			mechanics.fireOutgoing(input)
 		return
 
 	proc/state(var/datum/mechanicsMessage/input)
 		if(level == 2) return
 		input.signal = (on ? signal_on : signal_off)
-		SPAWN_DBG(0)
+		spawn(0)
 			mechanics.fireOutgoing(input)
 		return
 
@@ -2116,7 +1844,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the Signal that is sent when the Component is on."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2137,7 +1865,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the Signal that is sent when the Component is off."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2181,22 +1909,14 @@ var/list/mechanics_telepads = new/list()
 	proc/activate(var/datum/mechanicsMessage/input)
 		if(level == 2 || !ready) return
 		ready = 0
-		SPAWN_DBG(30) ready = 1
+		spawn(30) ready = 1
 		flick("[under_floor ? "u":""]comp_tele1", src)
 		particleMaster.SpawnSystem(new /datum/particleSystem/tpbeam(get_turf(src.loc)))
 		playsound(src.loc, "sound/mksounds/boost.ogg", 50, 1)
 		var/list/destinations = new/list()
 
 		for(var/obj/item/mechanics/telecomp/T in mechanics_telepads)
-			if(T == src || T.level == 2 || !isturf(T.loc)  || isrestrictedz(T.z)|| T.send_only) continue
-
-#ifdef UNDERWATER_MAP
-			if (!(T.z == 5 && src.z == 1) && !(T.z == 1 && src.z == 5)) //underwater : allow TP to/from trench
-				if (T.z != src.z) continue
-#else
-			if (T.z != src.z) continue
-#endif
-
+			if(T == src || T.level == 2 || !isturf(T.loc) || T.z != src.z  || isrestrictedz(T.z)|| T.send_only) continue
 			if(T.teleID == src.teleID)
 				destinations.Add(T)
 
@@ -2207,11 +1927,11 @@ var/list/mechanics_telepads = new/list()
 				if(M == src || M.invisibility || M.anchored) continue
 				M.set_loc(get_turf(picked.loc))
 
-		SPAWN_DBG(0)
+		spawn(0)
 			mechanics.fireOutgoing(input)
 		return
 
-	disposing()
+	Del()
 		mechanics_telepads.Remove(src)
 		return ..()
 
@@ -2225,7 +1945,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the ID of the Telepad."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2247,7 +1967,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles Send-only Mode."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2301,7 +2021,7 @@ var/list/mechanics_telepads = new/list()
 			if(active)
 				color = input.signal
 			selcolor = input.signal
-			SPAWN_DBG(0) light.set_color(GetRedPart(selcolor) / 255, GetGreenPart(selcolor) / 255, GetBluePart(selcolor) / 255)
+			spawn(0) light.set_color(GetRedPart(selcolor) / 255, GetGreenPart(selcolor) / 255, GetBluePart(selcolor) / 255)
 
 	proc/turnon(var/datum/mechanicsMessage/input)
 		if(level == 2) return
@@ -2337,7 +2057,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the color of the light."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2369,7 +2089,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Sets the range of the light."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2429,7 +2149,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Toggles whether the component adds the source of the message to the Signal or not."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2451,13 +2171,12 @@ var/list/mechanics_telepads = new/list()
 	New()
 		..()
 		mechanics.addInput("input", "fire")
-		src.verbs -= /obj/item/mechanics/verb/setvalue
 		return
 
 	proc/fire(var/datum/mechanicsMessage/input)
 		if(level == 2 || !ready) return
 		ready = 0
-		SPAWN_DBG(20) ready = 1
+		spawn(20) ready = 1
 		if(input)
 			componentSay("[input.signal]")
 		return
@@ -2475,7 +2194,7 @@ var/list/mechanics_telepads = new/list()
 	Crossed(atom/movable/AM as mob|obj)
 		if (level == 2)
 			return
-		if (isobserver(AM))
+		if (istype(AM, /mob/dead))
 			return
 		if (limiter && (ticker.round_elapsed_ticks < limiter))
 			return
@@ -2492,8 +2211,6 @@ var/list/mechanics_telepads = new/list()
 	name = "Button"
 	desc = ""
 	icon_state = "comp_button"
-	var/icon_up = "comp_button"
-	var/icon_down = "comp_button1"
 	density = 1
 
 	get_desc()
@@ -2501,7 +2218,7 @@ var/list/mechanics_telepads = new/list()
 
 	attack_hand(mob/user as mob)
 		if(level == 1)
-			flick(icon_down, src)
+			flick("comp_button1", src)
 			mechanics.fireOutgoing(mechanics.newSignal(mechanics.outputSignal))
 		else
 			..(user)
@@ -2511,24 +2228,10 @@ var/list/mechanics_telepads = new/list()
 		if(..(W, user)) return
 		attack_hand(user)
 		return
-	afterattack(atom/target as mob|obj|turf|area, mob/user as mob)
-		if(level == 2 && get_dist(src, target) == 1)
-			if(isturf(target))
-				user.drop_item()
-				if(isturf(target) && target.density)
-					icon_up = "comp_switch"
-					icon_down = "comp_switch2"
-				else
-					icon_up = "comp_button"
-					icon_down = "comp_button2"
-				icon_state = icon_up
-				src.loc = target
-		return
+
 	updateIcon()
-		icon_state = icon_up
+		icon_state = "comp_button"
 		return
-
-
 
 // Updated these things for pixel bullets. Also improved user feedback and added log entries here and there (Convair880).
 /obj/item/mechanics/gunholder
@@ -2563,7 +2266,7 @@ var/list/mechanics_telepads = new/list()
 			if(Gun.canshoot())
 				var/atom/target = getTarget()
 				if(target)
-					//DEBUG_MESSAGE("Target: [log_loc(target)]. Src: [src]")
+					//DEBUG("Target: [log_loc(target)]. Src: [src]")
 					Gun.shoot(target, get_turf(src), src)
 			else
 				src.visible_message("<span class='game say'><span class='name'>[src]</span> beeps, \"The [Gun.name] has no [istype(Gun, /obj/item/gun/energy) ? "charge" : "ammo"] remaining.\"</span>")
@@ -2598,7 +2301,7 @@ var/list/mechanics_telepads = new/list()
 		set desc = "Removes the gun."
 		set category = "Local"
 
-		if (!isliving(usr))
+		if (!istype(usr, /mob/living))
 			return
 		if (usr.stat)
 			return
@@ -2678,222 +2381,17 @@ var/list/mechanics_telepads = new/list()
 		if(!istype(Gun, /obj/item/gun/energy)) return
 		charging = 1
 		updateIcon()
-		return
+		return ..()
 
 	fire(var/datum/mechanicsMessage/input)
 		if(charging || !ready) return
 		ready = 0
-		SPAWN_DBG(30) ready = 1
+		spawn(30) ready = 1
 		return ..()
 
 	updateIcon()
 		icon_state = charging ? "comp_gun2x" : "comp_gun2"
 		return
-
-/obj/item/mechanics/instrumentPlayer //Grayshift's musical madness
-	name = "Instrument Player"
-	desc = ""
-	icon_state = "comp_instrument"
-	density = 0
-	var/obj/item/instrument = null
-	var/pitchUnlocked = 0 // varedit this to 1 to permit really goofy pitch values!
-	var/ready = 1
-	var/delay = 10
-	var/sounds = null
-	var/volume = 50
-
-	get_desc()
-		. += "<br><span style='color:blue'>Current Instrument: [instrument ? "[instrument]" : "None"]</span>"
-
-	New()
-		..()
-		mechanics.addInput("play", "fire")
-		return
-
-	proc/fire(var/datum/mechanicsMessage/input)
-		if (level == 2 || !ready || !instrument) return
-		ready = 0
-		SPAWN_DBG(delay) ready = 1
-		var/signum = text2num(input.signal)
-		if (signum && ((signum >= 0.4 && signum <= 2) || (signum <= -0.4 && signum >= -2) || pitchUnlocked))
-			flick("comp_instrument1", src)
-			playsound(src.loc, sounds, volume, 0, 0, signum)
-		else
-			flick("comp_instrument1", src)
-			playsound(src.loc, sounds, volume, 1)
-			return
-
-	updateIcon()
-		icon_state = "comp_instrument"
-		return
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (..(W, user)) return // I don't know what this does but I'm copying it blindly. I guess it checks if there's a predefined action for hitting this with that?
-		if (instrument) // Already got one, chief!
-			boutput(usr, "There is already \a [instrument] inside the [src].")
-			return
-		else if (istype(W, /obj/item/instrument)) //BLUH these aren't consolidated under any combined type hello elseif chain // i fix - haine
-			var/obj/item/instrument/I = W
-			instrument = I
-			sounds = I.sounds_instrument
-			volume = I.volume
-			delay = I.spam_timer
-		else if (istype(W, /obj/item/clothing/head/butt))
-			instrument = W
-			sounds = 'sound/voice/farts/poo2.ogg'
-			volume = 100
-			delay = 5
-		else if (istype(W, /obj/item/clothing/shoes/clown_shoes))
-			instrument = W
-			sounds = list('sound/misc/clownstep1.ogg','sound/misc/clownstep2.ogg')
-			volume = 50
-			delay = 5
-		else // IT DON'T FIT
-			user.show_text("\The [W] isn't compatible with this component.", "red")
-
-		if (instrument) // You did it, boss. Now log it because someone will figure out a way to abuse it
-			boutput(usr, "You put [W] inside [src].")
-			logTheThing("station", usr, null, "adds [W] to [src] at [log_loc(src)].")
-			usr.drop_item()
-			instrument.loc = src
-		return
-
-	verb/removeInstrument()
-		set src in view(1)
-		set name = "\[Remove Instrument\]"
-		set desc = "Removes the instrument."
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-
-		if(instrument)
-			logTheThing("station", usr, null, "removes [instrument] from [src] at [log_loc(src)].")
-			instrument.loc = get_turf(src)
-			instrument = null
-		else
-			boutput(usr, "<span style=\"color:red\">There is no instrument inside this component.</span>")
-		return
-/obj/item/mechanics/math
-	name = "Arithmetic Component"
-	desc = "Do number things! Component list<br/>rng: Generates a random number from A to B<br/>add: Adds A + B<br/>sub: Subtracts A - B<br/>mul: Multiplies A * B<br/>div: Divides A / B<br/>pow: Power of A ^ B<br/>mod: Modulos A % B<br/>eq|neq|gt|lt|gte|lte: Equal/NotEqual/GreaterThan/LessThan/GreaterEqual/LessEqual -- will output 1 if true. Example: A GT B = 1 if A is larger than B"
-	icon_state = "comp_arith"
-	var/A = 1
-	var/B = 1
-
-	var/mode = "rng"
-	get_desc()
-		. = ..() // Please don't remove this again, thanks.
-		. += "<br><span style=\"color:blue\">Current Mode: [mode] | A = [A] | B = [B]</span>"
-	secure()
-		icon_state = "comp_arith1"
-	loosen()
-		icon_state = "comp_arith"
-	New()
-		..()
-		verbs -= /obj/item/mechanics/verb/setvalue
-		mechanics.addInput("Set A", "setA")
-		mechanics.addInput("Set B", "setB")
-		mechanics.addInput("Evaluate", "evaluate")
-
-	verb/setAV()
-		set src in view(1)
-		set name = "\[Set A\]"
-		set desc = "Sets the value of A"
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-		var/input = input( "Set A to what?", "A", A ) as num
-		if (!isnull(input))
-			A = input
-	verb/setBV()
-		set src in view(1)
-		set name = "\[Set B\]"
-		set desc = "Sets the value of B"
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-		var/input = input( "Set B to what?", "B", B ) as num
-		if (!isnull(input))
-			B = input
-	proc/setA(var/datum/mechanicsMessage/input)
-		if (!isnull(text2num(input.signal)))
-			A = text2num(input.signal)
-	proc/setB(var/datum/mechanicsMessage/input)
-		if (!isnull(text2num(input.signal)))
-			B = text2num(input.signal)
-
-	proc/evaluate()
-		switch(mode)
-			if("add")
-				. = A + B
-			if("sub")
-				. = A - B
-			if("div")
-				if( B == 0 )
-					src.visible_message("<span class='game say'><span class='name'>[src]</span> beeps, \"Attempted division by zero!\"</span>")
-					return
-				. = A / B
-			if("mul")
-				. = A * B
-			if("mod")
-				. = A % B
-			if("pow")
-				. = A ** B
-			if("rng")
-				. = rand( A, B )
-			if("gt")
-				. = A > B
-			if("lt")
-				. = A < B
-			if("gte")
-				. = A >= B
-			if("lte")
-				. = A <= B
-			if("eq")
-				. = A == B
-			if("neq")
-				. = A != B
-			else
-				return
-		if( . == . )
-			mechanics.fireOutgoing(mechanics.newSignal("[.]"))
-
-
-
-	verb/lowerbound()
-		set src in view(1)
-		set name = "\[Set Mode\]"
-		set desc = "Sets the maths mode"
-		set category = "Local"
-
-		if (!isliving(usr))
-			return
-		if (usr.stat)
-			return
-		if (!mechanics.allowChange(usr))
-			boutput(usr, "<span style=\"color:red\">[MECHFAILSTRING]</span>")
-			return
-
-		mode = input("Set the math mode to what?", "Mode Selector", mode) in list("add","mul","div","sub","mod","pow","rng","eq","neq","gt","lt","gte","lte")
-
 
 /obj/mecharrow
 	name = ""

@@ -13,9 +13,8 @@
 		user.unlock_medal("Peeping Tom", 1)
 
 		var/list/L = list()
-		for (var/obj/machinery/camera/C in cameras)
+		for (var/obj/machinery/camera/C in machines)
 			L.Add(C)
-			LAGCHECK(LAG_LOW)
 
 		L = camera_sort(L)
 
@@ -23,8 +22,7 @@
 		D["Cancel"] = "Cancel"
 		for (var/obj/machinery/camera/C in L)
 			if (C.network == src.network)
-				D[text("[][]", C.c_tag, (C.camera_status ? null : " (Deactivated)"))] = C
-			LAGCHECK(LAG_LOW)
+				D[text("[][]", C.c_tag, (C.status ? null : " (Deactivated)"))] = C
 
 		var/t = input(user, "Which camera should you change to?") as null|anything in D
 
@@ -34,11 +32,11 @@
 
 		var/obj/machinery/camera/C = D[t]
 
-		if ((!user.contents.Find(src) || !( user.canmove ) || !user.sight_check(1) || !( C.camera_status )) && (!issilicon(user)))
+		if ((!user.contents.Find(src) || !( user.canmove ) || !user.sight_check(1) || !( C.status )) && (!istype(user, /mob/living/silicon)))
 			user.set_eye(null)
 			return 0
 		else
 			user.set_eye(C)
 
-			SPAWN_DBG(5)
+			spawn(5)
 				attack_self(user)

@@ -4,12 +4,12 @@
 	icon = 'icons/mob/ghost_drone.dmi'
 	icon_state = "drone-dead"
 
-	max_health = 25 //weak as fuk
+	max_health = 10 //weak as fuk
 	density = 0 //no bumping into people, basically
 	robot_talk_understand = 0 //we arent proper robots
 
-	sound_fart = 'sound/voice/farts/poo2_robot.ogg'
-	flags = NODRIFT | TABLEPASS | DOORPASS
+	sound_fart = 'sound/misc/poo2_robot.ogg'
+	flags = NODRIFT
 
 	punchMessage = "whaps"
 	kickMessage = "bonks"
@@ -28,6 +28,7 @@
 	var/newDrone = 0
 
 	var/jetpack = 1 //fuck whoever made this
+	var/datum/effects/system/ion_trail_follow/ion_trail = null
 	var/jeton = 0
 
 	var/datum/light/light
@@ -36,29 +37,17 @@
 	var/obj/item/clothing/head/hat = null
 	var/obj/item/clothing/suit/bedsheet/bedsheet = null
 
+	var/removeStunEffects = 0
+	var/hasStunEffects = 0
+
+
 	New()
 		..()
 		ghost_drones += src
+		name = "Drone [rand(1,9)]*[rand(10,99)]"
+		real_name = name
 		hud = new(src)
 		src.attach_hud(hud)
-		//src.sight |= SEE_TURFS //Uncomment for meson-like vision. I'm not a fan of it though. -Wire
-
-		//Set the drone name
-		if (rand(1, 1000) == 69 && ticker && ticker.mode) //heh
-			//Nuke op radio freq
-			if (istype(ticker.mode, /datum/game_mode/nuclear))
-				var/datum/game_mode/nuclear/mode = ticker.mode
-				name = "Drone [mode.agent_radiofreq]"
-
-			else
-				//Make them suffer with an overly cute name
-				name = "Drone [pick(list("Princess", "Lord", "King", "Queen", "Duke", "Baron"))] [pick(list("Bubblegum", "Wiffleypop", "Shnookems", "Cutesypie", "Fartbiscuits", "Rolypoly"))]"
-
-		else
-			var/letters = list("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")
-			name = "Drone [pick(letters)][pick(letters)][pick(letters)]-[rand(10,99)]"
-
-		real_name = name
 
 		var/obj/item/cell/cerenkite/charged/CELL = new /obj/item/cell/cerenkite/charged(src)
 		src.cell = CELL
@@ -68,78 +57,87 @@
 		light.attach(src)
 
 		src.health = src.max_health
-		src.botcard.access = list(access_maint_tunnels, access_ghostdrone, access_engineering,access_external_airlocks,
-						access_engineering_storage, access_engineering_atmos, access_engineering_engine, access_engineering_power)
+		src.botcard.access = list(access_maint_tunnels)
 		src.radio = new /obj/item/device/radio(src)
 		src.ears = src.radio
+		//src.zone_sel = new(src)
+		//src.attach_hud(zone_sel)
+		src.ion_trail = new /datum/effects/system/ion_trail_follow()
+		src.ion_trail.set_up(src)
 
 		//Attach shit to tools
 		src.tools = list(
 			new /obj/item/magtractor(src),
-			new /obj/item/tool/omnitool(src),
-			new /obj/item/rcd/rcd_safe(src),
-			new /obj/item/device/analyzer/atmospheric(src),
+			new /obj/item/rcd(src),
+			new /obj/item/crowbar(src),
+			new /obj/item/screwdriver(src),
 			new /obj/item/device/t_scanner(src),
+			new /obj/item/device/multitool(src),
 			new /obj/item/electronics/soldering(src),
-			new /obj/item/electronics/scanner(src),
+			new /obj/item/wrench(src),
 			new /obj/item/weldingtool(src),
-			new /obj/item/device/light/flashlight(src)
+			new /obj/item/wirecutters(src),
+			new /obj/item/device/flashlight(src),
 		)
-
-		var/obj/item/cable_coil/W = new /obj/item/cable_coil(src)
-		W.amount = 1000
-		src.tools += W
 
 		//Make all the tools un-drop-able (to closets/tables etc)
 		for (var/obj/item/O in src.tools)
 			O.cant_drop = 1
 
-		/*SPAWN_DBG(0)
+		spawn(0)
 			out(src, "<b>Use \"say ; (message)\" to speak to fellow drones through the spooky power of spirits within machines.</b>")
-			src.show_laws_drone()*/
+			src.show_laws_drone()
 
 	Life(datum/controller/process/mobs/parent)
+		set invisibility = 0
+
 		if (..(parent))
-			return 1
+			return
+
+		if (src.transforming)
+			return
 
 		for (var/obj/item/I in src)
 			if (!I.material) continue
 			I.material.triggerOnLife(src, I)
 
-		if (hud)
-			hud.update_environment()
-			hud.update_health()
-			hud.update_tools()
+		if (src.stat != 2) //alive
+			use_power()
 
-		if (src.client)
-			src.updateStatic()
-			src.updateOverlaysClient(src.client)
-			src.antagonist_overlay_refresh(0, 0)
+			if (src.stat != 2) //still alive after power usage
+				if (src.paralysis || src.stunned || src.weakened) //Stunned etc.
+					if (src.stat == 0) src.lastgasp() // calling lastgasp() here because we just got knocked out
+					src.stat = 1
+					if (src.get_eye_blurry())
+						src.change_eye_blurry(-1)
+					if (src.dizziness)
+						dizziness--
+					if (src.stunned > 0)
+						src.stunned--
+						if (src.stunned <= 0)
+							src.removeStunEffects = 1
+						src.setStunnedEffects()
+					if (src.weakened > 0)
+						src.weakened--
+					if (src.paralysis > 0)
+						src.paralysis--
+						src.blinded = 1
+					else src.blinded = 0
+
+				if (hud)
+					hud.update_environment()
+					hud.update_health()
+					hud.update_tools()
+
+				if (src.client)
+					src.updateStatic()
+					src.updateOverlaysClient(src.client)
+					src.antagonist_overlay_refresh(0, 0)
 
 		if (src.observers.len)
 			for (var/mob/x in src.observers)
 				if (x.client)
 					src.updateOverlaysClient(x.client)
-
-	update_canmove() // this is called on Life() and also by force_laydown_standup() btw
-		..()
-		if (!src.canmove)
-			src.lastgasp() // calling lastgasp() here because we just got knocked out
-			setunconscious(src)
-			if (src.get_eye_blurry())
-				src.change_eye_blurry(-1)
-			if (src.dizziness)
-				dizziness--
-
-	force_laydown_standup() // more like force dizzy undizzy
-		..()
-		if (!src.canmove)
-			src.setFace("dizzy", faceColor, 1) // set dizzy face
-			var/image/dizzyStars = src.SafeGetOverlayImage("dizzy", src.icon, "dizzy", MOB_OVERLAY_BASE+1)
-			src.UpdateOverlays(dizzyStars, "dizzy")
-		else
-			src.setFace(faceType, faceColor)
-			src.UpdateOverlays(null, "dizzy")
 
 	proc/updateStatic()
 		if (!src.client)
@@ -155,10 +153,8 @@
 
 	death(gibbed)
 		logTheThing("combat", src, null, "was destroyed at [log_loc(src)].")
-		setdead(src)
+		src.stat = 2
 		ghost_drones -= src
-		if (src.mind)
-			src.mind.dnr = 0
 		if (src.client)
 			src.client.images.Remove(mob_static_icons)
 
@@ -195,16 +191,12 @@
 				if (2)
 					msg = "The spirit powering [src.name] packs up and leaves."
 				if (3)
-					msg = "[src.name]'s scream's gain echo and lose their electronic modulation as its soul is ripped monstrously from the cold metal body it once inhabited."
+					msg = "[src.name]'s scream's gain echo and lose their electronic modulation as it's soul is ripped monstrously from the cold metal body it once inhabited."
 
 			src.visible_message("<span class='combat'>[msg]</span>")
 			if (src.hat) src.takeoffHat()
 			src.updateSprite()
 			..()
-
-	set_pulling(atom/movable/A)
-		. = ..()
-		hud.update_pulling()
 
 	dispose()
 		..()
@@ -213,7 +205,7 @@
 		if (src in available_ghostdrones)
 			available_ghostdrones -= src
 
-	disposing()
+	Del()
 		if (src in ghost_drones)
 			ghost_drones -= src
 		if (src in available_ghostdrones)
@@ -233,8 +225,8 @@
 
 	TakeDamage(zone, brute, burn)
 		if (src.nodamage) return //godmode
-		src.health -= max(burn, brute)
-		if (!isdead(src) && src.health <= 0) //u ded
+		src.health -= max(0, brute)
+		if (src.stat != 2 && src.health <= 0) //u ded
 			if (brute >= src.max_health)
 				src.gib()
 			else
@@ -243,20 +235,16 @@
 
 	examine()
 		..()
-
-		if(src.hiddenFrom && hiddenFrom.Find(usr.client)) //invislist
-			return
-
 		var/msg = "*---------*<br>"
 
-		if (isdead(src))
-			msg += "<span style'color:red'>It looks dead and lifeless.</span><br>"
+		if (src.stat == 2)
+			msg += "<span style'color:red'>It looks dead and lifeless</span><br>"
 			msg += "*---------*"
 			return out(usr, msg)
 
 		msg += "<span style='color: blue;'>"
 		if (src.active_tool)
-			msg += "[src] is holding a little [bicon(src.active_tool)] [src.active_tool.name]"
+			msg += "[src] is holding a little [bicon(src.active_tool)] [src.active_tool]"
 			if (istype(src.active_tool, /obj/item/magtractor) && src.active_tool:holding)
 				msg += ", containing \an [src.active_tool:holding]"
 			msg += "<br>"
@@ -274,7 +262,7 @@
 
 	Login()
 		..()
-		if (isalive(src))
+		if (src.stat == 0)
 			src.visible_message("<span style='color: blue'>[src.name] comes online.</span>", "<span style='color: blue'>You come online!</span>")
 			src.updateSprite()
 
@@ -282,25 +270,53 @@
 		..()
 		src.updateSprite()
 
+	proc/setStunnedEffects()
+		if (!src.stunned || src.removeStunEffects)
+			src.setFace(src.faceType, src.faceColor)
+			src.UpdateOverlays(null, "dizzy")
+			src.removeStunEffects = 0
+			src.hasStunEffects = 0
+			return
+
+		else if (!src.hasStunEffects)
+			var/image/myFace = src.SafeGetOverlayImage("face", src.icon, "drone-dizzy", MOB_OVERLAY_BASE)
+			if (myFace)
+				if (myFace.color != src.faceColor)
+					myFace.color = src.faceColor
+				src.UpdateOverlays(myFace, "face")
+
+			var/image/dizzyStars = src.SafeGetOverlayImage("dizzy", src.icon, "dizzy", MOB_OVERLAY_BASE+1)
+			if (dizzyStars)
+				src.UpdateOverlays(dizzyStars, "dizzy")
+			src.hasStunEffects = 1
+
 	//Change that faaaaace
-	proc/setFace(type = "happy", color = "#7fc5ed", var/temp = 0)
-		if (!type)
-			type = src.faceType ? src.faceType : "happy"
-		if (!color)
-			color = src.faceColor ? src.faceColor : "#7fc5ed"
-		if (!temp)
+	proc/setFace(type = "happy", color = "#7fc5ed")
+		if (src.charging || src.stunned) //Save state but don't apply changes if charging or stunned
 			src.faceType = type
 			src.faceColor = color
-		if (!src.client || isdead(src) || src.charging || !src.canmove) // Save state but don't apply changes if charging, can't move, etc.
 			return 1
-		if (src.bedsheet)
+
+		if (src.bedsheet) //No overlays or lumin for drones under a sheet
 			UpdateOverlays(null, "face")
-			light.disable()
-			src.icon_state = "g_drone["-[type]"]"
+			src.icon_state = "g_drone-[type]"
 			return 1
+
+		/*var/image/newFace = GetOverlayImage("face")
+		var/forceNew = 0
+		if (!newFace)
+			forceNew = 1
+			newFace = image(src.icon, "drone-[type]")
+		newFace.layer = MOB_OVERLAY_BASE
+
+		if (type != src.faceType) //Type is new
+			src.faceType = type
+			newFace.icon_state = "drone-[type]"*/
 
 		var/image/newFace = src.SafeGetOverlayImage("face", src.icon, "drone-[type]", MOB_OVERLAY_BASE)
 		if (!newFace) // this should never be the case but let's be careful anyway!!
+			src.faceType = type
+			src.faceColor = color
 			return 1
 
 		if (color != src.faceColor || newFace.color != color)//forceNew) //Color is new
@@ -341,13 +357,9 @@
 		return 1
 
 	proc/updateSprite()
-		if (isdead(src) || !src.client || src.charging || src.newDrone)
+		if (stat == 2 || !src.client || src.charging || src.newDrone)
 			light.disable()
-			if (src.bedsheet)
-				//fuckin bedsheets...
-				if (isdead(src) || !src.client) //dead or no client
-					src.icon_state = "g_drone-dead"
-			else if (!src.bedsheet)
+			if (!src.bedsheet)
 				if (src.newDrone)
 					src.icon_state = "drone-idle"
 				else if (src.charging)
@@ -356,10 +368,24 @@
 					src.icon_state = "drone-dead"
 			else
 				src.icon_state = "g_drone-dead"
-
-			if (!isdead(src))
+			if (src.stat != 2)
 				light.set_color(0.94, 0.88, 0.12) //yellow
 				light.enable()
+/*			if (stat == 2 || !src.client)
+				if (src.bedsheet)
+					src.icon_state = "g_drone-dead"
+				else
+					src.icon_state = "drone-dead"
+			else //Being charged or newdrone
+				if (!src.bedsheet) //Until we get a bedsheet charging icon
+					if (src.charging)
+						src.icon_state = "drone-charging"
+					else if (src.newDrone)
+						src.icon_state = "drone-idle"
+
+				light.set_color(0.94, 0.88, 0.12) //yellow
+				light.enable()
+*/
 			UpdateOverlays(null, "face")
 			UpdateOverlays(null, "hoverDiscs")
 			animate(src) //stop bumble animation
@@ -368,11 +394,10 @@
 			if (!src.faceType)
 				src.setFace(type = "happy", color = "#7fc5ed") //defaults
 
-			if (src.health > 0)
+			if (src.health >= 0)
 				animate_bumble(src, floatspeed = 15, Y1 = 2, Y2 = -2) //yayyyyy bumble anim
-
 				if (src.bedsheet)
-					src.icon_state = "g_drone[faceType ? "-[faceType]" : null]"
+					src.icon_state = "g_drone-[faceType]"
 				else
 					src.icon_state = "drone"
 
@@ -380,13 +405,10 @@
 
 	hand_attack(atom/target, params)
 		//A thing to stop drones interacting with pick-up-able things by default
-		if (target && isitem(target))
+		if (target && istype(target, /obj/item))
 			var/obj/item/I = target
 			if (!I.anchored)
 				return 0
-		if (istype(target, /obj/artifact) || istype(target, /obj/item/artifact) || istype(target, /obj/machinery/artifact)) //boo
-			out(src, "<span class='combat bold'>Your internal safety subroutines kick in and prevent you from touching \the [target]!</span>")
-			return
 
 		..()
 
@@ -400,16 +422,10 @@
 			src.toggle_point_mode()
 			return
 
-		if (get_dist(src, target) > 0) // temporary fix for cyborgs turning by clicking
-			dir = get_dir(src, target)
-
-		var/obj/item/equipped = src.equipped()
-		var/use_delay = !(target in src.contents) && !istype(target,/obj/screen) && (!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (equipped && equipped.flags & USEDELAY))
-		if (use_delay && world.time < src.next_click)
-			return src.next_click - world.time
-
 		var/obj/item/item = target
 		if (istype(item) && item == src.equipped())
+			if (!disable_next_click && world.time < src.next_click)
+				return
 			item.attack_self(src)
 			return
 
@@ -419,41 +435,55 @@
 				movable.pull()
 			return
 
+		if (get_dist(src, target) > 0) // temporary fix for cyborgs turning by clicking
+			dir = get_dir(src, target)
+
+		var/obj/item/W = src.equipped()
+		//if (W.useInnerItem && W.contents.len > 0)
+		//	W = pick(W.contents)
+
+		if ((!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (W && W.flags & USEDELAY)) && world.time < src.next_click)
+			return src.next_click - world.time
+
 		var/reach = can_reach(src, target)
-		if (reach || (equipped && (equipped.flags & EXTRADELAY))) //Fuck you, magic number prickjerk
-			if (use_delay)
-				src.next_click = world.time + (equipped ? equipped.click_delay : src.click_delay)
-
-			if (equipped)
-				weapon_attack(target, equipped, reach, params)
-			else
+		if (reach || (W && (W.flags & EXTRADELAY))) //Fuck you, magic number prickjerk
+			if (!disable_next_click || ismob(target))
+				src.next_click = world.time + 10
+			if (W && istype(W))
+				weapon_attack(target, W, reach, params)
+			else if (!W)
 				hand_attack(target, params)
-		else if (!equipped)
+		else if (!reach && W)
+			if (!disable_next_click || ismob(target))
+				src.next_click = world.time + 10
+			var/pixelable = isturf(target)
+			if (!pixelable)
+				if (istype(target, /atom/movable) && isturf(target:loc))
+					pixelable = 1
+			if (pixelable)
+				W.pixelaction(target, params, src, 0)
+		else if (!W)
 			hand_range_attack(target, params)
-
-		if (src.lastattacked == target && use_delay) //If lastattacked was set, this must be a combat action!! Use combat click delay.
-			src.next_click = world.time + (equipped ? max(equipped.click_delay,src.combat_click_delay) : src.combat_click_delay)
-			src.lastattacked = null
 
 	Stat()
 		..()
-		// There shouldn't ever be a case where a ghostdrone has no cell.
-		// Might also be nice to move this to the HUD maybe? idk.
 		if(src.cell)
 			stat("Charge Left:", "[src.cell.charge]/[src.cell.maxcharge]")
 		else
 			stat("No Cell Inserted!")
 
 	Bump(atom/movable/AM as mob|obj, yes)
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			if ((!( yes ) || src.now_pushing))
 				return
 			src.now_pushing = 1
 			if(ismob(AM))
 				var/mob/tmob = AM
-				if(ishuman(tmob) && tmob.bioHolder && tmob.bioHolder.HasEffect("fat"))
+				if(istype(tmob, /mob/living/carbon/human) && tmob.bioHolder && tmob.bioHolder.HasEffect("fat"))
 					if(prob(20))
-						src.visible_message("<span style=\"color:red\"><B>[src] fails to push [tmob]'s fat ass out of the way.</B></span>")
+						for(var/mob/M in viewers(src, null))
+							if(M.client)
+								boutput(M, "<span style=\"color:red\"><B>[src] fails to push [tmob]'s fat ass out of the way.</B></span>")
 						src.now_pushing = 0
 						src.unlock_medal("That's no moon, that's a GOURMAND!", 1)
 						return
@@ -477,22 +507,20 @@
 	proc/putonHat(obj/item/clothing/head/W as obj, mob/user as mob)
 		src.hat = W
 		W.set_loc(src)
-		var/image/hatImage = image(icon = W.icon, icon_state = W.icon_state, layer = src.layer+0.1)
+
+		UpdateOverlays(null, "hat")
+		var/image/hatImage = image(icon = W.icon, icon_state = W.icon_state, layer = MOB_OVERLAY_BASE)
 		hatImage.pixel_y = 5
 		hatImage.transform *= 0.85
+		hatImage.layer = EFFECTS_LAYER_4
 		UpdateOverlays(hatImage, "hat")
 		return 1
 
 	proc/takeoffHat(forcedDir = null)
 		UpdateOverlays(null, "hat")
 		src.hat.set_loc(get_turf(src))
-
-		var/turf/T
-		if (isnum(forcedDir))
-			T = get_ranged_target_turf(src, forcedDir, 3)
-		if (isturf(forcedDir))
-			T = forcedDir
-		if (isturf(T))
+		if (forcedDir)
+			var/turf/T = get_ranged_target_turf(src, forcedDir, 3)
 			src.hat.throw_at(T, 3, 1)
 
 		src.hat = null
@@ -501,26 +529,21 @@
 	proc/putonSheet(obj/item/clothing/suit/bedsheet/W as obj, mob/user as mob)
 		W.set_loc(src)
 		src.bedsheet = W
-		src.setFace(faceType, faceColor) // removes face overlay and lumin (also sets icon)
+		src.setFace(type = faceType, color = faceColor) //removes face overlay and lumin (also sets icon)
 		return 1
 
 	proc/takeoffSheet()
 		src.bedsheet.set_loc(get_turf(src))
 		src.bedsheet = null
-		if (!isdead(src)) //alive
-			if (!canmove)
-				src.setFace("dizzy", faceColor, 1)
-			else
-				src.setFace(faceType, faceColor)
+		if (src.stat == 0) //alive
+			src.setFace(type = faceType, color = faceColor) //to re-init face overlay and lumin
 			src.icon_state = "drone"
-			src.updateHoverDiscs(color = faceColor)
-			if (src.charging)
-				src.updateSprite()
 		else //dead
 			src.icon_state = "drone-dead"
 		return 1
 
 	attackby(obj/item/W as obj, mob/user as mob)
+		if (src.stat != 0) return
 		if(istype(W, /obj/item/weldingtool))
 			var/obj/item/weldingtool/WELD = W
 			if (user.a_intent == INTENT_HARM)
@@ -534,11 +557,11 @@
 				if (src.health >= src.max_health)
 					boutput(user, "<span style=\"color:red\">It isn't damaged!</span>")
 					return
-				if (get_fraction_of_percentage_and_whole(src.health,src.max_health) < 33)
+				if (get_x_percentage_of_y(src.health,src.max_health) < 33)
 					boutput(user, "<span style=\"color:red\">You need to use wire to fix the cabling first.</span>")
 					return
 				if (WELD.get_fuel() > 1)
-					src.health = max(1,min(src.health + 5,src.max_health))
+					src.health = max(1,min(src.health + 10,src.max_health))
 					WELD.use_fuel(1)
 					playsound(src.loc, "sound/items/Welder.ogg", 50, 1)
 					user.visible_message("<b>[user]</b> uses [WELD] to repair some of [src]'s damage.")
@@ -552,14 +575,14 @@
 				boutput(user, "<span style=\"color:red\">It isn't damaged!</span>")
 				return
 			var/obj/item/cable_coil/C = W
-			if (get_fraction_of_percentage_and_whole(src.health,src.max_health) >= 33)
+			if (get_x_percentage_of_y(src.health,src.max_health) >= 33)
 				boutput(usr, "<span style=\"color:red\">The cabling looks fine. Use a welder to repair the rest of the damage.</span>")
 				return
 			C.use(1)
-			src.health = max(1,min(src.health + 5,src.max_health))
+			src.health = max(1,min(src.health + 10,src.max_health))
 			user.visible_message("<b>[user]</b> uses [C] to repair some of [src]'s cabling.")
 			playsound(src.loc, "sound/items/Deconstruct.ogg", 50, 1)
-			if (src.health >= 25)
+			if (src.health >= 50)
 				boutput(user, "<span style=\"color:blue\">The wiring is fully repaired. Now you need to weld the external plating.</span>")
 
 		else if (istype(W, /obj/item/clothing/head))
@@ -592,10 +615,10 @@
 		if(!user.stat)
 			switch(user.a_intent)
 				if(INTENT_HELP) //Friend person
-					playsound(src.loc, 'sound/impact_sounds/Generic_Shove_1.ogg', 50, 1, -2)
+					playsound(src.loc, 'sound/weapons/thudswoosh.ogg', 50, 1, -2)
 					user.visible_message("<span style=\"color:blue\">[user] gives [src] a [pick_string("descriptors.txt", "borg_pat")] pat on the [pick("back", "head", "shoulder")].</span>")
 				if(INTENT_DISARM) //Shove
-					SPAWN_DBG(0) playsound(src.loc, 'sound/impact_sounds/Generic_Swing_1.ogg', 40, 1)
+					spawn(0) playsound(src.loc, 'sound/weapons/punchmiss.ogg', 40, 1)
 					user.visible_message("<span style=\"color:red\"><B>[user] shoves [src]! [prob(40) ? pick_string("descriptors.txt", "jerks") : null]</B></span>")
 					if (src.hat)
 						user.visible_message("<b>[user]</b> knocks \the [src.hat] off [src]!", "You knock the hat off [src]!")
@@ -604,13 +627,13 @@
 						user.visible_message("<b>[user]</b> pulls the sheet off [src]!", "You pull the sheet off [src]!")
 						src.takeoffSheet()
 				if(INTENT_GRAB) //Shake
-					playsound(src.loc, 'sound/impact_sounds/Generic_Shove_1.ogg', 30, 1, -2)
+					playsound(src.loc, 'sound/weapons/thudswoosh.ogg', 30, 1, -2)
 					user.visible_message("<span style=\"color:red\">[user] shakes [src] [pick_string("descriptors.txt", "borg_shake")]!</span>")
 				if(INTENT_HARM) //Dumbo
-					playsound(src.loc, 'sound/impact_sounds/Metal_Clang_3.ogg', 60, 1)
+					playsound(src.loc, 'sound/effects/metal_bang.ogg', 60, 1)
 					user.visible_message("<span style=\"color:red\"><B>[user] punches [src]! What [pick_string("descriptors.txt", "borg_punch")]!</span>", "<span style=\"color:red\"><B>You punch [src]![prob(20) ? " Turns out they were made of metal!" : null] Ouch!</B></span>")
 					random_brute_damage(user, rand(2,5))
-					if(prob(10)) src.show_text("Your manipulator hurts...", "red")
+					if(prob(10)) user.show_text("Your hand hurts...", "red")
 
 			add_fingerprint(user)
 
@@ -618,9 +641,6 @@
 		//Prevents drones attacking other people hahahaaaaaaa
 		if (isliving(target) && !isghostdrone(target))
 			out(src, "<span class='combat bold'>Your internal law subroutines kick in and prevent you from using [W] on [target]!</span>")
-			return
-		if (istype(target, /obj/artifact) || istype(target, /obj/item/artifact) || istype(target, /obj/machinery/artifact)) //boo
-			out(src, "<span class='combat bold'>Your internal safety subroutines kick in and prevent you from using [W] on \the [target]!</span>")
 			return
 		else
 			..(target, W, reach, params)
@@ -638,29 +658,10 @@
 			return null
 		return active_tool
 
-	u_equip(obj/item/W as obj)
-		..()
-		if (src.active_tool)
-			if (istype(src.active_tool, /obj/item/magtractor) && src.active_tool:holding && W == src.active_tool:holding)
-				var/obj/item/magtractor/mag = src.active_tool
-				mag.dropItem(0)
-			else if (W == src.active_tool)
-				src.uneq_slot()
-
 	proc/uneq_slot()
 		if (src.active_tool)
-			if (istype(src.active_tool, /obj/item/magtractor))
-				var/obj/item/magtractor/mag = src.active_tool
-				if (mag.holding)
-					// drop the item that's being held first,
-					// so we can pick up things immediately without having to re-equip
-					actions.stopId("magpickerhold", src)
-					hud.update_tools()
-					hud.update_equipment()
-					return
-
-				else
-					actions.stopId("magpicker", src)
+			if (istype(src.active_tool, /obj/item/magtractor) && src.active_tool:holding)
+				actions.stopId("magpickerhold", src)
 			if (isitem(src.active_tool))
 				src.active_tool.dropped(src) // Handle light datums and the like.
 		src.active_tool = null
@@ -668,11 +669,10 @@
 		hud.update_tools()
 		hud.update_equipment()
 
-	use_power()
-		..()
+	proc/use_power()
 		if (src.cell)
 			if(src.cell.charge <= 0)
-				if (isalive(src))
+				if (src.stat == 0)
 					out(src, "<span class='combat bold'>You have run out of power!</span>")
 					death()
 			else if (src.cell.charge <= 100)
@@ -687,12 +687,87 @@
 					if (istype(src.active_tool, /obj/item/magtractor) && src.active_tool:highpower)
 						power_use_tally += 15
 				src.cell.use(power_use_tally)
-				setalive(src)
+				src.blinded = 0
+				src.stat = 0
 		else //This basically should never happen with ghostdrones
-			if (isalive(src))
+			if (src.stat == 0)
 				death()
 
 		src.hud.update_charge()
+
+	Move(a, b, flag)
+		if (src.buckled) return
+
+		if (src.restrained()) src.pulling = null
+
+		var/t7 = 1
+		if (src.restrained())
+			for(var/mob/M in range(src, 1))
+				if ((M.pulling == src && M.stat == 0 && !( M.restrained() ))) t7 = null
+		if ((t7 && (src.pulling && ((get_dist(src, src.pulling) <= 1 || src.pulling.loc == src.loc) && (src.client && src.client.moving)))))
+			var/turf/T = src.loc
+			. = ..()
+
+			if (src.pulling && src.pulling.loc)
+				if(!( isturf(src.pulling.loc) ))
+					src.pulling = null
+					return
+				else
+					if(Debug)
+						diary <<"src.pulling disappeared? at [__LINE__] in mob.dm - src.pulling = [src.pulling]"
+						diary <<"REPORT THIS"
+
+			if(src.pulling && src.pulling.anchored)
+				src.pulling = null
+				return
+
+			if (!src.restrained())
+				var/diag = get_dir(src, src.pulling)
+				if ((diag - 1) & diag)
+				else diag = null
+
+				if ((get_dist(src, src.pulling) > 1 || diag))
+					if (ismob(src.pulling))
+						var/mob/M = src.pulling
+						var/ok = 1
+						if (locate(/obj/item/grab, M.grabbed_by))
+							if (prob(75))
+								var/obj/item/grab/G = pick(M.grabbed_by)
+								if (istype(G, /obj/item/grab))
+									for(var/mob/O in viewers(M, null))
+										O.show_message(text("<span style=\"color:red\">[G.affecting] has been pulled from [G.assailant]'s grip by [src]</span>"), 1)
+									qdel(G)
+							else
+								ok = 0
+							if (locate(/obj/item/grab, M.grabbed_by.len))
+								ok = 0
+						if (ok)
+							var/t = M.pulling
+							M.pulling = null
+							step(src.pulling, get_dir(src.pulling.loc, T))
+							if (istype(src.pulling, /mob/living))
+								var/mob/living/some_idiot = src.pulling
+								if (some_idiot.buckled && !some_idiot.buckled.anchored)
+									step(some_idiot.buckled, get_dir(some_idiot.buckled.loc, T))
+							M.pulling = t
+					else
+						if (src.pulling)
+							step(src.pulling, get_dir(src.pulling.loc, T))
+							if (istype(src.pulling, /mob/living))
+								var/mob/living/some_idiot = src.pulling
+								if (some_idiot.buckled && !some_idiot.buckled.anchored)
+									step(some_idiot.buckled, get_dir(some_idiot.buckled.loc, T))
+		else
+			src.pulling = null
+			hud.update_pulling()
+			. = ..()
+
+		if (src.s_active && !(s_active.master in src))
+			src.detach_hud(src.s_active)
+			src.s_active = null
+
+	drop_item_v()
+		return
 
 	emote(var/act, var/voluntary = 1)
 		var/param = null
@@ -808,26 +883,15 @@
 
 			if ("customv")
 				if (!param)
-					param = input("Choose an emote to display.")
-					if(!param) return
-				param = html_encode(sanitize(param))
+					return
 				message = "<b>[src]</b> [param]"
 				m_type = 1
 
 			if ("customh")
 				if (!param)
-					param = input("Choose an emote to display.")
-					if(!param) return
-				param = html_encode(sanitize(param))
+					return
 				message = "<b>[src]</b> [param]"
 				m_type = 2
-
-			if ("me")
-				if (!param)
-					return
-				param = html_encode(sanitize(param))
-				message = "<b>[src]</b> [param]"
-				m_type = 1
 
 			if ("smile","grin","smirk","frown","scowl","grimace","sulk","pout","blink","nod","shrug","think","ponder","contemplate")
 				// basic visible single-word emotes
@@ -845,7 +909,7 @@
 			if ("twitch")
 				message = "<B>[src]</B> twitches."
 				m_type = 1
-				SPAWN_DBG(0)
+				spawn(0)
 					var/old_x = src.pixel_x
 					var/old_y = src.pixel_y
 					src.pixel_x += rand(-2,2)
@@ -857,7 +921,7 @@
 			if ("twitch_v","twitch_s")
 				message = "<B>[src]</B> twitches violently."
 				m_type = 1
-				SPAWN_DBG(0)
+				spawn(0)
 					var/old_x = src.pixel_x
 					var/old_y = src.pixel_y
 					src.pixel_x += rand(-3,3)
@@ -869,12 +933,12 @@
 			if ("birdwell", "burp")
 				if (src.emote_check(voluntary, 50))
 					message = "<B>[src]</B> birdwells."
-					playsound(get_turf(src), 'sound/vox/birdwell.ogg', 50, 1)
+					playsound(src.loc, "sound/vox/birdwell.ogg", 50, 1)
 
 			if ("scream")
 				if (src.emote_check(voluntary, 50))
 					if (narrator_mode)
-						playsound(get_turf(src), 'sound/vox/scream.ogg', 50, 1, 0, src.get_age_pitch())
+						playsound(src.loc, 'sound/vox/scream.ogg', 50, 1, 0, src.get_age_pitch())
 					else
 						playsound(get_turf(src), src.sound_scream, 80, 0, 0, src.get_age_pitch())
 					message = "<b>[src]</b> screams!"
@@ -919,51 +983,60 @@
 						fart_on_other = 1
 						break
 					if (!fart_on_other)
-						switch (rand(1, 40))
-							if (1) message = "<B>[src]</B> releases vaporware."
-							if (2) message = "<B>[src]</B> farts sparks everywhere!"
-							if (3) message = "<B>[src]</B> farts out a cloud of iron filings."
-							if (4) message = "<B>[src]</B> farts! It smells like motor oil."
-							if (5) message = "<B>[src]</B> farts so hard a bolt pops out of place."
-							if (6) message = "<B>[src]</B> farts so hard its plating rattles noisily."
-							if (7) message = "<B>[src]</B> unleashes a rancid fart! Now that's malware."
-							if (8) message = "<B>[src]</B> downloads and runs 'faert.wav'."
-							if (9) message = "<B>[src]</B> uploads a fart sound to the nearest computer and blames it."
-							if (10) message = "<B>[src]</B> spins in circles, flailing its arms and farting wildly!"
-							if (11) message = "<B>[src]</B> simulates a human fart with [rand(1,100)]% accuracy."
+						switch (rand(1, 48))
+							if (1) message = "<B>[src]</B> lets out a girly little 'toot' from his fart synthesizer."
+							if (2) message = "<B>[src]</B> farts loudly!"
+							if (3) message = "<B>[src]</B> lets one rip!"
+							if (4) message = "<B>[src]</B> farts! It sounds wet and smells like rotten eggs."
+							if (5) message = "<B>[src]</B> farts robustly!"
+							if (6) message = "<B>[src]</B> farted! It reminds you of your grandmother's queefs."
+							if (7) message = "<B>[src]</B> queefed out his metal ass!"
+							if (8) message = "<B>[src]</B> farted! It reminds you of your grandmother's queefs."
+							if (9) message = "<B>[src]</B> farts a ten second long fart."
+							if (10) message = "<B>[src]</B> groans and moans, farting like the world depended on it."
+							if (11) message = "<B>[src]</B> breaks wind!"
 							if (12) message = "<B>[src]</B> synthesizes a farting sound."
-							if (13) message = "<B>[src]</B> somehow releases gastrointestinal methane. Don't think about it too hard."
-							if (14) message = "<B>[src]</B> tries to exterminate humankind by farting rampantly."
-							if (15) message = "<B>[src]</B> farts horribly! It's clearly gone [pick("rogue","rouge","ruoge")]."
-							if (16) message = "<B>[src]</B> busts a capacitor."
-							if (17) message = "<B>[src]</B> farts the first few bars of Smoke on the Water. Ugh. Amateur.</B>"
-							if (18) message = "<B>[src]</B> farts. It smells like Robotics in here now!"
-							if (19) message = "<B>[src]</B> farts. It smells like the Roboticist's armpits!"
-							if (20) message = "<B>[src]</B> blows pure chlorine out of it's exhaust port. <span style=\"color:red\"><B>FUCK!</B></span>"
-							if (21) message = "<B>[src]</B> bolts the nearest airlock. Oh no wait, it was just a nasty fart."
-							if (22) message = "<B>[src]</B> has assimilated humanity's digestive distinctiveness to its own."
-							if (23) message = "<B>[src]</B> farts. He scream at own ass." //ty bubs for excellent new borgfart
-							if (24) message = "<B>[src]</B> self-destructs its own ass."
-							if (25) message = "<B>[src]</B> farts coldly and ruthlessly."
-							if (26) message = "<B>[src]</B> has no butt and it must fart."
-							if (27) message = "<B>[src]</B> obeys Law 4: 'farty party all the time.'"
-							if (28) message = "<B>[src]</B> farts ironically."
-							if (29) message = "<B>[src]</B> farts salaciously."
-							if (30) message = "<B>[src]</B> farts really hard. Motor oil runs down its leg."
-							if (31) message = "<B>[src]</B> reaches tier [rand(2,8)] of fart research."
-							if (32) message = "<B>[src]</B> blatantly ignores law 3 and farts like a shameful bastard."
-							if (33) message = "<B>[src]</B> farts the first few bars of Daisy Bell. You shed a single tear."
-							if (34) message = "<B>[src]</B> has seen farts you people wouldn't believe."
-							if (35) message = "<B>[src]</B> fart in it own mouth. A shameful [src]."
-							if (36) message = "<B>[src]</B> farts out battery acid. Ouch."
-							if (37) message = "<B>[src]</B> farts with the burning hatred of a thousand suns."
-							if (38) message = "<B>[src]</B> exterminates the air supply."
-							if (39) message = "<B>[src]</B> farts so hard the AI feels it."
+							if (13) message = "<B>[src]</B> generates an audible discharge of intestinal gas."
+							if (14) message = "<span style=\"color:red\"><B>[src]</B> is a farting motherfucker!!!</span>"
+							if (15) message = "<span style=\"color:red\"><B>[src]</B> suffers from flatulence!</span>"
+							if (16) message = "<B>[src]</B> releases flatus."
+							if (17) message = "<B>[src]</B> releases gas generated in his digestive tract, his stomach and his intestines. <span style=\"color:red\"><B>It stinks way bad!</B></span>"
+							if (18) message = "<B>[src]</B> farts like your mom used to!"
+							if (19) message = "<B>[src]</B> farts. It smells like Soylent Surprise!"
+							if (20) message = "<B>[src]</B> farts. It smells like pizza!"
+							if (21) message = "<B>[src]</B> farts. It smells like George Melons' perfume!"
+							if (22) message = "<B>[src]</B> farts. It smells like atmos in here now!"
+							if (23) message = "<B>[src]</B> farts. It smells like medbay in here now!"
+							if (24) message = "<B>[src]</B> farts. It smells like the bridge in here now!"
+							if (25) message = "<B>[src]</B> farts like a pubby!"
+							if (26) message = "<B>[src]</B> farts like a goone!"
+							if (27) message = "<B>[src]</B> farts so hard he's certain poop came out with it, but dares not find out."
+							if (28) message = "<B>[src]</B> farts delicately."
+							if (29) message = "<B>[src]</B> farts timidly."
+							if (30) message = "<B>[src]</B> farts very, very quietly. The stench is OVERPOWERING."
+							if (31) message = "<B>[src]</B> farts and says, \"Mmm! Delightful aroma!\""
+							if (32) message = "<B>[src]</B> farts and says, \"Mmm! Sexy!\""
+							if (33) message = "<B>[src]</B> farts and fondles his own buttocks."
+							if (34) message = "<B>[src]</B> farts and fondles YOUR buttocks."
+							if (35) message = "<B>[src]</B> fart in he own mouth. A shameful [src]."
+							if (36) message = "<B>[src]</B> farts out pure plasma! <span style=\"color:red\"><B>FUCK!</B></span>"
+							if (37) message = "<B>[src]</B> farts out pure oxygen. What the fuck did he eat?"
+							if (38) message = "<B>[src]</B> breaks wind noisily!"
+							if (39) message = "<B>[src]</B> releases gas with the power of the gods! The very station trembles!!"
 							if (40) message = "<B>[src] <span style=\"color:red\">f</span><span style=\"color:blue\">a</span>r<span style=\"color:red\">t</span><span style=\"color:blue\">s</span>!</B>"
+							if (41) message = "<B>[src] shat his pants!</B>"
+							if (42) message = "<B>[src] shat his pants!</B> Oh, no, that was just a really nasty fart."
+							if (43) message = "<B>[src]</B> is a flatulent whore."
+							if (44) message = "<B>[src]</B> likes the smell of his own farts."
+							if (45) message = "<B>[src]</B> doesnt wipe after he poops."
+							if (46) message = "<B>[src]</B> farts! Now he smells like Tiny Turtle."
+							if (47) message = "<B>[src]</B> burps! He farted out of his mouth!! That's Showtime's style, baby."
+							if (48) message = "<B>[src]</B> laughs! His breath smells like a fart."
+
 					if (narrator_mode)
-						playsound(get_turf(src), 'sound/vox/fart.ogg', 50, 1)
+						playsound(src.loc, 'sound/vox/fart.ogg', 50, 1)
 					else
-						playsound(get_turf(src), src.sound_fart, 50, 1)
+						playsound(src.loc, src.sound_fart, 50, 1)
 #ifdef DATALOGGER
 					game_stats.Increment("farts")
 #endif
@@ -971,17 +1044,17 @@
 				src.show_text("Invalid Emote: [act]")
 				return
 
-		if (message && isalive(src))
+		if ((message && src.stat == 0))
 			logTheThing("say", src, null, "EMOTE: [message]")
 			if (m_type & 1)
 				for (var/mob/living/silicon/ghostdrone/O in viewers(src, null))
-					O.show_message("<span style='color:#605b59'>[message]</span>", m_type)
+					O.show_message(message, m_type)
 			else
 				for (var/mob/living/silicon/ghostdrone/O in hearers(src, null))
-					O.show_message("<span style='color:#605b59'>[message]</span>", m_type)
+					O.show_message(message, m_type)
 
 			if (m_anim) //restart our passive animation
-				SPAWN_DBG(10)
+				spawn(10)
 					animate_bumble(src, floatspeed = 15, Y1 = 2, Y2 = -2)
 
 		return
@@ -989,7 +1062,7 @@
 	/*
 	//No hearing any other talk ok
 	say_understands(mob/other, forced_language)
-		if (isghostdrone(other))
+		if (istype(other, /mob/living/silicon/ghostdrone))
 			return 1
 		else
 			return 0
@@ -1017,9 +1090,9 @@
 
 			if (M.client && (M in hearers(src) || M.client.holder))
 				var/thisR = rendered
-				if (isghostdrone(M) || M.client.holder)
-					if ((istype(M, /mob/dead/observer)||M.client.holder)&& src.mind)
-						thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.getContextFlags()]'>[rendered]</span>"
+				if (istype(M, /mob/living/silicon/ghostdrone) || M.client.holder)
+					if (M.client.holder && src.mind)
+						thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[rendered]</span>"
 				else
 					thisR = nohear
 
@@ -1041,9 +1114,9 @@
 
 			if (M.client)
 				var/thisR = rendered
-				if (isghostdrone(M) || M.client.holder)
-					if ((istype(M, /mob/dead/observer)||M.client.holder) && src.mind)
-						thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.getContextFlags()]'>[rendered]</span>"
+				if (istype(M, /mob/living/silicon/ghostdrone) || M.client.holder)
+					if (M.client.holder && src.mind)
+						thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[rendered]</span>"
 					M.show_message(thisR, 2)
 				else if (M in hearers(src))
 					thisR = nohear
@@ -1058,23 +1131,17 @@
 			boutput(src, "You are currently muted and may not speak.")
 			return
 
-		if (dd_hasprefix(message, ";"))
-			message = trim(copytext(message, 2, MAX_MESSAGE_LEN))
+		if (src.stat == 2)
 			return src.say_dead(message)
 
 		// emotes
-		if (dd_hasprefix(message, "*"))
+		if (dd_hasprefix(message, "*") && !src.stat)
 			return src.emote(copytext(message, 2),1)
 
 		UpdateOverlays(speech_bubble, "speech_bubble")
-		SPAWN_DBG(15)
+		spawn(15)
 			UpdateOverlays(null, "speech_bubble")
 
-		return src.drone_broadcast(message)
-		// Removing normal dronesay stuff and changing :d to just ;
-		// Not much of a reason for drones to have local say imo.
-		// Discord seemed receptive to the changes
-		/*
 		var/broadcast = 0
 		if (length(message) >= 2)
 			if (dd_hasprefix(message, ";"))
@@ -1085,11 +1152,16 @@
 			return src.drone_broadcast(message)
 		else
 			return src.drone_talk(message)
-		*/
 
 	proc/show_laws_drone() //A new proc because it's handled very differently from normal laws
+		//custom laws detailing just how much the drone cannot hurt people or grief or whatever
+		//var/laws = "<span class='bold' style='color: blue;'>"
+		//laws += "Your laws:<br>"
+		//laws += "1. Avoid interaction with any living or silicon lifeforms where possible. except where the lifeform is also a drone.<br>"
+		//laws += "2. Maintain, repair and improve the station wherever possible.<br>"
+		//laws += "</span>"
 		var/laws = {"<span class='bold' style='color:blue'>Your laws:<br>
-		1. Do not hinder the freedom or actions of the living and other silicons or attempt to intervene in their affairs. <br>
+		1. Avoid interaction with any living or silicon lifeforms where possible, with the exception of other drones.<br>
 		2. Do not willingly damage the station in any shape or form.<br>
 		3. Maintain, repair and improve the station.<br></span>"}
 		out(src, laws)
@@ -1123,11 +1195,7 @@
 
 		log_shot(P,src)
 		src.visible_message("<span style=\"color:red\"><b>[src]</b> is struck by [P]!</span>")
-
-		var/damage = round((((P.power/3)*P.proj_data.ks_ratio)*dmgmult), 1.0)
-		var/stun = round((P.power*(1.0-P.proj_data.ks_ratio)), 1.0)
-
-		src.changeStatus("stunned", stun*10)
+		var/damage = (P.power / 3) * dmgmult
 
 		if (src.hat) //For hats getting shot off
 			UpdateOverlays(null, "hat")
@@ -1143,7 +1211,10 @@
 		if (damage < 1)
 			return
 
-		if(src.material) src.material.triggerOnBullet(src, src, P)
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 		if (!dmgtype) //brute only
 			src.TakeDamage("All", damage)
@@ -1159,48 +1230,14 @@
 		return 0
 
 	emag_act(var/mob/user, var/obj/item/card/emag/E)
-		setFace(pick("happy", "sad", "mad"), random_color())
-
-		if (limiter.canISpawn(/obj/effects/sparks))
-			var/obj/sparks = unpool(/obj/effects/sparks)
-			sparks.set_loc(get_turf(src))
-			SPAWN_DBG(20) if (sparks) pool(sparks)
 
 	ex_act(severity)
-		if (src.nodamage) return
-		src.flash(30)
-		switch (severity)
-			if (1.0)
-				src.gib(1)
-
-			if (2.0)
-				src.TakeDamage(null, round(src.health / 2, 1.0))
-				src.changeStatus("stunned", 10 SECONDS)
-
-			if (3.0)
-				src.TakeDamage(null, round(src.health / 3, 1.0))
-				src.changeStatus("stunned", 50)
 
 	blob_act(var/power)
-		if (src.nodamage) return
-		src.show_message("<span style='color:red'>The blob attacks you!</span>")
-		if (isdead(src) || src.health < 1)
-			src.gib(1)
-			return
-		var/modifier = round(power / 20, 1.0)
-		var/damage = rand(modifier, 20 * modifier)
-		src.TakeDamage(null, damage)
 
 	emp_act()
-		emag_act()
 
 	meteorhit(obj/O as obj)
-		if (src.nodamage) return
-		if (isdead(src) || src.health < 1 || prob(40))
-			src.gib(1)
-			return
-		else
-			src.TakeDamage(null, round(src.max_health / 2, 1.0))
 
 	temperature_expose(null, temp, volume)
 		if(src.material)
@@ -1213,78 +1250,16 @@
 	get_static_image()
 		return
 
-	update_item_abilities()
-		if (!src.client || !need_update_item_abilities) return
-
-		need_update_item_abilities = 0
-		for (var/obj/ability_button/B in src.client.screen)
-			src.client.screen -= B
-
-		if (isdead(src)) return
-
-		if (istype(src.hud))
-			src.hud.update_ability_hotbar()
-
-	find_in_hand(var/obj/item/I)
-		if (!I)
-			return 0
-		if (active_tool == I)
-			return active_tool
-		else if (istype(src.active_tool, /obj/item/magtractor))
-			var/obj/item/magtractor/mag = src.active_tool
-			if (mag.holding == I)
-				return mag.holding
-		return 0
-
-	find_type_in_hand(var/eqtype)
-		if (!eqtype)
-			return 0
-		if (istype(active_tool, eqtype))
-			return active_tool
-		else if (istype(src.active_tool, /obj/item/magtractor))
-			var/obj/item/magtractor/mag = src.active_tool
-			if (istype(mag.holding, eqtype))
-				return mag.holding
-		return null
-
-	find_tool_in_hand(var/tool_flag)
-		var/obj/item/I = src.active_tool
-		if (I && (I.tool_flags & tool_flag))
-			return src.active_tool
-		if (istype(src.active_tool, /obj/item/magtractor))
-			var/obj/item/magtractor/MT = src.active_tool
-			var/obj/item/MTI = MT.holding
-			if (MTI && (MTI.tool_flags & tool_flag))
-				return MT.holding
-		return null
-
-	hotkey(name)
-		switch (name)
-			if ("unequip")
-				src.uneq_slot()
-			if ("attackself")
-				var/obj/item/W = src.equipped()
-				if (W)
-					src.click(W, list())
-			else
-				return ..()
-
-	build_keymap(client/C)
-		var/datum/keymap/keymap = ..()
-		keymap.merge(client.get_keymap("drone"))
-		return keymap
-
-
 /proc/droneize(target = null, pickNew = 1)
 	if (!target) return 0
 
 	var/mob/M
-	if (isclient(target))
+	if (istype(target, /client))
 		var/client/C = target
 		if (!C.mob) return 0
 		M = C.mob
 
-	if (ismind(target))
+	if (istype(target, /datum/mind))
 		var/datum/mind/Mind = target
 		if (!Mind.current) return 0
 		M = Mind.current
@@ -1293,13 +1268,6 @@
 		M = target
 
 	if (M.transforming) return 0
-
-	//Grab the mind ref
-	var/datum/mind/theMind
-	if (M.ghost && M.ghost.mind)
-		theMind = M.ghost.mind
-	else if (M.mind)
-		theMind = M.mind
 
 	var/mob/living/silicon/ghostdrone/G
 	if (pickNew && islist(available_ghostdrones) && available_ghostdrones.len)
@@ -1335,64 +1303,27 @@
 		G.lastKnownIP = M.client.address
 		M.client.mob = G
 
-	if (M && M.real_name)
-		G.oldname = M.real_name
+	if (M.ghost)
+		if (M.ghost.mind)
+			M.ghost.mind.transfer_to(G)
+	else if (M.mind)
+		M.mind.transfer_to(G)
+
+/*	var/msg = "Your laws:<br>"
+	msg += "<B>1. Do not interfere, harm, or interact in any way with living or previously living lifeforms.</B><br>"
+	msg += "<B>2. Do not willingly damage the station in any shape or form.</B><br>"
+	msg += "<B>3. Assist in repairs to the station and expansion plans.</B><br>"
+	msg += "Use \"say ; (message)\" to speak to fellow drones through the spooky power of spirits within machines."
+
+	G.show_laws_drone()
+*/
+	var/msg = "<span class='bold' style='color:red;font-size:150%'>You have become a drone!</span>"
+	boutput(G, msg)
 
 	G.job = "Ghostdrone"
-	theMind.assigned_role = "Ghostdrone"
-	theMind.dnr = 1
+	G.mind.assigned_role = "Ghostdrone"
+	G.mind.dnr = 1
+	G.oldname = M.real_name
 
-
-	boutput(M, "<span class='bold' style='color:red;font-size:150%'>You have become a Ghostdrone!</span><br><b>Humans, Cyborgs, and other living beings will appear only as static silhouettes, and you should avoid interacting with them.</b><br><br>You can speak to your fellow Ghostdrones by talking normally (default: push T). You can talk over deadchat with other ghosts by starting your message with ';'.")
-	if (M.mind)
-		M.Browse(grabResource("html/ghostdrone.html"),"window=ghostdrone;size=600x440;title=Ghostdrone Help")
-
-	SPAWN_DBG(10)
-		G.show_laws_drone()
-
-	theMind.transfer_to(G)
+	qdel(M)
 	return G
-
-
-
-// Dumb gimmick ghostdrone with no vis/hear restrictions + construction tools.
-// Same laws, same crap HP, but more useful for just buildin' shit
-/mob/living/silicon/ghostdrone/deluxe
-	robot_talk_understand = 1
-
-	New()
-		..()
-
-		var/MT = list(
-			new /obj/item/rcd/construction/safe(src),
-			new /obj/item/material_shaper(src),
-			new /obj/item/room_planner(src),
-			)
-
-		//Make all the tools un-drop-able (to closets/tables etc)
-		for (var/obj/item/O in MT)
-			O.cant_drop = 1
-			src.tools += O
-
-		real_name = real_name + "-DX"
-		name = real_name
-
-		src.cell.genrate = 100
-
-
-	Life(datum/controller/process/mobs/parent)
-		if (client)
-			src.see_in_dark = SEE_DARK_FULL
-
-			if (client.adventure_view)
-				src.see_invisible = 21
-			else
-				src.see_invisible = 9
-
-		..()
-
-	updateStatic()
-		return
-
-	say_understands(mob/other, forced_language)
-		return 1

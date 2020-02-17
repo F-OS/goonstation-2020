@@ -40,7 +40,7 @@
 			controller.ghostize()
 		..()
 
-	disposing()
+	Del()
 		if(controller)
 			controller.ghostize()
 		..()
@@ -128,14 +128,14 @@
 					var/obj/item/cable_coil/C = W
 					if(C.use(5))
 						user.show_text("You attach the wires to the cyborg head and secure them to the assembly. Needs a monitoring tool before it'll work, by all appearances.", "blue")
-						playsound(src.loc, "sound/impact_sounds/Generic_Stab_1.ogg", 20, 1)
+						playsound(src.loc, "sound/weapons/Genhit.ogg", 20, 1)
 						crafting_stage = 1
 						update_icon()
 					else
 						user.show_text("There's not enough wire on \the [C]!.", "red")
 					return
 			if(1)
-				if(istype(W, /obj/item/device/analyzer/healthanalyzer))
+				if(istype(W, /obj/item/device/healthanalyzer))
 					var/grump_text = prob(90) ? "The health analyzer isn't configured to support this, however." : "The health analyzer beeps grumpily; it didn't sign up for this shit!"
 					user.show_text("You wire up the sensors on the analyzer and connect the mental interface to the i/o port. [grump_text]", "blue")
 					user.u_equip(W)
@@ -144,15 +144,15 @@
 					update_icon()
 					return
 			if(2)
-				if (ispulsingtool(W))
-					user.show_text("You use \the [W] to root the health analyzer, voiding the warranty! Probably won't be enough to power the assembly, though.", "blue")
+				if (istype(W, /obj/item/device/multitool))
+					user.show_text("You use the multitool to root the health analyzer, voiding the warranty! Probably won't be enough to power the assembly, though.", "blue")
 					playsound(src.loc, "sound/effects/brrp.ogg", 50, 1)
 					crafting_stage = 3
 					return
 			if(3)
 				if (istype(W, /obj/item/cell))
 					user.show_text("You attach \the [W] to the assembly. It drones slightly. Won't do much good without a comms interface, however.", "blue")
-					playsound(src.loc, "sound/impact_sounds/Generic_Stab_1.ogg", 20, 1)
+					playsound(src.loc, "sound/weapons/Genhit.ogg", 20, 1)
 					user.u_equip(W)
 					qdel(W)
 					crafting_stage = 4
@@ -232,10 +232,10 @@
 			update_controller_verbs()
 		if ("pulse")
 			controller.say("[pick("BZ", "FZ", "GZ")][pick("A", "U", "O")][pick("P", "T", "ZZ")]")
-			playsound(get_turf(src), 'sound/voice/screams/robot_scream.ogg', 10, 1)
+			playsound(get_turf(src), 'sound/voice/robot_scream.ogg', 10, 1)
 		if ("cut")
 			controller.show_text("You no longer feel connected to the [det]!", "red")
-			playsound(get_turf(src), 'sound/voice/screams/robot_scream.ogg', 70, 1)
+			playsound(get_turf(src), 'sound/voice/robot_scream.ogg', 70, 1)
 			detonator_part = null
 			update_controller_verbs()
 

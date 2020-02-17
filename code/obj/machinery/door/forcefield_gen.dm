@@ -7,29 +7,26 @@
 	opacity = 0
 	anchored = 1
 	layer = FLOOR_EQUIP_LAYER1
-	event_handler_flags = USE_FLUID_ENTER | USE_CANPASS
 	var/set_active = 1 		  //Did players (de)activate it?
 	var/active = 1	   		  //Actual current status.
 	var/overloaded = 0 		  //Did AI/Robots Overload it?
 
 	Topic(href, href_list)
-		if(..())
-			return
+		..()
 		if (href_list["close"])
-			usr.Browse(null, "window=forcefield")
+			usr << browse(null, "window=forcefield")
 			if (usr.machine == src) usr.machine = null
 			src.updateUsrDialog()
 			return
 
-		if(issilicon(usr))
-			if (href_list["shock_on"])
-				overloaded = 1
-				if(!overlays.len)
-					overlays += image('icons/obj/doors/forcefield.dmi',"overloaded")
+		if (href_list["shock_on"])
+			overloaded = 1
+			if(!overlays.len)
+				overlays += icon('icons/obj/doors/forcefield.dmi',"overloaded")
 
-			if (href_list["shock_off"])
-				overloaded = 0
-				overlays = null
+		if (href_list["shock_off"])
+			overloaded = 0
+			overlays = null
 
 		if (href_list["activate"])
 			set_active = 1
@@ -44,7 +41,7 @@
 		return
 
 	process()
-		if(status & NOPOWER || !active)
+		if(stat & NOPOWER || !active)
 			turn_off()
 			return
 
@@ -62,22 +59,22 @@
 				turn_on()
 			else
 				turn_off()
-			status &= ~NOPOWER
+			stat &= ~NOPOWER
 		else
 			turn_off()
-			status |= NOPOWER
+			stat |= NOPOWER
 		return
 
 	proc/turn_on()
 		active = 1
-		set_density(1)
+		density = 1
 		icon_state = "portal_on"
-		if(overloaded && !overlays.len) overlays += image('icons/obj/doors/forcefield.dmi',"overloaded")
+		if(overloaded && !overlays.len) overlays += icon('icons/obj/doors/forcefield.dmi',"overloaded")
 		return
 
 	proc/turn_off()
 		active = 0
-		set_density(0)
+		density = 0
 		icon_state = "portal_off"
 		if(overloaded) overlays = null
 		return
@@ -99,12 +96,12 @@
 			html += "<p>Can not change state - Forcefield is offline.</p><br><br>"
 
 		html += "<p><a href='?src=\ref[src];close=1'>Close</a></p>"
-		user.Browse(html, "window=forcefield")
+		user << browse(html, "window=forcefield")
 
 		return
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		playsound(src, "sound/impact_sounds/Energy_Hit_1.ogg", 40, 1)
+		playsound(src, "sound/effects/shieldhit2.ogg", 40, 1)
 		return
 
 	proc/shock(var/mob/A)
@@ -113,15 +110,15 @@
 			boutput(M, "<span style=\"color:red\">[A] was shocked by [src]!</span>")
 		boutput(A, "<span style=\"color:red\">[src] shocks you.</span>")
 		A.TakeDamage("All", 0, 75)
-		if(hasvar(A,"weakened")) A:changeStatus("weakened", 1 SECONDS)
+		if(hasvar(A,"weakened")) A:weakened += 10
 		var/dirmob = turn(A.dir,180)
 		var/location = get_turf(A)
 		var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 		s.set_up(3, 1, location)
 		s.start()
 		step(A,dirmob)
-		SPAWN_DBG(5) step(A,dirmob)
-		playsound(src, "sound/impact_sounds/Energy_Hit_1.ogg", 40, 1)
+		spawn(5) step(A,dirmob)
+		playsound(src, "sound/effects/shieldhit2.ogg", 40, 1)
 		return 0
 
 	attack_hand(mob/user as mob)
@@ -130,7 +127,7 @@
 			shock(user)
 			return
 
-		if(src.allowed(user))
+		if(src.allowed(user, req_only_one_required))
 			if(set_active)
 				set_active = 0
 				turn_off()
@@ -145,23 +142,22 @@
 
 	CanPass(atom/A, turf/T)
 		if (!active) return 1
-		if (isliving(A))
-			var/mob/living/M = A
+		if (istype(A, /mob/living))
 
-			if(isdead(M)) return 1
+			if(A:stat == 2) return 1
 
 			if(overloaded)
 				shock(A)
 				return
 
-			if(src.allowed(A))
+			if(src.allowed(A, req_only_one_required))
 				return 1
 			else
 				return 0
 		return 0
 
 	meteorhit(var/obj/O as obj)
-		playsound(src, "sound/impact_sounds/Energy_Hit_1.ogg", 40, 1)
+		playsound(src, "sound/effects/shieldhit2.ogg", 40, 1)
 		set_active = 0
 		turn_off()
 		return

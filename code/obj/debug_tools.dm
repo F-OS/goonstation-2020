@@ -26,7 +26,7 @@
 		if(!istype(par))
 			return
 
-		SPAWN_DBG(P.particle_lifespan)
+		spawn(P.particle_lifespan)
 			if (par)
 				par.alpha = 255
 				par.blend_mode = 0
@@ -111,11 +111,9 @@
 	desc = "this is an admin thing ok just ignore it"
 	icon = 'icons/obj/stationobjs.dmi'
 	icon_state = "holo_console1"
-	var/list/components = list("full_jumpsuit", "full_overalls", "full_jersey", "full_swimsuit", "full_clown",
-	"top_jacket", "top_jacket_heavy", "top_vest", "top_suit", "top_shirt", "top_sleeves", "top_zipper",
-	"bottom_pants",  "bottom_belt", "bottom_shorts", "bottom_clownpants",
-	"stripe_sides", "stripe_shoulder", "stripe_belt", "stripe_captain", "stripe_clown", "trim_feet", "trim_hands",
-	"clown_suspenders", "clownpants_polkadots", "decal_medic", "decal_tie")
+	var/list/components = list("jumpsuit", "overalls", "jacket", "jacket_heavy", "vest", "shirt", "sleeves", "pants",
+	"zipper", "belt", "stripe_sides", "stripe_shoulder", "stripe_belt", "stripe_captain", "trim_feet", "trim_hands",
+	"decal_medic")
 	var/list/current_pieces = list()
 	var/list/current_colors = list()
 	var/list/current_alphas = list()
@@ -134,7 +132,7 @@
 		dat += "<A href='?src=\ref[src];add=1'>Add New Element</A><BR>"
 		dat += "<A href='?src=\ref[src];wipe=1'>Erase All Elements</A><BR>"
 
-		user.Browse(dat, "window=jumpsuitmaker;size=575x450")
+		user << browse(dat, "window=jumpsuitmaker;size=575x450")
 		onclose(user, "jumpsuitmaker")
 		return
 
@@ -161,7 +159,6 @@
 			src.current_colors = list()
 			src.current_alphas = list()
 
-		src.attack_hand(usr)
 		src.updateUsrDialog()
 		return
 

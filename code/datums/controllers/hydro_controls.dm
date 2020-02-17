@@ -1,16 +1,9 @@
 var/datum/hydroponics_controller/hydro_controls
 
-//some things (mostly items places on the map) call procs on this datum before it exists, queue them instead
-var/global/list/hydro_controller_queue = list(
-	"species" = list(),
-	"mutation" = list(),
-	"strain" = list()
-)
-
 /datum/hydroponics_controller/
 	// global variable name is currently "hydro_controls"
 	var/max_harvest_cap = 10          // How many items can be harvested at once.
-	var/delay_between_harvests = 300  // How long between harvests, in spawn ticks.
+	var/delay_between_harvests = 300  // How long between harvests, in spawn() ticks.
 	var/list/plant_species = list()
 	var/list/mutations = list()
 	var/list/strains = list()
@@ -18,7 +11,6 @@ var/global/list/hydro_controller_queue = list(
 	var/image/pot_death_display = null
 	var/image/pot_health_display = null
 	var/image/pot_harvest_display = null
-
 
 	proc/set_up()
 		pot_death_display = image('icons/obj/hydroponics/hydroponics.dmi', "led-dead")
@@ -42,7 +34,7 @@ var/global/list/hydro_controller_queue = list(
 				continue
 			src.plant_species += new A(src)
 
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/datum/plant/P in src.plant_species)
 				for (var/X in P.mutations)
 					if (ispath(X))
@@ -54,63 +46,9 @@ var/global/list/hydro_controller_queue = list(
 						P.commuts += HY_get_strain_from_path(X)
 						P.commuts -= X
 
-			src.process_queue()
-
-
-	//clear any entries in queue
-	proc/process_queue()
-		//clear species lookups
-		for (var/key in hydro_controller_queue["species"])
-			var/list/entry = hydro_controller_queue["species"][key]
-			var/species_path = entry["path"]
-			var/obj/item/thing = entry["thing"]
-			var/datum/plant/species
-
-			for (var/datum/plant/P in src.plant_species)
-				if (species_path == P.type)
-					species = P
-					break
-
-			thing.HY_set_species(species)
-			hydro_controller_queue["species"] -= key
-
-		//clear mutation lookups
-		for (var/key in hydro_controller_queue["mutation"])
-			var/list/entry = hydro_controller_queue["mutation"][key]
-			var/mutation_path = entry["path"]
-			var/obj/item/thing = entry["thing"]
-			var/datum/plantmutation/mutation
-
-			for (var/datum/plantmutation/M in src.mutations)
-				if (mutation_path == M.type)
-					mutation = M
-					break
-
-			thing.HY_set_mutation(mutation)
-			hydro_controller_queue["mutation"] -= key
-
-		//clear strain lookups
-		for (var/key in hydro_controller_queue["strain"])
-			var/list/entry = hydro_controller_queue["strain"][key]
-			var/strain_path = entry["path"]
-			var/obj/item/thing = entry["thing"]
-			var/datum/plant_gene_strain/strain
-
-			for (var/datum/plant_gene_strain/S in src.strains)
-				if (strain_path == S.type)
-					strain = S
-					break
-
-			thing.HY_set_strain(strain)
-			hydro_controller_queue["strain"] -= key						
-
-
-/proc/HY_get_species_from_path(var/species_path, var/obj/item/thing)
+/proc/HY_get_species_from_path(var/species_path)
 	if (!hydro_controls)
-		if (thing)
-			hydro_controller_queue["species"]["[length(hydro_controller_queue["species"])]"] = list("path" = species_path, "thing" = thing)
-		else
-			logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find species before controller setup")
+		logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find species before controller setup")
 		return null
 	if (!species_path)
 		logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find species with null path in controller")
@@ -124,12 +62,9 @@ var/global/list/hydro_controller_queue = list(
 	logTheThing("debug", null, null, "<b>Hydro Controller:</b> Species \"[species_path]\" not found")
 	return null
 
-/proc/HY_get_mutation_from_path(var/mutation_path, var/obj/item/thing)
+/proc/HY_get_mutation_from_path(var/mutation_path)
 	if (!hydro_controls)
-		if (thing)
-			hydro_controller_queue["mutation"]["[length(hydro_controller_queue["mutation"])]"] = list("path" = mutation_path, "thing" = thing)
-		else	
-			logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find mutation before controller setup")
+		logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find mutation before controller setup")
 		return null
 	if (!mutation_path)
 		logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find mutation with null path in controller")
@@ -143,12 +78,9 @@ var/global/list/hydro_controller_queue = list(
 	logTheThing("debug", null, null, "<b>Hydro Controller:</b> Mutation \"[mutation_path]\" not found")
 	return null
 
-/proc/HY_get_strain_from_path(var/strain_path, var/obj/item/thing)
+/proc/HY_get_strain_from_path(var/strain_path)
 	if (!hydro_controls)
-		if (thing)
-			hydro_controller_queue["strain"]["[length(hydro_controller_queue["strain"])]"] = list("path" = strain_path, "thing" = thing)
-		else	
-			logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find strain before controller setup")
+		logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find strain before controller setup")
 		return null
 	if (!strain_path)
 		logTheThing("debug", null, null, "<b>Hydro Controller:</b> Attempt to find strain with null path in controller")

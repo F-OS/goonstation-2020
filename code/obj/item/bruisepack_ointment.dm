@@ -85,9 +85,9 @@
 				if (H.organs[t])
 					affecting = H.organs[t]
 			else
-				if (!isitem(affecting) || affecting:burn_dam <= 0)
+				if (!istype(affecting, /obj/item) || affecting:burn_dam <= 0)
 					affecting = H.organs["head"]
-					if (!isitem(affecting) || affecting:burn_dam <= 0)
+					if (!istype(affecting, /obj/item) || affecting:burn_dam <= 0)
 						affecting = H.organs["chest"]
 
 			if (affecting.heal_damage(src.heal_brute, src.heal_burn))

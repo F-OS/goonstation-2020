@@ -17,7 +17,6 @@
 	stamina_damage = 5
 	stamina_cost = 5
 	stamina_crit_chance = 5
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	armed
 		icon_state = "mousetraparmed"
@@ -161,7 +160,7 @@
 
 			logTheThing("bombing", user, null, "rigs [src] with [src.arm] and [C] at [log_loc(user)].")
 
-		else if (iswrenchingtool(C))
+		else if (istype(C, /obj/item/wrench))
 			if (src.grenade)
 				user.show_text("You detach [src.grenade].", "blue")
 				src.grenade.set_loc(get_turf(src))
@@ -201,15 +200,9 @@
 				H.visible_message("<span style=\"color:red\"><B>[H] accidentally steps on the mousetrap.</B></span>",\
 				"<span style=\"color:red\"><B>You accidentally step on the mousetrap!</B></span>")
 
-		else if ((iscritter(AM)) && (src.armed))
-			var/mob/living/critter/C = AM
-			src.triggered(C)
-			C.visible_message("<span style=\"color:red\"><B>[C] accidentally triggers the mousetrap.</B></span>",\
-				"<span style=\"color:red\"><B>You accidentally trigger the mousetrap!</B></span>")
-
 		else if (istype(AM, /obj/critter/mouse) && (src.armed))
 			var/obj/critter/mouse/M = AM
-			playsound(src.loc, "sound/impact_sounds/Generic_Snap_1.ogg", 50, 1)
+			playsound(src.loc, "sound/effects/snap.ogg", 50, 1)
 			icon_state = "mousetrap"
 			src.armed = 0
 			src.visible_message("<span style=\"color:red\"><b>[M] is caught in the trap!</b></span>")
@@ -235,22 +228,18 @@
 				if ("feet")
 					if (!H.shoes)
 						affecting = H.organs[pick("l_leg", "r_leg")]
-						H.changeStatus("weakened", 3 SECONDS)
+						H.weakened = max(3, H.weakened)
 				if ("l_arm", "r_arm")
 					if (!H.gloves)
 						affecting = H.organs[type]
-						H.changeStatus("stunned", 3 SECONDS)
+						H.stunned = max(3, H.stunned)
 			if (affecting)
 				affecting.take_damage(1, 0)
 				H.UpdateDamageIcon()
 				H.updatehealth()
 
-		else if (iscritter(target))
-			var/mob/living/critter/C = target
-			C.TakeDamage("All", 1)
-
 		if (target)
-			playsound(target.loc, "sound/impact_sounds/Generic_Snap_1.ogg", 50, 1)
+			playsound(target.loc, "sound/effects/snap.ogg", 50, 1)
 		src.icon_state = "mousetrap"
 		src.armed = 0
 
@@ -332,7 +321,7 @@
 		return
 
 	attackby(obj/item/C as obj, mob/user as mob)
-		if (iswrenchingtool(C))
+		if (istype(C, /obj/item/wrench))
 			if (!isturf(src.loc))
 				user.show_text("Place the [src.name] on the ground first.", "red")
 				return
@@ -374,7 +363,7 @@
 		src.armed = 1
 		if (src.mousetrap)
 			src.mousetrap.armed = 1 // Must be armed or it won't work in mousetrap.triggered().
-		src.set_density(1)
+		src.density = 1
 		user.u_equip(src)
 
 		src.layer = initial(src.layer)

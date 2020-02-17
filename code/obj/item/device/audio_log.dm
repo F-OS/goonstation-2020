@@ -73,7 +73,6 @@
 	name = "Audio log"
 	desc = "A fairly spartan recording device."
 	icon_state = "recorder"
-	uses_multiple_icon_states = 1
 	item_state = "electronic"
 	w_class = 2.0
 	var/obj/item/audio_tape/tape = null
@@ -186,10 +185,10 @@
 			dat += "<td><a href='byond://?src=\ref[src];command=clear'>Clear Log</a></td>"
 			dat += "<td><a href='byond://?src=\ref[src];command=continuous_mode'>[continuous ? "Looping" : "No Loop"]</a></td></table></tt>"
 
-			user.Browse(dat, "window=audiolog;size=400x140")
+			user << browse(dat, "window=audiolog;size=400x140")
 			onclose(user, "audiolog")
 		else
-			user.Browse(null, "window=audiolog")
+			user << browse(null, "window=audiolog")
 			user.machine = null
 
 		return
@@ -214,7 +213,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(10)
+		spawn(10)
 			if (!src.tape)
 				src.tape = new /obj/item/audio_tape(src)
 			if (src.audiolog_messages && src.audiolog_messages.len)
@@ -260,7 +259,6 @@
 					src.icon_state = "[initial(src.icon_state)]-empty"
 
 					src.tape.set_loc(get_turf(src))
-					usr.put_in_hand_or_eject(src.tape) // try to eject it into the users hand, if we can
 
 					src.tape.log_line = 1
 					src.tape = null
@@ -268,7 +266,7 @@
 			src.add_fingerprint(usr)
 			src.updateSelfDialog()
 		else
-			usr.Browse(null, "window=audiolog")
+			usr << browse(null, "window=audiolog")
 			return
 		return
 
@@ -304,7 +302,7 @@
 			processing_items.Remove(src)
 			src.updateSelfDialog()
 			if(src.self_destruct)
-				SPAWN_DBG(20)
+				spawn(20)
 					src.explode()
 			return
 
@@ -314,7 +312,7 @@
 			processing_items.Remove(src)
 			src.updateSelfDialog()
 			if(src.self_destruct)
-				SPAWN_DBG(20)
+				spawn(20)
 					src.explode()
 			return
 		var/separator = findtext(speak_message,"|")
@@ -323,7 +321,7 @@
 			processing_items.Remove(src)
 			src.updateSelfDialog()
 			if(src.self_destruct)
-				SPAWN_DBG(20)
+				spawn(20)
 					src.explode()
 			return
 
@@ -364,83 +362,3 @@
 
 			qdel(src)
 			return
-
-// ########################
-// # z5 prefab audio logs #
-// ########################
-
-// sleepership.dmm
-// Lore Notez: some kinda lost colonyship
-
-/obj/item/device/audio_log/radioship/small/sleepership
-		continuous = 0
-		audiolog_messages = list("*buzzing static*",
-								"Maintenance log, uh, number 43.",
-								"Still having issues with the mainframe.",
-								"Damned thing blinked off as soon as it woke me this time.",
-								"*clanging metal*",
-								"Honestly, uh, I've not got much left to work with here.",
-								"If another one of these boards blows, I'm not gonna have anything to replace it with.",
-								"God knows what'll happen to us then. Here's hoping we last the rest of the trip.",
-								"*loud mechanical click*")
-		audiolog_speakers = list("???",
-								"Male Voice",
-								"Male Voice",
-								"Male Voice",
-								"???",
-								"Male Voice",
-								"Male Voice",
-								"Male Voice",
-								"???*")
-
-/obj/item/device/audio_log/radioship/large/sleepership
-		continuous = 0
-		audiolog_messages = list("*harsh beep*",
-								"This is an automated computer recording.",
-								"Log #261 - NCS #### - En-route to *loud hissing tone* colony.",
-								"System r-r-resources nearing de- ple- tionnnn.",
-								"*falling beeps*",
-								"Re-routing remaaaaaainiiiiiing power to top-deck cyro-sleepers.",
-								"*humming electronics*",
-								"Autopilot disengaged.",
-								"Delopying emergency beacon.",
-								"Central c-c-cOmpUtEr shut- d-dow-ow-ow-ownnnnn in 5,",
-								"4,",
-								"3-",
-								"*crackling and popping*")
-		audiolog_speakers = list("???",
-								"Electronic Voice",
-								"Electronic Voice",
-								"Stuttering Electronic Voice",
-								"???",
-								"Warbly Electronic Voice",
-								"???",
-								"Electronic Voice",
-								"Electronic Voice",
-								"Faltering Electronic Voice",
-								"Electronic Voice",
-								"Electronic Voice",
-								"???")
-
-// ########################
-// # Horizon  audio  logs #
-// ########################
-
-/obj/item/device/audio_log/horizon_minorcollision
-	continuous = 0
-	audiolog_messages = list("Course stady, bearing One One Zero Mark Two,",
-							"Firing thrusters.",
-							"Steady hot stuff. Keep your eyes on the grav- wait a second.",
-							"Uh, Captain- I- I don't-",
-							"Shuttlecraft One to NSS Horizon abort maneuver! ABORT MANEUVER WE ARE NOT CLEA-",
-							"*Thunderous scraping, metallic sound*",
-							"Negative, Captain. Engines offline, there's some kind of well between *click*",
-							"What. the fuck is that. *Creaking, static*")
-	audiolog_speakers = list("Female voice",
-							"Juvenile voice",
-							"Female voice",
-							"Juvenile voice",
-							"Female voice",
-							"???",
-							"NSS Horizon",
-							"???")

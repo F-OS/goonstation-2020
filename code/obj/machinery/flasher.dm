@@ -171,7 +171,6 @@
 	anchored = 0
 	base_state = "pflash"
 	density = 1
-	event_handler_flags = USE_PROXIMITY | USE_FLUID_ENTER
 
 /obj/machinery/flasher/New()
 	..()
@@ -182,16 +181,17 @@
 
 /obj/machinery/flasher/power_change()
 	if ( powered() )
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 		icon_state = "[base_state]1"
+		light.enable()
 	else
-		status |= ~NOPOWER
+		stat |= ~NOPOWER
 		icon_state = "[base_state]1-p"
 		light.disable()
 
 //Don't want to render prison breaks impossible
 /obj/machinery/flasher/attackby(obj/item/W as obj, mob/user as mob)
-	if (issnippingtool(W))
+	if (istype(W, /obj/item/wirecutters))
 		add_fingerprint(user)
 		src.disable = !src.disable
 		if (src.disable)
@@ -222,7 +222,7 @@
 		if (istype(O, /obj/overlay/tile_effect) || istype(O, /obj/machinery/camera))
 			continue
 		if (O.layer > layer)
-			SPAWN_DBG(0)
+			spawn(0)
 				O.overlays += image('icons/effects/fire.dmi', "2old")
 				sleep(10)
 				if (O)
@@ -248,17 +248,14 @@
 			src.flash()
 
 /obj/machinery/flasher/portable/attackby(obj/item/W as obj, mob/user as mob)
-	if (iswrenchingtool(W))
+	if (istype(W, /obj/item/wrench))
 		add_fingerprint(user)
 		src.anchored = !src.anchored
 
 		if (!src.anchored)
-			light.disable()
 			user.show_message(text("<span style=\"color:red\">[src] can now be moved.</span>"))
 			src.overlays = null
 
 		else if (src.anchored)
-			if ( powered() )
-				light.enable()
 			user.show_message(text("<span style=\"color:red\">[src] is now secured.</span>"))
 			src.overlays += "[base_state]-s"

@@ -1,7 +1,7 @@
 /obj/npc
 	name = "NPC"
 	icon = 'icons/misc/critter.dmi'
-	var/status = 0
+	var/stat = 0
 	var/mob/current_user = null
 	anchored = 1
 	density = 1
@@ -29,7 +29,7 @@
 	for(var/mob/M in AIviewers(src))
 		boutput(M, "<span style=\"color:red\"><B>[src.name]</B> becomes angry!</span>")
 	src.desc = "[src] looks angry"
-	SPAWN_DBG(rand(1000,3000))
+	spawn(rand(1000,3000))
 		src.visible_message("<b>[src.name] calms down.</b>")
 		src.desc = "[src] looks a bit annoyed."
 		src.angry = 0
@@ -38,30 +38,30 @@
 //What did you think traders wouldn't have protection?
 /obj/npc/proc/activatesecurity()
 	return
-// New() and disposing() add and remove machines from the global "machines" list
+// New() and Del() add and remove machines from the global "machines" list
 // This list is used to call the process() proc for all machines ~1 per second during a round
 
 /obj/npc/proc/gib(atom/location)
 	var/obj/decal/cleanable/blood/gibs/gib = null
 
 	// NORTH
-	gib = make_cleanable( /obj/decal/cleanable/blood/gibs,location)
+	gib = new /obj/decal/cleanable/blood/gibs(location)
 	if (prob(30))
 		gib.icon_state = "gibup1"
 	gib.streak(list(NORTH, NORTHEAST, NORTHWEST))
 
 	// SOUTH
-	gib = make_cleanable( /obj/decal/cleanable/blood/gibs,location)
+	gib = new /obj/decal/cleanable/blood/gibs(location)
 	if (prob(30))
 		gib.icon_state = "gibdown1"
 	gib.streak(list(SOUTH, SOUTHEAST, SOUTHWEST))
 
 	// WEST
-	gib = make_cleanable( /obj/decal/cleanable/blood/gibs,location)
+	gib = new /obj/decal/cleanable/blood/gibs(location)
 	gib.streak(list(WEST, NORTHWEST, SOUTHWEST))
 
 	// EAST
-	gib = make_cleanable( /obj/decal/cleanable/blood/gibs,location)
+	gib = new /obj/decal/cleanable/blood/gibs(location)
 	gib.streak(list(EAST, NORTHEAST, SOUTHEAST))
 
 /obj/npc/ex_act(severity)
@@ -94,22 +94,22 @@
 		activatesecurity()
 		src.anger()
 
-	if(src.material) src.material.triggerOnBullet(src, src, P)
+	if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+	for(var/atom/A in src)
+		if(A.material)
+			A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
-	if(P.proj_data)
-		switch(P.proj_data.damage_type)
-			if(D_KINETIC,D_PIERCING,D_SLASHING)
-				src.health -= damage
-			if(D_ENERGY)
-				src.health -= damage
-			if(D_BURNING)
-				src.health -= damage
-			if(D_RADIOACTIVE)
-				src.health -= 1
-			if(D_TOXIC)
-				src.health -= 1
-	else
-		src.health -= damage
+	switch(P.proj_data.damage_type)
+		if(D_KINETIC,D_PIERCING,D_SLASHING)
+			src.health -= damage
+		if(D_ENERGY)
+			src.health -= damage
+		if(D_BURNING)
+			src.health -= damage
+		if(D_RADIOACTIVE)
+			src.health -= 1
+		if(D_TOXIC)
+			src.health -= 1
 
 	if(health <=0)
 		src.death()

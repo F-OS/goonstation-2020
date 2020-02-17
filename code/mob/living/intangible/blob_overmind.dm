@@ -1,3 +1,5 @@
+#define eulers 2.7182818284
+
 /mob/living/intangible/blob_overmind
 	name = "Blob Overmind"
 	real_name = "Blob Overmind"
@@ -9,14 +11,12 @@
 	canmove = 1
 	blinded = 0
 	anchored = 1
-	mob_flags = SPEECH_BLOB
-
 	var/datum/tutorial/blob/tutorial
 	var/attack_power = 1
 	var/bio_points = 0
 	var/bio_points_max = 1
 	var/bio_points_max_bonus = 5
-	var/base_gen_rate = 3
+	var/base_gen_rate = 1
 	var/gen_rate_bonus = 0
 	var/gen_rate_used = 0
 	var/evo_points = 0
@@ -46,18 +46,6 @@
 	var/datum/material/my_material = null
 	var/datum/material/initial_material = null
 
-	var/organ_color = "#ffffff"
-	var/obj/item/clothing/head/hat = null
-
-	var/debuff_timestamp = 0
-	var/debuff_duration = 1200 //deciseconds. 1200 = 2 minutes
-
-	//give blobs who get rekt soon after starting another chance
-	var/current_try = 1
-	var/extra_tries_max = 2
-	var/extra_try_period = 3000 //3000 = 5 minutes
-	var/extra_try_timestamp = 0
-
 	proc/start_tutorial()
 		if (tutorial)
 			return
@@ -65,7 +53,7 @@
 		if (tutorial.tutorial_area)
 			tutorial.Start()
 		else
-			boutput(src, "<span style=\"color:red\">Could not start tutorial! Please try again later or call Wire.</span>")
+			boutput(src, "<span style=\"color:red\">Could not start tutorial! Please try again later or call Marquesas.</span>")
 			tutorial = null
 			return
 
@@ -79,13 +67,9 @@
 		src.sight |= SEE_TURFS | SEE_MOBS | SEE_OBJS | SEE_SELF
 		src.see_invisible = 15
 		src.see_in_dark = SEE_DARK_FULL
-		my_material = copyMaterial(getMaterial("blob"))
+		my_material = getCachedMaterial("blob")
 		my_material.color = "#ffffff"
-		initial_material = copyMaterial(getMaterial("blob"))
-
-		//set start grace-period timestamp
-		var/extraGrace = rand(600, 1800) //add between 1 min and 3 mins extra
-		src.extra_try_timestamp = world.timeofday + extra_try_period + extraGrace
+		initial_material = getCachedMaterial("blob")
 
 	Move(NewLoc)
 		if (tutorial)
@@ -107,11 +91,6 @@
 		if (src.client)
 			src.antagonist_overlay_refresh(0, 0)
 
-		//time to un-apply the nucleus-destroyed debuff
-		if (src.debuff_timestamp && world.timeofday >= src.debuff_timestamp)
-			src.debuff_timestamp = 0
-			out(src, "<span style=\"color:red\"><b>You can feel your former power returning!</b></span>")
-
 		if (blobs.len > 0)
 			/**
 			 * at 2175 blobs, blob points max will reach about 350. It will begin decreasing sharply after that
@@ -119,30 +98,14 @@
 			 * fighting it back because it will run out of points.
 			 */
 			src.bio_points_max = BlobPointsBezierApproximation(round(blobs.len / 5)) + bio_points_max_bonus
-
-		var/newBioPoints
-
-		//debuff active
-		if (src.debuff_timestamp)
-			var/genBonus = gen_rate_bonus
-			if (genBonus > 0)
-				genBonus = round(genBonus / 2)
-
-			//maybe other debuffs here in the future
-
-			newBioPoints = max(0,min(src.bio_points + (base_gen_rate + genBonus - gen_rate_used),src.bio_points_max))
-
-		else
-			newBioPoints = max(0,min(src.bio_points + (base_gen_rate + gen_rate_bonus - gen_rate_used),src.bio_points_max))
-
-		src.bio_points = newBioPoints
+		src.bio_points = max(0,min(src.bio_points + (base_gen_rate + gen_rate_bonus - gen_rate_used),src.bio_points_max))
 
 		if (tutorial)
 			if (!tutorial.PerformSilentAction("life", null))
 				return
 
 		if (starter_buff == 1)
-			if (blobs.len >= 25)
+			if (blobs.len >= 40)
 				boutput(src, "<span style=\"color:red\"><b>You no longer have the starter assistance.</b></span>")
 				starter_buff = 0
 
@@ -157,42 +120,17 @@
 			boutput(src, "<span style=\"color:blue\"><b>You have expanded enough to earn one extra nucleus! You will be granted another at size [next_extra_nucleus]. Good luck!</b></span>")
 
 	death()
-		//death was called but the player isnt playing this blob anymore
-		//OR they're in the process of transforming (e.g. gibbing)
-		if ((src.client && src.client.mob != src) || src.transforming)
-			return
-
-		//if within grace period, respawn
-		if (src.current_try < src.extra_tries_max && world.timeofday <= src.extra_try_timestamp)
-			src.extra_try_timestamp = 0
-			src.current_try++
-			src.reset()
-			out(src, "<span style=\"color:blue\"><b>In a desperate act of self preservation you avoid your untimely death by concentrating what energy you had left! You feel ready for round [src.current_try]!</b></span>")
-
-		//no grace, go die scrub
-		else
-			src.remove_all_abilities()
-			src.remove_all_upgrades()
-
-			boutput(src, "<span style=\"color:red\"><b>With no nuclei to bind it to your biomass, your consciousness slips away into nothingness...</b></span>")
-			src.ghostize()
-			SPAWN_DBG(0)
-				qdel(src)
+		boutput(src, "<span style=\"color:red\"><b>With no nuclei to bind it to your biomass, your consciousness slips away into nothingness...</b></span>")
+		src.ghostize()
+		spawn(0)
+			qdel(src)
 
 	Stat()
 		..()
 		stat(null, " ")
 		stat("--Blob--", " ")
 		stat("Bio Points:", "[bio_points]/[bio_points_max]")
-
-		//debuff active
-		if (src.debuff_timestamp && gen_rate_bonus > 0)
-			var/genBonus = round(gen_rate_bonus / 2)
-			stat("Generation Rate:", "[base_gen_rate + genBonus - gen_rate_used]/[base_gen_rate + gen_rate_bonus] BP <span style='color: red;'>(WEAKENED)</span>")
-
-		else
-			stat("Generation Rate:", "[base_gen_rate + gen_rate_bonus - gen_rate_used]/[base_gen_rate + gen_rate_bonus] BP")
-
+		stat("Generation Rate:", "[base_gen_rate + gen_rate_bonus - gen_rate_used]/[base_gen_rate + gen_rate_bonus] BP")
 		stat("Blob Size:", blobs.len)
 		stat("Evo Points:", evo_points)
 		stat("Next Evo Point at size:", next_evo_point)
@@ -204,8 +142,6 @@
 		..()
 		src.update_buttons()
 		client.show_popup_menus = 0
-		var/atom/plane = client.get_plane(PLANE_LIGHTING)
-		plane.alpha = 200
 
 	Logout()
 		..()
@@ -214,10 +150,6 @@
 				if (src.last_client.buildmode.is_active)
 					return
 			src.last_client.show_popup_menus = 1
-
-			var/atom/plane = last_client.get_plane(PLANE_LIGHTING)
-			if (plane)
-				plane.alpha = 255
 
 	MouseDrop()
 		return
@@ -230,12 +162,6 @@
 
 	is_spacefaring()
 		return 1
-
-	movement_delay()
-		if (src.client && src.client.check_key(KEY_RUN))
-			return 0.4 + movement_delay_modifier
-		else
-			return 0.75 + movement_delay_modifier
 
 	click(atom/target, params)
 		if (istype(target,/obj/screen/blob/))
@@ -260,14 +186,14 @@
 			src.update_buttons()
 			return
 		else
-			if (T && (!isghostrestrictedz(T.z) || (isghostrestrictedz(T.z) && restricted_z_allowed(src, T)) || src.tutorial || (src.client && src.client.holder)))
+			if (T && (!isrestrictedz(T.z) || (isrestrictedz(T.z) && restricted_z_allowed(src, T)) || src.tutorial || (src.client && src.client.holder)))
 				if (src.tutorial)
 					if (!tutorial.PerformAction("clickmove", T))
 						return
 				src.set_loc(T)
 				return
 
-			if (T && isghostrestrictedz(T.z) && !restricted_z_allowed(src, T) && !(src.client && src.client.holder))
+			if (isrestrictedz(T.z) && !restricted_z_allowed(src, T) && !(src.client && src.client.holder))
 				var/OS = observer_start.len ? pick(observer_start) : locate(1, 1, 1)
 				if (OS)
 					src.set_loc(OS)
@@ -283,45 +209,6 @@
 	say_quote(var/text)
 		var/speechverb = pick("wobbles", "wibbles", "jiggles", "wiggles", "undulates", "fidgets", "joggles", "twitches", "waggles", "trembles", "quivers")
 		return "[speechverb], \"[text]\""
-
-	//reset the blob to starting state
-	proc/reset()
-		src.attack_power = initial(src.attack_power)
-		src.bio_points = 0
-		src.bio_points_max = initial(src.bio_points_max)
-		src.bio_points_max_bonus = initial(src.bio_points_max_bonus)
-		src.base_gen_rate = initial(src.base_gen_rate)
-		src.gen_rate_bonus = 0
-		src.gen_rate_used = 0
-		src.evo_points = 0
-		src.next_evo_point = initial(src.next_evo_point)
-		src.spread_upgrade = 0
-		src.spread_mitigation = 0
-		src.viewing_upgrades = 1
-		src.help_mode = 0
-		src.blobs = new()
-		src.started = 0
-		src.starter_buff = 1
-		src.extra_nuclei = 0
-		src.next_extra_nucleus = initial(src.next_extra_nucleus)
-		src.multi_spread = 0
-		src.upgrading = 0
-		src.upgrade_id = 1
-		src.lipids = new()
-		src.nuclei = new()
-		src.my_material = copyMaterial(getMaterial("blob"))
-		src.my_material.color = "#ffffff"
-		src.initial_material = copyMaterial(getMaterial("blob"))
-		src.organ_color = initial(src.organ_color)
-		src.debuff_timestamp = 0
-
-		src.remove_all_abilities()
-		src.remove_all_upgrades()
-
-		src.add_ability(/datum/blob_ability/plant_nucleus)
-		src.add_ability(/datum/blob_ability/set_color)
-		src.add_ability(/datum/blob_ability/tutorial)
-		src.add_ability(/datum/blob_ability/help)
 
 	proc/get_gen_rate()
 		return base_gen_rate + gen_rate_bonus - gen_rate_used
@@ -350,15 +237,6 @@
 		src.available_upgrades += A
 		src.update_buttons()
 
-	proc/remove_all_upgrades()
-		for (var/datum/blob_upgrade/U in src.upgrades)
-			src.upgrades -= U
-			qdel(U)
-
-		for (var/datum/blob_upgrade/U in src.available_upgrades)
-			src.available_upgrades -= U
-			qdel(U)
-
 	proc/remove_ability(var/ability_type)
 		if (!ispath(ability_type))
 			return
@@ -373,18 +251,6 @@
 					src.shift_power = null
 				qdel(A)
 				return
-		src.update_buttons()
-
-	proc/remove_all_abilities()
-		for (var/datum/blob_ability/A in src.abilities)
-			src.abilities -= A
-			if (A == src.alt_power)
-				src.alt_power = null
-			if (A == src.ctrl_power)
-				src.ctrl_power = null
-			if (A == src.shift_power)
-				src.shift_power = null
-			qdel(A)
 		src.update_buttons()
 
 	proc/get_ability(var/ability_type)
@@ -511,24 +377,7 @@
 	projCanHit(datum/projectile/P)
 		return 0
 
-	proc/setHat( var/obj/item/clothing/head/hat )
-		hat.pixel_y = 10
-		//hat.pixel_x = -3
-		hat.appearance_flags |= (RESET_ALPHA)
-		for( var/obj/blob/b in nuclei )
-			if(src.hat)
-				b.overlays -= src.hat
-			b.overlays += hat
-		if( src.hat )
-			overlays -= src.hat
-			qdel(src.hat)
-		overlays += hat
-		src.hat = hat
-		hat.set_loc(src)
-
-
 /obj/screen/blob
-	plane = PLANE_HUD
 	var/datum/blob_ability/ability = null
 	var/datum/blob_upgrade/upgrade = null
 	var/image/ctrl_highlight = null
@@ -548,7 +397,7 @@
 		darkener = I
 
 	MouseDrop_T(atom/movable/O as mob|obj, mob/user as mob)
-		if (!istype(O,/obj/screen/blob/) || !isblob(user))
+		if (!istype(O,/obj/screen/blob/) || !istype(user,/mob/living/intangible/blob_overmind))
 			return
 		var/obj/screen/blob/source = O
 		if (!istype(src.ability) || !istype(source.ability))
@@ -563,7 +412,7 @@
 
 	//Click(location,control,params)
 	clicked(parameters)
-		if (!isblob(usr))
+		if (!istype(usr,/mob/living/intangible/blob_overmind))
 			return
 
 		var/mob/living/intangible/blob_overmind/user = usr
@@ -584,7 +433,7 @@
 					return
 				var/my_upgrade_id = user.upgrade_id
 				user.upgrading = my_upgrade_id
-				SPAWN_DBG (20)
+				spawn (20)
 					if (user.upgrading <= my_upgrade_id)
 						user.upgrading = 0
 					else
@@ -663,24 +512,10 @@
 
 	//WIRE TOOLTIPS
 	MouseEntered(location, control, params)
-		if (usr.client.tooltipHolder)
-			var/cost = null
-			if (ability)
-				cost = "<BR>Cost: [ability.bio_point_cost] BP<BR>Cooldown: [ability.cooldown_time / 10] s"
-			else if (upgrade)
-				cost = "<BR>Cost: [upgrade.evo_point_cost] EP"
-
-
-			usr.client.tooltipHolder.showHover(src, list(
-				"params" = params,
-				"title" = "[src.name][cost]",
-				"content" = src.desc ,
-				"theme" = "blob"
-			))
+		usr.client.tooltip.show(src, params, title = src.name, content = (src.desc ? src.desc : null), theme = "blob")
 
 	MouseExited()
-		if (usr.client.tooltipHolder)
-			usr.client.tooltipHolder.hideHover()
+		usr.client.tooltip.hide()
 
 /mob/proc/make_blob()
 	if (!src.client && !src.mind)
@@ -688,14 +523,14 @@
 	var/mob/living/intangible/blob_overmind/W = new/mob/living/intangible/blob_overmind(src)
 
 	var/turf/T = get_turf(src)
-	if (!(T && isturf(T)) || (isghostrestrictedz(T.z) && !(src.client && src.client.holder)))
+	if (!(T && isturf(T)) || (isrestrictedz(T.z) && !(src.client && src.client.holder)))
 		var/ASLoc = observer_start.len ? pick(observer_start) : locate(1, 1, 1)
 		if (ASLoc)
 			W.set_loc(ASLoc)
 		else
 			W.z = 1
 	else
-		W.set_loc(pick(latejoin))
+		W.set_loc(T)
 
 	if (src.mind)
 		src.mind.transfer_to(W)

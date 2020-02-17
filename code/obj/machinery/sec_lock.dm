@@ -8,7 +8,7 @@
 
 	if (src.loc == user.loc)
 		var/dat = text("<B>Security Pad:</B><BR><br>Keycard: []<BR><br><A href='?src=\ref[];door1=1'>Toggle Outer Door</A><BR><br><A href='?src=\ref[];door2=1'>Toggle Inner Door</A><BR><br><BR><br><A href='?src=\ref[];em_cl=1'>Emergency Close</A><BR><br><A href='?src=\ref[];em_op=1'>Emergency Open</A><BR>", (src.scan ? text("<A href='?src=\ref[];card=1'>[]</A>", src, src.scan.name) : text("<A href='?src=\ref[];card=1'>-----</A>", src)), src, src, src, src)
-		user.Browse(dat, "window=sec_lock")
+		user << browse(dat, "window=sec_lock")
 		onclose(user, "sec_lock")
 	return
 
@@ -17,7 +17,7 @@
 
 /obj/machinery/sec_lock/New()
 	..()
-	SPAWN_DBG( 2 )
+	spawn( 2 )
 		if (src.a_type == 1)
 			src.d2 = locate(/obj/machinery/door, locate(src.x - 2, src.y - 1, src.z))
 			src.d1 = locate(/obj/machinery/door, get_step(src, SOUTHWEST))
@@ -37,7 +37,7 @@
 	if ((!( src.d1 ) || !( src.d2 )))
 		boutput(usr, "<span style=\"color:red\">Error: Cannot interface with door security!</span>")
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf)) || (issilicon(usr))))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon))))
 		usr.machine = src
 		if (href_list["card"])
 			if (src.scan)
@@ -53,22 +53,22 @@
 			if (src.scan)
 				if (src.check_access(src.scan))
 					if (src.d1.density)
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d1.open()
 							return
 					else
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d1.close()
 							return
 		if (href_list["door2"])
 			if (src.scan)
 				if (src.check_access(src.scan))
 					if (src.d2.density)
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d2.open()
 							return
 					else
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d2.close()
 							return
 		if (href_list["em_cl"])
@@ -78,19 +78,19 @@
 						src.d1.close()
 						return
 					sleep(1)
-					SPAWN_DBG( 0 )
+					spawn( 0 )
 						if (!( src.d2.density ))
 							src.d2.close()
 						return
 		if (href_list["em_op"])
 			if (src.scan)
 				if (src.check_access(src.scan))
-					SPAWN_DBG( 0 )
+					spawn( 0 )
 						if (src.d1.density)
 							src.d1.open()
 						return
 					sleep(1)
-					SPAWN_DBG( 0 )
+					spawn( 0 )
 						if (src.d2.density)
 							src.d2.open()
 						return

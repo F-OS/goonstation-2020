@@ -12,8 +12,7 @@
 	react_xray = list(13,60,80,6,"COMPLEX")
 	touch_descriptors = list("You seem to have a little difficulty taking your hand off its surface.")
 	var/converting = 0
-	var/list/work_sounds = list('sound/impact_sounds/Flesh_Stab_1.ogg','sound/impact_sounds/Metal_Clang_1.ogg','sound/effects/airbridge_dpl.ogg','sound/impact_sounds/Slimy_Splat_1.ogg','sound/impact_sounds/Flesh_Tear_2.ogg','sound/impact_sounds/Slimy_Hit_3.ogg')
-	examine_hint = "It looks vaguely foreboding."
+	var/list/work_sounds = list('sound/effects/bloody_stab.ogg','sound/effects/clang.ogg','sound/effects/airbridge_dpl.ogg','sound/effects/splat.ogg','sound/misc/loudcrunch2.ogg','sound/effects/attackblob.ogg')
 
 	effect_touch(var/obj/O,var/mob/living/user)
 		if (..())
@@ -22,7 +21,7 @@
 			return
 		if (converting)
 			return
-		if (ishuman(user))
+		if (istype(user,/mob/living/carbon/human/))
 			O.visible_message("<span style=\"color:red\"><b>[O]</b> suddenly pulls [user.name] inside and slams shut!</span>")
 			user.emote("scream")
 			user.set_loc(O.loc)
@@ -31,7 +30,7 @@
 			while (loops > 0)
 				loops--
 				random_brute_damage(user, 15)
-				user.changeStatus("paralysis", 70)
+				user.paralysis = 5
 				playsound(user.loc, pick(work_sounds), 50, 1, -1)
 				sleep(4)
 
@@ -45,8 +44,7 @@
 
 			ArtifactLogs(user, null, O, "touched", "robotizing user", 0) // Added (Convair880).
 
-			if (ismonkey(user) || jobban_isbanned(user, "Cyborg"))
-				user.death()
+			if (ismonkey(user))
 				user.ghostize()
 				var/robopath = pick(/obj/machinery/bot/guardbot,/obj/machinery/bot/secbot,
 				/obj/machinery/bot/medbot,/obj/machinery/bot/firebot,/obj/machinery/bot/cleanbot,
@@ -56,8 +54,9 @@
 			else
 				var/mob/living/carbon/human/M = user
 				M.Robotize_MK2(1)
+				score_cyborgsmade += 1
 			converting = 0
-		else if (issilicon(user))
-			boutput(user, "<span style=\"color:red\">An imperious voice rings out in your head... \"<b>UPGRADE COMPLETE, RETURN TO ASSIGNED TASK</b>\"</span>")
+		else if (istype(user,/mob/living/silicon/))
+			boutput(user, "<span style=\"color:red\">An imperious voice rings out in your head... \"<b>HUNT BIOLOGICALS FOR UPGRADING\"</span>")
 		else
 			return

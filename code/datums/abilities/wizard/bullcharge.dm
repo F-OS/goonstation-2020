@@ -1,20 +1,17 @@
 /datum/targetable/spell/bullcharge
 	name = "Bull's Charge"
 	desc = "Records the casters movement for 4 seconds after which the spell will fire and throw & heavily damage everyone in it's recorded Path."
-	icon_state = "bullc" // Vaguely matching placeholder.
+	icon_state = "scream" // Vaguely matching placeholder.
 	targeted = 0
 	cooldown = 150
 	requires_robes = 1
 	offensive = 1
-	voice_grim = "sound/voice/wizard/BullChargeGrim.ogg"
-	voice_fem = "sound/voice/wizard/BullChargeFem.ogg"
-	voice_other = "sound/voice/wizard/BullChargeLoud.ogg"
 
 	cast()
 		if(!holder)
 			return
 		holder.owner.say("RAMI TIN")
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/BullChargeLoud.ogg", 50, 0, -1)
 
 		var/list/path = list()
 		var/turf/first = holder.owner.loc
@@ -27,7 +24,7 @@
 				prev = curr
 			sleep(1)
 
-		playsound(holder.owner.loc, "sound/voice/animal/bull.ogg", 25, 1, -1)
+		playsound(holder.owner.loc, "sound/effects/bull.ogg", 25, 1, -1)
 
 		var/list/affected = list()
 		var/obj/effects/bullshead/B = new/obj/effects/bullshead(first)
@@ -39,10 +36,10 @@
 				if (M.anchored || affected.Find(M) || M == holder.owner)
 					continue
 				affected += M
-				SPAWN_DBG(0) M.throw_at(get_edge_cheap(T, B.dir), 30, 1)
+				spawn(0) M.throw_at(get_edge_cheap(T, B.dir), 30, 1)
 				if (ismob(M))
 					var/mob/some_idiot = M
-					some_idiot.changeStatus("weakened", 3 SECONDS)
+					some_idiot.weakened += 3
 					some_idiot.TakeDamage("chest", 33, 0, 0, DAMAGE_BLUNT)
 			sleep(1)
 

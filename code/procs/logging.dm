@@ -7,10 +7,6 @@ Example in-game log call:
 Example out of game log call:
 		logTheThing("diary", src, null, "gibbed everyone ever", "admin")
 */
-
-//We save this as html because the non-diary logging currently has html tags in place
-var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-DD-hh-mm")].html")
-
 /proc/logTheThing(type, source, target, text, diaryType)
 	var/diaryLogging
 
@@ -22,15 +18,11 @@ var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-D
 	if (target) //If we have a target we assume the text has a %target% placeholder to shove it in
 		if (type == "diary") target = constructName(target, type)
 		else target = "<span class='target'>[constructName(target, type)]</span>"
-		text =  replacetext(text, "%target%", target)
+		text =  dd_replacetext(text, "%target%", target)
 
-	var/ingameLog = "<td class='duration'>\[[round(world.time/600)]:[(world.time%600)/10]\]</td><td class='source'>[source]</td><td class='text'>[text]</td>"
+	var/ingameLog = "<td class='duration'>[round(((world.time / 10) / 60))]M</td><td class='source'>[source]</td><td class='text'>[text]</td>"
 	switch(type)
 		//These are things we log in-game (accessible via the Secrets menu)
-		if ("audit")
-			logs["audit"] += ingameLog
-			diaryLogging = 1
-			diaryType = "audit"
 		if ("admin") logs["admin"] += ingameLog
 		if ("admin_help") logs["admin_help"] += ingameLog
 		if ("mentor_help") logs["mentor_help"] += ingameLog
@@ -41,6 +33,7 @@ var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-D
 		if ("combat") logs["combat"] += ingameLog
 		if ("telepathy") logs["telepathy"] += ingameLog
 		if ("debug") logs["debug"] += ingameLog
+		if ("wiredebug") logs["wire_debug"] += ingameLog
 		if ("pdamsg") logs["pdamsg"] += ingameLog
 		if ("signalers") logs["signalers"] += ingameLog
 		if ("bombing") logs["bombing"] += ingameLog
@@ -55,6 +48,7 @@ var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-D
 				if ("ahelp") if (config.log_say) diaryLogging = 1 //log_ahelp
 				if ("mhelp") if (config.log_say) diaryLogging = 1 //log_mhelp
 				if ("game") if (config.log_game) diaryLogging = 1
+				if ("vote") if (config.log_vote) diaryLogging = 1
 				if ("access") if (config.log_access) diaryLogging = 1
 				if ("say") if (config.log_say) diaryLogging = 1
 				if ("ooc") if (config.log_ooc) diaryLogging = 1
@@ -68,10 +62,6 @@ var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-D
 
 	if (diaryLogging)
 		diary << "[time2text(world.timeofday, "\[hh:mm:ss\]")] [uppertext(diaryType)]: [source ? "[source] ": ""][text]"
-
-	//A little trial run of full logs saved to disk. They are cleared by the server every so often (cronjob) (HEH NOT ANYMORE)
-	if (!diaryLogging && config.allowRotatingFullLogs)
-		roundLog << "[time2text(world.timeofday, "\[hh:mm:ss\]")] \[[uppertext(type)]] [source && source != "<span class='blank'>(blank)</span>" ? "[source]: ": ""][text]<br>"
 
 	return
 
@@ -96,9 +86,9 @@ var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-D
 			ckey = mobRef.ckey
 		if (mobRef.client)
 			online = 1
-		if (!isdead(mobRef))
+		if (mobRef.stat != 2)
 			dead = 0
-	else if (isclient(ref))
+	else if (istype(ref,/client))
 		var/client/clientRef = ref
 		online = 1
 		if (clientRef.mob)
@@ -106,7 +96,7 @@ var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-D
 			traitor = checktraitor(mobRef)
 			if (mobRef.real_name)
 				name = clientRef.mob.real_name
-			if (!isdead(mobRef))
+			if (mobRef.stat != 2)
 				dead = 0
 		if (clientRef.key)
 			key = clientRef.key
@@ -142,7 +132,7 @@ var/global/roundLog = file("data/logs/full/[time2text(world.realtime, "YYYY-MM-D
 			data += " \[<span class='traitorTag'>T</span>\]"
 	if (type != "diary" && !online && ckey)
 		data += " \[<span class='offline'>OFF</span>\]"
-	if (dead && ticker && current_state > GAME_STATE_PREGAME)
+	if (dead && ticker && ticker.current_state && ticker.current_state > GAME_STATE_PREGAME)
 		if (type == "diary")
 			data += " \[DEAD\]"
 		else
@@ -193,16 +183,6 @@ proc/log_shot(var/obj/projectile/P,var/obj/SHOT, var/target_is_immune = 0)
 	var/final_log2 = copytext(log_reagents, 1, -1)
 	return "(<b>Contents:</b> <i>[final_log2]</i>. <b>Temp:</b> <i>[A.reagents.total_temperature] K</i>)" // Added temperature. Even non-lethal chems can be harmful at unusually low or high temperatures (Convair880).
 
-/proc/log_health(var/mob/M)
-	var/log_health = ""
-	if (ishuman(M) || iscritter(M))
-		log_health += "[M.get_brain_damage()], [M.get_oxygen_deprivation()], [M.get_toxin_damage()], [M.get_burn_damage()], [M.get_brute_damage()]"
-	else if (issilicon(M))
-		log_health += "[M.get_burn_damage()], [M.get_brute_damage()]"
-	else
-		log_health += "No clue! Report this to a coder!"
-	return "(<b>Damage:</b> <i>[log_health]</i>)"
-
 /proc/log_loc(var/atom/A as turf|obj|mob)
 	if (!istype(A))
 		return
@@ -214,63 +194,3 @@ proc/log_shot(var/obj/projectile/P,var/obj/SHOT, var/target_is_immune = 0)
 // Does what is says on the tin. We're using the global proc, though (Convair880).
 /proc/log_atmos(var/atom/A as turf|obj|mob)
 	return scan_atmospheric(A, 0, 1)
-
-
-/proc/get_log_data_html(logType as text, searchString as text, var/datum/admins/requesting_admin)
-	if (!searchString)
-		searchString = ""
-	var/nameRegex
-	try
-		nameRegex = regex(searchString,"ig")
-	catch()
-		nameRegex = searchString
-		logTheThing("debug", null, null, "Tried to search logs with invalid regex, switching to plain text: [searchString]")
-
-	var/dat = "<table>"
-
-	logType = replacetext(logType, "_string", "")
-	logType = replacetext(logType, "_log", "")
-
-	var/prettyLogName = replacetext(logType, "_", " ")
-	if (prettyLogName == "alls") prettyLogName = "all"
-
-	var/foundCount = 0
-	if (logType == "alls")
-		for (var/log in logs)
-			if(log == "audit") continue
-			var/list/logList = logs[log]
-			prettyLogName = replacetext(log, "_", " ")
-			var/searchData
-			var/found
-			for (var/l in logList)
-				if (findtext(l, nameRegex, 1, null))
-					searchData += "<tr class='log'>[l]</tr>"
-					found = 1
-					foundCount++
-			if (found) dat += "<tr><td colspan='3' class='header [log]'>[prettyLogName] logs</td></tr>"
-			dat += searchData
-	else
-		var/list/logList = logs[logType]
-		dat += "<tr><td colspan='3' class='header [logType]'>[prettyLogName] logs</td></tr>"
-		if (!logList)
-			CRASH("get_log_data called with invalid log type: \"[logType]\"")
-		else if (!logList.len)
-			dat += "<tr><td colspan='3' class='log'>No results in [prettyLogName] logs.</td></tr>"
-		else
-			if (searchString)
-				for (var/l in logList)
-					if (findtext(l, nameRegex, 1, null))
-						dat += "<tr class='log'>[l]</tr>"
-						foundCount++
-			else
-				for (var/l in logList)
-					dat += "<tr class='log'>[l]</tr>"
-					foundCount++
-		dat += "</table>"
-
-	dat = "<tr><td colspan='3' class='header text-normal [logType]'><b>Logs</b>[searchString ? " (Searched for '[searchString]')" : ""]. Found <b>[foundCount]</b> results.</td></tr>" + dat
-	dat = replacetext(dat, "%admin_ref%", "\ref[requesting_admin]")
-	var/adminLogHtml = grabResource("html/admin/admin_log.html")
-	adminLogHtml = replacetext(adminLogHtml, "<!-- TABLE GOES HERE -->", "[dat]")
-
-	return adminLogHtml

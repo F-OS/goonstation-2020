@@ -14,7 +14,6 @@
 	firevuln = 0.25
 	brutevuln = 0.5
 	butcherable = 1
-	chase_text = "slams into"
 
 	var/punch_damage_max = 9
 	var/punch_damage_min = 3
@@ -24,24 +23,23 @@
 	skinresult = /obj/item/material_piece/cloth/leather
 	max_skins = 2
 
-	/*New()
+	New()
 		..()
-		playsound(src.loc, pick('sound/voice/Zgroan1.ogg', 'sound/voice/Zgroan2.ogg', 'sound/voice/Zgroan3.ogg', 'sound/voice/Zgroan4.ogg'), 25, 0)*/
+		playsound(src.loc, pick('sound/voice/Zgroan1.ogg', 'sound/voice/Zgroan2.ogg', 'sound/voice/Zgroan3.ogg', 'sound/voice/Zgroan4.ogg'), 25, 0)
 
 	seek_target()
 		src.anchored = 0
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.health < 0) continue
-			if (ishuman(C))
+			if (istype(C,/mob/living/carbon/human))
 				if (C:mutantrace && istype(C:mutantrace, /datum/mutantrace/zombie)) continue
-				if (iswelder(C)) continue
 				if (istype(C:head, /obj/item/clothing/head/void_crown)) continue
 
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -70,24 +68,20 @@
 
 			else continue
 
-	proc/after_attack_special(mob/living/M) //Override in subtype
-		return
+
 
 	ChaseAttack(mob/M)
 		if(iscarbon(M) && prob(15))
-			..()
-			playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+			src.visible_message("<span style=\"color:red\"><B>[src]</B> slams into [src.target]!</span>")
+			playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
 			random_brute_damage(M, rand(0,3))
-			M.changeStatus("stunned", 2 SECONDS)
-			M.changeStatus("weakened", 2 SECONDS)
+			M.stunned += rand(0,4)
+			M.weakened += rand(1,4)
 		else
 			src.visible_message("<span style=\"color:red\"><B>[src]</B> tries to knock down [src.target] but misses!</span>")
 
 	CritterAttack(mob/living/M)
 		src.attacking = 1
-		if (ishuman(M))
-			var/mob/living/carbon/human/H = M
-			H.was_harmed(src)
 		if(istype(M,/obj/critter))
 			var/obj/critter/C = M
 			src.visible_message("<span style=\"color:red\"><B>[src]</B> punches [src.target]!</span>")
@@ -95,43 +89,41 @@
 			C.health -= 4
 			if(C.health <= 0)
 				C.CritterDeath()
-			SPAWN_DBG(25)
+			spawn(25)
 				src.attacking = 0
 			return
 
-		if (M.health > 40 && !M.getStatusDuration("weakened"))
+		if (M.health > 40 && !M.weakened)
 			src.visible_message("<span style=\"color:red\"><B>[src]</B> punches [src.target]!</span>")
 			playsound(M.loc, "punch", 25, 1, -1)
 
 			var/to_deal = rand(punch_damage_min,punch_damage_max)
 			random_brute_damage(M, to_deal)
-			after_attack_special(src.target)
 			if(iscarbon(M))
 				if(to_deal > (((punch_damage_max-punch_damage_min)/2)+punch_damage_min) && prob(50))
 					src.visible_message("<span style=\"color:red\"><B>[src] knocks down [M]!</B></span>")
-					M:changeStatus("weakened", 80)
+					M:weakened += 8
 		//		if(prob(4) && eats_brains) //Give the gift of being a zombie (unless we eat them too fast)
 		//			M.contract_disease(/datum/ailment/disease/necrotic_degeneration, null, null, 1) // path, name, strain, bypass resist
 			if(src.hulk) //TANK!
-				SPAWN_DBG(0)
-					M:changeStatus("paralysis", 2 SECONDS)
+				spawn(0)
+					M:paralysis += 1
 					step_away(M,src,15)
-					SPAWN_DBG(3) step_away(M,src,15)
-			SPAWN_DBG(25)
+					spawn(3) step_away(M,src,15)
+			spawn(25)
 				src.attacking = 0
 		else
-			if(ishuman(M) && src.eats_brains) //These only make human zombies anyway!
+			if(istype(M,/mob/living/carbon/human) && src.eats_brains) //These only make human zombies anyway!
 				src.visible_message("<span style=\"color:red\"><B>[src]</B> starts trying to eat [M]'s brain!</span>")
 			else
 				src.visible_message("<span style=\"color:red\"><B>[src]</B> attacks [src.target]!</span>")
-				playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+				playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
 				random_brute_damage(src.target, rand(punch_damage_min,punch_damage_max))
-				after_attack_special(src.target)
-				SPAWN_DBG(25)
+				spawn(25)
 					src.attacking = 0
 				return
-			SPAWN_DBG(60)
-				if (get_dist(src, M) <= 1 && ((M:loc == target_lastloc)) && M.lying)
+			spawn(60)
+				if (get_dist(src, M) <= 1 && ((M:loc == target_lastloc)))
 					if(iscarbon(M))
 						logTheThing("combat", M, null, "was zombified by [src] at [log_loc(src)].") // Some logging for instakill critters would be nice (Convair880).
 						M.death(1)
@@ -149,7 +141,7 @@
 						src.visible_message("<span style=\"color:red\">[M]'s corpse reanimates!</span>")
 						//Zombie is all dressed up and no place to go
 						var/stealthy = 0 //High enough and people won't even see it's undead right away.
-						if(ishuman(M))
+						if(istype(M,/mob/living/carbon/human))
 							var/mob/living/carbon/human/H = M
 							//Uniform
 							if(H.w_uniform)
@@ -190,16 +182,18 @@
 								var/icon/head_icon = icon('icons/mob/head.dmi', "[t1]")
 								if (istype(H.head, /obj/item/clothing/head/butt))
 									var/obj/item/clothing/head/butt/B = H.head
-									if (B.s_tone)
-										head_icon.Blend(B.s_tone, ICON_ADD)
-								P.overlays += image(icon = head_icon, layer = FLOAT_LAYER)
+									if (B.s_tone >= 0)
+										head_icon.Blend(rgb(B.s_tone, B.s_tone, B.s_tone), ICON_ADD)
+									else
+										head_icon.Blend(rgb(-B.s_tone,  -B.s_tone,  -B.s_tone), ICON_SUBTRACT)
+								P.overlays += image("icon" = head_icon, "layer" = FLOAT_LAYER)
 								if (H.head.c_flags & COVERSEYES)
 									stealthy += 2
 								if (H.head.c_flags & COVERSMOUTH)
 									stealthy += 2
 
 							//Oh no, a tank!
-							if(H.is_hulk())
+							if(H.bioHolder.HasEffect("hulk"))
 								P.hulk = 1
 								P.punch_damage_max += 4
 
@@ -223,16 +217,16 @@
 						qdel(M)
 						qdel(animation)
 						sleeping = 2
-						SPAWN_DBG(20) playsound(src.loc, pick("sound/voice/burp_alien.ogg"), 50, 0)
+						spawn(20) playsound(src.loc, pick("sound/misc/burp_alien.ogg"), 50, 0)
 				else
 					src.visible_message("<span style=\"color:red\"><B>[src]</B> gnashes its teeth in fustration!</span>")
 				src.attacking = 0
 
 	CritterDeath()
 		src.alive = 0
-		playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
+		playsound(src.loc, "sound/effects/splat.ogg", 100, 1)
 		var/obj/decal/cleanable/blood/gibs/gib = null
-		gib = make_cleanable( /obj/decal/cleanable/blood/gibs,src.loc)
+		gib = new /obj/decal/cleanable/blood/gibs(src.loc)
 		if (prob(30))
 			gib.icon_state = "gibup1"
 		gib.streak(list(NORTH, NORTHEAST, NORTHWEST))
@@ -266,7 +260,7 @@
 
 	CritterDeath()
 		src.alive = 0
-		playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
+		playsound(src.loc, "sound/effects/splat.ogg", 100, 1)
 		gibs(src.loc)
 		qdel (src)
 
@@ -312,44 +306,3 @@
 		if(!attacking)
 			src.CritterAttack(M)
 		return
-
-//For Jones City Ruins
-/obj/critter/zombie/radiation
-	name = "Shambling Technician"
-	desc = "Looks like they got a large dose of the Zetas."
-	icon_state = "radzombie"
-	health = 25
-	brutevuln = 0.4
-	firevuln = 0.4
-	eats_brains = 0
-	generic = 0
-	atcritter = 0
-	butcherable = 0
-	defensive = 1
-	var/datum/light/light
-
-	New()
-		..()
-		light = new /datum/light/point
-		light.attach(src)
-		light.set_brightness(0.8)
-		light.set_height(1.5)
-		light.set_color(0, 0.8, 0.3)
-		light.enable()
-
-	ChaseAttack(mob/M)
-		if(!attacking)
-			src.CritterAttack(M)
-		return
-
-	after_attack_special(mob/living/M)
-		boutput(M, "<span style=\"color:red\">You are enveloped by a soft green glow emanating from [src].</span>")
-		M.changeStatus("radiation", 80, 4)
-
-	CritterDeath()
-		light.disable()
-		src.alive = 0
-		playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
-		gibs(src.loc)
-		make_cleanable( /obj/decal/cleanable/greenglow,src.loc)
-		qdel (src)

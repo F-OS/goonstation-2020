@@ -17,26 +17,6 @@
 		M.client.view = world.view
 		holder.removeAbility(/datum/targetable/cruiser/cancel_camera)
 
-/datum/targetable/cruiser/toggle_interior
-	name = "Toggle Interior"
-	desc = "Enables/disables the interior"
-	icon_state = "cancelcam"
-	cooldown = 0
-	targeted = 0
-	target_anything = 0
-	dont_lock_holder = 1
-	ignore_holder_lock = 1
-
-	cast(atom/target)
-		if (..())
-			return 1
-
-		var/mob/M = holder.owner
-		if(istype(M.loc, /obj/machinery/cruiser_destroyable/cruiser_pod))
-			var/obj/machinery/cruiser_destroyable/cruiser_pod/C = M.loc
-			C.interior.ship.toggle_interior(M)
-
-
 /datum/targetable/cruiser/exit_pod
 	name = "Exit Pod"
 	desc = "Exit the pod you are currently in."
@@ -56,8 +36,6 @@
 			var/obj/machinery/cruiser_destroyable/cruiser_pod/C = holder.owner.loc
 			C.exitPod(holder.owner)
 
-
-
 /datum/targetable/cruiser/warp
 	name = "Warp"
 	desc = "Warp to a beacon."
@@ -74,10 +52,8 @@
 
 		var/obj/machinery/cruiser_destroyable/cruiser_pod/C = holder.owner.loc
 		var/area/ship_interior/I = C.loc.loc
-		if (I) //ZeWaka: Fix for null.ship
-			var/obj/machinery/cruiser/P = I.ship
-			if (P.engine)
-				P.warp()
+		var/obj/machinery/cruiser/P = I.ship
+		P.warp()
 
 /datum/targetable/cruiser/fire_weapons
 	name = "Fire Weapons"

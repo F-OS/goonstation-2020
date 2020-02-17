@@ -24,9 +24,9 @@ obj/hud/New(var/type = 0)
 /obj/hud/proc/instantiate(var/type = 0)
 
 	mymob = src.loc
-	ASSERT(ismob(mymob))
+	ASSERT(istype(mymob, /mob))
 
-	if(ishivebot(mymob))
+	if(istype(mymob, /mob/living/silicon/hivebot))
 		src.hivebot_hud()
 		return
 

@@ -108,6 +108,7 @@
 		src.is_researching = 0
 		src.items_to_research[tier] -= src.current_research
 		src.researched_items[tier] += src.current_research
+		score_researchdone += 1
 		src.current_research = null
 		return 1
 
@@ -360,7 +361,7 @@
 		for(var/datum/a in R.items_to_research[i])
 			dat += "[a:name]<BR>"
 
-	usr.Browse(dat, "window=researchdebug;size=400x400")
+	usr << browse(dat, "window=researchdebug;size=400x400")
 
 /client/proc/RS_artifact_debug()
 	set category = "Specialist Debug"
@@ -398,7 +399,7 @@
 		for(var/datum/a in R.items_to_research[i])
 			dat += "[a:name]<BR>"
 
-	usr.Browse(dat, "window=researchdebug;size=400x400")
+	usr << browse(dat, "window=researchdebug;size=400x400")
 
 /client/proc/RS_robotics_debug()
 	set category = "Specialist Debug"
@@ -436,7 +437,7 @@
 		for(var/datum/a in R.items_to_research[i])
 			dat += "[a:name]<BR>"
 
-	usr.Browse(dat, "window=researchdebug;size=400x400")
+	usr << browse(dat, "window=researchdebug;size=400x400")
 
 /client/proc/RS_grant_research()
 	set category = "Specialist Debug"

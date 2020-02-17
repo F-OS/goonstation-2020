@@ -36,12 +36,17 @@
 		message_admins("[key_name(tplayer.current)] successfully redeems an antag token.")
 		//num_changelings = max(0, num_changelings - 1)
 
-	var/list/chosen_changelings = antagWeighter.choose(pool = possible_changelings, role = "changeling", amount = num_changelings, recordChosen = 1)
-	traitors |= chosen_changelings
-	for (var/datum/mind/changeling in traitors)
-		changeling.special_role = "changeling"
+	for(var/j = 0, j < num_changelings, j++)
+		var/datum/mind/changeling = pick(possible_changelings)
+		src.traitors += changeling
 		possible_changelings.Remove(changeling)
 
+	for(var/datum/mind/changeling in src.traitors)
+		if(!changeling || !istype(changeling))
+			src.traitors.Remove(changeling)
+			continue
+		if(istype(changeling))
+			changeling.special_role = "changeling"
 	return 1
 
 /datum/game_mode/changeling/post_setup()
@@ -61,7 +66,7 @@
 				boutput(changeling.current, "<B>Objective #[obj_count]</B>: [objective.explanation_text]")
 				obj_count++
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 /datum/game_mode/changeling/proc/get_possible_changelings(num_changelings=1)
@@ -103,7 +108,7 @@
 		intercepttext += i_text.build(A, pick(src.traitors))
 /*
 	for (var/obj/machinery/computer/communications/comm in machines)
-		if (!(comm.status & (BROKEN | NOPOWER)) && comm.prints_intercept)
+		if (!(comm.stat & (BROKEN | NOPOWER)) && comm.prints_intercept)
 			var/obj/item/paper/intercept = new /obj/item/paper( comm.loc )
 			intercept.name = "paper- 'Cent. Com. Status Summary'"
 			intercept.info = intercepttext
@@ -112,7 +117,7 @@
 			comm.messagetext.Add(intercepttext)
 */
 
-	for (var/obj/machinery/communications_dish/C in comm_dishes)
+	for (var/obj/machinery/communications_dish/C in machines)
 		C.add_centcom_report("Cent. Com. Status Summary", intercepttext)
 
 	command_alert("Summary downloaded and printed out at all communications consoles.", "Enemy communication intercept. Security Level Elevated.")

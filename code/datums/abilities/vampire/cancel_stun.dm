@@ -1,11 +1,10 @@
 /datum/targetable/vampire/cancel_stuns
 	name = "Cancel stuns"
-	desc = "Recover from being stunned. You will take damage in proportion to the amount of stun you dispel."
-	icon_state = "nostun"
+	desc = "Recover from being stunned."
 	targeted = 0
 	target_nodamage_check = 0
 	max_range = 0
-	cooldown = 10
+	cooldown = 600
 	pointCost = 0
 	when_stunned = 2
 	not_when_handcuffed = 0
@@ -19,35 +18,21 @@
 		if (!M)
 			return
 
-		M.delStatus("stunned")
-		M.delStatus("weakened")
-		M.delStatus("paralysis")
-		M.delStatus("slowed")
-		M.delStatus("disorient")
+		M.stunned = 0
+		M.weakened = 0
+		M.paralysis = 0
+		M.slowed = 0
 		M.change_misstep_chance(-INFINITY)
 		M.stuttering = 0
 		M.drowsyness = 0
 
-		if (M.get_stamina() < 0) // Tasers etc.
-			M.set_stamina(1)
+		if (M.get_stamina() != (STAMINA_MAX + M.get_stam_mod_max())) // Tasers etc.
+			M.set_stamina(STAMINA_MAX + M.get_stam_mod_max())
 
-		if (message_type == 3)
-			violent_standup_twitch(M)
-			M.visible_message("<span style=\"color:red\"><B>[M] contorts their body and judders upright!</B></span>")
-			playsound(M.loc, 'sound/effects/bones_break.ogg', 60, 1)
-		else if (message_type == 2)
+		if (message_type == 2)
 			boutput(M, __blue("You feel your flesh knitting itself back together."))
 		else
 			boutput(M, __blue("You feel refreshed and ready to get back into the fight."))
-
-		if (M.resting)
-			M.resting = 0
-			if (ishuman(M))
-				var/mob/living/carbon/human/H = M
-				H.hud.update_resting()
-
-		M.force_laydown_standup()
-
 
 		logTheThing("combat", M, null, "uses cancel stuns at [log_loc(M)].")
 		return
@@ -61,16 +46,7 @@
 		if (!M)
 			return 1
 
-		var/greatest_stun = max(3, M.getStatusDuration("stunned"),M.getStatusDuration("weakened"),M.getStatusDuration("paralysis"),M.getStatusDuration("slowed")/4,M.getStatusDuration("disorient")/2)
-		greatest_stun = round(greatest_stun / 10)
-
-		M.TakeDamage("All", greatest_stun, 0)
-		M.take_oxygen_deprivation(-5)
-		M.losebreath = min(usr.losebreath - 3)
-		M.updatehealth()
-		boutput(M, __blue("You cancel your stuns and take [greatest_stun] damage in return."))
-
-		src.remove_stuns(3)
+		src.remove_stuns(1)
 		return 0
 
 /datum/targetable/vampire/cancel_stuns/mk2

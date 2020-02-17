@@ -35,7 +35,7 @@
 				dat += "<a href='byond://?src=\ref[src];mode=0'>Back</a><br>"
 
 				if (istype(src.active1, /datum/data/record) && data_core.general.Find(src.active1))
-					dat += "Full Name: [src.active1.fields["full_name"]] ID: [src.active1.fields["id"]]<br>"
+					dat += "Name: [src.active1.fields["name"]] ID: [src.active1.fields["id"]]<br>"
 					dat += "Sex: [src.active1.fields["sex"]]<br>"
 					dat += "Age: [src.active1.fields["age"]]<br>"
 					dat += "Fingerprint: [src.active1.fields["fingerprint"]]<br>"
@@ -118,7 +118,7 @@
 				dat += "<a href='byond://?src=\ref[src];mode=0'>Back</a><br>"
 
 				if (istype(src.active1, /datum/data/record) && data_core.general.Find(src.active1))
-					dat += "Full Name: [src.active1.fields["full_name"]] ID: [src.active1.fields["id"]]<br>"
+					dat += "Name: [src.active1.fields["name"]] ID: [src.active1.fields["id"]]<br>"
 					dat += "Sex: [src.active1.fields["sex"]]<br>"
 					dat += "Age: [src.active1.fields["age"]]<br>"
 					dat += "Fingerprint: [src.active1.fields["fingerprint"]]<br>"

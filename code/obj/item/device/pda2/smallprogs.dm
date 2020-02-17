@@ -9,7 +9,6 @@
 //Janitor mop-locating program
 //Remote door control program
 //Atmospherics Alert-checking program
-//Power checker program
 //Hydroponics plant monitor
 //Emergency alert program
 //Self destruct detomatix program
@@ -17,7 +16,6 @@
 //Detomatix Detomanual
 //Ticket writer
 //Cargo request
-//Station Namer
 
 //Banking
 /datum/computer/file/pda_program/banking
@@ -195,7 +193,7 @@ Code:
 			if(last_transmission && world.time < (last_transmission + 5))
 				return
 			last_transmission = world.time
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				logTheThing("signalers", usr, null, "used [src.master] @ location ([showCoords(src.master.loc.x, src.master.loc.y, src.master.loc.z)]) <B>:</B> [format_frequency(send_freq)]/[send_code]")
 
 				var/datum/signal/signal = get_free_signal()
@@ -293,7 +291,7 @@ Code:
 			return
 		if (last_honk && world.time < last_honk + 20)
 			return
-		playsound(src.master.loc, "sound/musical_instruments/Bikehorn_1.ogg", (src.honk_volume * 25), 1)
+		playsound(src.master.loc, "sound/items/bikehorn.ogg", (src.honk_volume * 25), 1)
 		src.last_honk = world.time
 
 		return
@@ -318,7 +316,6 @@ Code:
 
 			var/ldat
 			for (var/obj/item/mop/M in world)
-				LAGCHECK(LAG_LOW)
 				var/turf/ml = get_turf(M)
 
 				if(!ml || !istype(ml))
@@ -338,7 +335,6 @@ Code:
 
 			ldat = null
 			for (var/obj/mopbucket/B in world)
-				LAGCHECK(LAG_LOW)
 				var/turf/bl = get_turf(B)
 
 				if(!bl || !istype(bl))
@@ -409,10 +405,10 @@ Code:
 				if (M.id != src.id)
 					continue
 				if (M.density)
-					SPAWN_DBG(0)
+					spawn(0)
 						M.open()
 				else
-					SPAWN_DBG(0)
+					spawn(0)
 						M.close()
 
 		src.master.add_fingerprint(usr)
@@ -496,72 +492,13 @@ Code:
 			src.temp = null
 
 			if(signal.data["severe_list"])
-				src.severe_alerts = splittext(signal.data["severe_list"], ";")
+				src.severe_alerts = dd_text2list(signal.data["severe_list"], ";")
 			if(signal.data["minor_list"])
-				src.minor_alerts = splittext(signal.data["minor_list"], ";")
+				src.minor_alerts = dd_text2list(signal.data["minor_list"], ";")
 
 			src.master.updateSelfDialog()
 
 		return
-
-
-//PDA program for displaying engine data and laser output. By FishDance
-//Note: Could display weird results if there is more than one engine or PTL around.
-/datum/computer/file/pda_program/power_checker
-	name = "Power Checker 0.14"
-	size = 4
-
-	var/obj/machinery/atmospherics/binary/circulatorTemp/circ1
-	var/obj/machinery/atmospherics/binary/circulatorTemp/right/circ2
-	var/obj/machinery/power/pt_laser/laser
-	var/obj/machinery/power/generatorTemp/generator
-
-	return_text()
-		if(..())
-			return
-		if (!laser)
-			laser = locate(/obj/machinery/power/pt_laser) in machines
-		if (!generator)
-			generator = locate(/obj/machinery/power/generatorTemp) in machines
-		if (!generator || !circ1)
-			circ1 = generator.circ1
-		if (!generator || !circ2)
-			circ2 = generator.circ2
-
-
-		var/stuff = src.return_text_header()
-
-		if (generator)
-			stuff += "<BR><B>Thermo-Electric Generator Status</B><BR>"
-			stuff += "Output : [engineering_notation(generator.lastgen)]W<BR>"
-			stuff += "<BR>"
-
-			stuff += "<B>Hot Loop</B><BR>"
-			stuff += "Temperature Inlet: [round(circ1.air1.temperature, 0.1)] K  Outlet: [round(circ1.air2.temperature, 0.1)] K<BR>"
-			stuff += "Pressure Inlet: [round(circ1.air1.return_pressure(), 0.1)] kPa  Outlet: [round(circ1.air2.return_pressure(), 0.1)] kPa<BR>"
-			stuff += "<BR>"
-
-			stuff += "<B>Cold Loop</B><BR>"
-			stuff += "Temperature Inlet: [round(circ2.air1.temperature, 0.1)] K  Outlet: [round(circ2.air2.temperature, 0.1)] K<BR>"
-			stuff += "Pressure Inlet: [round(circ2.air1.return_pressure(), 0.1)] kPa  Outlet: [round(circ2.air2.return_pressure(), 0.1)] kPa<BR>"
-			stuff += "<BR>"
-		else
-			stuff += "Error! No engine detected!<BR><BR>"
-		if (laser)
-			stuff += "<B>Power Transmition Laser Status</B><BR>"
-			stuff += "Currently Active: "
-
-			if(laser.firing)
-				stuff += "Yes<BR>"
-			else
-				stuff += "No<BR>"
-
-			stuff += "Power Stored: [engineering_notation(laser.charge)]J ([round(100.0*laser.charge/laser.capacity, 0.1)]%)<BR>"
-			stuff += "Power Input: [engineering_notation(laser.chargelevel)]W<BR>"
-			stuff += "Power Output: [engineering_notation(laser.output)]W<BR>"
-		else
-			stuff += "Error! No PTL detected!"
-		return stuff
 
 //Hydroponics plant monitor.
 /datum/computer/file/pda_program/hydro_monitor
@@ -705,12 +642,6 @@ Code:
 		signal.data["sender_name"] = src.master.owner
 		signal.data["group"] = mailgroup
 		var/area/an_area = get_area(src.master)
-
-		if (isAIeye(usr))
-			var/turf/eye_loc = get_turf(usr)
-			if (!(eye_loc.cameras && eye_loc.cameras.len))
-				an_area = get_area(eye_loc)
-
 		signal.data["message"] = "<b><span style=\"color:red\">***CRISIS ALERT*** Location: [an_area ? an_area.name : "nowhere"]!</span></b>"
 
 		src.post_signal(signal)
@@ -732,7 +663,7 @@ Code:
 
 		if(!detonating)
 			src.detonating = 1
-			SPAWN_DBG(10)
+			spawn(10)
 				src.master.explode()
 
 		return dat
@@ -946,13 +877,11 @@ Using electronic "Detomatix" BOMB program is perhaps less simple!<br>
 			data_core.tickets += T
 
 			playsound(get_turf(src.master), "sound/machines/printer_thermal.ogg", 50, 1)
-			SPAWN_DBG(30)
-				var/obj/item/paper/p = unpool(/obj/item/paper)
-				p.set_loc(get_turf(src.master))
+			spawn(30)
+				var/obj/item/paper/p = new (get_turf(src.master))
 				p.name = "Official Caution - [ticket_target]"
 				p.info = ticket_text
 				p.icon_state = "paper_caution"
-
 
 /*			for(var/datum/data/record/S in data_core.security) //there is probably a better way of doing this too
 				if(S.fields["name"] == ticket_target)
@@ -1002,10 +931,9 @@ Using electronic "Detomatix" BOMB program is perhaps less simple!<br>
 			if(PDAownerjob in list("Head of Security","Head of Personnel","Captain"))
 				var/ticket_text = "[ticket_target] has been fined [fine_amount] credits by Nanotrasen Corporate Security for [ticket_reason] on [time2text(world.realtime, "DD/MM/53")].<br>Issued and approved by: [PDAowner] - [PDAownerjob]<br>"
 				playsound(get_turf(src.master), "sound/machines/printer_thermal.ogg", 50, 1)
-				SPAWN_DBG(30)
+				spawn(30)
 					F.approve(PDAowner,PDAownerjob)
-					var/obj/item/paper/p = unpool(/obj/item/paper)
-					p.set_loc(get_turf(src.master))
+					var/obj/item/paper/p = new (get_turf(src.master))
 					p.name = "Official Fine Notification - [ticket_target]"
 					p.info = ticket_text
 					p.icon_state = "paper_caution"
@@ -1023,11 +951,10 @@ Using electronic "Detomatix" BOMB program is perhaps less simple!<br>
 			var/datum/fine/F = locate(href_list["approve"])
 
 			playsound(get_turf(src.master), "sound/machines/printer_thermal.ogg", 50, 1)
-			SPAWN_DBG(30)
+			spawn(30)
 				F.approve(PDAowner,PDAownerjob)
 				var/ticket_text = "[F.target] has been fined [F.amount] credits by Nanotrasen Corporate Security for [F.reason] on [time2text(world.realtime, "DD/MM/53")].<br>Requested by: [F.issuer] - [F.issuer_job]<br>Approved by: [PDAowner] - [PDAownerjob]<br>"
-				var/obj/item/paper/p = unpool(/obj/item/paper)
-				p.set_loc(get_turf(src.master))
+				var/obj/item/paper/p = new (get_turf(src.master))
 				p.name = "Official Fine Notification - [F.target]"
 				p.info = ticket_text
 				p.icon_state = "paper_caution"
@@ -1091,7 +1018,7 @@ Using electronic "Detomatix" BOMB program is perhaps less simple!<br>
 		if (href_list["order"])
 			src.temp = {"<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR><HR>
 			<B>Please select the Supply Package you would like to request:</B><BR><BR>"}
-			for(var/S in childrentypesof(/datum/supply_packs) )
+			for(var/S in (typesof(/datum/supply_packs) - /datum/supply_packs) )
 				var/datum/supply_packs/N = new S()
 				if(N.hidden || N.syndicate) continue
 				// Have to send the type instead of a reference to the obj because it would get caught by the garbage collector. oh well.
@@ -1107,12 +1034,6 @@ Using electronic "Detomatix" BOMB program is perhaps less simple!<br>
 				qdel(O)
 				return
 			var/datum/supply_packs/P = new supplytype ()
-
-			if(P.syndicate || P.hidden)
-				// Get that jerk
-				trigger_anti_cheat(usr, "tried to href exploit order packs on [src]")
-				return
-
 			O.object = P
 			O.orderedby = src.master.owner
 			O.console_location = get_area(src.master)
@@ -1145,59 +1066,3 @@ Using electronic "Detomatix" BOMB program is perhaps less simple!<br>
 		src.master.updateSelfDialog()
 		return
 #undef SPAM_DELAY
-
-/datum/computer/file/pda_program/station_name
-	name = "Station Namer"
-	size = 2
-
-	return_text()
-		if(..())
-			return
-
-		var/dat = src.return_text_header()
-
-		dat += "<h4>Station Namer Delux 3000</h4>"
-
-		if (station_name_changing)
-			var/nextName = lastStationNameChange + stationNameChangeDelay
-			if (nextName > world.timeofday)
-				dat += "<b>The station naming coils are recharging, you must wait [(nextName - world.timeofday) / 10] seconds.</b><br><br>"
-			else
-				dat += "<a href='?src=\ref[src];change=1'>Change Name</a><br><br>"
-		else
-			dat += "<b>Cosmic interference is preventing station name changes right now. Yep.</b><br><br>"
-
-		dat += "Current station name: [station_name()]"
-
-		return dat
-
-	Topic(href, href_list)
-		if(..())
-			return
-
-		if (href_list["change"])
-			if (station_name_changing)
-				usr.openStationNameChangeWindow(src, "submitChange=1")
-			else
-				src.master.updateSelfDialog()
-
-		if (href_list["submitChange"])
-			if (station_name_changing)
-				var/nextName = lastStationNameChange + stationNameChangeDelay
-				if (nextName > world.timeofday)
-					alert("You must wait for the station naming coils to recharge! Did space school teach you nothing?!")
-					usr.Browse(null, "window=stationnamechanger")
-					src.master.updateSelfDialog()
-					return
-
-				lastStationNameChange = world.timeofday
-				var/newName = href_list["newName"]
-
-				if (set_station_name(usr, newName))
-					command_alert("The new station name is [station_name]", "Station Naming Ceremony Completion Detection Algorithm")
-
-			usr.Browse(null, "window=stationnamechanger")
-			src.master.updateSelfDialog()
-
-		src.master.add_fingerprint(usr)
-		return

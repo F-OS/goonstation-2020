@@ -159,7 +159,7 @@ Buildable meters
 
 /obj/item/weapon/pipe/attackby(var/obj/item/weapon/W as obj, var/mob/user as mob)
 	/*
-	if (iswrenchingtool(W))
+	if (istype(W, /obj/item/weapon/wrench))
 
 		var/pipedir = src.get_pdir()|src.get_hdir()		// all possible pipe dirs including h/e#
 
@@ -410,7 +410,8 @@ Buildable meters
 	w_class = 4
 
 /obj/item/weapon/pipe_meter/attackby(var/obj/item/weapon/W as obj, var/mob/user as mob)
-	if (iswrenchingtool(W))
+
+	if (istype(W, /obj/item/weapon/wrench))
 		if(locate(/obj/machinery/pipes, src.loc))
 			new/obj/machinery/meter( src.loc )
 			playsound(src.loc, "sound/items/Ratchet.ogg", 50, 1)

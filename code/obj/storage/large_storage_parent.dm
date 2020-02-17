@@ -11,22 +11,18 @@
 /obj/storage
 	name = "storage"
 	desc = "this is a parent item you shouldn't see!!"
-	flags = FPRINT | NOSPLASH | FLUID_SUBMERGE
-	event_handler_flags = USE_FLUID_ENTER | USE_CANPASS
+	flags = FPRINT | NOSPLASH
 	icon = 'icons/obj/large_storage.dmi'
 	icon_state = "closed"
 	density = 1
 	throwforce = 10
 	mouse_drag_pointer = MOUSE_ACTIVE_POINTER
-	p_class = 2.5
 	var/secure = 0
 	var/personal = 0
 	var/registered = null
 	var/icon_closed = "closed"
 	var/icon_opened = "open"
 	var/icon_welded = "welded-closet"
-	var/open_sound = "sound/machines/click.ogg"
-	var/close_sound = "sound/machines/click.ogg"
 	var/open = 0
 	var/welded = 0
 	var/locked = 0
@@ -44,49 +40,35 @@
 	var/crunches_deliciously = 0 // :I
 	//var/mob/living/carbon/to_crunch = null
 	var/owner_ckey = null // owner of the crunchy cart, so they don't get crunched
-	var/opening_anim = null
-	var/closing_anim = null
-
 	var/list/spawn_contents = list() // maybe better than just a bunch of stuff in New()?
-	var/made_stuff
+
 	New()
 		..()
-		SPAWN_DBG(1)
+		spawn(1)
 			src.update_icon()
-			//I wonder what it would do for world initialization time to do this when the locker is opened instead.
-			//src.make_my_stuff()
-
+			src.make_my_stuff()
 			if (!src.open)		// if closed, any item at src's loc is put in the contents
 				for (var/obj/O in src.loc)
 					if (src.is_acceptable_content(O))
 						O.set_loc(src)
 
-		lockers_and_crates.Add(src)
-
-	disposing()
-		lockers_and_crates.Remove(src)
-		..()
-
 	proc/make_my_stuff() // use this rather than overriding the container's New()
-		if (!islist(src.spawn_contents))
-			return 0
-
+		if (!src.spawn_contents || !islist(src.spawn_contents) || !src.spawn_contents.len)
+			return
 		for (var/thing in src.spawn_contents)
 			var/amt = 1
 			if (!ispath(thing))
 				continue
-			if (isnum(spawn_contents[thing])) //Instead of duplicate entries in the list, let's make them associative
+			if(isnum(spawn_contents[thing])) //Instead of duplicate entries in the list, let's make them associative
 				amt = abs(spawn_contents[thing])
 			do new thing(src)	//Two lines! I TOLD YOU I COULD DO IT!!!
 			while (--amt > 0)
-		return 1
+		return
 
 	proc/update_icon()
 		if (src.open)
-			flick(src.opening_anim,src)
 			src.icon_state = src.icon_opened
 		else if (!src.open)
-			flick(src.closing_anim,src)
 			src.icon_state = src.icon_closed
 
 		if (src.overlays)
@@ -109,7 +91,7 @@
 		return get_turf(src)
 
 	relaymove(mob/user as mob)
-		if (user.getStatusDuration("stunned") > 0 || user.getStatusDuration("weakened") || user.getStatusDuration("paralysis") > 0 || !isalive(user))
+		if (user.stunned > 0 || user.weakened > 0 || user.paralysis > 0 || user.stat != 0)
 			return
 		if (world.time < (src.last_relaymove_time + RELAYMOVE_DELAY))
 			return
@@ -124,7 +106,7 @@
 				user.unlock_medal("IT'S A TRAP", 1)
 				for (var/mob/M in hearers(src, null))
 					M.show_text("<font size=[max(0, 5 - get_dist(src, M))]>THUD, thud!</font>")
-				playsound(get_turf(src), "sound/impact_sounds/Wood_Hit_1.ogg", 15, 1, -3)
+				playsound(get_turf(src), "sound/effects/zhit.ogg", 15, 1, -3)
 				var/shakes = 5
 				while (shakes > 0)
 					shakes--
@@ -133,13 +115,8 @@
 					sleep(1)
 				src.pixel_x = 0
 				src.pixel_y = 0
-				SPAWN_DBG(5)
+				spawn(5)
 					src.jiggled = 0
-
-			if (prob(10) && src.can_flip_bust)
-				user.show_text("<span style=\"color:red\">[src] [pick("cracks","bends","shakes","groans")].</span>")
-				src.bust_out()
-
 			return
 
 		else if (prob(src.open_fail_prob))
@@ -150,13 +127,11 @@
 
 		// if all else fails:
 		src.open()
-		src.visible_message("<span style='color:red'><b>[user]</b> kicks [src] open!</span>")
+		src.visible_message("<span style=\"color:red\"><b>[user]</b> kicks [src] open!</span>")
 
 	attack_hand(mob/user as mob)
 		if (get_dist(user, src) > 1)
 			return
-
-		interact_particle(user,src)
 		add_fingerprint(user)
 		if (src.welded)
 			user.show_text("It won't open!", "red")
@@ -173,7 +148,7 @@
 		else if (istype(W, /obj/item/satchel/))
 			var/amt = W:contents.len
 			if (amt)
-				user.visible_message("<span style='color:blue'>[user] dumps out [W]'s contents into [src]!</span>")
+				user.visible_message("<span style=\"color:blue\">[user] dumps out [W]'s contents into [src]!</span>")
 				var/amtload = 0
 				for (var/obj/item/I in W.contents)
 					if (open)
@@ -183,7 +158,7 @@
 					amtload++
 				W:satchel_updateicon()
 				if (amtload)
-					user.show_text("[amtload] [W:itemstring] dumped into [src]!", "blue")
+					user.show_text("[amtload] [W:itemstring] dumped into [W]!", "blue")
 				else
 					user.show_text("No [W:itemstring] dumped!", "red")
 				return
@@ -197,7 +172,7 @@
 						return
 					welder.use_fuel(1)
 					src.legholes = 1
-					src.visible_message("<span style='color:red'>[user] adds some holes to the bottom of [src] with [welder].</span>")
+					src.visible_message("<span style=\"color:red\">[user] adds some holes to the bottom of [src] with [welder].</span>")
 					return
 				else if(!issilicon(user))
 					if(user.drop_item())
@@ -205,14 +180,14 @@
 							welder.set_loc(src.loc)
 					return
 
-			else if (iswrenchingtool(W))
+			else if (istype(W, /obj/item/wrench))
 				var/obj/item/I = new /obj/item/sheet(get_turf(src))
 				if (src.material)
 					I.setMaterial(src.material)
 				else
-					var/datum/material/M = getMaterial("steel")
+					var/datum/material/M = getCachedMaterial("steel")
 					I.setMaterial(M)
-				src.visible_message("<span style='color:red'>[user] takes apart [src] with [W].</span>")
+				src.visible_message("<span style=\"color:red\">[user] takes apart [src] with [W].</span>")
 				qdel(src)
 				return
 			else if (!issilicon(user))
@@ -230,10 +205,10 @@
 					return
 				if (!src.welded)
 					src.weld(1, welder, user)
-					src.visible_message("<span style='color:red'>[user] welds [src] closed with [welder].</span>")
+					src.visible_message("<span style=\"color:red\">[user] welds [src] closed with [welder].</span>")
 				else
 					src.weld(0, welder, user)
-					src.visible_message("<span style='color:red'>[user] unwelds [src] with [welder].</span>")
+					src.visible_message("<span style=\"color:red\">[user] unwelds [src] with [welder].</span>")
 				return
 
 		if (src.secure)
@@ -242,10 +217,10 @@
 				return
 			else if (src.personal && istype(W, /obj/item/card/id))
 				var/obj/item/card/id/I = W
-				if (src.allowed(user) || !src.registered || (istype(W, /obj/item/card/id) && src.registered == I.registered))
+				if (src.allowed(user, req_only_one_required) || !src.registered || (istype(W, /obj/item/card/id) && src.registered == I.registered))
 					//they can open all lockers, or nobody owns this, or they own this locker
 					src.locked = !( src.locked )
-					user.visible_message("<span style='color:blue'>The locker has been [src.locked ? null : "un"]locked by [user].</span>")
+					user.visible_message("<span style=\"color:blue\">The locker has been [src.locked ? null : "un"]locked by [user].</span>")
 					src.update_icon()
 					if (!src.registered)
 						src.registered = I.registered
@@ -254,10 +229,10 @@
 					for (var/mob/M in src.contents)
 						src.log_me(user, M, src.locked ? "locks" : "unlocks")
 					return
-			else if (!src.personal && src.allowed(user))
+			else if (!src.personal && src.allowed(user, req_only_one_required))
 				if (!src.open)
 					src.locked = !src.locked
-					user.visible_message("<span style='color:blue'>[src] has been [src.locked ? null : "un"]locked by [user].</span>")
+					user.visible_message("<span style=\"color:blue\">[src] has been [src.locked ? null : "un"]locked by [user].</span>")
 					src.update_icon()
 					for (var/mob/M in src.contents)
 						src.log_me(user, M, src.locked ? "locks" : "unlocks")
@@ -278,38 +253,8 @@
 		else
 			return ..()
 
-	proc/check_if_enterable(var/mob/living/L, var/skip_penalty=0)
-		//return 1 if a mob can enter, 0 if not
-		var/turf/T = get_turf(src)
-		var/no_go = 0
-		if (T.density)
-			no_go = T
-		else
-			for (var/obj/thingy in T)
-				if (thingy == src)
-					continue
-				if (istype(thingy, /obj/storage) && thingy:is_short)
-					continue
-				if (thingy.density)
-					no_go = thingy
-					break
-
-		if (no_go) // no more scooting around walls and doors okay
-			if(!skip_penalty & istype(L))
-				L.visible_message("<span style='color:red'><b>[L]</b> scoots around [src], right into [no_go]!</span>",\
-				"<span style='color:red'>You scoot around [src], right into [no_go]!</span>")
-				if (!L.hasStatus("weakened"))
-					L.changeStatus("weakened", 4 SECONDS)
-				if (prob(25))
-					L.show_text("You hit your head on [no_go]!", "red")
-					L.TakeDamage("head", 0, 10)
-
-			. = 0
-		else
-			. = 1
-
 	MouseDrop_T(atom/movable/O as mob|obj, mob/user as mob)
-		if (!in_range(user, src) || !in_range(user, O) || user.restrained() || user.getStatusDuration("paralysis") || user.sleeping || user.stat || user.lying || isAI(user))
+		if (!in_range(user, src) || !in_range(user, O) || user.restrained() || user.paralysis || user.sleeping || user.stat || user.lying)
 			return
 
 		if (!src.is_acceptable_content(O))
@@ -322,18 +267,37 @@
 		src.add_fingerprint(user)
 
 		if (src.is_short && O == user)
-			if(!check_if_enterable(user))
+			var/turf/T = get_turf(src)
+			var/no_go = 0
+			if (T.density)
+				no_go = T
+			else
+				for (var/obj/thingy in T)
+					if (thingy == src)
+						continue
+					if (istype(thingy, /obj/storage) && thingy:is_short)
+						continue
+					if (thingy.density)
+						no_go = thingy
+						break
+
+			if (no_go) // no more scooting around walls and doors okay
+				user.visible_message("<span style=\"color:red\"><b>[user]</b> scoots around [src], right into [no_go]!</span>",\
+				"<span style=\"color:red\">You scoot around [src], right into [no_go]!</span>")
+				user.weakened += 4
+				if (prob(25))
+					user.show_text("You hit your head on [no_go]!", "red")
+					user.TakeDamage("head", 0, 10)
 				return
 
 			if (iscarbon(O))
 				var/mob/living/carbon/M = user
 				if (M.bioHolder && M.bioHolder.HasEffect("clumsy") && prob(40))
-					user.visible_message("<span style='color:red'><b>[user]</b> trips over [src]!</span>",\
-					"<span style='color:red'>You trip over [src]!</span>")
-					playsound(user.loc, 'sound/impact_sounds/Generic_Hit_2.ogg', 15, 1, -3)
+					user.visible_message("<span style=\"color:red\"><b>[user]</b> trips over [src]!</span>",\
+					"<span style=\"color:red\">You trip over [src]!</span>")
+					playsound(user.loc, 'sound/weapons/genhit2.ogg', 15, 1, -3)
 					user.set_loc(src.loc)
-					if (!user.hasStatus("weakened"))
-						user.changeStatus("weakened", 10 SECONDS)
+					user.weakened += 10
 					return
 				else
 					user.show_text("You scoot around [src].")
@@ -359,14 +323,14 @@
 			user.u_equip(O)
 			O.set_loc(get_turf(user))
 
-		SPAWN_DBG(5)
+		spawn(5)
 			if (istype(O, /obj/item/raw_material/))
-				user.visible_message("<span style='color:blue'>[user] begins quickly stuffing materials into [src]!</span>",\
-				"<span style='color:blue'>You begin quickly stuffing materials into [src]!</span>")
+				user.visible_message("<span style=\"color:blue\">[user] begins quickly stuffing materials into [src]!</span>",\
+				"<span style=\"color:blue\">You begin quickly stuffing materials into [src]!</span>")
 				var/staystill = user.loc
 				for (var/obj/item/raw_material/M in view(1,user))
-					if (M.material && M.material.getProperty("radioactive") > 0)
-						user.changeStatus("radiation", (round(min(M.material.getProperty("radioactive") / 2, 20)))*10, 2)
+					if (M.material && M.material.getProperty(PROP_RADIOACTIVITY) > 0)
+						user.irradiate(round(min(M.material.getProperty(PROP_RADIOACTIVITY) / 2, 20)))
 					if (M.loc == src || M.loc == src.loc) // we're already there!
 						continue
 					M.set_loc(src.loc)
@@ -376,8 +340,8 @@
 					if (user.loc != staystill)
 						break
 				for (var/obj/item/material_piece/M in view(1,user))
-					if (M.material && M.material.getProperty("radioactive") > 0)
-						user.changeStatus("radiation", (round(min(M.material.getProperty("radioactive") / 2, 20)))*10, 2)
+					if (M.material && M.material.getProperty(PROP_RADIOACTIVITY) > 0)
+						user.irradiate(round(min(M.material.getProperty(PROP_RADIOACTIVITY) / 2, 20)))
 					if (M.loc == src || M.loc == src.loc) // we're already there!
 						continue
 					M.set_loc(src.loc)
@@ -387,13 +351,13 @@
 					if (user.loc != staystill)
 						break
 				user.show_text("You finish stuffing materials into [src]!", "blue")
-				SPAWN_DBG(5)
+				spawn(5)
 					if (src.open)
 						src.close()
 
 			else if (istype(O, /obj/item/plant/) || istype(O, /obj/item/reagent_containers/food/snacks/))
-				user.visible_message("<span style='color:blue'>[user] begins quickly stuffing produce into [src]!</span>",\
-				"<span style='color:blue'>You begin quickly stuffing produce into [src]!</span>")
+				user.visible_message("<span style=\"color:blue\">[user] begins quickly stuffing produce into [src]!</span>",\
+				"<span style=\"color:blue\">You begin quickly stuffing produce into [src]!</span>")
 				var/staystill = user.loc
 				for (var/obj/item/plant/P in view(1,user))
 					if (P in user)
@@ -418,19 +382,18 @@
 					if (user.loc != staystill)
 						break
 				user.show_text("You finish stuffing produce into [src]!", "blue")
-				SPAWN_DBG(5)
+				spawn(5)
 					if (src.open)
 						src.close()
 
 			else
-				if(check_if_enterable(O))
-					O.set_loc(src.loc)
-					if (user != O)
-						user.visible_message("<span style='color:red'>[user] stuffs [O] into [src]!</span>",\
-						"<span style='color:red'>You stuff [O] into [src]!</span>")
-					SPAWN_DBG(5)
-						if (src.open)
-							src.close()
+				O.set_loc(src.loc)
+				if (user != O)
+					user.visible_message("<span style=\"color:red\">[user] stuffs [O] into [src]!</span>",\
+					"<span style=\"color:red\">You stuff [O] into [src]!</span>")
+				spawn(5)
+					if (src.open)
+						src.close()
 		return ..()
 
 	attack_ai(mob/user)
@@ -450,15 +413,21 @@
 	ex_act(severity)
 		switch (severity)
 			if (1)
-				dump_contents()
+				for (var/atom/movable/A as mob|obj in src)
+					A.set_loc(src.loc)
+					A.ex_act(severity)
 				qdel(src)
 			if (2)
 				if (prob(50))
-					dump_contents()
+					for (var/atom/movable/A as mob|obj in src)
+						A.set_loc(src.loc)
+						A.ex_act(severity)
 					qdel(src)
 			if (3)
 				if (prob(5))
-					dump_contents()
+					for (var/atom/movable/A as mob|obj in src)
+						A.set_loc(src.loc)
+						A.ex_act(severity)
 					qdel(src)
 
 	blob_act(var/power)
@@ -482,41 +451,21 @@
 			return 0
 		return 1
 
-	var/obj/storage/entangled
-	proc/open(var/entangleLogic)
+	proc/open()
 		if (src.open)
 			return 0
 		if (!src.can_open())
 			return 0
-		else
-			flick(src.opening_anim,src)
-
-		if(entangled && !entangleLogic && !entangled.can_close())
-			visible_message("<span style='color:red'>It won't budge!</span>")
-			return 0
-
-		if(entangled && !entangleLogic)
-			entangled.entangled = src
-			entangled.close(1)
-			contents = entangled.contents
-
-
 		src.dump_contents()
 		src.open = 1
 		src.update_icon()
-		p_class = initial(p_class)
-		playsound(src.loc, src.open_sound, 15, 1, -3)
+		playsound(src.loc, 'sound/machines/click.ogg', 15, 1, -3)
 		return 1
 
-	proc/close(var/entangleLogic)
-		flick(src.closing_anim,src)
+	proc/close()
 		if (!src.open)
 			return 0
 		if (!src.can_close())
-			return 0
-
-		if(entangled && !entangleLogic && !entangled.can_open())
-			visible_message("<span style='color:red'>It won't budge!</span>")
 			return 0
 
 		src.open = 0
@@ -526,16 +475,12 @@
 				O.set_loc(src)
 
 		for (var/mob/M in get_turf(src))
-			if (M.anchored || M.buckled)
-				continue
-			if (src.is_short && !M.lying)
-				step_away(M, src, 1)
+			if (M.anchored || M.buckled || (src.is_short && !M.lying))
 				continue
 #ifdef HALLOWEEN
 			if (halloween_mode && prob(5)) //remove the prob() if you want, it's just a little broken if dudes are constantly teleporting
 				var/list/obj/storage/myPals = list()
 				for (var/obj/storage/O in world)
-					LAGCHECK(LAG_LOW)
 					if (O.z != src.z || O.open || !O.can_open())
 						continue
 					myPals.Add(O)
@@ -552,25 +497,9 @@
 				src.crunch(M)
 			M.set_loc(src)
 
-		recalcPClass()
-
-		if(entangled && !entangleLogic)
-			entangled.entangled = src
-			entangled.contents = src.contents
-			entangled.open(1)
-
 		src.update_icon()
-		playsound(src.loc, src.close_sound, 15, 1, -3)
+		playsound(src.loc, "sound/machines/click.ogg", 15, 1, -3)
 		return 1
-
-	proc/recalcPClass()
-		var/maxPClass = 0
-		for (var/atom/movable/O in contents)
-			if (ishuman(O)) // can't use p_class for human mobs as we need to use the heavier one regardless of whether they're standing/lying down
-				maxPClass = max(maxPClass, 3) //horay magic number
-			else
-				maxPClass = max(maxPClass, O.p_class)
-		p_class = initial(p_class) + maxPClass
 
 	proc/can_open()
 		if (src.welded || src.locked)
@@ -584,9 +513,6 @@
 		return 1
 
 	proc/dump_contents()
-		if(src.spawn_contents && make_my_stuff()) //Make the stuff when the locker is first opened.
-			spawn_contents = null
-
 		var/newloc = get_turf(src)
 		for (var/obj/O in src)
 			O.set_loc(newloc)
@@ -601,26 +527,26 @@
 
 	proc/bust_out()
 		if (src.health)
-			src.visible_message("<span style='color:red'>[src] [pick("cracks","bends","shakes","groans")].</span>")
+			src.visible_message("<span style=\"color:red\">[src] [pick("cracks","bends","shakes","groans")].</span>")
 			src.health--
 		if (src.health <= 0)
-			src.visible_message("<span style='color:red'>[src] breaks apart!</span>")
+			src.visible_message("<span style=\"color:red\">[src] breaks apart!</span>")
 			src.dump_contents()
-			SPAWN_DBG(1)
+			spawn(1)
 				var/newloc = get_turf(src)
-				make_cleanable( /obj/decal/cleanable/machine_debris,newloc)
+				new /obj/decal/cleanable/machine_debris(newloc)
 				qdel(src)
 
 	proc/weld(var/shut = 0, var/obj/item/weldingtool/W as obj, var/mob/weldman as mob)
 		if (shut)
 			W.use_fuel(1)
 			W.eyecheck(weldman)
-			weldman.visible_message("<span style='color:red'>[weldman] welds [src] shut.</span>")
+			weldman.visible_message("<span style=\"color:red\">[weldman] welds [src] shut.</span>")
 			src.welded = 1
 		else
 			W.use_fuel(1)
 			W.eyecheck(weldman)
-			weldman.visible_message("<span style='color:red'>[weldman] unwelds [src].</span>") // walt-fuck_you.ogg
+			weldman.visible_message("<span style=\"color:red\">[weldman] unwelds [src].</span>") // walt-fuck_you.ogg
 			src.welded = 0
 		src.update_icon()
 		for (var/mob/M in src.contents)
@@ -634,34 +560,31 @@
 		if (M.ckey && (M.ckey == owner_ckey))
 			return
 		else
-			M.show_text("Is it getting... smaller in here?", "red")
-			SPAWN_DBG(50)
-
-				var/found = 0
-				for (var/mob/contained_mob in src.contents)
-					if (M == contained_mob)
-						found = 1
-
-				if (found)
-					playsound(src.loc, 'sound/impact_sounds/Slimy_Splat_1.ogg', 75, 1)
-					M.show_text("<b>OH JESUS CHRIST</b>", "red")
-					bleed(M, 500, 5)
-					src.log_me(usr && ismob(usr) ? usr : null, M, "uses trash compactor")
-					var/mob/living/carbon/cube/meat/W = M.make_cube(/mob/living/carbon/cube/meat, rand(10,15), get_turf(src))
-					if (src.crunches_deliciously)
-						W.name = "hotdog"
-						var/obj/item/reagent_containers/food/snacks/hotdog/syndicate/snoopdog = new /obj/item/reagent_containers/food/snacks/hotdog/syndicate(src)
-						snoopdog.victim = W
-
-					for (var/obj/item/I in M)
-						if (istype(I, /obj/item/implant))
-							I.set_loc(W)
-							continue
-
-						I.set_loc(src)
-
+			src.locked = 1
+			M.show_text("Is it getting...smaller in here?", "red")
+			spawn(50)
+				if (!M.loc == src)
 					src.locked = 0
-					src.open()
+					return
+				playsound(src.loc, 'sound/effects/splat.ogg', 75, 1)
+				M.show_text("<b>OH JESUS CHRIST</b>", "red")
+				bleed(M, 500, 5)
+				src.log_me(usr && ismob(usr) ? usr : null, M, "uses trash compactor")
+				var/mob/living/carbon/wall/meatcube/W = M.make_meatcube(rand(10,15), get_turf(src))
+				if (src.crunches_deliciously)
+					W.name = "hotdog"
+					var/obj/item/reagent_containers/food/snacks/hotdog/syndicate/snoopdog = new /obj/item/reagent_containers/food/snacks/hotdog/syndicate(src)
+					snoopdog.victim = W
+
+				for (var/obj/item/I in M)
+					if (istype(I, /obj/item/implant))
+						I.set_loc(W)
+						continue
+
+					I.set_loc(src)
+
+				src.locked = 0
+				src.open()
 
 	// Added (Convair880).
 	proc/log_me(var/mob/user, var/mob/occupant, var/action = "")
@@ -677,7 +600,7 @@
 		set desc = "Open or close the closet/crate/whatever. Woah!"
 		set category = "Local"
 
-		if (usr.stat || !usr.can_use_hands() || isAI(usr))
+		if (usr.stat || !usr.can_use_hands())
 			return
 
 		return toggle()
@@ -688,7 +611,7 @@
 		set desc = "Enter the closet/crate/whatever. Wow!"
 		set category = "Local"
 
-		if (usr.stat || !usr.can_use_hands() || usr.loc == src || isAI(usr))
+		if (usr.stat || !usr.can_use_hands() || usr.loc == src)
 			return
 
 		if (src.locked)
@@ -727,7 +650,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(10)
+		spawn(10)
 			if (isnum(src.radio_control) && radio_controller)
 				radio_control = max(1000, min(round(radio_control), 1500))
 				src.net_id = generate_net_id(src)
@@ -762,7 +685,7 @@
 					reply.source = src
 					reply.transmission_method = TRANSMISSION_RADIO
 					reply.data = list("address_1" = sender, "command" = "lock=[locked]&open=[open]", "sender" = src.net_id)
-					SPAWN_DBG (5)
+					spawn (5)
 						src.radio_control.post_signal(src, reply, 2)
 
 				if ("lock")
@@ -780,7 +703,7 @@
 						reply.data = list("address_1" = sender, "command" = "ack", "sender" = src.net_id)
 					else
 						reply.data = list("address_1" = sender, "command" = "nack", "data" = "badpass", "sender" = src.net_id)
-					SPAWN_DBG (5)
+					spawn (5)
 						src.radio_control.post_signal(src, reply, 2)
 
 				if ("unlock")
@@ -799,7 +722,7 @@
 					else
 						reply.data = list("address_1" = sender, "command" = "nack", "data" = "badpass", "sender" = src.net_id)
 
-					SPAWN_DBG(5)
+					spawn(5)
 						src.radio_control.post_signal(src, reply, 2)
 			return //todo
 
@@ -811,7 +734,7 @@
 			reply.data["command"] = "ping_reply"
 			reply.data["device"] = "WNET_SECLOCKER"
 			reply.data["netid"] = src.net_id
-			SPAWN_DBG(5)
+			spawn(5)
 				src.radio_control.post_signal(src, reply, 2)
 			return
 		return
@@ -836,11 +759,5 @@
 			if (user)
 				user.show_text("You repair the lock on [src].", "blue")
 			return 1
-
-	mob_flip_inside(var/mob/user)
-		..(user)
-		if (prob(33) && src.can_flip_bust)
-			user.show_text("<span style=\"color:red\">[src] [pick("cracks","bends","shakes","groans")].</span>")
-			src.bust_out()
 
 #undef RELAYMOVE_DELAY

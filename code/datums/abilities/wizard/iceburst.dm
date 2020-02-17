@@ -6,9 +6,6 @@
 	cooldown = 200
 	requires_robes = 1
 	offensive = 1
-	voice_grim = "sound/voice/wizard/IceburstGrim.ogg"
-	voice_fem = "sound/voice/wizard/IceburstFem.ogg"
-	voice_other = "sound/voice/wizard/IceburstLoud.ogg"
 
 	cast()
 		if(!holder)
@@ -18,41 +15,37 @@
 		var/moblimit = 3
 
 		for(var/mob/living/M as mob in oview())
-			if(isdead(M)) continue
+			if(M.stat == 2) continue
 			count2++
 		if(!count2)
 			boutput(holder.owner, "Noone is in range!")
 			return 1
 
 		holder.owner.say("NYTH ERRIN")
-		..()
-
+		playsound(holder.owner.loc, "sound/voice/wizard/IceburstLoud.ogg", 50, 0, -1)
 		if(!holder.owner.wizard_spellpower())
 			boutput(holder.owner, "<span style=\"color:red\">Your spell is weak without a staff to focus it!</span>")
 
 		for (var/mob/living/M as mob in oview())
-			if(isdead(M)) continue
+			if(M.stat == 2) continue
 			if (ishuman(M))
-				if (M.traitHolder.hasTrait("training_chaplain"))
+				if (M.bioHolder.HasEffect("training_chaplain"))
 					boutput(holder.owner, "<span style=\"color:red\">[M] has divine protection! The spell refuses to target \him!</span>")
 					continue
-			if (iswizard(M))
+			if (iswizard(M) && M.wizard_spellpower())
 				boutput(holder.owner, "<span style=\"color:red\">[M] has arcane protection! The spell refuses to target \him!</span>")
-				continue
-			else if(check_target_immunity( M ))
-				boutput(holder.owner, "<span style='color:red'>[M] seems to be warded from the effects!</span>" )
 				continue
 
 			playsound(holder.owner.loc, "sound/effects/mag_iceburstlaunch.ogg", 25, 1, -1)
 			if ((!holder.owner.wizard_spellpower() && count >= 1) || (count >= moblimit)) break
 			count++
-			SPAWN_DBG(0)
+			spawn(0)
 				var/obj/overlay/A = new /obj/overlay( holder.owner.loc )
 				A.icon_state = "icem"
 				A.icon = 'icons/obj/wizard.dmi'
 				A.name = "ice bolt"
 				A.anchored = 0
-				A.set_density(0)
+				A.density = 0
 				A.layer = MOB_EFFECT_LAYER
 				//A.sd_SetLuminosity(3)
 				//A.sd_SetColor(0, 0.1, 0.8)
@@ -63,7 +56,7 @@
 							var/obj/decal/icefloor/B = new /obj/decal/icefloor(A.loc)
 							//B.sd_SetLuminosity(1)
 							//B.sd_SetColor(0, 0.1, 0.8)
-							SPAWN_DBG(200)
+							spawn(200)
 								qdel (B)
 					step_to(A,M,0)
 					if (get_dist(A,M) == 0)
@@ -92,23 +85,18 @@
 	layer = EFFECTS_LAYER_BASE
 	var/health = 10
 	var/steam_on_death = 1
-	var/add_underlay = 1
 
 	New(loc, mob/iced as mob)
 		..()
-		if(iced && !isAI(iced) && !isblob(iced) && !iswraith(iced))
+		if(iced && !isAI(iced) && !istype(iced, /mob/living/intangible/blob_overmind))
 			if(istype(iced.loc, /obj/icecube)) //Already in a cube?
 				qdel(src)
 				return
 
 			iced.set_loc(src)
 
-			if (add_underlay)
-				src.underlays += iced
+			src.underlays += iced
 			boutput(iced, "<span style=\"color:red\">You are trapped within [src]!</span>") // since this is used in at least two places to trap people in things other than ice cubes
-
-			iced.last_cubed = world.time
-
 		src.health *= (rand(10,20)/10)
 		return
 
@@ -117,27 +105,18 @@
 			return
 
 		if(prob(25))
-			takeDamage(1)
+			src.health--
+			if(src.health <= 0)
+				qdel(src)
 		return
-
-	proc/takeDamage(var/damage)
-		src.health -= damage
-		if(src.health <= 0)
-			qdel(src)
-			return
-		else
-			var/wiggle = 3
-			while(wiggle > 0)
-				wiggle--
-				src.pixel_x = rand(-2,2)
-				src.pixel_y = rand(-2,2)
-				sleep(0.5)
-			src.pixel_x = 0
-			src.pixel_y = 0
 
 	attack_hand(mob/user as mob)
 		user.visible_message("<span class='combat'><b>[user]</b> kicks [src]!</span>", "<span style=\"color:blue\">You kick [src].</span>")
-		takeDamage(2)
+
+		src.health -= 2
+		if(src.health <= 0)
+			qdel(src)
+		return
 
 	bullet_act(var/obj/projectile/P)
 		var/damage = 0
@@ -145,23 +124,37 @@
 		if (damage < 1)
 			return
 
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter) )
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+
 		switch(P.proj_data.damage_type)
 			if(D_KINETIC)
-				takeDamage(damage*2)
+				src.health -= (damage*2)
 			if(D_PIERCING)
-				takeDamage(damage/2)
+				src.health -= (damage/2)
 			if(D_ENERGY)
-				takeDamage(damage/4)
+				src.health -= (damage/4)
+
+		if(src.health <= 0)
+			qdel(src)
+
+		return
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		takeDamage(W.force)
+		src.health -= W.force
+		if(src.health <= 0)
+			qdel(src)
+			return
+		..()
+		return
 
 	disposing()
 		for(var/atom/movable/AM in src)
 			if(ismob(AM))
 				var/mob/M = AM
 				M.visible_message("<span style=\"color:red\"><b>[M]</b> breaks out of [src]!</span>","<span style=\"color:red\">You break out of [src]!</span>")
-				M.last_cubed = world.time
 			AM.set_loc(src.loc)
 
 		if (steam_on_death)
@@ -169,18 +162,7 @@
 				var/datum/effects/system/steam_spread/steam = unpool(/datum/effects/system/steam_spread)
 				steam.set_up(10, 0, get_turf(src))
 				steam.attach(src)
-				steam.start(clear_holder=1)
+				steam.start()
 
 		..()
 		return
-
-	mob_flip_inside(var/mob/user)
-		..(user)
-		user.show_text("<span style=\"color:red\">[src] [pick("cracks","bends","shakes","groans")].</span>")
-		src.takeDamage(6)
-
-	ex_act(severity)
-		for(var/atom/A in src)
-			A.ex_act(severity)
-		takeDamage(20 / severity)
-		..()

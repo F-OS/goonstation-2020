@@ -15,15 +15,23 @@
 	var/broken_num = 0
 	//Save and regenerate weakened parts.
 
+	// For whatever reason, disposing() is never called for this item. Ditto for the cloak generator (Convair880).
+	Del()
+		//DEBUG("Del() was called for [src].")
+		if (src.active)
+			src.turn_off()
+		..()
+		return
+
 	disposing()
-		//DEBUG_MESSAGE("Disposing() was called for [src] at [log_loc(src)].")
+		//DEBUG("Disposing() was called for [src] at [log_loc(src)].")
 		if (src.active)
 			src.turn_off()
 		..()
 		return
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (iswrenchingtool(W) && isturf(loc) && !istype(loc, /turf/space))
+		if(istype(W,/obj/item/wrench) && isturf(loc) && !istype(loc,/turf/space))
 			if(secured)
 				boutput(usr, "<span style=\"color:red\">You unsecure the generator.</span>")
 				secured = 0
@@ -42,7 +50,7 @@
 
 	verb/increase_range()
 		set src in view(1)
-		if (!isliving(usr)) return
+		if (!istype(usr,/mob/living)) return
 		if (!isturf(loc))
 			boutput(usr, "<span style=\"color:red\">You must place the generator on the ground to use it.</span>")
 			return
@@ -54,7 +62,7 @@
 
 	verb/decrease_range()
 		set src in view(1)
-		if (!isliving(usr)) return
+		if (!istype(usr,/mob/living)) return
 		if (!isturf(loc))
 			boutput(usr, "<span style=\"color:red\">You must place the generator on the ground to use it.</span>")
 			return
@@ -107,7 +115,7 @@
 			S.health = 0
 			S.icon_state = "shield0"
 			S.name = "weakened shield"
-			SPAWN_DBG(200)
+			spawn(200)
 				if(S)
 					S.health = S.health_max
 					S.check()
@@ -125,7 +133,7 @@
 
 	verb/toggle()
 		set src in view(1)
-		if (!isliving(usr)) return
+		if (!istype(usr,/mob/living)) return
 		if (!isturf(loc))
 			boutput(usr, "<span style=\"color:red\">You must place the generator on the ground to use it.</span>")
 			return
@@ -146,7 +154,6 @@
 	opacity = 0
 	anchored = 1
 	layer=12
-	event_handler_flags = USE_FLUID_ENTER | USE_CANPASS
 	var/health_max = 10
 	var/health = 10
 	var/broken = 0
@@ -165,7 +172,7 @@
 		if(broken) return
 		health--
 		check()
-		playsound(src, "sound/impact_sounds/Energy_Hit_1.ogg", 40, 1)
+		playsound(src, "sound/effects/shieldhit2.ogg", 40, 1)
 		qdel(O)
 
 	proc/check()
@@ -174,7 +181,7 @@
 			icon_state = "shield0"
 			name = "weakened shield"
 			playsound(src, "sound/effects/shielddown2.ogg", 45, 1)
-			SPAWN_DBG(450)
+			spawn(450)
 				health = health_max
 				check()
 		else

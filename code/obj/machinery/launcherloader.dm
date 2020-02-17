@@ -7,7 +7,6 @@
 	opacity = 0
 	layer = 2.6
 	anchored = 1
-	event_handler_flags = USE_HASENTERED
 
 	var/obj/machinery/mass_driver/driver = null
 
@@ -18,7 +17,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(5)
+		spawn(5)
 			var/list/drivers = new/list()
 			for(var/obj/machinery/mass_driver/D in range(1,src))
 				drivers += D
@@ -52,21 +51,21 @@
 		if(driver && !driver_operating)
 			driver_operating = 1
 
-			SPAWN_DBG(0)
+			spawn(0)
 				var/obj/machinery/door/poddoor/door = null
-				for(var/obj/machinery/door/poddoor/P in doors)
+				for(var/obj/machinery/door/poddoor/P)
 					if (P.id == driver.id)
 						door = P
-						SPAWN_DBG(0)
+						spawn(0)
 							if (door)
 								door.open()
-						SPAWN_DBG(100)
+						spawn(100)
 							if (door)
 								door.close() //this may need some adjusting still
 
-				SPAWN_DBG(door ? 55 : 20) driver_operating = 0
+				spawn(door ? 55 : 20) driver_operating = 0
 
-				SPAWN_DBG(door ? 20 : 10)
+				spawn(door ? 20 : 10)
 					if (driver)
 						for(var/obj/machinery/mass_driver/D in machines)
 							if(D.id == driver.id)
@@ -82,7 +81,7 @@
 
 	HasEntered(atom/A)
 		if (isobserver(A) || isintangible(A) || iswraith(A)) return
-		return_if_overlay_or_effect(A)
+		if (istype(A, /obj/overlay)) return
 		activate()
 
 
@@ -106,7 +105,6 @@
 	density = 0
 	opacity = 0
 	anchored = 1
-	event_handler_flags = USE_HASENTERED
 
 	var/default_direction = NORTH //The direction things get sent into when the router does not have a destination for the given barcode or when there is none attached.
 	var/list/destinations = new/list() //List of tags and the associated directions.
@@ -115,10 +113,9 @@
 	var/operating = 0
 	var/driver_operating = 0
 
-	var/trigger_when_no_match = 1
-
 	proc/activate()
 		if(operating || !isturf(src.loc)) return
+		operating = 1
 
 		var/next_dest = null
 
@@ -129,14 +126,8 @@
 					next_dest = destinations[AM.delivery_destination]
 					break
 
-		if(next_dest)
-			src.dir = next_dest
-		else
-			if (!trigger_when_no_match)
-				operating = 0
-			src.dir = default_direction
-
-		operating = 1
+		if(next_dest) src.dir = next_dest
+		else src.dir = default_direction
 
 		flick("amdl_1",src)
 		playsound(src, "sound/effects/pump.ogg",50, 1)
@@ -155,12 +146,12 @@
 		if(driver && !driver_operating)
 			driver_operating = 1
 
-			SPAWN_DBG(0)
-				SPAWN_DBG(20)
+			spawn(0)
+				spawn(20)
 					driver_operating = 0
 					driver = null
 
-				SPAWN_DBG(10)
+				spawn(10)
 					if (driver)
 						driver.drive()
 
@@ -175,13 +166,7 @@
 
 	HasEntered(atom/A)
 		if (isobserver(A) || isintangible(A) || iswraith(A)) return
-
-		if (!trigger_when_no_match)
-			var/atom/movable/AM = A
-			if (!AM.delivery_destination)
-				return
-
-		return_if_overlay_or_effect(A)
+		if (istype(A, /obj/overlay)) return
 		activate()
 
 /obj/machinery/cargo_router/exampleRouter
@@ -277,21 +262,6 @@
 		default_direction = EAST
 		..()
 
-
-/obj/machinery/cargo_router/oshan_north
-	trigger_when_no_match = 0
-	New()
-		destinations = list("North" = NORTH)
-		default_direction = NORTH
-		..()
-
-/obj/machinery/cargo_router/oshan_south
-	trigger_when_no_match = 0
-	New()
-		destinations = list("South" = SOUTH)
-		default_direction = SOUTH
-		..()
-
 /obj/machinery/computer/barcode
 	name = "Barcode Computer"
 	desc = "Used to print barcode stickers for the cargo routing system."
@@ -319,14 +289,15 @@
 		dat += "<BR><b><A href='?src=\ref[src];add=1'>Add Tag</A></b>"
 
 		user.machine = src
-		user.Browse(dat, "title=Barcode Computer;window=bc_computer_[src];size=300x400")
-		onclose(user, "bc_computer_[src]")
+		user << browse("<TITLE>Barcode Computer</TITLE><BR>[dat]", "window=bc_computer;size=400x300")
+		onclose(user, "bc_computer")
 		return
 
 
 	attackby(var/obj/item/I as obj, user as mob)
-		if (istype(I, /obj/item/card/id) || (istype(I, /obj/item/device/pda2) && I:ID_card))
-			if (istype(I, /obj/item/device/pda2) && I:ID_card) I = I:ID_card
+		if (istype(I, /obj/item/device/pda2) && I:ID_card)
+			I = I:ID_card
+		if (istype(I, /obj/item/card/id))
 			boutput(user, "<span style=\"color:blue\">You swipe the ID card.</span>")
 			account = FindBankAccountByName(I:registered)
 			if(account)
@@ -353,9 +324,8 @@
 			playsound(src.loc, "sound/machines/printer_thermal.ogg", 50, 0)
 			sleep(28)
 			var/obj/item/barcodesticker/B = new/obj/item/barcodesticker(src.loc)
-			var/dest = strip_html(href_list["print"], 64)
-			B.name = "Barcode Sticker ([dest])"
-			B.destination = dest
+			B.name = "Barcode Sticker ([href_list["print"]])"
+			B.destination = href_list["print"]
 			B.scan = src.scan
 			B.account = src.account
 			printing = 0
@@ -369,9 +339,9 @@
 			if(length(input) && !destinations.Find(input))
 				destinations.Add(input)*/
 
-			usr.Browse(null, "window=bc_computer")
-			src.updateUsrDialog()
-			return
+		usr << browse(null, "window=bc_computer")
+		src.updateUsrDialog()
+		return
 
 /obj/machinery/computer/barcode/qm //has trader tags if there is one
 	name = "QM Barcode Computer"
@@ -385,29 +355,19 @@
 		var/dat = ""
 		dat += "<b>Available Destinations:</b><BR>"
 		for(var/I in destinations)
-			dat += "<b><A href='?src=\ref[src];print=[I]'>[I]</A></b><BR>"
+			dat += "<b><A href='?src=\ref[src];print=[I]'>[I]</A></b><BR><BR>"
 
-		dat += "<BR><b>Available Traders:</b><BR>"
+		dat += "<b>Available Traders:</b><BR>"
 		for(var/datum/trader/T in shippingmarket.active_traders)
 			if (!T.hidden)
-				dat += "<b><A href='?src=\ref[src];print=[T.crate_tag]'>Sell to [T.name]</A></b><BR>"
+				dat += "<br><b><A href='?src=\ref[src];print=[T.crate_tag]'>Sell to [T.name]</A></b><BR>"
 
-		//dat += "<BR><b><A href='?src=\ref[src];add=1'>Add Tag</A></b>"
+		dat += "<BR><b><A href='?src=\ref[src];add=1'>Add Tag</A></b>"
 
 		user.machine = src
-		// Attempting to diagnose an infinite window refresh I can't duplicate, reverting the display style back to plain HTML to see what results that gets me.
-		// Hooray for having a playerbase to test shit on
-		//user.Browse(dat, "title=Barcode Computer;window=bc_computer_[src];size=300x400")
-		user.Browse(dat, "title=Barcode Computer;window=bc_computer_[src];size=300x400")
-		onclose(user, "bc_computer_[src]")
+		user << browse("<TITLE>Barcode Computer</TITLE><BR>[dat]", "window=bc_computer;size=400x300")
+		onclose(user, "bc_computer")
 		return
-
-/obj/machinery/computer/barcode/oshan
-	name = "Barcode Computer"
-	desc = "Used to print barcode stickers for the cargo carousel routing system."
-
-	destinations = list("North","South")
-
 
 /obj/item/barcodesticker
 	name = "Barcode Sticker"
@@ -433,9 +393,6 @@
 				C.account = src.account
 				boutput(usr, "<span style=\"color:blue\">[target] has been marked with your account routing information.</span>")
 				C.desc = "[C] belongs to [scan.registered]."
-			if(istype(target, /obj/storage/crate))
-				var/obj/storage/crate/C = target
-				C.update_icon()
 			qdel(src)
 		return
 

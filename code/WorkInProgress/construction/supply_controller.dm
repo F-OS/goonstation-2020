@@ -108,7 +108,7 @@
 		comlarge = new /datum/commodity/largeartifact()
 
 	match_condition(var/obj/O)
-		if (isitem(O) && O.artifact)
+		if (istype(O, /obj/item) && O.artifact)
 			return comhandheld
 		else if (O.artifact)
 			return comlarge
@@ -359,14 +359,14 @@
 	maximum_stock = 5
 	replenishment_time = 3000
 	supply_packs = list(/datum/supply_packs/medicalfirstaid)
-/*
+
 /datum/supply_control/arc_smelter
 	required = /datum/progress/rooms/cargo_bay
 	maximum_stock = 2
 	replenishment_time = 36000
 	supply_packs = list(/datum/supply_packs/complex/arc_smelter)
 	workstation_grade = 2
-*/
+
 /datum/supply_control/weapon_kit
 	maximum_stock = 3
 	initial_stock = 1
@@ -517,7 +517,7 @@
 	proc/used()
 		charge = 0
 		has_crystal--
-		SPAWN_DBG(0)
+		spawn(0)
 			while (charge < 100)
 				charge++
 				sleep(1)
@@ -607,7 +607,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(50)
+		spawn(50)
 			recheck()
 
 	proc/is_sellable(var/obj/O)
@@ -674,7 +674,7 @@
 				else
 					var/turf/T = get_turf(in_target)
 					for (var/atom/movable/O in T)
-						if ((O != in_target && O.density) || isliving(O))
+						if ((O != in_target && O.density) || istype(O, /mob/living))
 							message = "<span class='bad'>Please clear the teleportation target area.</span>"
 							attack_hand(usr)
 							return
@@ -709,7 +709,7 @@
 							continue
 						if (is_sellable(O))
 							CR = O
-						else if (O.density || isliving(O) || isitem(O))
+						else if (O.density || istype(O, /mob/living) || istype(O, /obj/item))
 							message = "<span class='bad'>Please remove all objects and lifeforms not being sold from the telepad.</span>"
 							attack_hand(usr)
 							return
@@ -744,7 +744,7 @@
 		var/datum/game_mode/construction/C = ticker.mode
 		var/is_powered = src.powered()
 		if (!is_powered && !has_battery_power)
-			user.Browse("The screen is blank.", "window=specsupply;size=500x400")
+			user << browse("The screen is blank.", "window=specsupply;size=500x400")
 			return
 		var/interface = {"<html><head><style>
 table.orderable {
@@ -852,4 +852,4 @@ h2 {
 
 			interface += "</tbody></table>"
 		interface += "</body></html>"
-		user.Browse(interface, "window=specsupply;size=500x400")
+		user << browse(interface, "window=specsupply;size=500x400")

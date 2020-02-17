@@ -2,8 +2,6 @@
 // Bad smoke
 /////////////////////////////////////////////
 
-//consider replacing with newsmoke + reagent
-
 /obj/effects/bad_smoke
 	name = "smoke"
 	icon_state = "smoke"
@@ -15,7 +13,6 @@
 	icon = 'icons/effects/96x96.dmi'
 	pixel_x = -32
 	pixel_y = -32
-	event_handler_flags = USE_HASENTERED
 
 /obj/effects/bad_smoke/Move()
 	..()
@@ -24,7 +21,7 @@
 		else
 			M.drop_item()
 			if (prob(25))
-				M.changeStatus("stunned", 1 SECONDS)
+				M.stunned += 1
 			M.take_oxygen_deprivation(1)
 			M.emote("cough")
 	return
@@ -37,7 +34,7 @@
 		else
 			M.drop_item()
 			if (prob(25))
-				M.changeStatus("stunned", 1 SECONDS)
+				M.stunned += 1
 			M.take_oxygen_deprivation(1)
 			M.emote("cough")
 	return

@@ -269,10 +269,10 @@
 	return src.attack_hand(user)
 
 /obj/machinery/door_control/attack_hand(mob/user as mob)
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 
-	if (user.getStatusDuration("stunned") || user.getStatusDuration("weakened") || user.stat)
+	if (user.stunned || user.weakened || user.stat)
 		return
 
 	use_power(5)
@@ -281,60 +281,66 @@
 	if (!src.id)
 		return
 
-	logTheThing("station", user, null, "toggled the [src.name] at [log_loc(src)].")
-
-	for (var/obj/machinery/door/poddoor/M in doors)
+	for (var/obj/machinery/door/poddoor/M)
 		if (M.id == src.id)
 			if (M.density)
-				M.open()
-				if (src.timer)
-					SPAWN_DBG(src.timer)
-						M.close()
+				spawn(0)
+					M.open()
+					if (src.timer)
+						spawn(src.timer)
+							M.close()
+					return
 			else
-				M.close()
-				if (src.timer)
-					SPAWN_DBG(src.timer)
-						M.open()
+				spawn(0)
+					M.close()
+					if (src.timer)
+						spawn(src.timer)
+							M.open()
+					return
 
-	for (var/obj/machinery/door/airlock/M in doors)
+	for (var/obj/machinery/door/airlock/M)
 		if (M.id == src.id)
 			if (M.density)
-				M.open()
+				spawn(0)
+					M.open()
+					return
 			else
-				M.close()
+				spawn(0)
+					M.close()
+					return
 
-	for (var/obj/machinery/conveyor/M in machines) // Workaround for the stacked conveyor belt issue (Convair880).
+	for (var/obj/machinery/conveyor/M) // Workaround for the stacked conveyor belt issue (Convair880).
 		if (M.id == src.id)
 			if (M.operating)
 				M.operating = 0
 				if (src.timer)
-					SPAWN_DBG(src.timer)
+					spawn(src.timer)
 						M.operating = 1
 			else
 				M.operating = 1
 				if (src.timer)
-					SPAWN_DBG(src.timer)
+					spawn(src.timer)
 						M.operating = 0
 			M.setdir()
 
-	SPAWN_DBG(15)
-		if(!(status & NOPOWER))
+	spawn(15)
+		if(!(stat & NOPOWER))
 			icon_state = "doorctrl0"
 	src.add_fingerprint(usr)
 
 /obj/machinery/door_control/power_change()
 	..()
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "doorctrl-p"
 	else
 		icon_state = "doorctrl0"
 
 /obj/machinery/door_control/oneshot/attack_hand(mob/user as mob)
 	..()
-	if (!(status & BROKEN))
-		src.status |= BROKEN
+	if (!(stat & BROKEN))
+		src.stat |= BROKEN
 		src.visible_message("<span style=\"color:red\">[src] emits a sad thunk.  That can't be good.</span>")
-		playsound(src.loc, "sound/impact_sounds/Generic_Click_1.ogg", 50, 1)
+		playsound(src.loc, "sound/effects/thunk.ogg", 50, 1)
 	else
 		boutput(user, "<span style=\"color:red\">It's broken.</span>")
 
@@ -352,7 +358,7 @@
 
 /obj/machinery/driver_button/attack_hand(mob/user as mob)
 
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 	if(active)
 		return
@@ -362,9 +368,11 @@
 	active = 1
 	icon_state = "launcheract"
 
-	for(var/obj/machinery/door/poddoor/M in doors)
+	for(var/obj/machinery/door/poddoor/M)
 		if (M.id == src.id)
-			M.open()
+			spawn( 0 )
+				M.open()
+				return
 
 	sleep(20)
 
@@ -374,9 +382,11 @@
 
 	sleep(50)
 
-	for(var/obj/machinery/door/poddoor/M in doors)
+	for(var/obj/machinery/door/poddoor/M)
 		if (M.id == src.id)
-			M.close()
+			spawn( 0 )
+				M.close()
+				return
 
 	icon_state = "launcherbtt"
 	active = 0
@@ -399,9 +409,7 @@
 	var/frequency = 1142
 	var/open = 0 //open or not?
 	var/access_type = 1
-	var/access_type_secondary = null
 	anchored = 1.0
-	var/datum/light/light
 
 	syndicate
 		access_type = -1
@@ -416,7 +424,7 @@
 
 		wizard
 			id = "hangar_wizard"
-			access_type = -2
+			access_type = -1
 
 			new_walls
 				north
@@ -522,13 +530,6 @@
 
 		security
 			id = "hangar_security"
-			access_type = 2
-			#ifdef MAP_OVERRIDE_MANTA
-			access_type_secondary = 2
-			#else
-			access_type_secondary = null
-			#endif
-
 
 			new_walls
 				north
@@ -661,24 +662,14 @@
 	New()
 		..()
 		UnsubscribeProcess()
-		SPAWN_DBG(5)	// must wait for map loading to finish
+		spawn(5)	// must wait for map loading to finish
 			if(radio_controller)
 				radio_controller.add_object(src, "[frequency]")
 
 		if(id)
 			pass = "[id]-[rand(1,50)]"
 			name = "Access Code: [pass]"
-		light = new /datum/light/point //They were kinda dark okay
-		light.attach(src)
-		light.set_brightness(0.6)
-		light.set_height(1.25)
-		light.set_color(0.9, 0.5, 0.5)
-		light.enable()
 		return
-
-	disposing()
-		radio_controller.remove_object(src, "[frequency]")
-		..()
 
 	Click(var/location,var/control,var/params)
 		if(get_dist(usr, src) < 16)
@@ -692,20 +683,13 @@
 					return ..()
 				if (!access_type)
 					open_door()
-				else if (!access_type_secondary)
-					open_door()
-				else if (!access_type_secondary)
-					open_door()
 				else
 					if(V.com_system.access_type == src.access_type)
-						open_door()
-
-					else if(V.com_system.access_type_secondary == src.access_type_secondary)
 						open_door()
 					else
 						boutput(usr, "<span style=\"color:red\">Access denied. Comms system not recognized.</span>")
 						return ..()
-			return ..()
+		return ..()
 
 	attack_ai(mob/user as mob)
 		return src.attack_hand(user)
@@ -720,18 +704,22 @@
 		return
 
 	proc/open_door()
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			return
 		use_power(5)
 
-		for(var/obj/machinery/door/poddoor/M in doors)
+		for(var/obj/machinery/door/poddoor/M)
 			if (M.id == src.id)
 				if (M.density)
-					M.open()
-					src.open = 1
+					spawn( 0 )
+						M.open()
+						src.open = 1
+						return
 				else
-					M.close()
-					src.open = 0
+					spawn( 0 )
+						M.close()
+						src.open = 0
+						return
 
 	receive_signal(datum/signal/signal)
 		if(..())
@@ -744,16 +732,20 @@
 				return
 
 			if(signal.data["doorpass"] == src.pass)
-				if(status & (NOPOWER|BROKEN))
+				if(stat & (NOPOWER|BROKEN))
 					return
 				use_power(5)
 
-				for(var/obj/machinery/door/poddoor/M in doors)
+				for(var/obj/machinery/door/poddoor/M)
 					if (M.id == src.id)
 						if (M.density)
-							M.open()
+							spawn( 0 )
+								M.open()
+								return
 						else
-							M.close()
+							spawn( 0 )
+								M.close()
+								return
 			return
 		////////reset pass
 		if(signal.data["command"] =="reset door pass")
@@ -786,3 +778,34 @@
 			return frequency.post_signal(src, signal)
 		//else
 			//qdel(signal)
+
+//Weird, but need to make use of turf for entered proc
+/turf/simulated/shuttle/floor/door_control
+	name = "Ship Sensor"
+	icon = 'icons/turf/floors.dmi'
+	icon_state = "solarpanel"
+	var/id = null
+
+	Entered(mob/user as mob)
+		open_door()
+		..()
+		return
+	Entered(obj/O as obj)
+		..()
+		if(istype(O, /obj/machinery/vehicle))
+			open_door()
+		return
+
+	proc
+		open_door()
+
+			for(var/obj/machinery/door/poddoor/M)
+				if (M.id == src.id)
+					if (M.density)
+						spawn( 0 )
+							M.open()
+							return
+					else
+						spawn( 0 )
+							M.close()
+							return

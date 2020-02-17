@@ -233,7 +233,7 @@ SHARDS
 
 /obj/item/shard/Bump()
 
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		if (prob(20))
 			src.force = 15
 		else
@@ -277,11 +277,11 @@ SHARDS
 		var/mob/M = AM
 		if(ishuman(M))
 			var/mob/living/carbon/human/H = M
-			if(isabomination(H))
+			if(istype(H.mutantrace, /datum/mutantrace/abomination))
 				return
 			if(!H.shoes)
 				boutput(H, "<span style=\"color:red\"><B>You step in the broken glass!</B></span>")
-				playsound(src.loc, "sound/impact_sounds/Glass_Shards_Hit_1.ogg", 50, 1)
+				playsound(src.loc, "sound/misc/glass_step.ogg", 50, 1)
 				var/obj/item/affecting = H.organs[pick("l_leg", "r_leg")]
 				H.weakened = max(3, H.weakened)
 				affecting.take_damage(5, 0)
@@ -327,7 +327,7 @@ SHARDS
 		if(ismob(AM))
 			var/mob/M = AM
 			boutput(M, "<span style=\"color:red\"><B>You step on the crystal shard!</B></span>")
-			playsound(src.loc, "sound/impact_sounds/Glass_Shards_Hit_1.ogg", 50, 1)
+			playsound(src.loc, "sound/misc/glass_step.ogg", 50, 1)
 			if(ishuman(M))
 				var/mob/living/carbon/human/H = M
 				var/obj/item/affecting = H.organs[pick("l_leg", "r_leg")]

@@ -14,7 +14,7 @@
 
 /datum/game_mode/wizard/announce()
 	boutput(world, "<B>The current game mode is - Wizard!</B>")
-	boutput(world, "<B>There is a <span style=\"color:red\">SPACE WIZARD</span> on the [station_or_ship()]. You can't let him achieve his objective!</B>")
+	boutput(world, "<B>There is a <span style=\"color:red\">SPACE WIZARD</span> on the station. You can't let him achieve his objective!</B>")
 
 /datum/game_mode/wizard/pre_setup()
 
@@ -40,13 +40,13 @@
 		/*--num_wizards
 		num_wizards = max(num_wizards, 0)*/
 
-	var/list/chosen_wizards = antagWeighter.choose(pool = possible_wizards, role = "wizard", amount = num_wizards, recordChosen = 1)
-	traitors |= chosen_wizards
-	for (var/datum/mind/wizard in traitors)
-		wizard.assigned_role = "MODE"
-		wizard.special_role = "wizard"
+	for(var/j = 0, j < num_wizards, j++)
+		var/datum/mind/wizard = pick(possible_wizards)
+		src.traitors += wizard
 		possible_wizards.Remove(wizard)
 
+	for(var/datum/mind/wiz_mind in src.traitors)
+		wiz_mind.assigned_role = "MODE"
 	return 1
 
 /datum/game_mode/wizard/post_setup()
@@ -70,19 +70,19 @@
 
 			equip_wizard(wizard.current)
 			boutput(wizard.current, "<B><span style=\"color:red\">You are a Wizard!</span></B>")
-			boutput(wizard.current, "<B>The Space Wizards Federation has sent you to perform a ritual on the [station_or_ship()]:</B>")
+			boutput(wizard.current, "<B>The Space Wizards Federation has sent you to perform a ritual on the station:</B>")
 
 			var/obj_count = 1
 			for(var/datum/objective/objective in wizard.objectives)
 				boutput(wizard.current, "<B>Objective #[obj_count]</B>: [objective.explanation_text]")
 				obj_count++
-			boutput(wizard.current, "<B>Complete all steps of the ritual, and the Dark Gods shall have the [station_or_ship()]! Work together with any partner you may have!</B>")
+			boutput(wizard.current, "<B>Complete all steps of the ritual, and the Dark Gods shall have the station! Work together with any partner you may have!</B>")
 
 	for(var/datum/mind/wizard in src.traitors)
 		var/randomname
-		if (wizard.current.gender == "female") randomname = wiz_female.len ? pick(wiz_female) : "Witch"
-		else randomname = wiz_male.len ? pick(wiz_male) : "Wizard"
-		SPAWN_DBG(0)
+		if (wizard.current.gender == "female") randomname = pick(wiz_female)
+		else randomname = pick(wiz_male)
+		spawn(0)
 			var/newname = adminscrub(input(wizard.current,"You are a Wizard. Would you like to change your name to something else?", "Name change",randomname) as text)
 
 			if (length(ckey(newname)) == 0)
@@ -90,11 +90,11 @@
 
 			if (newname)
 				if (length(newname) >= 26) newname = copytext(newname, 1, 26)
-				newname = replacetext(newname, ">", "'")
+				newname = dd_replacetext(newname, ">", "'")
 				wizard.current.real_name = newname
 				wizard.current.name = newname
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 /datum/game_mode/wizard/proc/get_possible_wizards(minimum_wizards=1)
@@ -140,7 +140,7 @@
 		intercepttext += i_text.build(A, pick(src.traitors))
 /*
 	for (var/obj/machinery/computer/communications/comm in machines)
-		if (!(comm.status & (BROKEN | NOPOWER)) && comm.prints_intercept)
+		if (!(comm.stat & (BROKEN | NOPOWER)) && comm.prints_intercept)
 			var/obj/item/paper/intercept = new /obj/item/paper( comm.loc )
 			intercept.name = "paper- 'Cent. Com. Status Summary'"
 			intercept.info = intercepttext
@@ -148,7 +148,7 @@
 			comm.messagetitle.Add("Cent. Com. Status Summary")
 			comm.messagetext.Add(intercepttext)
 */
-	for (var/obj/machinery/communications_dish/C in comm_dishes)
+	for (var/obj/machinery/communications_dish/C in machines)
 		C.add_centcom_report("Cent. Com. Status Summary", intercepttext)
 
 	command_alert("Summary downloaded and printed out at all communications consoles.", "Enemy communication intercept. Security Level Elevated.")
@@ -171,7 +171,7 @@
 
 datum/game_mode/wizard/check_finished()
 
-	if(emergency_shuttle.location == SHUTTLE_LOC_RETURNED)
+	if(emergency_shuttle.location == 2)
 		return 1
 
 	if (no_automatic_ending)
@@ -197,7 +197,7 @@ datum/game_mode/wizard/check_finished()
 		for(var/datum/objective/objective in W.objectives)
 			if(objective.check_completion()) objectives_completed++
 		if(objectives_completed == W.objectives.len) wincount++
-		//if(!W.current || isdead(W.current)) wizdeathcount++
+		//if(!W.current || W.current.stat == 2) wizdeathcount++
 
 	//if (wizcount == wizdeathcount) return 1
 	if (wizcount == wincount)

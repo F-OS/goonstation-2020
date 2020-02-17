@@ -91,17 +91,6 @@
 	desc = "High-quality material sheets."
 	price = 7 // no more scamming
 	baseprice = 7
-/// pathology
-
-/datum/commodity/mat_bar
-	comname = "Material Bar"
-	comtype = /obj/item/material_piece
-	desc = "A Material Bar of some type."
-	onmarket = 1
-	price = 2
-	baseprice = 2
-	upperfluc = 2
-	lowerfluc = -1
 
 /datum/commodity/ore // because QMs keep scamming the system, I am lowering the base price of ore way down - cogwerks
 	comname = "ore"
@@ -117,16 +106,10 @@
 /datum/commodity/ore/mauxite
 	comname = "Mauxite"
 	comtype = /obj/item/raw_material/mauxite
-/datum/commodity/mat_bar/mauxite
-	comname = "Mauxite Bar"
-	comtype = /obj/item/material_piece/mauxite
 
 /datum/commodity/ore/pharosium
 	comname = "Pharosium"
 	comtype = /obj/item/raw_material/pharosium
-/datum/commodity/mat_bar/pharosium
-	comname = "Pharosium Bar"
-	comtype = /obj/item/material_piece/pharosium
 
 /datum/commodity/ore/char
 	comname = "Char"
@@ -135,20 +118,10 @@
 	baseprice = 35
 	upperfluc = 50
 	lowerfluc = -25
-/datum/commodity/mat_bar/char
-	comname = "Char Bar"
-	comtype = /obj/item/material_piece/char
-	price = 35
-	baseprice = 35
-	upperfluc = 50
-	lowerfluc = -25
 
 /datum/commodity/ore/molitz
 	comname = "Molitz"
 	comtype = /obj/item/raw_material/molitz
-/datum/commodity/mat_bar/molitz
-	comname = "Molitz Bar"
-	comtype = /obj/item/material_piece/molitz
 
 /datum/commodity/ore/cobryl
 	comname = "Cobryl"
@@ -157,24 +130,10 @@
 	baseprice = 200
 	upperfluc = 200
 	lowerfluc = -100
-/datum/commodity/mat_bar/cobryl
-	comname = "Cobryl Bar"
-	comtype = /obj/item/material_piece/cobryl
-	price = 200
-	baseprice = 200
-	upperfluc = 200
-	lowerfluc = -100
 
 /datum/commodity/ore/uqill
 	comname = "Uqill"
 	comtype = /obj/item/raw_material/uqill
-	price = 750
-	baseprice = 750
-	upperfluc = 1000
-	lowerfluc = -500
-/datum/commodity/mat_bar/uqill
-	comname = "Uqill Bar"
-	comtype = /obj/item/material_piece/uqill
 	price = 750
 	baseprice = 750
 	upperfluc = 1000
@@ -188,31 +147,14 @@
 	baseprice = 1000
 	upperfluc = 1000
 	lowerfluc = -500
-/datum/commodity/mat_bar/telecrystal
-	comname = "Telecrystal Block"
-	comtype = /obj/item/material_piece/telecrystal
-	price = 1000
-	baseprice = 1000
-	upperfluc = 1000
-	lowerfluc = -500
 
 /datum/commodity/ore/fibrilith // why is this worth a ton of money?? dropping the value to further upset QMs
 	comname = "Fibrilith"
 	comtype = /obj/item/raw_material/fibrilith
-/datum/commodity/mat_bar/fibrilith
-	comname = "Fibrilith Block"
-	comtype = /obj/item/material_piece/fibrilith
 
 /datum/commodity/ore/koshmarite
 	comname = "Koshmarite"
 	comtype = /obj/item/raw_material/eldritch
-	price = 100
-	baseprice = 100
-	upperfluc = 100
-	lowerfluc = -50
-/datum/commodity/mat_bar/koshmarite
-	comname = "Koshmarite Block"
-	comtype = /obj/item/material_piece/koshmarite
 	price = 100
 	baseprice = 100
 	upperfluc = 100
@@ -225,24 +167,10 @@
 	baseprice = 100
 	upperfluc = 100
 	lowerfluc = -50
-/datum/commodity/mat_bar/viscerite
-	comname = "Viscerite Block"
-	comtype = /obj/item/material_piece/viscerite
-	price = 100
-	baseprice = 100
-	upperfluc = 100
-	lowerfluc = -50
 
 /datum/commodity/ore/bohrum
 	comname = "Bohrum"
 	comtype = /obj/item/raw_material/bohrum
-	price = 200
-	baseprice = 200
-	upperfluc = 200
-	lowerfluc = -100
-/datum/commodity/mat_bar/bohrum
-	comname = "Bohrum Bar"
-	comtype = /obj/item/material_piece/bohrum
 	price = 200
 	baseprice = 200
 	upperfluc = 200
@@ -255,24 +183,10 @@
 	baseprice = 350
 	upperfluc = 200
 	lowerfluc = -200
-/datum/commodity/mat_bar/claretine
-	comname = "Claretine Bar"
-	comtype = /obj/item/material_piece/claretine
-	price = 350
-	baseprice = 350
-	upperfluc = 200
-	lowerfluc = -200
 
 /datum/commodity/ore/erebite
 	comname = "Erebite"
 	comtype = /obj/item/raw_material/erebite
-	price = 650
-	baseprice = 650
-	upperfluc = 200
-	lowerfluc = -200
-/datum/commodity/mat_bar/erebite
-	comname = "Erebite Bar"
-	comtype = /obj/item/material_piece/erebite
 	price = 650
 	baseprice = 650
 	upperfluc = 200
@@ -285,13 +199,6 @@
 	baseprice = 480
 	upperfluc = 200
 	lowerfluc = -200
-/datum/commodity/mat_bar/cerenkite
-	comname = "Cerenkite Bar"
-	comtype = /obj/item/material_piece/cerenkite
-	price = 650
-	baseprice = 650
-	upperfluc = 200
-	lowerfluc = -200
 
 /datum/commodity/ore/plasmastone
 	comname = "Plasmastone"
@@ -300,24 +207,10 @@
 	baseprice = 550
 	upperfluc = 200
 	lowerfluc = -200
-/datum/commodity/mat_bar/plasmastone
-	comname = "Plasmastone Bar"
-	comtype = /obj/item/material_piece/plasmastone
-	price = 550
-	baseprice = 550
-	upperfluc = 200
-	lowerfluc = -200
 
 /datum/commodity/ore/syreline
 	comname = "Syreline"
 	comtype = /obj/item/raw_material/syreline
-	price = 800
-	baseprice = 800
-	upperfluc = 1000
-	lowerfluc = -300
-/datum/commodity/mat_bar/syreline
-	comname = "Syreline Bar"
-	comtype = /obj/item/material_piece/syreline
 	price = 800
 	baseprice = 800
 	upperfluc = 1000
@@ -599,14 +492,6 @@
 
 /// these are things that you can sell to the traders
 
-/datum/commodity/drugs/poppies
-	comname = "Poppies"
-	comtype = /obj/item/plant/herb/poppy
-	price = 350
-	baseprice = 350
-	upperfluc = 200
-	lowerfluc = -100
-
 /datum/commodity/drugs/shrooms
 	comname = "Psilocybin"
 	comtype = /obj/item/reagent_containers/food/snacks/mushroom/psilocybin
@@ -702,15 +587,6 @@
 	baseprice = 100
 	upperfluc = 150
 	lowerfluc = -150
-
-/datum/commodity/drugs/jenkem
-	comname = "Jenkem (1x syringe)"
-	comtype = /obj/item/reagent_containers/syringe/jenkem
-	desc = "A low quality sewage drug used by no one in the right state of mind."
-	price = 300
-	baseprice = 300
-	upperfluc = 150
-	lowerfluc = -50
 
 /datum/commodity/drugs/lsd
 	comname = "LSD (1x patch)"
@@ -984,15 +860,6 @@
 	upperfluc = 2500
 	lowerfluc = -2500
 
-/datum/commodity/contraband/spy_sticker_kit
-	comname = "Spy Sticker Kit"
-	comtype = /obj/item/storage/box/spy_sticker_kit
-	desc = "Kit contains innocuous stickers that can be used to broadcast audio and observe a video feed wirelessly."
-	price = 1000
-	baseprice = 1000
-	upperfluc = 200
-	lowerfluc = -200
-
 //NT stuff
 
 /datum/commodity/contraband/ntso_uniform
@@ -1161,24 +1028,6 @@
 	upperfluc = 750
 	lowerfluc = -500
 
-/datum/commodity/junk/grinder_upgrade
-	comname = "Enzymatic Reclaimer Upgrade Board"
-	comtype = /obj/item/grinder_upgrade
-	price = 2500
-	baseprice = 2500
-	upperfluc = 750
-	lowerfluc = -500
-
-/datum/commodity/junk/circus_board
-	comname = "Circus board"
-	comtype = /obj/item/peripheral/card_scanner/clownifier
-	desc = "A cheap imported ID scanner module. It looks sticky. Like, WAY sticker than a computer module should be."
-	price = 150
-	baseprice = 150
-	upperfluc = 50
-	lowerfluc = -50
-
-
 /////////////////////////////////
 ///////food trader //////////////
 /////////////////////////////////
@@ -1222,10 +1071,10 @@
 /datum/commodity/produce/special/lashberry
 	comname = "Lashberry"
 	comtype = /obj/item/reagent_containers/food/snacks/plant/lashberry
-	price = 400
-	baseprice = 400
-	upperfluc = 300
-	lowerfluc = -150
+	price = 700
+	baseprice = 700
+	upperfluc = 500
+	lowerfluc = -250
 
 /datum/commodity/produce/special/glowfruit
 	comname = "Glowfruit"
@@ -1242,14 +1091,6 @@
 	baseprice = 215
 	upperfluc = 150
 	lowerfluc = -75
-
-/datum/commodity/produce/special/goldfishcracker
-	comname = "Goldfish Cracker"
-	comtype = /obj/item/reagent_containers/food/snacks/goldfish_cracker
-	price = 500
-	baseprice = 500
-	upperfluc = 400
-	lowerfluc = -200
 
 // sell
 
@@ -1281,62 +1122,6 @@
 	upperfluc = 5
 	lowerfluc = -5
 
-/datum/commodity/diner/fishburger
-	comname = "Fish-Fil-A"
-	comtype = /obj/item/reagent_containers/food/snacks/burger/fishburger
-	price = 10
-	baseprice = 10
-	upperfluc = 5
-	lowerfluc = -5
-
-/datum/commodity/diner/luauburger
-	comname = "Luau Burger"
-	comtype = /obj/item/reagent_containers/food/snacks/burger/luauburger
-	price = 10
-	baseprice = 10
-	upperfluc = 5
-	lowerfluc = -5
-
-/datum/commodity/diner/tikiburger
-	comname = "Tiki Burger"
-	comtype = /obj/item/reagent_containers/food/snacks/burger/tikiburger
-	price = 10
-	baseprice = 10
-	upperfluc = 5
-	lowerfluc = -5
-
-/datum/commodity/diner/coconutburger
-	comname = "Coconut Burger"
-	comtype = /obj/item/reagent_containers/food/snacks/burger/coconutburger
-	price = 10
-	baseprice = 10
-	upperfluc = 5
-	lowerfluc = -5
-
-/datum/commodity/diner/onigiri
-	comname = "Onigiri"
-	comtype = /obj/item/reagent_containers/food/snacks/rice_ball/onigiri
-	price = 6
-	baseprice = 6
-	upperfluc = 5
-	lowerfluc = -3
-
-/datum/commodity/diner/nigiri_roll
-	comname = "Nigiri Roll"
-	comtype = /obj/item/reagent_containers/food/snacks/nigiri_roll
-	price = 20
-	baseprice = 20
-	upperfluc = 5
-	lowerfluc = -5
-
-/datum/commodity/diner/sushi_roll
-	comname = "Sushi Roll"
-	comtype = /obj/item/reagent_containers/food/snacks/sushi_roll
-	price = 60
-	baseprice = 60
-	upperfluc = 10
-	lowerfluc = -10
-
 /datum/commodity/diner/mashedpotatoes
 	comname = "Mashed Potatoes"
 	comtype = /obj/item/reagent_containers/food/snacks/mashedpotatoes
@@ -1364,14 +1149,6 @@
 /datum/commodity/diner/meatloaf
 	comname = "Meatloaf"
 	comtype = /obj/item/reagent_containers/food/snacks/meatloaf
-	price = 15
-	baseprice = 15
-	upperfluc = 5
-	lowerfluc = -5
-
-/datum/commodity/diner/fishfingers
-	comname = "Fish Fingers"
-	comtype = /obj/item/reagent_containers/food/snacks/fish_fingers
 	price = 15
 	baseprice = 15
 	upperfluc = 5
@@ -1418,8 +1195,6 @@
 				comtype = /obj/item/reagent_containers/food/snacks/breakfast
 			if ("sunday")
 				comtype = /obj/item/reagent_containers/food/snacks/pie/pot
-
-
 
 ///// body parts
 
@@ -1531,17 +1306,9 @@
 	upperfluc = 2000
 	lowerfluc = -2000
 
-/datum/commodity/bodyparts/l_eye
-	comname = "Left Human Eye"
-	comtype = /obj/item/organ/eye/left
-	price = 2500
-	baseprice = 2500
-	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/r_eye
-	comname = "Right Human Eye"
-	comtype = /obj/item/organ/eye/right
+/datum/commodity/bodyparts/eye
+	comname = "Human Eye"
+	comtype = /obj/item/organ/eye
 	price = 2500
 	baseprice = 2500
 	upperfluc = 1000
@@ -1568,14 +1335,6 @@
 	comtype = /obj/item/organ/eye/cyber/sunglass
 	price = 2000
 	baseprice = 2000
-	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/cybereye_sechud
-	comname = "Security HUD Cybereye"
-	comtype = /obj/item/organ/eye/cyber/sechud
-	price = 2100
-	baseprice = 2100
 	upperfluc = 1000
 	lowerfluc = -1000
 
@@ -1606,8 +1365,8 @@
 /datum/commodity/bodyparts/cybereye_prodoc
 	comname = "ProDoc Healthview Cybereye"
 	comtype = /obj/item/organ/eye/cyber/prodoc
-	price = 2100
-	baseprice = 2100
+	price = 2000
+	baseprice = 2000
 	upperfluc = 1000
 	lowerfluc = -1000
 
@@ -1619,22 +1378,6 @@
 	upperfluc = 1000
 	lowerfluc = -1000
 
-/datum/commodity/bodyparts/cybereye_night
-	comname = "Night Vision Cybereye"
-	comtype = /obj/item/organ/eye/cyber/nightvision
-	price = 8000
-	baseprice = 8000
-	upperfluc = 4000
-	lowerfluc = -4000
-
-/datum/commodity/bodyparts/cybereye_laser
-	comname = "Laser Cybereye"
-	comtype = /obj/item/organ/eye/cyber/laser
-	price = 10000
-	baseprice = 10000
-	upperfluc = 5000
-	lowerfluc = -5000
-
 /datum/commodity/bodyparts/cybereye_ecto
 	comname = "Ectosensor Cybereye"
 	comtype = /obj/item/organ/eye/cyber/ecto
@@ -1643,168 +1386,12 @@
 	upperfluc = 10000
 	lowerfluc = -10000
 
-/datum/commodity/bodyparts/l_lung
-	comname = "Left Human Lung"
-	comtype = /obj/item/organ/lung/left
+/datum/commodity/bodyparts/lung
+	comname = "Human Lung"
+	comtype = /obj/item/organ/lung
 	price = 2500
 	baseprice = 2500
 	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/r_lung
-	comname = "Right Human Lung"
-	comtype = /obj/item/organ/lung/right
-	price = 2500
-	baseprice = 2500
-	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/l_cyberlung
-	comname = "Left Cyberlung"
-	comtype = /obj/item/organ/lung/cyber/left
-	price = 1300
-	baseprice = 1300
-	upperfluc = 500
-	lowerfluc = -500
-
-/datum/commodity/bodyparts/r_cyberlung
-	comname = "Right Cyberlung"
-	comtype = /obj/item/organ/lung/cyber/right
-	price = 1300
-	baseprice = 1300
-	upperfluc = 500
-	lowerfluc = -500
-
-//////////////////////////////////////
-
-/datum/commodity/bodyparts/l_kidney
-	comname = "Left Human Kidney"
-	comtype = /obj/item/organ/kidney/left
-	price = 2200
-	baseprice = 2200
-	upperfluc = 900
-	lowerfluc = -900
-
-/datum/commodity/bodyparts/r_kidney
-	comname = "Right Human Kidney"
-	comtype = /obj/item/organ/kidney/right
-	price = 2200
-	baseprice = 2200
-	upperfluc = 900
-	lowerfluc = -900
-
-/datum/commodity/bodyparts/l_cyberkidney
-	comname = "Left Cyberkidney"
-	comtype = /obj/item/organ/kidney/cyber/left
-	price = 1000
-	baseprice = 1000
-	upperfluc = 500
-	lowerfluc = -500
-
-/datum/commodity/bodyparts/r_cyberkidney
-	comname = "Right Cyberkidney"
-	comtype = /obj/item/organ/kidney/cyber/right
-	price = 1200
-	baseprice = 1200
-	upperfluc = 500
-	lowerfluc = -500
-
-////////////////////////////////////////
-
-/datum/commodity/bodyparts/liver
-	comname = "Human Liver"
-	comtype = /obj/item/organ/liver
-	price = 3500
-	baseprice = 3500
-	upperfluc = 1500
-	lowerfluc = -1500
-
-/datum/commodity/bodyparts/cyberliver
-	comname = "Cyberliver"
-	comtype = /obj/item/organ/liver/cyber
-	price = 2500
-	baseprice = 2500
-	upperfluc = 1500
-	lowerfluc = -1500
-
-/datum/commodity/bodyparts/spleen
-	comname = "Human Spleen"
-	comtype = /obj/item/organ/spleen
-	price = 2200
-	baseprice = 2200
-	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/cyberspleen
-	comname = "Cyberspleen"
-	comtype = /obj/item/organ/spleen/cyber
-	price = 1000
-	baseprice = 1000
-	upperfluc = 500
-	lowerfluc = -500
-
-/datum/commodity/bodyparts/pancreas
-	comname = "Human Pancreas"
-	comtype = /obj/item/organ/pancreas
-	price = 1100
-	baseprice = 1100
-	upperfluc = 200
-	lowerfluc = -200
-
-/datum/commodity/bodyparts/cyberpancreas
-	comname = "Cyberpancreas"
-	comtype = /obj/item/organ/pancreas/cyber
-	price = 800
-	baseprice = 800
-	upperfluc = 200
-	lowerfluc = -200
-
-/datum/commodity/bodyparts/appendix
-	comname = "Human Appendix"
-	comtype = /obj/item/organ/appendix
-	price = 100
-	baseprice = 100
-	upperfluc = 100
-	lowerfluc = -99
-
-/datum/commodity/bodyparts/cyberappendix
-	comname = "Cyberappendix"
-	comtype = /obj/item/organ/appendix/cyber
-	price = 4500
-	baseprice = 4500
-	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/stomach
-	comname = "Human Stomach"
-	comtype = /obj/item/organ/stomach
-	price = 2500
-	baseprice = 2500
-	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/cyberstomach
-	comname = "Cyberstomach"
-	comtype = /obj/item/organ/stomach/cyber
-	price = 2200
-	baseprice = 2200
-	upperfluc = 2000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/intestines
-	comname = "Human Intestines"
-	comtype = /obj/item/organ/intestines
-	price = 2500
-	baseprice = 2500
-	upperfluc = 1000
-	lowerfluc = -1000
-
-/datum/commodity/bodyparts/cyberintestines
-	comname = "Cyberintestines"
-	comtype = /obj/item/organ/intestines/cyber
-	price = 1800
-	baseprice = 1800
-	upperfluc = 2000
 	lowerfluc = -1000
 
 /datum/commodity/medical
@@ -1814,19 +1401,17 @@
 /datum/commodity/medical/injectorbelt
 	comname = "Injector Belt"
 	comtype = /obj/item/injector_belt
-	desc = "A belt that injects the wearer with chemicals loaded from a container."
-	price = 15500
-	baseprice = 15500
-	upperfluc = 2500
-	lowerfluc = -2500
+	price = 5500
+	baseprice = 5500
+	upperfluc = 1500
+	lowerfluc = -1500
 
 /datum/commodity/medical/injectormask
 	comname = "Vapo-Matic"
 	comtype = /obj/item/clothing/mask/gas/injector_mask
-	desc = "A gas mask that doses the wearer with chemicals loaded from a container."
-	price = 19000
-	baseprice = 19000
-	upperfluc = 4500
+	price = 7000
+	baseprice = 7000
+	upperfluc = 2500
 	lowerfluc = -2500
 
 /datum/commodity/medical/strange_reagent
@@ -1884,42 +1469,6 @@
 	baseprice = 1200
 	upperfluc = 100
 	lowerfluc = -100
-
-/datum/commodity/medical/ether
-	comname = "Ether"
-	comtype = /obj/item/reagent_containers/glass/bottle/ether
-	desc = "A strong but highly addictive anesthetic and sedative."
-	price = 2000
-	baseprice = 2000
-	upperfluc = 1500
-	lowerfluc = -500
-
-/datum/commodity/medical/toxin
-	comname = "Toxin"
-	comtype = /obj/item/reagent_containers/glass/bottle/toxin
-	desc = "Various toxin compounds."
-	price = 8000
-	baseprice = 8000
-	upperfluc = 3000
-	lowerfluc = -1000
-
-/datum/commodity/medical/cyanide
-	comname = "Cyanide"
-	comtype = /obj/item/reagent_containers/glass/bottle/cyanide
-	desc = "A rapidly acting and highly dangerous chemical."
-	price = 9000
-	baseprice = 9000
-	upperfluc = 4000
-	lowerfluc = -1000
-
-/datum/commodity/medical/omnizine
-	comname = "Omnizine"
-	comtype = /obj/item/reagent_containers/glass/bottle/omnizine
-	desc = "An experimental and expensive herbal compound."
-	price = 12000
-	baseprice = 12000
-	upperfluc = 6000
-	lowerfluc = -2000
 
 ///// costume kits
 
@@ -1992,42 +1541,6 @@
 	upperfluc = 150
 	lowerfluc = -100
 
-/datum/commodity/costume/werewolf
-	comname = "Werewolf Costume"
-	comtype = /obj/item/storage/box/costume/werewolf
-	desc = "A surprisingly decent quality werewolf costume, probably from some discount Halloween superstore."
-	price = 600
-	baseprice = 100
-	upperfluc = 150
-	lowerfluc = -100
-
-/datum/commodity/costume/abomination
-	comname = "Abomination Costume"
-	comtype = /obj/item/storage/box/costume/abomination
-	desc = "Who's seen a shambling abomination in such close detail to recreate such a monstrosity?"
-	price = 600
-	baseprice = 100
-	upperfluc = 150
-	lowerfluc = -100
-
-/datum/commodity/costume/roller_disco
-	comname = "Roller Disco Costume"
-	comtype = /obj/item/storage/box/costume/roller_disco
-	desc = "You'll really impress your pals at the next Saturday night roller disco."
-	price = 200
-	baseprice = 100
-	upperfluc = 150
-	lowerfluc = -100
-
-/datum/commodity/costume/hotdog
-	comname = "Hotdog Costume"
-	comtype = /obj/item/storage/box/costume/hotdog
-	desc = "Hot-diggity-dog!"
-	price = 1000
-	baseprice = 100
-	upperfluc = 150
-	lowerfluc = -100
-
 /datum/commodity/balloons //no it ain't a costume kit but it's going in Geoff's wares so idgaf tOt fite me
 	comname = "box of balloons"
 	comtype = /obj/item/storage/box/balloonbox
@@ -2036,15 +1549,6 @@
 	baseprice = 50
 	upperfluc = 100
 	lowerfluc = -50
-
-/datum/commodity/crayons
-	comname = "box of crayons"
-	comtype = /obj/item/storage/box/crayon
-	desc = "A box of colorful crayons! Lovely!"
-	price = 50
-	baseprice = 50
-	upperfluc = 100
-	lowerfluc = -20
 
 /// pathology
 /datum/commodity/synthmodule
@@ -2131,451 +1635,3 @@
 	baseprice = 400
 	upperfluc = 400
 	lowerfluc = -200
-
-// FLOCKTRADER COMMODITIES AND PRICES
-/datum/commodity/flock/
-	desc = "Goods that the Flocktrader sells or wants."
-	onmarket = 0
-
-// WANTS TO BUY
-/datum/commodity/flock/desired
-	desc = "This material can be used by us to repair our ship and fabricate new drones."
-
-/datum/commodity/flock/desired/videocard
-	comname = "Advanced Videocard"
-	comtype = /obj/item/peripheral/videocard
-	desc_buy = "We're aware your computers can't handle this peripheral. We can find a use for it."
-	onmarket = 1
-	price = 400
-	upperfluc = 100
-	lowerfluc = -100
-
-/datum/commodity/flock/desired/feather
-	comname = "Feather"
-	comtype = /obj/item/feather
-	desc_buy = "Low material value, but it reminds us of the Source. We find these comforting."
-	onmarket = 1
-	price = 20
-	upperfluc = 10
-	lowerfluc = -10
-
-/datum/commodity/flock/desired/electronics
-	comname = "Electronic Components"
-	comtype = /obj/item/electronics
-	desc_buy = "The aggressive drones of this space have useful innards."
-	onmarket = 1
-	price = 100
-	upperfluc = 50
-	lowerfluc = -50
-
-/datum/commodity/flock/desired/brain
-	comname = "Brain"
-	comtype = /obj/item/organ/brain
-	desc_buy = "We are experimenting with new cognitive microstructures. Specimens for research are appreciated."
-	onmarket = 1
-	price = 1000
-	upperfluc = 500
-	lowerfluc = -500
-
-/datum/commodity/flock/desired/beeegg
-	comname = "Bee Egg"
-	comtype = /obj/item/reagent_containers/food/snacks/ingredient/egg/bee
-	desc_buy = "These creatures have a fascinating genetic structure. Specimens for research are appreciated."
-	onmarket = 1
-	price = 50
-	upperfluc = 25
-	lowerfluc = -25
-
-/datum/commodity/flock/desired/critteregg
-	comname = "Creature Egg"
-	comtype = /obj/item/reagent_containers/food/snacks/ingredient/egg/critter
-	desc_buy = "We are interested in novel biological structures within this region of space. Specimens for research are appreciated."
-	onmarket = 1
-	price = 100
-	upperfluc = 50
-	lowerfluc = -50
-
-/datum/commodity/flock/desired/egg
-	comname = "Regular Egg"
-	comtype = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	desc_buy = "Eggs are delicious and a good source of nutrients for growing flockdrones."
-	onmarket = 1
-	price = 10
-	upperfluc = 5
-	lowerfluc = -5
-
-/datum/commodity/flock/desired/material
-	comname = "Material Piece"
-	comtype = /obj/item/material_piece
-	desc_buy = "We are not selective. Any processed material is acceptable."
-	onmarket = 1
-	price = 50
-	upperfluc = 40
-	lowerfluc = -40
-
-/datum/commodity/flock/desired/rawmaterial
-	comname = "Raw Material Piece"
-	comtype = /obj/item/raw_material
-	desc_buy = "We are not selective. Any raw material is acceptable."
-	onmarket = 1
-	price = 40
-	upperfluc = 30
-	lowerfluc = -30
-
-// WILL SELL
-/datum/commodity/flock/tech
-	desc = "Our technology is unique and unattainable elsewhere."
-
-/datum/commodity/flock/tech/table
-	comname = "Flocktable"
-	comtype = /obj/item/furniture_parts/table/flock
-	desc = "A processing subsystem of obsolete design with a perfectly flat surface. Good for placing things."
-	onmarket = 1
-	price = 200
-	upperfluc = 100
-	lowerfluc = -100
-
-/datum/commodity/flock/tech/chair
-	comname = "Flockchair"
-	comtype = /obj/item/furniture_parts/flock_chair
-	desc = "Prior to our mass-energy conversion technology, we used these chambers to charge our drones. Now padded with feather-down cushions for comfort."
-	onmarket = 1
-	price = 350
-	upperfluc = 175
-	lowerfluc =  -175
-
-/datum/commodity/flock/tech/gnesis
-	comname = "Gnesis"
-	comtype = /obj/item/material_piece/gnesis
-	desc = "Our mind and matter, filled with stoic and resolute intent."
-	onmarket = 1
-	price = 2000
-	upperfluc = 1500
-	lowerfluc = -1500
-
-/datum/commodity/flock/tech/gnesisglass
-	comname = "Translucent Gnesis"
-	comtype = /obj/item/material_piece/gnesisglass
-	desc = "Our mind and matter, filled with open and honest intent."
-	onmarket = 1
-	price = 3000
-	upperfluc = 2500
-	lowerfluc = -2500
-
-/datum/commodity/flock/tech/flocknugget
-	comname = "Flocknugget"
-	comtype = /obj/item/reagent_containers/food/snacks/ingredient/meat/mysterymeat/nugget/flock
-	desc = "Apparently this is a delicacy. We did not know your kind can stomach metallic crystal."
-	onmarket = 1
-	price = 30
-	upperfluc = 15
-	lowerfluc = -15
-
-/datum/commodity/flock/tech/flockbrain
-	comname = "Processing Core"
-	comtype = /obj/item/organ/brain/flockdrone
-	desc = "We are loathe to part with our processing cores, but we can be convinced with enough credits."
-	onmarket = 1
-	price = 5000
-	upperfluc = 4500
-	lowerfluc = -4500
-
-/datum/commodity/flock/tech/fluid
-	comname = "Fluid Cache"
-	comtype = /obj/item/reagent_containers/gnesis
-	desc = "A sealed container with a fluid form of our matter, filled with indecision. We wish you the very best in figuring out how to extract the fluid."
-	onmarket = 1
-	price = 4000
-	upperfluc = 2000
-	lowerfluc = -2000
-
-/datum/commodity/flock/tech/flockburger
-	comname = "Flockburger"
-	comtype = /obj/item/reagent_containers/food/snacks/burger/flockburger
-	desc = "We have found a new use for completely irrecoverable processing cores. We cannot currently offer fries with that. We've changed the recipe after some complaints from our customers."
-	onmarket = 1
-	price = 60
-	upperfluc = 30
-	lowerfluc = -30
-
-/datum/commodity/flock/tech/flockblocker
-	comname = "Flockblocker Telejammer"
-	comtype = /obj/item/device/flockblocker
-	desc = "A handheld teleportation jammer powered by the universe's contempt for those who attempt to bend space to their whim."
-	onmarket = 1
-	price = 300000
-	upperfluc = 15000
-	lowerfluc = -15000
-
-/datum/commodity/flock/tech/incapacitor
-	comname = "Incapacitor"
-	comtype = /obj/item/gun/energy/flock
-	desc = "We have tried to replicate our pacification technology in a form your kind can use. There may be some issues."
-	onmarket = 1
-	price = 30000
-	upperfluc = 12500
-	lowerfluc = -12500
-
-/////////////////////////////////
-///////skeleton trader //////////
-/////////////////////////////////
-
-/datum/commodity/hat/bandana
-	comname = "Bandana"
-	comtype = /obj/item/clothing/head/bandana/random_color
-	desc = "A randomly colored bandana."
-	price = 300
-	baseprice = 300
-	upperfluc = 100
-	lowerfluc = -100
-
-/datum/commodity/hat/beret
-	comname = "Beret"
-	comtype = /obj/item/clothing/head/beret/random_color
-	desc = "A randomly colored beret."
-	price = 500
-	baseprice = 500
-	upperfluc = 200
-	lowerfluc = -100
-
-/datum/commodity/hat/spacehelmet
-	comname = "Space Helmet"
-	comtype = /obj/item/clothing/head/helmet/space/oldish
-	desc = "An old space helmet."
-	price = 700
-	baseprice = 600
-	upperfluc = 100
-	lowerfluc = -100
-
-	red
-		comname = "Red Space Helmet"
-		comtype = /obj/item/clothing/head/helmet/space/syndicate/old
-		desc = "An old space helmet. It's red."
-
-/datum/commodity/hat/pinkwizard
-	comname = "Pink Wizard Hat"
-	comtype = /obj/item/clothing/head/pinkwizard
-	desc = "A pink wizard hat. Magic not included."
-	price = 800
-	baseprice = 700
-	upperfluc = 100
-	lowerfluc = -100
-
-/datum/commodity/hat/purplebutt
-	comname = "Purple Butt Hat"
-	comtype = /obj/item/clothing/head/purplebutt
-	desc = "Exotic."
-	price = 800
-	baseprice = 700
-	upperfluc = 100
-	lowerfluc = -200
-
-/datum/commodity/hat/dailyspecial
-	comname = "Daily Special"
-	comtype = null
-	desc = "Purchase assured, it's a bargain."
-	price = 900
-	baseprice = 800
-	upperfluc = 200
-	lowerfluc = -100
-
-	New()
-		..()
-		switch (lowertext( time2text(world.realtime, "Day") ))
-			if ("monday")
-				comtype = /obj/item/clothing/head/dramachefhat
-			if ("tuesday")
-				comtype = /obj/item/clothing/head/psyche
-			if ("wednesday")
-				comtype = /obj/item/clothing/head/centhat/red
-			if ("thursday")
-				comtype = /obj/item/clothing/head/bigtex
-			if ("friday")
-				comtype = /obj/item/clothing/head/fedora
-			if ("saturday")
-				comtype = /obj/item/clothing/head/XComHair
-			if ("sunday")
-				comtype = /obj/item/clothing/head/helmet/greek
-
-/datum/commodity/hat/laurels
-	comname = "Laurels"
-	comtype = /obj/item/clothing/head/laurels
-	desc = "An ancient Greek affair."
-	price = 1000
-	baseprice = 1000
-	upperfluc = 500
-	lowerfluc = -100
-
-/datum/commodity/tech/laptop
-	comname = "Personal Laptop"
-	comtype = /obj/item/luggable_computer/personal
-	desc = "Top of the line!"
-	price = 5000
-	baseprice = 5000
-	upperfluc = 1000
-	lowerfluc = -2000
-
-
-////////////////////////////////////////////////
-
-/datum/commodity/clothing/psyche
-	comname = "Psychedelic jumpsuit"
-	comtype = /obj/item/clothing/under/gimmick/psyche
-	desc = "Some garish garb, stolen off a hippie's back."
-	price = 3000
-	baseprice = 3000
-	upperfluc = 500
-	lowerfluc = -1000
-
-/datum/commodity/clothing/chameleon
-	comname = "Black jumpsuit"
-	comtype = /obj/item/clothing/under/chameleon
-	desc = "A plain black jumpsuit. Not very myserious at all, no."
-	price = 6000
-	baseprice = 6000
-	upperfluc = 2500
-	lowerfluc = -1000
-
-/datum/commodity/banana_grenade
-	comname = "Banana grenade"
-	comtype = /obj/item/old_grenade/banana
-	desc = "Perfect for magic tricks and slips, and some clown's birthday present."
-	price = 2000
-	baseprice = 2000
-	upperfluc = 500
-	lowerfluc = -500
-
-/datum/commodity/cheese_grenade
-	comname = "Cheese Sandwich grenade"
-	comtype = /obj/item/old_grenade/banana/cheese_sandwich
-	desc = "Contains only one type of cheese, unfortunately."
-	price = 2500
-	baseprice = 2500
-	upperfluc = 500
-	lowerfluc = -500
-
-/datum/commodity/corndog_grenade
-	comname = "Banana Corndog grenade"
-	comtype = /obj/item/old_grenade/banana/banana_corndog
-	desc = "A very space efficient party pleaser. No ketchup or mustard included."
-	price = 3000
-	baseprice = 3000
-	upperfluc = 500
-	lowerfluc = -500
-
-/datum/commodity/gokart
-	comname = "Go-Kart"
-	comtype = /obj/racing_clowncar/kart
-	desc = "They just don't make the same quality go-karts anymore. Get this relic while you can."
-	price = 30000
-	baseprice = 30000
-	upperfluc = 10000
-	lowerfluc = -1000
-
-/datum/commodity/car
-	comname = "Fancy Car"
-	comtype = /obj/machinery/vehicle/tank/car/rusty
-	desc = "Might need some TLC, but a discount ride is a discount ride."
-	price = 55000
-	upperfluc = 10000
-	lowerfluc = -5000
-
-/datum/commodity/menthol_cigarettes
-	comname = "Menthol Cigarettes"
-	comtype = /obj/item/clothing/mask/cigarette/menthol
-	desc = "Gotta get some minty smokes."
-	price = 500
-	baseprice = 500
-	upperfluc = 200
-	lowerfluc = -200
-
-/datum/commodity/propuffs
-	comname = "Pro Puffs"
-	comtype = /obj/item/clothing/mask/cigarette/propuffs
-	desc = "These flavors are are gold."
-	price = 600
-	baseprice = 600
-	upperfluc = 200
-	lowerfluc = -200
-
-///////////////////greg///////////////////////////////
-/datum/commodity/airzooka
-	comname = "Donk Co brand Airzooka"
-	comtype = /obj/item/gun/kinetic/airzooka
-	desc = "A high tech air deploying and transportation device!"
-	price = 5000
-	baseprice = 5000
-	upperfluc = 200
-	lowerfluc = -200
-
-/datum/commodity/airbag
-	comname = "Airzooka Replacement Bag"
-	comtype = /obj/item/ammo/bullets/airzooka
-	desc = "A replacement bag for your Donk Co brand Airzooka!"
-	price = 500
-	baseprice = 500
-	upperfluc = 200
-	lowerfluc = -200
-
-/datum/commodity/dangerbag
-	comname = "Airzooka Replacement Bag"
-	comtype = /obj/item/ammo/bullets/airzooka/bad
-	desc = "A replacement bag for your Donk Co brand Airzooka, now with plasma lining!"
-	price = 3500
-	baseprice = 500
-	upperfluc = 200
-	lowerfluc = -200
-
-/datum/commodity/owleggs
-	comname = "Owl Eggs"
-	desc = "We are currently accepting donations of Owl Eggs for the exhibits! isn't that hootastic?"
-	comtype = /obj/item/reagent_containers/food/snacks/ingredient/egg/critter/owl
-	price = 150
-	baseprice = 50
-	upperfluc = 25
-	lowerfluc = -25
-
-/datum/commodity/hat/dailyspecial/greg
-	comname = "Daily Special"
-	comtype = null
-	desc = "We are now authorized to begin importing fashion accessories for our customers!"
-	price = 1000
-	baseprice = 800
-	upperfluc = 200
-	lowerfluc = -100
-
-/datum/commodity/crayons/greg
-	comname = "box of crayons"
-	comtype = /obj/item/storage/box/crayon
-	desc = "Donkola brand color sticks! FDA approved to not cause sudden cell death since 2032!"
-	price = 250
-	baseprice = 50
-	upperfluc = 100
-	lowerfluc = -20
-
-/datum/commodity/drugs/poppies/greg
-	comname = "Poppies"
-	desc = "In respect of those lost during the colonization of the frontier, we are now offering poppies."
-	comtype = /obj/item/plant/herb/poppy
-	price = 350
-	baseprice = 350
-	upperfluc = 200
-	lowerfluc = -100
-
-/datum/commodity/owlpaint
-	comtype = /obj/item/pod/paintjob/owl
-	comname = "Limited Edition Owlery Brand Pod Painting Kit"
-	desc = "Now you can represent your love for the Owls by painting your Space Pod in our signature colors!"
-	price = 10050
-	baseprice = 550
-	upperfluc = 200
-	lowerfluc = -100
-
-/datum/commodity/HEtorpedo
-	comname = "High Explosive Torpedo"
-	comtype = /obj/torpedo_tray/hiexp_loaded
-	desc = "A highly explosive torpedo, ready for your sick, destructive needs."
-	price = 10000
-	baseprice = 10000
-	upperfluc = 5000
-	lowerfluc = -5000

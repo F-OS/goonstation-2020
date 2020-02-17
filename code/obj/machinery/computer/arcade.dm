@@ -16,20 +16,15 @@
 	var/blocked = 0 //Player cannot attack/heal while set
 	desc = "An arcade machine, you can win wonderful prizes!"
 
-	lr = 0.7
-	lg = 0.96
-	lb = 0.96
-
-/obj/machinery/computer/arcade/attackby(var/obj/item/I as obj, user as mob)
-	if (isscrewingtool(I))
+/obj/machinery/computer/arcade/attackby(I as obj, user as mob)
+	if(istype(I, /obj/item/screwdriver))
 		playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		if(do_after(user, 20))
-			if (src.status & BROKEN)
+			if (src.stat & BROKEN)
 				boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 				var/obj/computerframe/A = new /obj/computerframe( src.loc )
 				if(src.material) A.setMaterial(src.material)
-				var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-				G.set_loc(src.loc)
+				new /obj/item/raw_material/shard/glass( src.loc )
 				var/obj/item/circuitboard/arcade/M = new /obj/item/circuitboard/arcade( A )
 				for (var/obj/C in src)
 					C.set_loc(src.loc)
@@ -65,7 +60,7 @@
 	name_part1 = pick("the Automatic ", "Farmer ", "Lord ", "Professor ", "the Evil ", "the Dread King ", "the Space ", "Lord ")
 	name_part2 = pick("Melonoid", "Murdertron", "Sorcerer", "Ruin", "Jeff", "Ectoplasm", "Crushulon")
 
-	src.enemy_name = replacetext((name_part1 + name_part2), "the ", "")
+	src.enemy_name = dd_replacetext((name_part1 + name_part2), "the ", "")
 	src.name = (name_action + name_part1 + name_part2)
 
 
@@ -75,10 +70,6 @@
 /obj/machinery/computer/arcade/attack_hand(mob/user as mob)
 	if(..())
 		return
-	show_ui(user)
-	return
-
-/obj/machinery/computer/arcade/proc/show_ui(var/mob/user)
 	user.machine = src
 	var/dat = "<a href='byond://?src=\ref[src];close=1'>Close</a>"
 	dat += "<center><h4>[src.enemy_name]</h4></center>"
@@ -95,8 +86,9 @@
 
 	dat += "</b></center>"
 
-	user.Browse(dat, "window=arcade")
+	user << browse(dat, "window=arcade")
 	onclose(user, "arcade")
+	return
 
 /obj/machinery/computer/arcade/Topic(href, href_list)
 	if(..())
@@ -104,7 +96,6 @@
 
 	if (!src.blocked)
 		if (href_list["attack"])
-			if(cheat_check()) return
 			src.blocked = 1
 			var/attackamt = rand(2,6)
 			src.temp = "You attack for [attackamt] damage!"
@@ -115,7 +106,6 @@
 			src.arcade_action()
 
 		else if (href_list["heal"])
-			if(cheat_check()) return
 			src.blocked = 1
 			var/pointamt = rand(1,3)
 			var/healamt = rand(6,8)
@@ -130,7 +120,6 @@
 			src.arcade_action()
 
 		else if (href_list["charge"])
-			if(cheat_check()) return
 			src.blocked = 1
 			var/chargeamt = rand(4,7)
 			src.temp = "You regain [chargeamt] points"
@@ -142,7 +131,7 @@
 
 	if (href_list["close"])
 		usr.machine = null
-		usr.Browse(null, "window=arcade")
+		usr << browse(null, "window=arcade")
 
 	else if (href_list["newgame"]) //Reset everything
 		temp = "New Round"
@@ -157,10 +146,6 @@
 	return
 
 /obj/machinery/computer/arcade/proc/arcade_action()
-	//No more vending prizes due to href exploits
-	if(src.gameover)
-		return
-
 	var/mob/living/carbon/human/H = usr
 	if (istype(H))
 		if (H.sims)
@@ -169,19 +154,15 @@
 		src.gameover = 1
 		src.temp = "[src.enemy_name] has fallen! Rejoice!"
 		var/obj/item/prize
-		var/prizeselect = rand(1,8)
+		var/prizeselect = rand(1,7)
 		switch(prizeselect)
 			if(1)
-				var/obj/item/spacecash/P = unpool(/obj/item/spacecash)
-				P.setup(src.loc)
-				prize = P
+				prize = new /obj/item/spacecash(src.loc)
 				prize.name = "space ticket"
 				prize.desc = "It's almost like actual currency!"
 			if(2)
 				if (isrestrictedz(z))
-					var/obj/item/spacecash/P = unpool(/obj/item/spacecash)
-					P.setup(src.loc)
-					prize = P
+					prize = new /obj/item/spacecash(src.loc)
 					prize.name = "space ticket"
 					prize.desc = "It's almost like actual currency!"
 				else
@@ -189,7 +170,7 @@
 					prize.name = "electronic blink toy game"
 					prize.desc = "Blink.  Blink.  Blink."
 			if(3)
-				prize = new /obj/item/device/light/zippo(src.loc)
+				prize = new /obj/item/zippo(src.loc)
 				prize.name = "Burno Lighter"
 				prize.desc = "Almost like a decent lighter!"
 			if(4)
@@ -198,11 +179,14 @@
 				else
 					prize = new /obj/item/toy/sword(src.loc)
 			if(5)
-				prize = new /obj/item/instrument/harmonica(src.loc)
+				prize = new /obj/item/harmonica(src.loc)
 				prize.name = "reverse harmonica"
 				prize.desc = "To the untrained eye it is like any other harmonica, but the professional will notice that it is BACKWARDS."
 			if(6)
-				prize = new /obj/item/wrench/gold(src.loc)
+				prize = new /obj/item/wrench(src.loc)
+				prize.name = "golden wrench"
+				prize.desc = "A generic wrench, but now with gold plating!"
+				prize.icon_state = "gold_wrench"
 			if(7)
 				prize = new /obj/item/firework(src.loc)
 				prize.icon = 'icons/obj/device.dmi'
@@ -210,8 +194,6 @@
 				prize.name = "decloaking device"
 				prize.desc = "A device for removing cloaks. Made in Space-Taiwan."
 				prize:det_time = 5
-			if(8)
-				prize = new /obj/item/toy/plush(src.loc)
 
 
 	else if ((src.enemy_mp <= 5) && (prob(70)))
@@ -242,23 +224,15 @@
 	src.blocked = 0
 	return
 
-/obj/machinery/computer/arcade/proc/cheat_check()
-	//Call this proc in attack / heal / recharge code before doing work. If called when the game is over someone is a cheating scrubbaroni
-	if(src.gameover)
-		show_ui(usr)
-		return 1
-	else
-		return 0
-
 /obj/machinery/computer/arcade/power_change()
 
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		icon_state = "arcadeb"
 	else
 		if( powered() )
 			icon_state = initial(icon_state)
-			status &= ~NOPOWER
+			stat &= ~NOPOWER
 		else
-			SPAWN_DBG(rand(0, 15))
+			spawn(rand(0, 15))
 				src.icon_state = "arcade0"
-				status |= NOPOWER
+				stat |= NOPOWER

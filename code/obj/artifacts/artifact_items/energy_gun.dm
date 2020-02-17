@@ -18,7 +18,7 @@
 		// The other three are normal for energy gun setup, so proceed as usual i guess
 		cell = null
 
-		SPAWN_DBG(0)
+		spawn(0)
 			src.ArtifactSetup()
 			var/datum/artifact/A = src.artifact
 			cell = new/obj/item/ammo/power_cell/self_charging/artifact(src,A.artitype)
@@ -27,8 +27,6 @@
 			current_projectile = AS.bullet
 			projectiles = list(src.current_projectile)
 			cell.max_charge = max(cell.max_charge, current_projectile.cost)
-
-		src.setItemSpecial(null)
 
 	examine()
 		set src in oview()
@@ -47,7 +45,7 @@
 			..()
 
 	process_ammo(var/mob/user)
-		if(isrobot(user))
+		if(istype(user,/mob/living/silicon/robot))
 			var/mob/living/silicon/robot/R = user
 			if(R.cell)
 				if(R.cell.charge >= src.robocharge)

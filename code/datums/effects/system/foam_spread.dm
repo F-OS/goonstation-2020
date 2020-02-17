@@ -6,7 +6,7 @@
 	var/temperature = T0C
 	var/list/banned_reagents = list("smokepowder", "thalmerite", "fluorosurfactant", "stimulants", "salt")
 
-/datum/effects/system/foam_spread/proc/set_up(amt=5, loca, var/datum/reagents/carry = null, var/metalfoam = 0, var/carry_volume = 0)
+/datum/effects/system/foam_spread/proc/set_up(amt=5, loca, var/datum/reagents/carry = null, var/metalfoam = 0)
 	if (!carry)
 		return
 	amount = round(amt/5, 1)
@@ -25,34 +25,22 @@
 	// this makes a list of the reagent ids and spawns 1 unit of that reagent when the foam disolves.
 
 	if(carry && !metal)
-		var/carrymult = 1
-		if (carry_volume > 0)
-			carrymult = min(carry_volume / carry.total_volume,1)
-
 		for(var/reagent_id in carry.reagent_list)
 			var/datum/reagent/current_reagent = carry.reagent_list[reagent_id]
-			carried_reagents[reagent_id] = current_reagent.volume * carrymult
+			carried_reagents[reagent_id] = current_reagent.volume
 
 /datum/effects/system/foam_spread/proc/start()
-	SPAWN_DBG(0)
+	spawn(0)
 		var/obj/effects/foam/F = locate() in location
 		if(F)
-			DEBUG_MESSAGE("Located [F] in [location]")
-			F.repeated_applications += 1
-			//var/min = max(27 - (F.repeated_applications * 3),0)
-			var/amt_change = min((amount - (F.repeated_applications*2) ),amount)
-			amt_change = max(amt_change,0)
-			F.amount += amt_change
-
+			DEBUG("Located [F] in [location]")
+			F.amount += amount
 			F.amount = min(F.amount, 27)
 			return
 
 		F = unpool(/obj/effects/foam)
-		F.foam_id = "\ref[src][world.time]"
 		F.set_up(src.location, metal)
 		F.amount = amount
-
-		playsound(F.loc, "sound/effects/bubbles2.ogg", 80, 1, -3) //let's not play this from every single foam obj
 
 		if(!metal)			// don't carry other chemicals if a metal foam
 			F.create_reagents(15)

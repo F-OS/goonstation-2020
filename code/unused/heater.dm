@@ -1,6 +1,6 @@
 /obj/machinery/atmoalter/heater/proc/setstate()
 
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "heater-p"
 		return
 
@@ -12,7 +12,7 @@
 
 /obj/machinery/atmoalter/heater/process()
 	/*
-	if(status & NOPOWER)	return
+	if(stat & NOPOWER)	return
 	use_power(5)
 
 	var/turf/T = src.loc
@@ -72,7 +72,7 @@
 
 /obj/machinery/atmoalter/heater/attack_hand(var/mob/user as mob)
 	/*
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 
 	user.machine = src
@@ -107,11 +107,11 @@
 
 /obj/machinery/atmoalter/heater/Topic(href, href_list)
 	..()
-	if (status & (BROKEN|NOPOWER))
+	if (stat & (BROKEN|NOPOWER))
 		return
 	if (usr.stat || usr.restrained())
 		return
-	if (((get_dist(src, usr) <= 1 || usr.telekinesis == 1) && istype(src.loc, /turf)) || (isAI(usr)))
+	if (((get_dist(src, usr) <= 1 || usr.telekinesis == 1) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon/ai)))
 		usr.machine = src
 		if (href_list["c"])
 			var/c = text2num(href_list["c"])
@@ -183,7 +183,7 @@
 		T.set_loc(src)
 		src.holding = T
 	else
-		if (iswrenchingtool(W))
+		if (istype(W, /obj/item/weapon/wrench))
 			var/obj/machinery/connector/con = locate(/obj/machinery/connector, src.loc)
 
 			if (src.c_status)

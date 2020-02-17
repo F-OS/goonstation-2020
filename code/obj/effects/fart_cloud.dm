@@ -6,7 +6,6 @@
 	opacity = 1
 	anchored = 0
 	mouse_opacity = 0
-	event_handler_flags = USE_HASENTERED
 	var/amount = 6
 	var/mob/living/fartowner = null
 
@@ -30,14 +29,14 @@
 	if (owner)
 		fartowner = owner
 	amount = rand(3,8)
-	SPAWN_DBG(0)
+	spawn(0)
 		src.Life()
 	return
 
 /obj/effects/fart_cloud/Move()
 	..()
 	for(var/mob/living/carbon/human/R in get_turf(src))
-		if (R.internal != null && R.wear_mask && (R.wear_mask.c_flags & MASKINTERNALS))
+		if (R.internal != null && usr.wear_mask && (R.wear_mask.c_flags & MASKINTERNALS))
 			continue
 		if (R == src.fartowner)
 			continue
@@ -46,8 +45,8 @@
 
 /obj/effects/fart_cloud/HasEntered(mob/living/carbon/human/R as mob )
 	..()
-	if (ishuman(R))
-		if (R.internal != null && R.wear_mask && (R.wear_mask.c_flags & MASKINTERNALS))
+	if (istype(R, /mob/living/carbon/human))
+		if (R.internal != null && usr.wear_mask && (R.wear_mask.c_flags & MASKINTERNALS))
 			return
 		if (R == src.fartowner)
 			return

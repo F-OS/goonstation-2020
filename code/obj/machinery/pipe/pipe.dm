@@ -117,7 +117,7 @@ var/linenums = 0
 
 	var/delta_gt
 
-	if(vnode1 && !(vnode1.status & BROKEN))
+	if(vnode1 && !(vnode1.stat & BROKEN))
 		delta_gt = FLOWFRAC * ( vnode1.get_gas_val(src) - gas.total_moles() / capmult)
 		calc_delta( src, gas, ngas, vnode1, delta_gt)//, dbg)
 
@@ -127,7 +127,7 @@ var/linenums = 0
 	else
 		leak_to_turf(1)
 
-	if(vnode2 && !(vnode2.status & BROKEN))
+	if(vnode2 && !(vnode2.stat & BROKEN))
 		delta_gt = FLOWFRAC * ( vnode2.get_gas_val(src) - gas.total_moles() / capmult)
 		calc_delta( src, gas, ngas, vnode2, delta_gt)//, dbg)
 
@@ -342,7 +342,7 @@ var/linenums = 0
 
 	var/is = "[dirs[3]]"
 
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		is += "-b"
 
 	if ((src.level == 1 && isturf(src.loc) && T.intact))
@@ -383,11 +383,11 @@ var/linenums = 0
 
 /obj/machinery/pipes/proc/rupture()
 
-	status |= BROKEN
+	stat |= BROKEN
 	update()
 
 /obj/machinery/pipes/disposing()
-	status |= BROKEN
+	stat |= BROKEN
 	update()
 	..()
 
@@ -395,13 +395,13 @@ var/linenums = 0
 /obj/machinery/pipes/attackby(obj/item/weapon/W as obj, mob/user as mob)
 
 	if (istype(W, /obj/item/weapon/weldingtool) && W:welding)
-		if(!(status & BROKEN))
+		if(!(stat & BROKEN))
 			return
 		if (W:weldfuel < 2)
 			boutput(user, "<span style=\"color:blue\">You need more welding fuel to complete this task.</span>")
 			return
 		W:weldfuel -= 2
-		status &= ~BROKEN
+		stat &= ~BROKEN
 		update()
 		for (var/mob/M in viewers(src))
 			M.show_message("<span style=\"color:red\">The pipe has been mended by [user.name] with the weldingtool.</span>", 3, "<span style=\"color:red\">You hear welding.</span>", 2)
@@ -413,14 +413,14 @@ var/linenums = 0
 			qdel(src)
 			return
 		if(2.0)
-			status |= BROKEN
+			stat |= BROKEN
 			update()
 			if (prob(50))
 				qdel(src)
 				return
 		if(3.0)
 			if(prob(75))
-				status |= BROKEN
+				stat |= BROKEN
 				update()
 				if (prob(25))
 					qdel(src)
@@ -740,14 +740,14 @@ var/linenums = 0
 /obj/machinery/circulator/verb/toggle_power()
 	set src in view(1)
 
-	if(circ_status == 1)
-		circ_status = 2
-		SPAWN_DBG(30)				// 3 second delay for slow-off
-			if(circ_status == 2)
-				circ_status = 0
+	if(status == 1)
+		status = 2
+		spawn(30)				// 3 second delay for slow-off
+			if(status == 2)
+				status = 0
 				updateicon()
-	else if(circ_status == 0)
-		circ_status =1
+	else if(status == 0)
+		status =1
 
 	updateicon()
 
@@ -762,31 +762,31 @@ var/linenums = 0
 
 	rate = prate/100*capacity
 
-	if(circ_status == 1)
+	if(status == 1)
 		if(!on)
-			circ_status = 2
-			SPAWN_DBG(30)
-				if(circ_status == 2)
-					circ_status = 0
+			status = 2
+			spawn(30)
+				if(status == 2)
+					status = 0
 					updateicon()
-	else if(circ_status == 0)
+	else if(status == 0)
 		if(on)
-			circ_status = 1
-	else	// circ_status ==2
+			status = 1
+	else	// status ==2
 		if(on)
-			circ_status = 1
+			status = 1
 
 	updateicon()
 
 
 /obj/machinery/circulator/proc/updateicon()
 
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "circ[side]-p"
 		return
 
 	var/is
-	switch(circ_status)
+	switch(status)
 		if(0)
 			is = "off"
 		if(1)
@@ -825,9 +825,9 @@ var/linenums = 0
 	/*
 	// if operating, pump from resv1 to resv2
 
-	if(! (status & NOPOWER) )				// only do circulator step if powered; still do rest of gas flow at all times
-		if(circ_status==1 || circ_status==2)
-			gas2.transfer_from(gas1, circ_status==1? rate : rate/2)
+	if(! (stat & NOPOWER) )				// only do circulator step if powered; still do rest of gas flow at all times
+		if(status==1 || status==2)
+			gas2.transfer_from(gas1, status==1? rate : rate/2)
 			use_power(rate/capacity * 100)
 		ngas1.copy_from(gas1)
 		ngas2.copy_from(gas2)
@@ -896,7 +896,7 @@ var/linenums = 0
 	//agas = new/obj/substance/gas()
 
 	gasflowlist += src
-	SPAWN_DBG(5)
+	spawn(5)
 		var/obj/machinery/atmoalter/A = locate(/obj/machinery/atmoalter, src.loc)
 
 		if(A && A.c_status != 0)
@@ -1454,7 +1454,7 @@ var/linenums = 0
 /obj/machinery/valve/mvalve/attack_hand(mob/user)
 	..()
 	add_fingerprint(user)
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		return
 
 	if(!open)		// now opening
@@ -1514,7 +1514,7 @@ var/linenums = 0
 
 /obj/machinery/valve/dvalve/power_change()
 	..()
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "dvalve[open]nopower"
 		return
 	icon_state = "dvalve[open]"
@@ -1598,7 +1598,7 @@ var/linenums = 0
 /obj/machinery/valve/dvalve/attack_hand(mob/user)
 	..()
 	add_fingerprint(user)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 
 	if(!open)		// now opening
@@ -1697,7 +1697,7 @@ var/linenums = 0
 
 /obj/machinery/oneway/pipepump/process()
 	/*
-	if(! (status & NOPOWER) )  // pump if power
+	if(! (stat & NOPOWER) )  // pump if power
 		gas1.transfer_from(gas2, rate)
 		use_power(25, ENVIRON)
 		ngas1.copy_from(gas1)
@@ -1721,15 +1721,15 @@ var/linenums = 0
 	*/ //TODO: FIX
 
 /obj/machinery/oneway/pipepump/proc/updateicon()
-	icon_state = "pipepump-[(status & NOPOWER) ? "stop" : "run"]"
+	icon_state = "pipepump-[(stat & NOPOWER) ? "stop" : "run"]"
 
 /obj/machinery/oneway/pipepump/power_change()
 	if(powered(ENVIRON))
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
 
-		status |= NOPOWER
-	SPAWN_DBG(rand(1,15))	// So they don't all turn off at the same time
+		stat |= NOPOWER
+	spawn(rand(1,15))	// So they don't all turn off at the same time
 		updateicon()
 
 // Filter inlet
@@ -1770,7 +1770,7 @@ var/linenums = 0
 
 /obj/machinery/inlet/filter/process()
 	src.updateicon()
-	if(!(status & NOPOWER))
+	if(!(stat & NOPOWER))
 	/*	var/turf/T = src.loc
 		if(!T || T.density)	return
 
@@ -1810,16 +1810,16 @@ var/linenums = 0
 
 /obj/machinery/inlet/filter/power_change()
 	if(powered(ENVIRON))
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
-		status |= NOPOWER
-	SPAWN_DBG(rand(1,15))
+		stat |= NOPOWER
+	spawn(rand(1,15))
 		updateicon()
 	return
 
 /obj/machinery/inlet/filter/proc/updateicon()
 	/*
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "inlet_filter-0"
 		return
 	if(src.gas.total_moles() > src.gas.maximum/2)
@@ -1840,16 +1840,16 @@ var/linenums = 0
 
 /obj/machinery/vent/filter/power_change()
 	if(powered(ENVIRON))
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
-		status |= NOPOWER
-	SPAWN_DBG(rand(1,15))
+		stat |= NOPOWER
+	spawn(rand(1,15))
 		updateicon()
 	return
 
 /obj/machinery/vent/filter/proc/updateicon()
 	/*
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "vent_filter-0"
 		return
 	if(src.gas.total_moles() > src.gas.maximum/2)

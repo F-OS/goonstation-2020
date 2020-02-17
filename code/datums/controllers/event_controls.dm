@@ -23,15 +23,15 @@ var/datum/event_controller/random_events
 	var/minimum_population = 15 // Minimum amount of players connected for event to occur
 
 	New()
-		for (var/X in childrentypesof(/datum/random_event/major))
+		for (var/X in typesof(/datum/random_event/major) - /datum/random_event/major)
 			var/datum/random_event/RE = new X
 			events += RE
 
-		for (var/X in childrentypesof(/datum/random_event/minor))
+		for (var/X in typesof(/datum/random_event/minor) - /datum/random_event/minor)
 			var/datum/random_event/RE = new X
 			minor_events += RE
 
-		for (var/X in childrentypesof(/datum/random_event/special))
+		for (var/X in typesof(/datum/random_event/special) - /datum/random_event/special)
 			var/datum/random_event/RE = new X
 			special_events += RE
 
@@ -48,7 +48,7 @@ var/datum/event_controller/random_events
 		var/event_timer = rand(time_between_events_lower,time_between_events_upper)
 		next_event = ticker.round_elapsed_ticks + event_timer
 		message_admins("<span style=\"color:blue\">Next event will occur at [round(next_event / 600)] minutes into the round.</span>")
-		SPAWN_DBG(event_timer)
+		spawn(event_timer)
 			event_cycle()
 
 	proc/minor_event_cycle()
@@ -57,7 +57,7 @@ var/datum/event_controller/random_events
 			do_random_event(minor_events)
 		var/event_timer = rand(time_between_minor_events_lower,time_between_minor_events_upper)
 		next_minor_event = ticker.round_elapsed_ticks + event_timer
-		SPAWN_DBG(event_timer)
+		spawn(event_timer)
 			minor_event_cycle()
 
 	proc/do_random_event(var/list/event_bank)
@@ -65,13 +65,12 @@ var/datum/event_controller/random_events
 			logTheThing("debug", null, null, "<b>Random Events:</b> do_random_event proc was passed a bad event bank")
 			return
 		var/list/eligible = list()
-		var/list/weights = list()
 		for (var/datum/random_event/RE in event_bank)
-			if (RE.is_event_available())
-				eligible += RE
-				weights += RE.weight
+			if (!RE.is_event_available())
+				continue
+			eligible += RE
 		if (eligible.len > 0)
-			var/datum/random_event/this = weightedprob(eligible, weights)
+			var/datum/random_event/this = pick(eligible)
 			this.event_effect()
 		else
 			logTheThing("debug", null, null, "<b>Random Events:</b> do_random_event couldn't find any eligible events")
@@ -96,7 +95,7 @@ var/datum/event_controller/random_events
 		var/dat = "<html><body><title>Random Events Controller</title>"
 		dat += "<b><u>Random Event Controls</u></b><HR>"
 
-		if (current_state <= GAME_STATE_PREGAME)
+		if (ticker.current_state == GAME_STATE_PREGAME)
 			dat += "<b>Random Events begin at: <a href='byond://?src=\ref[src];EventBegin=1'>[round(events_begin / 600)] minutes</a><br>"
 			dat += "<b>Minor Events begin at: <a href='byond://?src=\ref[src];MEventBegin=1'>[round(minor_events_begin / 600)] minutes</a><br>"
 		else
@@ -137,11 +136,9 @@ var/datum/event_controller/random_events
 
 		dat += "<HR>"
 		dat += "</body></html>"
-		usr.Browse(dat,"window=reconfig;size=450x450")
+		usr << browse(dat,"window=reconfig;size=450x450")
 
 	Topic(href, href_list[])
-		//So we have not had any validation on the admin random events panel since its inception. Argh. /Spy
-		if(usr && usr.client && !usr.client.holder) {boutput(usr, "Only administrators may use this command."); return}
 
 		if(href_list["TriggerEvent"])
 			var/datum/random_event/RE = locate(href_list["TriggerEvent"]) in events
@@ -202,8 +199,8 @@ var/datum/event_controller/random_events
 		else if(href_list["MinPop"])
 			var/new_min = input("How many players need to be connected before events will occur?","Random Events",minimum_population) as num
 			if (new_min == minimum_population) return
-
-			if (new_min < 1)
+			
+			if (new_min < 1) 
 				boutput(usr, "<span style=\"color:red\">Well that doesn't even make sense.</span>")
 				return
 			else
@@ -211,8 +208,8 @@ var/datum/event_controller/random_events
 
 			message_admins("Admin [key_name(usr)] set the minimum population for events to [minimum_population]")
 			logTheThing("admin", usr, null, "set the minimum population for events to [minimum_population]")
-			logTheThing("diary", usr, null, "set the minimum population for events to [minimum_population]", "admin")
-
+			logTheThing("diary", usr, null, "set the minimum population for events to [minimum_population]", "admin")		
+		
 		else if(href_list["EventBegin"])
 			var/time = input("How many minutes into the round until events begin?","Random Events") as num
 			events_begin = time * 600

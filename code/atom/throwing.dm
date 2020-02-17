@@ -1,24 +1,16 @@
 /atom/var/throw_count = 0	  //Counts up for tiles traveled in throw mode. Only resets for mobs.
-/atom/var/throw_unlimited = 0 //Setting this to 1 before throwing will make the object behave as if in space. //If set on turf, the turf will allow infinite throwing over itself.
+/atom/var/throw_unlimited = 0 //Setting this to 1 before throwing will make the object behave as if in space.
 /atom/var/throw_return = 0    //When 1 item will return like a boomerang.
-/atom/var/throw_spin = 1      //If the icon spins while thrown
-/atom/var/throw_pixel = 1		//1 if the pixel vars will be adjusted depending on aiming/mouse params, on impact.
-/atom/var/throw_traveled = 0
-/atom/var/last_throw_x = 0
-/atom/var/last_throw_y = 0
 /mob/var/gib_flag = 0 	      //Sorry about this.
 
 /atom/movable/proc/hit_check()
 	if(src.throwing)
-		for(var/thing in get_turf(src))
-			var/atom/A = thing
+		for(var/atom/A in get_turf(src))
 			if (!src.throwing)
 				break
 			if(A == src) continue
-			if(isliving(A))
-				var/mob/living/L = A
-				if (!L.throws_can_hit_me) continue
-				if (L.lying) continue
+			if(istype(A,/mob/living))
+				if(A:lying) continue
 				src.throw_impact(A)
 				src.throwing = 0
 			// **TODO: Better behaviour for windows
@@ -31,49 +23,17 @@
 /atom/proc/throw_begin(atom/target)
 	return
 
-/atom/proc/throw_impact(atom/hit_atom, list/params)
-	var/turf/t = get_turf(hit_atom)
-	if( t && t.loc && t.loc:sanctuary ) return
-	var/impact_sfx = 0
-
-	if (isliving(hit_atom))
-		impact_sfx = 'sound/impact_sounds/Generic_Hit_2.ogg'
-
-		if(iscarbon(hit_atom))
-			var/mob/living/carbon/human/C = hit_atom //fuck you, monkeys
-			var/turf/T = get_turf(C)
-			var/turf/U = get_step(C, C.dir)
-
-
-			if(C && istype(src, /atom/movable))
-				var/atom/movable/A = src
-				if (C.find_type_in_hand(/obj/item/bat))
-					if (prob(1))
-						A.throw_at(get_edge_target_turf(C,get_dir(C, U)), 50, 60)
-						playsound(T, 'sound/items/woodbat.ogg', 50, 1)
-						playsound(T, 'sound/items/batcheer.ogg', 50, 1)
-						C.visible_message("<span style=\"color:red\">[C] hits the [src.name] with the bat and scores a HOMERUN! Woah!!!!</span>")
-					else
-						A.throw_at(get_edge_target_turf(C,get_dir(C, U)), 50, 25)
-						playsound(T, 'sound/items/woodbat.ogg', 50, 1)
-						C.visible_message("<span style=\"color:red\">[C] hits the [src.name] with the bat!</span>")
-
-					return 1
+/atom/proc/throw_impact(atom/hit_atom)
 
 	if(src.material) src.material.triggerOnAttack(src, src, hit_atom)
-
-	if (throw_pixel && islist(params) && params["icon-y"] && params["icon-x"])
-		src.pixel_x = text2num(params["icon-x"]) - 16
-		src.pixel_y = text2num(params["icon-y"]) - 16
-
 	for(var/atom/A in hit_atom)
 		if(A.material)
 			A.material.triggerOnAttacked(A, src, hit_atom, src)
 
 	if (reagents)
-		reagents.physical_shock(20)
+		reagents.physical_shock(7)
 
-	if (ishuman(hit_atom)) // Haine fix for undefined proc or verb /mob/living/carbon/wall/meatcube/juggling()
+	if(iscarbon(hit_atom))
 		var/mob/living/carbon/human/C = hit_atom //fuck you, monkeys
 
 		if (!ismob(src))
@@ -82,6 +42,8 @@
 					C.visible_message("<span style=\"color:red\"><b>[C]<b> gets hit in the face by [src]!</span>")
 					if (hasvar(src, "throwforce"))
 						C.TakeDamage("head", src:throwforce, 0)
+						if (ishuman(C) && C.job == "Clown")
+							score_clownabuse++
 				else
 					if (prob(C.juggling.len * 5)) // might drop stuff while already juggling things
 						C.drop_juggle()
@@ -89,13 +51,16 @@
 						C.add_juggle(src)
 				return
 
-		if(((C.in_throw_mode && C.a_intent == "help") || (C.client && C.client.check_key(KEY_THROW))) && !C.equipped())
-			if((C.hand && (!C.limbs.l_arm)) || (!C.hand && (!C.limbs.r_arm)) || C.handcuffed || (prob(60) && C.bioHolder.HasEffect("clumsy")) || ismob(src) || (throw_traveled <= 1 && last_throw_x == src.x && last_throw_y == src.y))
+		if(((C.in_throw_mode && C.a_intent == "help") || (C.client && C.client.check_key("shift"))) && !C.equipped())
+			if((C.hand && (!C.limbs.l_arm)) || (!C.hand && (!C.limbs.r_arm)) || C.handcuffed || (prob(60) && C.bioHolder.HasEffect("clumsy")) || ismob(src))
 				C.visible_message("<span style=\"color:red\">[C] has been hit by [src].</span>")
 				// Added log_reagents() calls for drinking glasses. Also the location (Convair880).
 				logTheThing("combat", C, null, "is struck by [src] [src.is_open_container() ? "[log_reagents(src)]" : ""] at [log_loc(C)].")
 				if(src.vars.Find("throwforce"))
 					random_brute_damage(C, src:throwforce)
+					if (ishuman(C))
+						if (C.job == "Clown")
+							score_clownabuse++
 
 			#ifdef DATALOGGER
 				game_stats.Increment("violence")
@@ -103,7 +68,7 @@
 
 				if(src.vars.Find("throwforce") && src:throwforce >= 40)
 					C.throw_at(get_edge_target_turf(C,get_dir(src, C)), 10, 1)
-					C.changeStatus("stunned", 3 SECONDS)
+					C.stunned += 3
 
 				if(ismob(src)) src:throw_impacted()
 
@@ -121,13 +86,8 @@
 			logTheThing("combat", C, null, "is struck by [src] [src.is_open_container() ? "[log_reagents(src)]" : ""] at [log_loc(C)].")
 			if(src.vars.Find("throwforce"))
 				random_brute_damage(C, src:throwforce)
-
-			//bleed check here
-			if (isitem(src))
-				if ((src:hit_type == DAMAGE_STAB && prob(20)) || (src:hit_type == DAMAGE_CUT && prob(40)))
-					take_bleeding_damage(C, null, 1, src:hit_type)
-					impact_sfx = 'sound/impact_sounds/Flesh_Stab_3.ogg'
-
+				if (istype(C, /mob/living/carbon/human))
+					if (C.job == "Clown") score_clownabuse++
 
 		#ifdef DATALOGGER
 			game_stats.Increment("violence")
@@ -135,10 +95,9 @@
 
 			if(src.vars.Find("throwforce") && src:throwforce >= 40)
 				C.throw_at(get_edge_target_turf(C,get_dir(src, C)), 10, 1)
-				C.changeStatus("stunned", 3 SECONDS)
+				C.stunned += 3
 
 			if(ismob(src)) src:throw_impacted()
-
 
 	else if(issilicon(hit_atom))
 		var/mob/living/silicon/S = hit_atom
@@ -156,8 +115,6 @@
 
 		if(ismob(src)) src:throw_impacted()
 
-		impact_sfx = impact_sfx = 'sound/impact_sounds/Metal_Clang_3.ogg'
-
 
 	else if(isobj(hit_atom))
 		var/obj/O = hit_atom
@@ -173,18 +130,13 @@
 	else if(isturf(hit_atom))
 		var/turf/T = hit_atom
 		if(T.density)
-			//SPAWN_DBG(2) step(src, turn(src.dir, 180))
+			//spawn(2) step(src, turn(src.dir, 180))
 			if(ismob(src)) src:throw_impacted()
-			/*if(istype(hit_atom, /turf/simulated/wall) && isitem(src))
+			/*if(istype(hit_atom, /turf/simulated/wall) && istype(src, /obj/item))
 				var/turf/simulated/wall/W = hit_atom
 				W.take_hit(src)*/
 			if(src.vars.Find("throwforce") && src:throwforce >= 80)
 				T.meteorhit(src)
-
-			impact_sfx = impact_sfx = 'sound/impact_sounds/Generic_Stab_1.ogg'
-
-	if (impact_sfx && src)
-		playsound(src, impact_sfx, 40, 1)
 
 /atom/movable/Bump(atom/O)
 	if(src.throwing)
@@ -192,48 +144,31 @@
 		src.throwing = 0
 	..()
 
-/atom/movable/proc/throw_at(atom/target, range, speed, list/params, turf/thrown_from)
+/atom/movable/proc/throw_at(atom/target, range, speed)
 	//use a modified version of Bresenham's algorithm to get from the atom's current position to that of the target
 	if (!target) return
-	if (reagents)
-		reagents.physical_shock(14)
 	src.throwing = 1
-	src.throw_traveled = 0
-	src.last_throw_x = src.x
-	src.last_throw_y = src.y
 	src.throw_begin(target)
 
 	//Gotta do this in 4 steps or byond decides that the best way to interpolate between (0 and) 180 and 360 is to just flip the icon over, not turn it.
 	if(!istype(src)) return
 
 	var/matrix/transform_original = src.transform
-	if (src.throw_spin == 1)
-		animate(src, transform = matrix(transform_original, 120, MATRIX_ROTATE | MATRIX_MODIFY), time = 8/3, loop = -1)
-		animate(transform = matrix(transform_original, 120, MATRIX_ROTATE | MATRIX_MODIFY), time = 8/3, loop = -1)
-		animate(transform = matrix(transform_original, 120, MATRIX_ROTATE | MATRIX_MODIFY), time = 8/3, loop = -1)
+	animate(src, transform = matrix(transform_original, 120, MATRIX_ROTATE | MATRIX_MODIFY), time = 8/3, loop = -1)
+	animate(transform = matrix(transform_original, 120, MATRIX_ROTATE | MATRIX_MODIFY), time = 8/3, loop = -1)
+	animate(transform = matrix(transform_original, 120, MATRIX_ROTATE | MATRIX_MODIFY), time = 8/3, loop = -1)
 
-	var/hitAThing = 0
-	var/target_true_x = target.x
-	var/target_true_y = target.y
-
-	if (isobj(target.loc))
-		var/obj/container = target.loc
-		if (target in container.contents)
-			target_true_x = container.x
-			target_true_y = container.y
-
-
-	var/dist_x = abs(target_true_x - src.x)
-	var/dist_y = abs(target_true_y - src.y)
+	var/dist_x = abs(target.x - src.x)
+	var/dist_y = abs(target.y - src.y)
 
 	var/dx
-	if (target_true_x  > src.x)
+	if (target.x > src.x)
 		dx = EAST
 	else
 		dx = WEST
 
 	var/dy
-	if (target_true_y  > src.y)
+	if (target.y > src.y)
 		dy = NORTH
 	else
 		dy = SOUTH
@@ -243,16 +178,13 @@
 
 	if(dist_x > dist_y)
 		var/error = dist_x/2 - dist_y
-		var/turf/T = src.loc
-		while (target && ( (((src.x < target_true_x && dx == EAST) || (src.x > target_true_x && dx == WEST)) && dist_travelled < range) || (T && T.throw_unlimited) || src.throw_unlimited) && src.throwing && isturf(src.loc))
+		while (target && ((((src.x < target.x && dx == EAST) || (src.x > target.x && dx == WEST)) && dist_travelled < range) || istype(src.loc, /turf/space) || src.throw_unlimited) && src.throwing && istype(src.loc, /turf))
 			// only stop when we've gone the whole distance (or max throw range) and are on a non-space tile, or hit something, or hit the end of the map, or someone picks it up
 			if(error < 0)
 				var/atom/step = get_step(src, dy)
 				if(!step || step == src.loc) // going off the edge of the map makes get_step return null, don't let things go off the edge
 					break
-				if (!Move(step))  // Grayshift: Race condition fix. Bump proc calls are delayed past the end of the loop and won't trigger end condition
-					hitAThing = 1 // of !throwing on their own, so manually checking if Move failed as end condition
-					break
+				src.Move(step)
 				hit_check()
 				error += dist_x
 				dist_travelled++
@@ -265,9 +197,7 @@
 				var/atom/step = get_step(src, dx)
 				if(!step || step == src.loc) // going off the edge of the map makes get_step return null, don't let things go off the edge
 					break
-				if (!Move(step))
-					hitAThing = 1
-					break
+				src.Move(step)
 				hit_check()
 				error -= dist_y
 				dist_travelled++
@@ -276,19 +206,15 @@
 				if(dist_since_sleep >= speed)
 					dist_since_sleep = 0
 					sleep(1)
-			T = src.loc
 	else
 		var/error = dist_y/2 - dist_x
-		var/turf/T = src.loc
-		while (target && ( (((src.y < target_true_y && dy == NORTH) || (src.y > target_true_y && dy == SOUTH)) && dist_travelled < range) || (T && T.throw_unlimited) || src.throw_unlimited) && src.throwing && isturf(src.loc))
+		while (target && ((((src.y < target.y && dy == NORTH) || (src.y > target.y && dy == SOUTH)) && dist_travelled < range) || istype(src.loc, /turf/space) || src.throw_unlimited) && src.throwing && istype(src.loc, /turf))
 			// only stop when we've gone the whole distance (or max throw range) and are on a non-space tile, or hit something, or hit the end of the map, or someone picks it up
 			if(error < 0)
 				var/atom/step = get_step(src, dx)
 				if(!step || step == src.loc) // going off the edge of the map makes get_step return null, don't let things go off the edge
 					break
-				if (!Move(step))
-					hitAThing = 1
-					break
+				src.Move(step)
 				hit_check()
 				error += dist_y
 				dist_travelled++
@@ -301,9 +227,7 @@
 				var/atom/step = get_step(src, dy)
 				if(!step || step == src.loc) // going off the edge of the map makes get_step return null, don't let things go off the edge
 					break
-				if (!Move(step))
-					hitAThing = 1
-					break
+				src.Move(step)
 				hit_check()
 				error -= dist_x
 				dist_travelled++
@@ -312,25 +236,18 @@
 				if(dist_since_sleep >= speed)
 					dist_since_sleep = 0
 					sleep(1)
-			T = src.loc
 
 	//done throwing, either because it hit something or it finished moving
-	if (!hitAThing) // Bump proc requires throwing flag to be set, so if we hit a thing, leave it on and let Bump turn it off
-		src.throwing = 0
-	else // if we hit something don't use the pixel x/y from the click params
-		params = null
-
 	src.throw_unlimited = 0
+	src.throwing = 0
 	animate(src, transform = transform_original)
 
 	//Wire note: Small fix stemming from pie science. Throw a pie at yourself! Whoa!
-	//if (target == usr)
-	//	src.throw_impact(target)
-	//	src.throwing = 0
-	//Somepotato note: this is gross. Way to make wireless killing machines!!!
+	if (target == usr)
+		src.throw_impact(target)
+		src.throwing = 0
 
-	throw_traveled = dist_travelled
-	if(isobj(src)) src:throw_impact(get_turf(src), params)
+	if(isobj(src)) src:throw_impact(get_turf(src))
 
 	if(target != usr && src.throw_return) throw_at(usr, src.throw_range, src.throw_speed)
 	//testing boomrang stuff

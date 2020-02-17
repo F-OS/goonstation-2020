@@ -6,7 +6,7 @@
 	duration = 60
 	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
 	id = "critter_devour"
-	icon = 'icons/mob/critter_ui.dmi'
+	icon = 'icons/mob/critter_ui.dmi' 
 	icon_state = "devour_over"
 	var/mob/living/target
 	var/datum/targetable/critter/gibstare/gibstare
@@ -34,7 +34,7 @@
 		var/mob/ownerMob = owner
 		playsound(ownerMob.loc, "sound/weapons/phaseroverload.ogg", 100, 1)
 		boutput(target, "<span style=\"color:red\">You feel a horrible pain in your head!</span>")
-		target.changeStatus("stunned", 1 SECONDS)
+		target.stunned += 1
 
 	onEnd()
 		..()

@@ -1,6 +1,5 @@
 datum/mind
 	var/key
-	var/ckey
 	var/mob/current
 	var/mob/virtual
 
@@ -10,8 +9,6 @@ datum/mind
 	var/last_miranda_time = 0 // this is different than last_memory_time, this is when the rights were last SAID, not last CHANGED
 
 	var/violated_hippocratic_oath = 0
-	var/sold_soul = 0 //have we sold our soul to some otherworldly entity?
-	var/diabolical = 0 //are we some sort of demon or other spirit baddie?
 
 	var/assigned_role
 	var/special_role
@@ -27,10 +24,7 @@ datum/mind
 	var/is_target = 0
 	var/list/purchased_traitor_items = list()
 	var/list/traitor_crate_items = list()
-	var/list/blob_absorb_victims = list()
-	var/list/spy_stolen_items = list()
 
-	var/welder_knife = null
 	var/datum/gang/gang = null //Associate a leader with their gang.
 
 	//Ability holders.
@@ -47,7 +41,6 @@ datum/mind
 	var/master = null
 
 	var/dnr = 0
-	var/joined_observer = 0 //keep track of whether this player joined round as an observer (blocks them from bank payouts)
 
 	var/luck = 50 // todo:
 	var/sanity = 100 // implement dis
@@ -56,42 +49,16 @@ datum/mind
 
 	var/obj/item/organ/brain/brain
 
-	var/datum/bank_purchaseable/purchased_bank_item = 0 //set when player readies up
-	var/join_time = 0
-	var/last_death_time = 0 // look, you can live a dozen lives in one round if you're (un)lucky enough
-
-	var/karma = 0 //fuck
-	var/damned = 0 // If 1, they go to hell when are die
-
-	// Capture when they die. Used in the round-end credits
-	var/icon/death_icon = null
-
 	New(mob/M)
 		..()
 		if (M)
 			current = M
 			key = M.key
-			ckey = M.ckey
 			src.handwriting = pick(handwriting_styles)
-		src.last_death_time = world.timeofday // I DON'T KNOW SHUT UP YOU'RE NOT MY REAL DAD
 
 	proc/transfer_to(mob/new_character)
-		Z_LOG_DEBUG("Mind/TransferTo", "Transferring \ref[src] (\ref[current], [current]) ...")
 		if (!new_character)
-			Z_LOG_DEBUG("Mind/TransferTo", "No new_character given, transfer aborted")
 			return
-
-		Z_LOG_DEBUG("Mind/TransferTo", "New mob: \ref[new_character] ([new_character])")
-		if (new_character.disposed)
-			if (current)
-				boutput(current, "You were about to be transferred into another body, but that body was pending deletion! This may fuck everything up so if it does dial 1-800-CODER.")
-				message_admins("Tried to transfer mind of mob [current] (\ref[current], [key_name(current)]) to qdel'd mob [new_character] (\ref[new_character]) God damnit. Un-qdeling the mob and praying (this will probably fuck up).")
-				new_character.disposed = 0
-			else
-				message_admins("Tried to transfer mind [src] (\ref[src]) to qdel'd mob [new_character] (\ref[new_character]) FIX THIS SHIT")
-
-			Z_LOG_ERROR("Mind/TransferTo", "Trying to transfer to a mob that's in the delete queue! Jesus fucking christ.")
-			//CRASH("Trying to transfer to a mob that's in the delete queue!")
 
 		if (current)
 			current.mind = null
@@ -101,24 +68,11 @@ datum/mind
 
 		new_character.key = key
 
-		Z_LOG_DEBUG("Mind/TransferTo", "Mind swapped, moving verbs")
-
-
 		//if (is_changeling)
 		//	new_character.make_changeling()
 
 		for (var/intrinsic_verb in intrinsic_verbs)
-			Z_LOG_DEBUG("Mind/TransferTo", "Adding [intrinsic_verb]")
 			new_character.verbs += intrinsic_verb
-
-
-		//transfer abilholder to me self
-		if (new_character.abilityHolder)
-			Z_LOG_DEBUG("Mind/TransferTo", "Transferring abilityHolder")
-			new_character.abilityHolder.transferOwnership(new_character)
-
-		Z_LOG_DEBUG("Mind/TransferTo", "Complete")
-
 
 	proc/swap_with(mob/target)
 		var/datum/mind/other_mind = target.mind
@@ -177,7 +131,7 @@ datum/mind
 			if (mymaster)
 				output+= "<br><b>Your master:</b> [mymaster.real_name]"
 
-		recipient.Browse(output,"window=memory;title=Memory")
+		recipient << browse(output,"window=memory")
 
 	proc/set_miranda(new_text)
 		miranda = new_text
@@ -185,15 +139,8 @@ datum/mind
 	proc/show_miranda(mob/recipient)
 		var/output = "<B>[current.real_name]'s Miranda Rights</B><HR>[miranda]"
 
-		recipient.Browse(output,"window=miranda;title=Miranda Rights")
+		recipient << browse(output,"window=miranda")
 
-	proc/register_death()
-		var/tod = time2text(world.realtime,"hh:mm:ss") //weasellos time of death patch
-		src.store_memory("Time of death: [tod]", 0)
-		// stuff for critter respawns
-		src.last_death_time = world.timeofday
-
-	disposing()
+	Del()
 		logTheThing("debug", null, null, "<b>Mind</b> Mind for \[[src.key ? src.key : "NO KEY"]] deleted!")
-		Z_LOG_DEBUG("Mind/Disposing", "Mind \ref[src] [src.key ? "([src.key])" : ""] deleted")
 		..()

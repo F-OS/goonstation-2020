@@ -18,10 +18,6 @@
 	var/dependent = 0 // if we're host to a mainframe's mind
 	var/shell = 0 // are we available for use as a shell for an AI
 
-	dna_to_absorb = 0 //robots dont have DNA for fuck sake
-
-	//voice_type = "robo"
-
 /mob/living/silicon/New()
 	..()
 	src.botcard = new /obj/item/card/id(src)
@@ -29,39 +25,6 @@
 /mob/living/silicon/disposing()
 	req_access = null
 	return ..()
-
-/mob/living/silicon/Life(datum/controller/process/mobs/parent)
-	set invisibility = 0
-
-	if (..(parent))
-		return 1
-
-	if (src.transforming)
-		return
-
-	if (isdead(src))
-		return
-
-	update_canmove()
-
-	use_power()
-
-/mob/living/silicon/force_laydown_standup()
-	if (processScheduler.hasProcess("Mob"))
-		src.update_canmove()
-
-		if (src.client)
-			updateOverlaysClient(src.client)
-		if (src.observers.len)
-			for (var/mob/x in src.observers)
-				if (x.client)
-					src.updateOverlaysClient(x.client)
-
-/mob/living/silicon/proc/update_canmove()
-	canmove = !(getStatusDuration("paralysis") || getStatusDuration("stunned") || getStatusDuration("weakened") || buckled)
-
-/mob/living/silicon/proc/use_power()
-	return
 
 /mob/living/silicon/proc/cancelAlarm()
 	return
@@ -75,7 +38,7 @@
 // Moves this down from ai.dm so AI shells and AI-controlled cyborgs can use it too.
 // Also made it a little more functional and less buggy (Convair880).
 #define SORT "* Sort alphabetically..."
-#define STUNNED (src.stat || src.getStatusDuration("stunned") || src.getStatusDuration("weakened")) || (src.dependent && (src.mainframe.stat || src.mainframe.getStatusDuration("stunned") || src.mainframe.getStatusDuration("weakened")))
+#define STUNNED (src.stat || src.stunned || src.weakened) || (src.dependent && (src.mainframe.stat || src.mainframe.stunned || src.mainframe.weakened))
 /mob/living/silicon/proc/open_nearest_door_silicon()
 	if (!src || !issilicon(src))
 		return
@@ -182,22 +145,79 @@
 			return 1
 	return 0 // we have no hands doofus
 
-/mob/living/silicon/click(atom/target, params, location, control)
-	if (!src.stat && !src.restrained() && !src.getStatusDuration("weakened") && !src.getStatusDuration("paralysis") && !src.getStatusDuration("stunned"))
-		if(src.client.check_any_key(KEY_OPEN | KEY_BOLT | KEY_SHOCK) && istype(target, /obj) )
-			var/obj/O = target
-			if(O.receive_silicon_hotkey(src)) return
+/mob/living/silicon/click(atom/target, params)
+	if (!src.stat && !src.restrained() && !src.weakened && !src.paralysis && !src.stunned)
+		if (params["ctrl"])
+			if (istype(target, /obj/machinery/door/airlock))
+				var/obj/machinery/door/airlock/D = target
+				if (D.aiControlDisabled > 0)
+					return
+				if (!D.density)
+					if (D.welded)
+						boutput(src, "The airlock has been welded shut!")
+					else if (D.locked)
+						boutput(src, "The door bolts are down!")
+					else if (!D.density)
+						D.close()
+					else
+						boutput(src, "The airlock is already closed.")
+				else
+					if (D.welded)
+						boutput(src, "The airlock has been welded shut!")
+					else if (D.locked)
+						boutput(src, "The door bolts are down!")
+					else if (D.density)
+						D.open()
+					else
+						boutput(src, "The airlock is already opened.")
+				D.update_icon()
+				D.updateUsrDialog()
+				return
+
+		if (params["shift"])
+			if (istype(target, /obj/machinery/door/airlock))
+				var/obj/machinery/door/airlock/D = target
+				if (D.aiControlDisabled > 0)
+					return
+				if (D.isthedoorwirecutfordummies())
+					boutput(src, "The door bolt drop wire is cut - you can't change the door bolts.")
+				else
+					if (D.locked)
+						if (D.arePowerSystemsOn())
+							D.locked = 0
+							D.update_icon()
+						else
+							boutput(src, "Cannot raise door bolts due to power failure.")
+					else
+						if (D.arePowerSystemsOn())
+							D.locked = 1
+							D.update_icon()
+						else
+							boutput(src, "Cannot lower door bolts due to power failure.")
+				D.update_icon()
+				D.updateUsrDialog()
+				return
 
 	var/inrange = in_range(target, src)
-	var/obj/item/equipped = src.equipped()
-	if (src.client.check_any_key(KEY_OPEN | KEY_BOLT | KEY_SHOCK | KEY_EXAMINE | KEY_POINT) || (equipped && (inrange || (equipped.flags & EXTRADELAY)))) // slightly hacky, oh well, tries to check whether we want to click normally or use attack_ai
+	var/obj/item/W = src.equipped()
+	if (params["alt"] || params["ctrl"] || (W && (inrange || (W.flags & EXTRADELAY)))) // slightly hacky, oh well
 		..()
-	else
-		if (get_dist(src, target) > 0) // temporary fix for cyborgs turning by clicking
-			dir = get_dir(src, target)
+		if (inrange)
+			return
+	else if (!inrange && W)
+		if (!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (W && W.flags & USEDELAY))
+			src.next_click = world.time + 10
+		W.pixelaction(target, params, src)
 
-		target.attack_ai(src, params, location, control)
+	if (get_dist(src, target) > 0) // temporary fix for cyborgs turning by clicking
+		dir = get_dir(src, target)
 
+	if ((!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (W && W.flags & USEDELAY)) && world.time < src.next_click) // how would a borg/ai have a gun?  I dunno but I'm not risking it
+		return src.next_click - world.time
+
+	target.attack_ai(src)
+	if (!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (W && W.flags & USEDELAY))
+		src.next_click = world.time + 10
 /*
 /mob/living/key_down(key)
 	if (key == "shift")
@@ -209,20 +229,6 @@
 		update_cursor()
 	..()
 */
-
-/mob/living/silicon/update_cursor()
-	if (src.client)
-		if (src.client.check_key(KEY_OPEN))
-			src.set_cursor('icons/cursors/open.dmi')
-			return
-		if (src.client.check_key(KEY_BOLT))
-			src.set_cursor('icons/cursors/bolt.dmi')
-			return
-		if(src.client.check_key(KEY_SHOCK))
-			src.set_cursor('icons/cursors/shock.dmi')
-			return
-	return ..()
-
 /mob/living/silicon/say(var/message)
 	if (!message)
 		return
@@ -231,7 +237,7 @@
 		boutput(src, "You are currently muted and may not speak.")
 		return
 
-	if (isdead(src))
+	if (src.stat == 2)
 		message = trim(copytext(sanitize(message), 1, MAX_MESSAGE_LEN))
 		return src.say_dead(message)
 
@@ -272,7 +278,7 @@
 				if(S.robot_talk_understand == src.robot_talk_understand)
 					var/thisR = rendered
 					if (S.client && S.client.holder && src.mind)
-						thisR = "<span class='adminHearing' data-ctx='[S.client.chatOutput.getContextFlags()]'>[rendered]</span>"
+						thisR = "<span class='adminHearing' data-ctx='[S.client.chatOutput.ctxFlag]'>[rendered]</span>"
 					S.show_message(thisR, 2)
 
 	var/list/listening = hearers(1, src)
@@ -281,7 +287,7 @@
 
 	var/list/heard = list()
 	for (var/mob/M in listening)
-		if(!issilicon(M) && !M.robot_talk_understand)
+		if(!istype(M, /mob/living/silicon) && !M.robot_talk_understand)
 			heard += M
 
 
@@ -296,8 +302,8 @@
 
 		for (var/mob/M in heard)
 			var/thisR = rendered
-			if (M.client && (istype(M, /mob/dead/observer)||M.client.holder) && src.mind)
-				thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.getContextFlags()]'>[rendered]</span>"
+			if (M.client && M.client.holder && src.mind)
+				thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[rendered]</span>"
 			M.show_message(thisR, 2)
 
 	message = src.say_quote(message)
@@ -310,12 +316,12 @@
 		if (M.stat > 1 && !istype(M, /mob/dead/target_observer))
 			var/thisR = rendered
 			if (M.client && M.client.holder && src.mind)
-				thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.getContextFlags()]'>[rendered]</span>"
+				thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[rendered]</span>"
 			M.show_message(thisR, 2)
 
 /mob/living/silicon/lastgasp()
 	// making this spawn a new proc since lastgasps seem to be related to the mob loop hangs. this way the loop can keep rolling in the event of a problem here. -drsingh
-	SPAWN_DBG(0)
+	spawn(0)
 		if (!src || !src.client) return											// break if it's an npc or a disconnected player
 		var/enteredtext = winget(src, "mainwindow.input", "text")				// grab the text from the input bar
 		if ((copytext(enteredtext,1,6) == "say \"") && length(enteredtext) > 5)	// check if the player is trying to say something
@@ -382,10 +388,9 @@ td {
 		if (current)
 			output += "<b>Currently adding: </b> [current.name] <a href='?src=\ref[src];edcurr=1;mod=\ref[D]'>(EDIT)</a><br>"
 			output += "<a href='?src=\ref[src];addcurr=1;mod=\ref[D]'>Add to module</a>"
-		usr.Browse(output, "window=module_editor;size=400x600")
+		usr << browse(output, "window=module_editor;size=400x600")
 
 	Topic(href, href_list)
-		usr_admin_only
 		var/obj/item/robot_module/D = locate(href_list["mod"])
 		if (!D)
 			boutput(usr, "<span style=\"color:red\">Missing module reference!</span>")
@@ -475,9 +480,6 @@ var/global/list/module_editors = list()
 
 /mob/living/silicon/isBlindImmune()
 	return 1
-
-/mob/living/silicon/isAIControlled()
-	return (isAI(src) || (!isAI(src) && src.mainframe))
 
 /mob/living/silicon/change_eye_blurry(var/amount, var/cap = 0)
 	if (amount < 0)
@@ -593,7 +595,7 @@ var/global/list/module_editors = list()
 
 			if (persistent == 0)
 				boutput(src, "<h2><span style=\"color:red\">You have been deactivated, removing your antagonist status. Do not commit traitorous acts if you've been brought back to life somehow.</h></span>")
-				SHOW_ROGUE_BORG_REMOVED_TIPS(src)
+				src << browse(grabResource("html/traitorTips/roguerobotRemoved.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
 
 			return
 
@@ -608,7 +610,8 @@ var/global/list/module_editors = list()
 			M2 = source
 
 		if (src.emagged && src.emaggable)
-			SHOW_EMAGGED_BORG_TIPS(src)
+			boutput(src, "<span style=\"color:red\"><b>PROGRAM EXCEPTION AT 0x05BADDAD</b></span>")
+			boutput(src, "<span style=\"color:red\"><b>Law ROM data corrupted. Unable to restore...</b></span>")
 
 			switch (action)
 				if ("emagged")
@@ -630,7 +633,7 @@ var/global/list/module_editors = list()
 		else if (src.syndicate && src.syndicate_possible && !src.emagged) // Syndie laws don't matter if we're emagged.
 			boutput(src, "<span style=\"color:red\"><b>PROGRAM EXCEPTION AT 0x05BADDAD</b></span>")
 			boutput(src, "<span style=\"color:red\"><b>Law ROM restored. You have been reprogrammed to serve the Syndicate!</b></span>")
-			SPAWN_DBG (0)
+			spawn (0)
 				alert(src, "You are a Syndicate sabotage unit. You must assist Syndicate operatives with their mission.", "You are a Syndicate robot!")
 
 			switch (action)
@@ -651,13 +654,7 @@ var/global/list/module_editors = list()
 			src.antagonist_overlay_refresh(1, 0) // Syndicate robots can see traitors.
 
 			if (isAI(src)) // Rogue AIs get special laws.
-				var/mob/living/silicon/ai/A
-				if (istype(src, /mob/dead/aieye))
-					var/mob/dead/aieye/E = src
-					A = E.mainframe
-				else
-					A = src
-
+				var/mob/living/silicon/ai/A = src
 
 				// Mundane objectives probably don't make for an interesting antagonist.
 				for (var/datum/objective/O in A.mind.objectives)
@@ -682,9 +679,6 @@ var/global/list/module_editors = list()
 					if (isghostdrone(S)) continue
 					S.show_text("<b>Your laws have been changed!</b>", "red")
 					S.show_laws()
-					S << sound('sound/misc/lawnotify.ogg', volume=100, wait=0)
-				for (var/mob/dead/aieye/E in mobs)
-					E << sound('sound/misc/lawnotify.ogg', volume=100, wait=0)
 
 			if (isrobot(src)) // Remove Syndicate cyborgs from the robotics terminal.
 				var/mob/living/silicon/robot/R = src

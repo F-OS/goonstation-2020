@@ -6,13 +6,12 @@
 	flags = FPRINT | NOSPLASH
 	anchored = 1.0
 	desc = "A metal frame used to hold objects. Can be wrenched and made portable."
-	event_handler_flags = USE_FLUID_ENTER | USE_CANPASS
 
 /obj/rack/New()
 	..()
 	var/bonus = 0
 	for (var/obj/O in loc)
-		if (isitem(O))
+		if (istype(O, /obj/item))
 			bonus += 4
 		if (istype(O, /obj/table))
 			return
@@ -25,27 +24,26 @@
 /obj/rack/ex_act(severity)
 	switch(severity)
 		if(1.0)
-			//src.deconstruct()
 			qdel(src)
 			return
 		if(2.0)
 			if (prob(50))
-				src.deconstruct()
+				qdel(src)
 				return
 		if(3.0)
 			if (prob(25))
 				src.icon_state = "rackbroken"
-				src.set_density(0)
+				src.density = 0
 		else
 	return
 
 /obj/rack/blob_act(var/power)
 	if(prob(power * 2.5))
-		src.deconstruct()
+		qdel(src)
 		return
 	else if(prob(power * 2.5))
 		src.icon_state = "rackbroken"
-		src.set_density(0)
+		src.density = 0
 		return
 
 /obj/rack/CanPass(atom/movable/mover, turf/target, height=0, air_group=0)
@@ -57,25 +55,11 @@
 		return 0
 
 /obj/rack/MouseDrop_T(obj/O as obj, mob/user as mob)
-	if (!isitem(O) || !in_range(user, src) || !in_range(user, O) || user.restrained() || user.getStatusDuration("paralysis") || user.sleeping || user.stat || user.lying)
-		return
-	var/obj/item/I = O
-	if (istype(I,/obj/item/satchel))
-		var/obj/item/satchel/S = I
-		if (S.contents.len < 1)
-			boutput(usr, "<span style='color:red'>There's nothing in [S]!</span>")
-		else
-			user.visible_message("<span style='color:blue'>[user] dumps out [S]'s contents onto [src]!</span>")
-			for (var/obj/item/thing in S.contents)
-				thing.set_loc(src.loc)
-			S.desc = "A leather bag. It holds 0/[S.maxitems] [S.itemstring]."
-			S.satchel_updateicon()
-			return
-	if (isrobot(user) || user.equipped() != I || (I.cant_drop || I.cant_self_remove))
+	if ((!( istype(O, /obj/item) ) || user.equipped() != O))
 		return
 	user.drop_item()
-	if (I.loc != src.loc)
-		step(I, get_dir(I, src))
+	if (O.loc != src.loc)
+		step(O, get_dir(O, src))
 	return
 
 /obj/rack/dispose()
@@ -91,17 +75,18 @@
 	..()
 
 /obj/rack/attackby(obj/item/W as obj, mob/user as mob)
-	if (iswrenchingtool(W))
-		actions.start(new /datum/action/bar/icon/rack_tool_interact(src, W), user)
-	else
-		src.place_on(W, user)
-	return
+	if (istype(W, /obj/item/wrench))
+		var/atom/A = new /obj/item/rack_parts( src.loc )
+		if(src.material) A.setMaterial(src.material)
+		playsound(src.loc, "sound/items/Ratchet.ogg", 50, 1)
 
-/obj/rack/proc/deconstruct()
-	var/obj/item/furniture_parts/P = new /obj/item/furniture_parts/rack(src.loc)
-	if (P && src.material)
-		P.setMaterial(src.material)
-	qdel(src)
+		//SN src = null
+		qdel(src)
+		return
+	if (issilicon(user)) return
+	user.drop_item()
+	if(W && W.loc)	W.set_loc(src.loc)
+	return
 
 /obj/rack/meteorhit(obj/O as obj)
 	if(prob(75))
@@ -109,50 +94,5 @@
 		return
 	else
 		src.icon_state = "rackbroken"
-		src.set_density(0)
+		src.density = 0
 	return
-
-/datum/action/bar/icon/rack_tool_interact
-	id = "rack_tool_interact"
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
-	duration = 50
-	icon = 'icons/ui/actions.dmi'
-	icon_state = "working"
-
-	var/obj/rack/the_rack
-	var/obj/item/the_tool
-
-	New(var/obj/rack/rak, var/obj/item/tool, var/duration_i)
-		..()
-		if (rak)
-			the_rack = rak
-		if (tool)
-			the_tool = tool
-			icon = the_tool.icon
-			icon_state = the_tool.icon_state
-		if (duration_i)
-			duration = duration_i
-		if (ishuman(owner))
-			var/mob/living/carbon/human/H = owner
-			if (H.traitHolder.hasTrait("carpenter"))
-				duration = round(duration / 2)
-
-	onUpdate()
-		..()
-		if (the_rack == null || the_tool == null || owner == null || get_dist(owner, the_rack) > 1)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-		var/mob/source = owner
-		if (istype(source) && the_tool != source.equipped())
-			interrupt(INTERRUPT_ALWAYS)
-
-	onStart()
-		..()
-		playsound(get_turf(the_rack), "sound/items/Ratchet.ogg", 50, 1)
-		owner.visible_message("<span style='color:blue'>[owner] begins disassembling [the_rack].</span>")
-
-	onEnd()
-		..()
-		playsound(get_turf(the_rack), "sound/items/Deconstruct.ogg", 50, 1)
-		owner.visible_message("<span style='color:blue'>[owner] disassembles [the_rack].</span>")
-		the_rack.deconstruct()

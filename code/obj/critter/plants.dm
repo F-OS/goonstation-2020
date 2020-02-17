@@ -14,7 +14,6 @@
 	brutevuln = 0.5
 	butcherable = 1
 	name_the_meat = 0
-	chase_text = "slams into"
 	meat_type = /obj/item/reagent_containers/food/snacks/salad
 	generic = 0 // get this using the plant quality
 
@@ -27,12 +26,12 @@
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.job == "Botanist") continue
 			if (C.health < 0) continue
 			if (C in src.friends) continue
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -44,15 +43,15 @@
 			else continue
 
 	ChaseAttack(mob/M)
-		..()
-		playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
-		M.changeStatus("stunned", 2 SECONDS)
-		M.changeStatus("weakened", 2 SECONDS)
+		src.visible_message("<span class='combat'><B>[src]</B> slams into [M]!</span>")
+		playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
+		M.stunned += rand(1,4)
+		M.weakened += rand(1,4)
 
 	CritterAttack(mob/M)
 		src.attacking = 1
 		src.visible_message("<span class='combat'><B>[src]</B> starts trying to eat [M]!</span>")
-		SPAWN_DBG(70)
+		spawn(70)
 			if (get_dist(src, M) <= 1 && ((M:loc == target_lastloc)) && src.alive) // added a health check so dead maneaters stop eating people - cogwerks
 				if(iscarbon(M))
 					src.visible_message("<span class='combat'><B>[src]</B> ravenously wolfs down [M]!</span>")
@@ -76,11 +75,8 @@
 					sleeping = 2
 					src.target = null
 					src.task = "thinking"
-					playsound(src.loc, pick("sound/voice/burp_alien.ogg"), 50, 0)
+					playsound(src.loc, pick("sound/misc/burp_alien.ogg"), 50, 0)
 			else
-				if (ishuman(M))
-					var/mob/living/carbon/human/H = M
-					H.was_harmed(src)
 				if(src.alive) // don't gnash teeth if dead
 					src.visible_message("<span class='combat'><B>[src]</B> gnashes its teeth in fustration!</span>")
 			src.attacking = 0
@@ -102,7 +98,6 @@
 	butcherable = 1
 	name_the_meat = 0
 	death_text = "%src% messily splatters into a puddle of tomato sauce!"
-	chase_text = "viciously lunges at"
 	meat_type = /obj/item/reagent_containers/food/snacks/plant/tomato/explosive
 	generic = 0
 
@@ -111,12 +106,12 @@
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.health < 0) continue
 			if (C in src.friends) continue
 			if (C.name == src.attacker) src.attack = 1
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -129,16 +124,20 @@
 				continue
 
 	ChaseAttack(mob/M)
-		..()
-		if (prob(20)) M.changeStatus("stunned", 2 SECONDS)
+		src.visible_message("<span class='combat'><B>[src]</B> viciously lunges at [M]!</span>")
+		if (prob(20)) M.stunned += rand(1,3)
 		random_brute_damage(M, rand(2,5))
 
 	CritterAttack(mob/M)
-		..()
+		src.attacking = 1
+		src.visible_message("<span class='combat'><B>[src]</B> bites [src.target]!</span>")
+		random_brute_damage(src.target, rand(1,2))
+		spawn(10)
+			src.attacking = 0
 
 	CritterDeath()
 		..()
-		playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
-		var/obj/decal/cleanable/blood/B = make_cleanable(/obj/decal/cleanable/blood,src.loc)
+		playsound(src.loc, "sound/effects/splat.ogg", 100, 1)
+		var/obj/decal/cleanable/blood/B = new(src.loc)
 		B.name = "ruined tomato"
 		qdel (src)

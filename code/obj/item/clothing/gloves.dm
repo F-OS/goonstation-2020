@@ -9,6 +9,9 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 	wear_image_icon = 'icons/mob/hands.dmi'
 	inhand_image_icon = 'icons/mob/inhand/hand_feethand.dmi'
 	protective_temperature = 400
+	heat_transfer_coefficient = 0.25
+	siemens_coefficient = 0.50
+	disease_resistance = 10
 	var/uses = 0
 	var/max_uses = 0 // If can_be_charged == 1, how many charges can these gloves store?
 	var/stunready = 0
@@ -23,16 +26,9 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 
 	var/glove_ID = null
 
-	setupProperties()
-		..()
-		setProperty("coldprot", 3)
-		setProperty("heatprot", 3)
-		setProperty("viralprot", 10)
-		setProperty("conductivity", 0.5)
-
 	New()
 		..() // your parents miss you
-		SPAWN_DBG(20)
+		spawn(20)
 			src.glove_ID = src.CreateID()
 			if (glove_IDs) // fix for Cannot execute null.Add(), maybe??
 				glove_IDs.Add(src.glove_ID)
@@ -58,30 +54,6 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 			newID += "[pick(numbersAndLetters)]"
 		if (length(newID))
 			return newID
-
-	attack(var/atom/target as mob, var/atom/challenger as mob)
-		// you, sir, have offended my honour!
-		if (!isliving(target))
-			return ..()
-		// check intents and targets
-		if (ismob(challenger))
-			var/mob/C = challenger
-			if (C.a_intent != INTENT_HELP || !(C.zone_sel && C.zone_sel.selecting == "head"))
-				return ..()
-		else
-			return ..()
-		// I demand satisfaction!
-		if (ismob(target))
-			target.visible_message(
-				"<span><b>[challenger]</b> slaps [target] in the face with the the [src]!</span>",
-				"<span style=\"color:red\"><b>[challenger] slaps you in the face with the [src]! [capitalize(he_or_she(challenger))] has offended your honour!</span>"
-			)
-			logTheThing("combat", challenger, target, "glove-slapped %target%")
-		else
-			target.visible_message(
-				"<span style=\"color:red\"><b>[challenger]</b> slaps [target] in the face with the [src]!</span>"
-			)
-		playsound(target, 'sound/impact_sounds/Generic_Snap_1.ogg', 100, 1)
 
 	attackby(obj/item/W, mob/user)
 		if (istype(W, /obj/item/cable_coil))
@@ -145,6 +117,7 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 
 			if (src.scramble_prints)
 				data += corruptText(prints, 20)
+			// Known bug: occasionally breaks the format of the forensic scanner's readout. Dunno how to account for that yet (Convair880).
 
 			else // Seems a bit redundant to return both (Convair880).
 
@@ -157,22 +130,6 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 			data += " (Glove ID: [src.glove_ID])" // Space is required for formatting (Convair880).
 
 		return data
-
-
-/obj/item/clothing/gloves/long // adhara stuff
-	desc = "These long gloves protect your sleeves and skin from whatever dirty job you may be doing."
-	name = "cleaning gloves"
-	icon = 'icons/obj/clothing/item_gloves.dmi'
-	wear_image_icon = 'icons/mob/hands.dmi'
-	inhand_image_icon = 'icons/mob/inhand/hand_feethand.dmi'
-	icon_state = "long_gloves"
-	item_state = "long_gloves"
-	protective_temperature = 550
-	material_prints = "synthetic silicone rubber fibers"
-	setupProperties()
-		..()
-		setProperty("conductivity", 0.1)
-		setProperty("heatprot", 5)
 
 /obj/item/clothing/gloves/fingerless
 	desc = "These gloves lack fingers."
@@ -187,162 +144,79 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 	icon_state = "black"
 	item_state = "bgloves"
 	protective_temperature = 1500
+	heat_transfer_coefficient = 0.01
 	material_prints = "black leather fibers"
-
-	setupProperties()
-		..()
-		setProperty("heatprot", 7)
 
 /obj/item/clothing/gloves/cyborg
 	desc = "beep boop borp"
 	name = "cyborg gloves"
 	icon_state = "black"
 	item_state = "r_hands"
-	setupProperties()
-		..()
-		setProperty("conductivity", 1)
+	siemens_coefficient = 1.0
 
 /obj/item/clothing/gloves/latex
 	name = "Latex Gloves"
 	icon_state = "latex"
 	item_state = "lgloves"
+	siemens_coefficient = 0.30
 	permeability_coefficient = 0.02
 	desc = "Thin gloves that offer minimal protection."
 	protective_temperature = 310
+	heat_transfer_coefficient = 0.90
 	scramble_prints = 1
-	setupProperties()
-		..()
-		setProperty("conductivity", 0.3)
-
-/obj/item/clothing/gloves/latex/blue
-	color = "#91d5e9"
-/obj/item/clothing/gloves/latex/purple
-	color = "#d888d8"
-/obj/item/clothing/gloves/latex/teal
-	color = "#73e8b6"
-/obj/item/clothing/gloves/latex/pink
-	color = "#ff9bc6"
-
-/obj/item/clothing/gloves/latex/random
-	New()
-		..()
-		if (prob(66))
-			src.color = pick("#91d5e9","#d888d8","#73e8b6","#ff9bc6")
-
-/obj/item/clothing/gloves/crafted
-	name = "gloves"
-	icon_state = "latex"
-	item_state = "lgloves"
-	desc = "Custom made gloves."
-	scramble_prints = 1
-
-	insulating
-		onMaterialChanged()
-			..()
-			if(istype(src.material))
-				if(src.material.hasProperty("electrical"))
-					src.setProperty("conductivity", src.material.getProperty("electrical") / 100)
-				else
-					src.setProperty("conductivity", 1)
-
-				if(src.material.hasProperty("thermal"))
-					protective_temperature = (100 - src.material.getProperty("thermal")) ** 1.65
-					setProperty("coldprot", round((100 - src.material.getProperty("thermal")) * 0.1))
-					setProperty("heatprot", round((100 - src.material.getProperty("thermal")) * 0.1))
-				else
-					protective_temperature = 0
-					setProperty("coldprot", 0)
-					setProperty("heatprot", 0)
-			return
-
-	armored
-		icon_state = "black"
-		item_state = "swat_gl"
-		onMaterialChanged()
-			..()
-			if(istype(src.material))
-				if(src.material.hasProperty("density"))
-					src.setProperty("meleeprot", round((src.material.getProperty("density") ** 0.5) + (src.material.getProperty("density") > 70 ? 3 : 0)))
-				else
-					src.setProperty("meleeprot", 0)
-
-				if(src.material.hasProperty("hard"))
-					src.setProperty("rangedprot", (src.material.getProperty("hard") ** 0.1) + 0.25)
-				else
-					src.setProperty("rangedprot", 0)
-			return
 
 /obj/item/clothing/gloves/swat
-	desc = "These tactical gloves are quite fire and electrically-resistant."
+	desc = "These tactical gloves are somewhat fire and impact-resistant."
 	name = "SWAT Gloves"
 	icon_state = "black"
 	item_state = "swat_gl"
+	siemens_coefficient = 0.30
 	protective_temperature = 1100
+	heat_transfer_coefficient = 0.05
 	material_prints = "high-quality synthetic fibers"
-	setupProperties()
-		..()
-		setProperty("heatprot", 10)
-		setProperty("conductivity", 0.3)
 
 /obj/item/clothing/gloves/stungloves/
 	name = "Stungloves"
 	desc = "These gloves are electrically charged."
 	icon_state = "stun"
 	item_state = "stun"
+	siemens_coefficient = 0
 	material_prints = "insulative fibers, electrically charged"
 	stunready = 1
 	can_be_charged = 1
 	uses = 5
 	max_uses = 5
-	setupProperties()
-		..()
-		setProperty("conductivity", 0)
 
 /obj/item/clothing/gloves/yellow
 	desc = "These gloves are electrically insulated."
 	name = "insulated gloves"
 	icon_state = "yellow"
 	item_state = "ygloves"
+	siemens_coefficient = 0
+	protective_temperature = 1000
+	heat_transfer_coefficient = 0.01
 	material_prints = "insulative fibers"
 	can_be_charged = 1
 	max_uses = 1
-	permeability_coefficient = 0.5
-
-	setupProperties()
-		..()
-		setProperty("conductivity", 0)
-
-	proc/unsulate()
-		src.desc = "These gloves are not electrically insulated."
-		src.name = "unsulated gloves"
-		setProperty("conductivity", 1)
-		src.can_be_charged = 0
-		src.max_uses = 0
 
 /obj/item/clothing/gloves/yellow/unsulated
 	desc = "These gloves are not electrically insulated."
 	name = "unsulated gloves"
+	siemens_coefficient = 1
+	protective_temperature = 10
+	heat_transfer_coefficient = 1
 	can_be_charged = 0
 	max_uses = 0
-	setupProperties()
-		..()
-		setProperty("conductivity", 1)
 
 /obj/item/clothing/gloves/boxing
 	name = "Boxing Gloves"
 	desc = "These gloves are for competitive boxing."
 	icon_state = "boxinggloves"
 	item_state = "bogloves"
+	siemens_coefficient = 0.20
+	protective_temperature = 310
+	heat_transfer_coefficient = 0.25
 	material_prints = "red leather fibers"
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 7)
-		setProperty("conductivity", 0.3)
-
-	afterattack(atom/target, mob/user, reach, params)
-		..()
-		boutput(user, "<span style=\"color:blue\"><b>You have to put the gloves on your hands first, silly!</b></span>")
 
 	get_desc(dist)
 		if (src.weighted)
@@ -356,6 +230,11 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 		boutput(user, "You slip the horseshoe inside one of the gloves.")
 		src.weighted = 1
 		qdel(W)
+		/* no why are you deleting the gloves and making new ones, just change the desc and set the var on the existing ones, fuck
+		var/obj/item/clothing/gloves/boxing_h/A = new /obj/item/clothing/gloves/boxing_h
+		A.set_loc(user.loc)
+		qdel(W)
+		qdel(src)*/
 	else
 		return ..()
 
@@ -376,15 +255,15 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 	name = "power gloves"
 	icon_state = "yellow"
 	item_state = "ygloves"
+	siemens_coefficient = 0
+
+	protective_temperature = 1000
+	heat_transfer_coefficient = 0.01
 	material_prints = "insulative fibers and nanomachines"
 	can_be_charged = 1 // Quite pointless, but could be useful as a last resort away from powered wires? Hell, it's a traitor item and can get the buff (Convair880).
 	max_uses = 1
 
 	var/spam_flag = 0
-
-	setupProperties()
-		..()
-		setProperty("conductivity", 0)
 
 	proc/use_power(var/amount)
 		var/turf/T = get_turf(src)
@@ -410,7 +289,7 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 				return
 
 			spam_flag = 1
-			SPAWN_DBG(40) spam_flag = 0
+			spawn(40) spam_flag = 0
 
 			use_power(50000)
 
@@ -420,11 +299,6 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 			var/list/dummies = new/list()
 
 			playsound(user, "sound/effects/elec_bigzap.ogg", 40, 1)
-
-			for (var/obj/item/cloaking_device/I in user)
-				if (I.active)
-					I.deactivate(user)
-					user.visible_message("<span style=\"color:blue\"><b>[user]'s cloak is disrupted!</b></span>")
 
 			if(isturf(target))
 				target_r = new/obj/elec_trg_dummy(target)
@@ -437,16 +311,16 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 				var/list/affected = DrawLine(last, target_r, /obj/line_obj/elec ,'icons/obj/projectiles.dmi',"WholeLghtn",1,1,"HalfStartLghtn","HalfEndLghtn",OBJ_LAYER,1,PreloadedIcon='icons/effects/LghtLine.dmi')
 
 				for(var/obj/O in affected)
-					SPAWN_DBG(6) pool(O)
+					spawn(6) pool(O)
 
 				if(istype(target_r, /obj/machinery/power/generatorTemp))
 					var/obj/machinery/power/generatorTemp/gen = target_r
 					gen.efficiency_controller += 5
 					gen.grump += 5
-					SPAWN_DBG(450)
+					spawn(450)
 						gen.efficiency_controller -= 5
 
-				else if(isliving(target_r)) //Probably unsafe.
+				else if(istype(target_r, /mob/living)) //Probably unsafe.
 					logTheThing("combat", user, target_r, "zaps %target% with power gloves")
 					switch(user:a_intent)
 						if("harm")
@@ -469,79 +343,3 @@ var/list/glove_IDs = new/list() //Global list of all gloves. Identical to Cogwer
 
 			for(var/d in dummies)
 				qdel(d)
-
-/obj/item/clothing/gloves/water_wings
-	name = "water wings"
-	desc = "Inflatable armbands that don't help you keep afloat at all! At least they look fun."
-	icon_state = "water_wings"
-	item_state = "water_wings"
-	hide_prints = 0
-
-
-//Fun isn't something one considers when coding in ss13, but this did put a smile on my face
-/obj/item/clothing/gloves/brass_gauntlet
-	name = "Brass Gauntlet"
-	desc = "A strange gauntlet made of cogs and brass machinery. It has seven slots along the side."
-	icon_state = "brassgauntlet"
-	item_state = "brassgauntlet"
-	weighted = 1
-	burn_possible = 0
-	cant_self_remove = 1
-	cant_other_remove = 1
-	abilities = list()
-	ability_buttons = list()
-
-	attackby(obj/item/power_stones/W, mob/user)
-		if (istype(W, /obj/item/power_stones))
-			if(!istype(user, /mob/living/carbon/human)) return //This ain't a critter gauntlet
-			if(user:gloves != src)
-				boutput(user, "<span style=\"color:red\"><B>You need to be wearing it dingus!</B></span>")
-				return
-			for(var/obj/item/power_stones/S in src)
-				if(S.stonetype == W.stonetype)
-					boutput(user, "<span style=\"color:red\"><B>That's already in there you doofus!</B></span>") //Some nerd is going to figure out how to duplicate stones I know it
-					return
-			user.visible_message("<span style=\"color:red\"><B>[user] slots the [W] into the [src]!</B></span>")
-			user.drop_item()
-			W.set_loc(src)
-			abilities.Add(W.ability)
-
-			var/obj/ability_button/NB = new W.ability(src)
-			ability_buttons += NB
-			NB.the_item = src
-			NB.the_mob = user
-			NB.name = NB.name + " ([W.name])"
-
-			if(!user.item_abilities.Find(NB))
-				user.item_abilities.Add(NB)
-
-			user.need_update_item_abilities = 1
-			user.update_item_abilities()
-
-		//Nerd trap for using the philosophers stone
-		if (istype(W, /obj/item/alchemy/stone))
-			if(!istype(user, /mob/living/carbon/human)) return
-			if(user:gloves != src) return
-
-			badstone(user, W, src)
-			goldsnap(user)
-
-		//Wow this is super dumb and dangerous why would you do this
-		if(istype(W, /obj/item/raw_material))
-			if(!istype(user, /mob/living/carbon/human)) return
-			if(user:gloves != src) return
-
-			badmaterial(user, W, src)
-
-		//whytho
-		if(istype(W, /obj/item/brick))
-			if(!istype(user, /mob/living/carbon/human)) return
-			if(user:gloves != src) return
-
-			boutput(user, "<span style=\"color:red\"><B>You smack the [src] with the [W]. It makes a grumpy whirr. I don't think it liked that!</B></span>")
-			sleep(50)
-			boutput(user, "<span style=\"color:red\"><B>The [src] suddenly sucks you inside and devours you. Next time don't go smacking dangerous artifacts with bricks!</B></span>")
-			user.implode()
-
-		if(istype(W, /obj/item/plutonium_core/hootonium_core))
-			boutput(user, "<span style=\"color:red\"><B>The [src] reacts but the core is too big for the slots.</B></span>")

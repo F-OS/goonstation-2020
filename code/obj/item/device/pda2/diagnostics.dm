@@ -23,8 +23,6 @@
 
 		dat +="<h4>Wireless Ping Tool</h4>"
 
-		dat += "Device ID: \[[master.net_id]]<br>"
-
 		dat += {"Freq: <tt>
 <a href='byond://?src=\ref[src];adj_freq=-100'>-</a>
 <a href='byond://?src=\ref[src];adj_freq=-10'>-</a>
@@ -65,7 +63,7 @@
 			return
 
 		if (href_list["send"])
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 
 
 				var/datum/signal/signal = get_free_signal()
@@ -78,7 +76,7 @@
 				mode = 1
 				if(result) result.Cut()
 				master.updateSelfDialog()
-				SPAWN_DBG(20)
+				spawn(20)
 					mode = 0
 					master.updateSelfDialog()
 				return
@@ -423,7 +421,7 @@
 
 		else if (href_list["send"])
 			mode = 1
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 
 
 				var/datum/signal/signal = get_free_signal()
@@ -438,7 +436,7 @@
 
 				src.post_signal(signal,"[send_freq]")
 				master.updateSelfDialog()
-				SPAWN_DBG(10)
+				spawn(10)
 					mode = 0
 					master.updateSelfDialog()
 

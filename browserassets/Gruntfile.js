@@ -22,7 +22,6 @@ module.exports = function (grunt) {
     dist: 'build'
   };
 
-  var rev = grunt.file.read('revision') || '1';
   var cdn = 'http://cdn.goonhub.com';
 
   // Define the configuration for all the tasks
@@ -122,7 +121,6 @@ module.exports = function (grunt) {
         options: {
           replacements: [{
             pattern: /\{\{resource\(\"(.*?)\"\)\}\}/ig,
-            //replacement: cdn + '/$1' + '?cdnrev=' + rev
             replacement: cdn + '/$1'
           }]
         }
@@ -137,7 +135,6 @@ module.exports = function (grunt) {
         options: {
           replacements: [{
             pattern: /\{\{resource\(\"(.*?)\"\)\}\}/ig,
-            //replacement: cdn + '/$1' + '?cdnrev=' + rev
             replacement: cdn + '/$1'
           }]
         }
@@ -152,7 +149,6 @@ module.exports = function (grunt) {
         options: {
           replacements: [{
             pattern: /\{\{resource\(\"(.*?)\"\)\}\}/ig,
-            //replacement: cdn + '/$1' + '?cdnrev=' + rev
             replacement: cdn + '/$1'
           }]
         }
@@ -208,10 +204,8 @@ module.exports = function (grunt) {
           cwd: '<%= config.app %>',
           dest: '<%= config.dist %>',
           src: [
-            'images/{,*/}*.webp',
-            'css/fonts/**',
-			'sounds/**',
-			'misc/**'
+            '/images/{,*/}*.webp',
+            '/css/fonts/{,*/}*.*'
           ]
         },
         ]
@@ -278,3 +272,5 @@ module.exports = function (grunt) {
     'build'
   ]);
 };
+
+//fart

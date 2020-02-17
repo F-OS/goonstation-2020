@@ -34,24 +34,22 @@
 		var/turf/T = get_turf(O)
 
 		if (warning_initial)
-			T.visible_message("<b><span style=\"color:red\">[O] [warning_initial]</b></span>")
+			T.visible_message("<b>[O] [warning_initial]</b>")
 		if (alarm_initial)
-			playsound(T, alarm_initial, 100, 1, -1)
+			playsound(T, alarm_initial, 50, 1, -1)
 
-		SPAWN_DBG(src.explode_delay)  //who the fuck coded this shit below without running get_turf again
-			T = get_turf(O)
+		spawn(src.explode_delay)
 			if (warning_final)
-				T.visible_message("<b><span style=\"color:red\">[O] [warning_final]</b></span>")
+				T.visible_message("<b>[O] [warning_final]</b>")
 			if (alarm_final)
-				playsound(T, alarm_final, 100, 1, -1)
+				playsound(T, alarm_final, 50, 1, -1)
 			animate_flash_color_fill(O,flascustomization_first_color,10,3)
 
-			SPAWN_DBG(30)
-				T = get_turf(O)
+			spawn(30)
 				if (src.activated)
 					deploy_payload(O)
 				else
-					T.visible_message("<b><span style=\"color:blue\">[O] [text_disarmed]</b></span>")
+					T.visible_message("<b>[O] [text_disarmed]")
 
 	proc/deploy_payload(var/obj/O)
 		if (!O)
@@ -106,7 +104,7 @@
 		src.exp_deva *= rand(3,5)
 		src.exp_hevy *= rand(4,6)
 		src.exp_lite *= rand(5,7)
-		src.explode_delay *= 1.5 //Was too long, nobody would know it was a bomb.ZeWaka
+		src.explode_delay *= 2
 
 // black hole bomb
 
@@ -158,19 +156,19 @@
 		switch(artitype)
 			if ("ancient")
 				// industrial heavy machinery kinda stuff
-				potential_reagents = list("nanites","liquid plasma","mercury","lithium","plasma","radium","uranium","phlogiston",
+				potential_reagents = list("nanites","liquid plasma","mercury","lithium","plasma","radium","uranium","napalm",
 				"thermite","fuel","acid","silicate","lube","cryostylane","oil")
 			if ("martian")
 				// medicine, some poisons, some gross stuff
-				potential_reagents = list("charcoal","styptic_powder","salbutamol","anti_rad","silver_sulfadiazine","synaptizine",
-				"omnizine","synthflesh","cyanide","ketamine","toxin","neurotoxin","mutagen","fake_initropidril",
+				potential_reagents = list("charcoal","stypic_powder","salbutamol","anti_rad","silver_sulfadiazine","synaptizine",
+				"omnizine","synthflesh","cyanide","sonambutril","toxin","neurotoxin","mutagen","fake_initropidril",
 				"toxic_slurry","jenkem","space_fungus","blood","vomit","gvomit","urine","meat_slurry","grease")
 			if ("eldritch")
 				// all the worst stuff. all of it
 				potential_reagents = list("chlorine","fluorine","lithium","mercury","plasma","radium","uranium","strange_reagent",
-				"phlogiston","thermite","infernite","foof","fuel","blackpowder","acid","amanitin","coniine","cyanide","curare",
+				"napalm","thermite","infernite","foof","fuel","blackpowder","acid","amanitin","coniine","cyanide","curare",
 				"formaldehyde","lipolicide","initropidril","cholesterol","itching","pacid","pancuronium","polonium",
-				"sodium_thiopental","ketamine","sulfonal","toxin","venom","neurotoxin","mutagen","wolfsbane",
+				"sodium_thiopental","sonambutril","sulfonal","toxin","venom","neurotoxin","mutagen","wolfsbane",
 				"toxic_slurry","histamine","sarin")
 			else
 				// absolutely everything
@@ -220,6 +218,6 @@
 
 		O.reagents.clear_reagents()
 
-		SPAWN_DBG(recharge_delay)
+		spawn(recharge_delay)
 			if (O)
 				O.ArtifactDeactivated()

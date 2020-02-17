@@ -6,11 +6,12 @@ var/datum/manufacturing_controller/manuf_controls
 	var/list/custom_schematics = list()
 
 	proc/set_up()
-		for (var/M in childrentypesof(/datum/manufacture))
+		for (var/M in typesof(/datum/manufacture) - /datum/manufacture)
 			src.normal_schematics += new M
 		for (var/obj/machinery/manufacturer/M in world)
 			src.manufacturing_units += M
 			M.set_up_schematics()
+			M.claim_free_resources()
 
 /proc/get_schematic_from_path(var/schematic_path)
 	if (!ispath(schematic_path))

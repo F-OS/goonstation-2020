@@ -29,27 +29,14 @@
 			message_admins("BAD: [src] ([src.type]) spawned at [showCoords(src.x, src.y, src.z)]")
 			qdel(src)
 
-	custom_suicide = 1
 	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
-		user.visible_message("<span style='color:red'><b>[user] slams the toolbox closed on [his_or_her(user)] head repeatedly!</b></span>")
+		user.visible_message("<span style=\"color:red\"><b>[user] slams the toolbox closed on \his head repeatedly!</b></span>")
 		user.TakeDamage("head", 150, 0)
 		user.updatehealth()
-		SPAWN_DBG(500)
-			if (user && !isdead(user))
+		spawn(100)
+			if (user)
 				user.suiciding = 0
 		return 1
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if (istype(W, /obj/item/storage/toolbox) || istype(W, /obj/item/storage/box) || istype(W, /obj/item/storage/belt))
-			var/obj/item/storage/S = W
-			for (var/obj/item/I in S.get_contents())
-				if (..(I, user, null, S) == 0)
-					break
-			return
-		else
-			return ..()
 
 /obj/item/storage/toolbox/emergency
 	name = "emergency toolbox"
@@ -58,7 +45,7 @@
 	desc = "A metal container designed to hold various tools. This variety holds supplies required for emergencies."
 	spawn_contents = list(/obj/item/crowbar,\
 	/obj/item/extinguisher,\
-	/obj/item/device/light/flashlight,\
+	/obj/item/device/flashlight,\
 	/obj/item/device/radio)
 
 /obj/item/storage/toolbox/mechanical
@@ -70,8 +57,8 @@
 	/obj/item/wrench,\
 	/obj/item/weldingtool,\
 	/obj/item/crowbar,\
-	/obj/item/wirecutters,\
-	/obj/item/device/analyzer/atmospheric)
+	/obj/item/device/analyzer,\
+	/obj/item/wirecutters)
 
 /obj/item/storage/toolbox/electrical
 	name = "electrical toolbox"
@@ -153,7 +140,7 @@
 		if(istype(W, /obj/item/grab))	// It will devour people! It's an evil thing!
 			var/obj/item/grab/G = W
 			if(!G.affecting) return
-			if(!G.affecting.stat && !G.affecting.restrained() && !G.affecting.getStatusDuration("weakened"))
+			if(!G.affecting.stat && !G.affecting.restrained() && !G.affecting.weakened)
 				boutput(user, "<span style=\"color:red\">They're moving too much to feed to His Grace!</span>")
 				return
 			user.visible_message("<span style=\"color:red\"><b>[user] is trying to feed [G.affecting] to [src]!</b></span>")
@@ -176,7 +163,7 @@
 
 		src.hunger = 0
 		src.hunger_message_level = 0
-		playsound(src.loc, pick("sound/voice/burp_alien.ogg"), 50, 0)
+		playsound(src.loc, pick("sound/misc/burp_alien.ogg"), 50, 0)
 		//Neatly sort everything they have into handy little boxes.
 		var/obj/item/storage/box/per_person = new
 		per_person.set_loc(src)
@@ -199,9 +186,12 @@
 				looted.layer = initial(looted.layer)
 				looted.dropped(M)
 
-		M.remove()
+		M.ghostize()
 		var/we_need_to_die = (M == original_owner)
-		SPAWN_DBG(5)
+		var/mob/dead_jerk = M
+		spawn(5)
+			if(dead_jerk)
+				qdel(dead_jerk)
 			if (G)
 				qdel(G)
 			if (we_need_to_die)
@@ -322,9 +312,9 @@
 			affected_mob:HealDamage("All", 12, 12)
 			if(affected_mob.get_toxin_damage())
 				affected_mob.take_toxin_damage(-5)
-			affected_mob.delStatus("stunned")
-			affected_mob.delStatus("weakened")
-			affected_mob.delStatus("paralysis")
+			if(affected_mob:stunned) affected_mob:stunned = 0
+			if(affected_mob:weakened) affected_mob:weakened = 0
+			if(affected_mob:paralysis) affected_mob:paralysis = 0
 			affected_mob.dizziness = max(0,affected_mob.dizziness-10)
 			affected_mob:drowsyness = max(0,affected_mob:drowsyness-10)
 			affected_mob:sleeping = 0

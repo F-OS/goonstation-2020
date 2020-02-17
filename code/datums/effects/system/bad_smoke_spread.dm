@@ -4,11 +4,6 @@
 // in case you wanted a vent to always smoke north for example
 /////////////////////////////////////////////
 
-proc/ClearBadsmokeRefs(var/atom/A)
-	for (var/datum/effects/system/bad_smoke_spread/BS in bad_smoke_list)
-		if (BS.holder == A)
-			BS.holder = null
-
 /datum/effects/system/bad_smoke_spread
 	var/number = 3
 	var/cardinals = 0
@@ -17,10 +12,6 @@ proc/ClearBadsmokeRefs(var/atom/A)
 	var/total_smoke = 0 // To stop it being spammed and lagging!
 	var/direction
 	var/color = null
-
-	New()
-		..()
-		bad_smoke_list += src
 
 /datum/effects/system/bad_smoke_spread/proc/set_up(n = 5, c = 0, loca, direct, color)
 	if(n > 20)
@@ -38,21 +29,13 @@ proc/ClearBadsmokeRefs(var/atom/A)
 
 /datum/effects/system/bad_smoke_spread/proc/attach(atom/atom)
 	holder = atom
-	holder.temp_flags |= HAS_BAD_SMOKE
-
-/datum/effects/system/bad_smoke_spread/disposing()
-	bad_smoke_list -= src
-	if (holder)
-		holder.temp_flags &= ~HAS_BAD_SMOKE
-	holder = null
-	..()
 
 /datum/effects/system/bad_smoke_spread/proc/start()
 	var/i = 0
 	for(i=0, i<src.number, i++)
 		if(src.total_smoke > 20)
 			return
-		SPAWN_DBG(0)
+		spawn(0)
 			if(holder)
 				src.location = get_turf(holder)
 			var/obj/effects/bad_smoke/smoke = unpool(/obj/effects/bad_smoke)
@@ -67,12 +50,8 @@ proc/ClearBadsmokeRefs(var/atom/A)
 					direction = pick(alldirs)
 			for(var/j=0, j<pick(0,1,1,1,2,2,2,3), j++)
 				sleep(10)
-				var/turf/t = get_step(smoke, direction)
-				if( t && t.loc && t.loc:sanctuary )
-					pool(smoke)
-					continue
 				step(smoke,direction)
-			SPAWN_DBG(150+rand(10,30))
+			spawn(150+rand(10,30))
 				if (smoke)
 					pool(smoke)
 				src.total_smoke--

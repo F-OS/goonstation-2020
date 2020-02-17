@@ -58,7 +58,7 @@
 //			var/turf/T = O.loc
 //			for(var/atom/A in T.contents)
 //				boutput(src, "There is a [A.name] at this location.")
-			SPAWN_DBG(5) pool(O)
+			spawn(5) pool(O)
 
 		if(istype(target_r, /obj/railgun_trg_dummy)) qdel(target_r)
 
@@ -206,6 +206,9 @@ proc/Get_Angle(atom/ref, atom/target,startpx,startpy,endpx,endpy)
   else if(dx<0)
     .+=360
 
+proc/arctan(x)
+  var/y=arcsin(x/sqrt(1+x*x))
+  return y
 
 proc/DrawLine(atom/Start,atom/End,LineType,Icon,Whole_Icon_State = "",CenterOfIconStart=1,CenterOfIconEnd=1,HalfStart_Icon_State = "HalfStart",HalfEnd_Icon_State = "HalfEnd",Layer=OBJ_LAYER,ExtraDetection=1,startpx,startpy,endpx,endpy,startpx2,startpy2,PreloadedIcon=null)
 	if(isturf(Start)||isturf(End))
@@ -404,5 +407,10 @@ proc/line_ReturnEfficDir(Angle)
 		ReturnedDir = WEST
 	return ReturnedDir
 
+//This returns the tangent of x, for use with North and South straights.
+proc/tan(x)
+	return (sin(x)/cos(x))
 
-
+//This returns the tangent reciprocal of x, for use with East and West straights.
+proc/tanR(x)
+	return (cos(x)/sin(x))

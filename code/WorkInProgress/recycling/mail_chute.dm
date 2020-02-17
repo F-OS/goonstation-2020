@@ -6,7 +6,7 @@
 	desc = "A pneumatic mail-delivery chute."
 	icon_style = "mail"
 	var/mail_tag = null
-	//var/destination_tag = null // dropped to parent /obj/machinery/disposal
+	var/destination_tag = null
 	var/list/destinations = list()
 	var/frequency = 1475
 	var/datum/radio_frequency/radio_connection
@@ -25,7 +25,7 @@
 		if (src.autoname == 1 && !isnull(src.mail_tag))
 			src.name = "mail chute ([src.mail_tag])"
 
-		SPAWN_DBG(100)
+		spawn(100)
 			if (src)
 				if (radio_controller)
 					radio_connection = radio_controller.add_object(src, "[frequency]")
@@ -36,15 +36,10 @@
 
 		return
 
-	disposing()
-		radio_controller.remove_object(src, "[frequency]")
-		radio_controller.remove_object(src, "[pdafrequency]")
-		..()
-
 	// user interaction
 	interact(mob/user, var/ai=0)
 		src.add_fingerprint(user)
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			user.machine = null
 			return
 
@@ -73,14 +68,13 @@
 
 
 		user.machine = src
-		user.Browse(dat, "window=mailchute;size=360x270")
+		user << browse(dat, "window=mailchute;size=360x270")
 		onclose(user, "mailchute")
 
 	Topic(href, href_list)
-		if(..())
-			return
+		..()
 		src.add_fingerprint(usr)
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			return
 		if(usr.stat || usr.restrained() || src.flushing)
 			return
@@ -90,7 +84,7 @@
 
 			if(href_list["close"])
 				usr.machine = null
-				usr.Browse(null, "window=mailchute")
+				usr << browse(null, "window=mailchute")
 				return
 
 			if(href_list["pump"])
@@ -116,7 +110,7 @@
 				signal.transmission_method = TRANSMISSION_RADIO
 				signal.data["command"] = "mail_inquire"
 
-				SPAWN_DBG(4)
+				spawn(4)
 					if (radio_connection) radio_connection.post_signal(src, signal)
 
 			if(href_list["handle"])
@@ -126,7 +120,7 @@
 			if(href_list["eject"])
 				eject()
 		else
-			usr.Browse(null, "window=mailchute")
+			usr << browse(null, "window=mailchute")
 			usr.machine = null
 			return
 		return
@@ -157,7 +151,7 @@
 				src.destinations = sortList(src.destinations)
 
 		else if (signal.data["command"] == "mail_inquire")
-			SPAWN_DBG (4)
+			spawn (4)
 				if (src) src.post_radio_status()
 			return
 
@@ -172,8 +166,8 @@
 		if (istype(src, /obj/machinery/disposal/mail)) flick("mailchute-flush", src)
 		else flick("disposal-flush", src)
 
-		var/obj/disposalholder/H = unpool(/obj/disposalholder)	// virtual holder object which actually
-																// travels through the pipes.
+		var/obj/disposalholder/H = new()	// virtual holder object which actually
+											// travels through the pipes.
 
 		H.init(src)	// copy the contents of disposer to holder
 		H.mail_tag = src.destination_tag
@@ -239,8 +233,8 @@
 			if (istype(src, /obj/machinery/disposal/mail)) flick("mailchute-flush", src)
 			else flick("disposal-flush", src)
 
-			var/obj/disposalholder/H = unpool(/obj/disposalholder)	// virtual holder object which actually
-																	// travels through the pipes.
+			var/obj/disposalholder/H = new()	// virtual holder object which actually
+												// travels through the pipes.
 
 			H.init(src)	// copy the contents of disposer to holder
 
@@ -292,9 +286,6 @@
 		detective
 			name = "Detective"
 			mail_tag = "detective"
-		armory
-			name = "Armory"
-			mail_tag = "armory"
 
 	bridge
 		name = "Bridge"
@@ -401,12 +392,12 @@
 		cargo
 			name = "Cargo Checkpoint"
 			mail_tag = "cargo checkpoint"
-		west
-			name = "West Hallway Checkpoint"
-			mail_tag = "west hallway checkpoint"
-		east
-			name = "East Hallway Checkpoint"
-			mail_tag = "east hallway checkpoint"
+		port
+			name = "Port Hallway Checkpoint"
+			mail_tag = "port hallway checkpoint"
+		starboard
+			name = "Starboard Hallway Checkpoint"
+			mail_tag = "starboard hallway checkpoint"
 
 	public
 		name = "Don't spawn me"
@@ -444,7 +435,7 @@
 
 /obj/machinery/disposal/mail/small
 	icon = 'icons/obj/disposal_small.dmi'
-	handle_normal_state = "disposal-handle"
+	handle_state = "dispover-handle"
 	density = 0
 
 /obj/machinery/disposal/mail/small/autoname
@@ -912,9 +903,9 @@
 			west
 				dir = WEST
 
-		west
-			name = "West Hallway Checkpoint"
-			mail_tag = "west hallway checkpoint"
+		port
+			name = "Port Hallway Checkpoint"
+			mail_tag = "port hallway checkpoint"
 
 			north
 				dir = NORTH
@@ -926,9 +917,9 @@
 			west
 				dir = WEST
 
-		east
-			name = "East Hallway Checkpoint"
-			mail_tag = "east hallway checkpoint"
+		starboard
+			name = "Starboard Hallway Checkpoint"
+			mail_tag = "starboard hallway checkpoint"
 
 			north
 				dir = NORTH

@@ -30,7 +30,7 @@
 
 /obj/machinery/power/am_engine/injector/New()
 	..()
-	SPAWN_DBG( 13 )
+	spawn( 13 )
 		var/loc = get_step(src, NORTH)
 		src.connected = locate(/obj/machinery/power/am_engine/engine, get_step(loc, NORTH))
 		return
@@ -38,7 +38,7 @@
 
 
 /obj/machinery/power/am_engine/injector/attackby(obj/item/weapon/fuel/F, mob/user)
-	if( (status & BROKEN) || !connected) return
+	if( (stat & BROKEN) || !connected) return
 
 	if(istype(F, /obj/item/weapon/fuel/H))
 		if(injecting)
@@ -48,7 +48,7 @@
 		injecting = 1
 		var/fuel = F.fuel
 		qdel(F)
-		SPAWN_DBG( 300 )
+		spawn( 300 )
 			injecting = 0
 			new/obj/item/weapon/fuel(src.loc)
 			connected.H_fuel += fuel
@@ -61,7 +61,7 @@
 		injecting = 1
 		var/fuel = F.fuel
 		qdel(F)
-		SPAWN_DBG( 300 )
+		spawn( 300 )
 			injecting = 0
 			new /obj/item/weapon/fuel(src.loc)
 			connected.antiH_fuel += fuel
@@ -74,7 +74,7 @@
 
 /obj/machinery/power/am_engine/engine/New()
 	..()
-	SPAWN_DBG( 7 )
+	spawn( 7 )
 		var/loc = get_step(src, SOUTH)
 		src.connected = locate(/obj/machinery/power/am_engine/injector, get_step(loc, SOUTH))
 		return
@@ -83,7 +83,7 @@
 
 /obj/machinery/power/am_engine/engine/proc/engine_go()
 
-	if( (!src.connected) || (status & BROKEN) )
+	if( (!src.connected) || (stat & BROKEN) )
 		return
 
 	if(!antiH_fuel || !H_fuel)
@@ -124,7 +124,7 @@
 /obj/machinery/power/am_engine/engine/proc/engine_process()
 
 	do
-		if( (!src.connected) || (status & BROKEN) )
+		if( (!src.connected) || (stat & BROKEN) )
 			return
 
 		if(!antiH_fuel || !H_fuel)

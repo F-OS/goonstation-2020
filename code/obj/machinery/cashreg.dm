@@ -15,12 +15,6 @@
 	attackby(obj/item/W as obj, mob/user as mob)
 		if (istype(W, /obj/item/device/pda2) && W:ID_card)
 			W = W:ID_card
-		if (iswrenchingtool(W))
-			user.visible_message("<span style='color:red'>[user] smacks [src] with the wrench!</span>")
-			if(prob(33))
-				new/obj/item/scrap(get_turf(src))
-				src.visible_message("<span style='color:red'>[src] breaks!</span>")
-				qdel(src)//honk
 		if (istype(W, /obj/item/card/id))
 			var/obj/item/card/id/card = W
 			if (!mainaccount)

@@ -4,7 +4,6 @@
 	icon = 'icons/obj/grille.dmi'
 	icon_state = "grille"
 	density = 1
-	stops_space_move = 1
 	var/health = 30
 	var/health_max = 30
 	var/ruined = 0
@@ -17,7 +16,6 @@
 	flags = FPRINT | CONDUCT | USEDELAY
 	pressure_resistance = 5*ONE_ATMOSPHERE
 	layer = GRILLE_LAYER
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER | USE_CANPASS
 
 	New()
 		..()
@@ -26,7 +24,7 @@
 	steel
 		New()
 			..()
-			var/datum/material/M = getMaterial("steel")
+			var/datum/material/M = getCachedMaterial("steel")
 			src.setMaterial(M)
 
 	steel/broken
@@ -47,20 +45,15 @@
 		layer = CATWALK_LAYER
 		shock_when_entered = 0
 
-		cross //HEY YOU! YEAH, YOU LOOKING AT THIS. Use these for the corners of your catwalks!
-			name = "catwalk surface" //Or I'll murder you since you are making things ugly on purpose.
-			icon_state = "catwalk_cross" //(Statement does not apply when you actually want to use the other ones.)
-
 	onMaterialChanged()
 		..()
 		if (istype(src.material))
-			health_max = material.hasProperty("density") ? round(material.getProperty("density")) : 25
-			health = health_max
-
-			cut_resist = material.hasProperty("hard") ? material.getProperty("hard") : cut_resist
-			blunt_resist = material.hasProperty("density") ? material.getProperty("density") : blunt_resist
-			corrode_resist = material.hasProperty("corrosion") ? material.getProperty("corrosion") : corrode_resist
-			//temp_resist = material.hasProperty(PROP_MELTING) ? material.getProperty(PROP_MELTING) : temp_resist
+			health = material.hasProperty(PROP_TOUGHNESS) ? material.getProperty(PROP_TOUGHNESS) : health
+			health_max = material.hasProperty(PROP_TOUGHNESS) ? material.getProperty(PROP_TOUGHNESS) : health_max
+			cut_resist = material.hasProperty(PROP_SHEAR) ? material.getProperty(PROP_SHEAR) : cut_resist
+			blunt_resist = material.hasProperty(PROP_COMPRESSIVE) ? material.getProperty(PROP_COMPRESSIVE) : blunt_resist
+			corrode_resist = material.hasProperty(PROP_CORROSION) ? material.getProperty(PROP_CORROSION) : corrode_resist
+			temp_resist = material.hasProperty(PROP_MELTING) ? material.getProperty(PROP_MELTING) : temp_resist
 			if (blunt_resist != 0) blunt_resist /= 2
 
 	damage_blunt(var/amount)
@@ -81,14 +74,14 @@
 				armor += src.material.quality * 0.25
 			else if (src.quality < 10)
 				armor = 0
-				//amount += rand(1,3)
+				amount += rand(1,3)
 
 			amount -= armor
 
 		src.health = max(0,min(src.health - amount,src.health_max))
 		if (src.health == 0)
 			update_icon("cut")
-			src.set_density(0)
+			src.density = 0
 			src.ruined = 1
 		else
 			update_icon()
@@ -108,7 +101,7 @@
 		if (src.health == 0)
 			drop_rods(1)
 			update_icon("cut")
-			src.set_density(0)
+			src.density = 0
 			src.ruined = 1
 		else
 			update_icon()
@@ -125,7 +118,7 @@
 		src.health = max(0,min(src.health - amount,src.health_max))
 		if (src.health == 0)
 			update_icon("corroded")
-			src.set_density(0)
+			src.density = 0
 			src.ruined = 1
 		else
 			update_icon()
@@ -146,7 +139,7 @@
 		src.health = max(0,min(src.health - amount,src.health_max))
 		if (src.health == 0)
 			update_icon("melted")
-			src.set_density(0)
+			src.density = 0
 			src.ruined = 1
 		else
 			update_icon()
@@ -186,7 +179,7 @@
 				damage_corrosive(volume / 2)
 			if("pacid")
 				damage_corrosive(volume)
-			if("phlogiston")
+			if("napalm")
 				damage_heat(volume)
 			if("infernite")
 				damage_heat(volume * 2)
@@ -196,29 +189,27 @@
 	hitby(AM as mob|obj)
 		..()
 		src.visible_message("<span style=\"color:red\"><B>[src] was hit by [AM].</B></span>")
-		playsound(src.loc, 'sound/impact_sounds/Metal_Hit_Light_1.ogg', 100, 1)
+		playsound(src.loc, 'sound/effects/grillehit.ogg', 100, 1)
 		if (ismob(AM))
 			damage_blunt(5)
 		else if (isobj(AM))
 			var/obj/O = AM
 			if (O.throwforce)
-				damage_blunt(max(0.5, O.throwforce / blunt_resist)) // we don't want people screaming right through these and you can still get through them by kicking/cutting/etc
+				damage_blunt(max(1, round(O.throwforce / 3, 1))) // we don't want people screaming right through these and you can still get through them by kicking/cutting/etc
 		return
 
 	attack_hand(obj/M, mob/user)
-		if (!islist(user)) //mbc : what the fuck. who is passing a list as an arg here. WHY. WHY i cant find it
-			user.lastattacked = src
 		if(!shock(usr, 70))
 			var/damage = 1
 			var/dam_type = "blunt"
 			var/text = "[usr.kickMessage] [src]"
 
-			if (usr.is_hulk() && damage < 5)
+			if (usr.bioHolder && usr.bioHolder.HasEffect("hulk") && damage < 5)
 				damage = 10
 				text = "smashes [src] with incredible strength"
 
 			src.visible_message("<span style=\"color:red\"><b>[usr]</b> [text]!</span>")
-			playsound(src.loc, 'sound/impact_sounds/Metal_Hit_Light_1.ogg', 80, 1)
+			playsound(src.loc, 'sound/effects/grillehit.ogg', 80, 1)
 
 			if (dam_type == "slashing")
 				damage_slashing(damage)
@@ -228,7 +219,7 @@
 	attackby(obj/item/W, mob/user)
 		// Things that won't electrocute you
 
-		if (ispulsingtool(W) || istype(W, /obj/item/device/t_scanner))
+		if (istype(W,/obj/item/device/multitool) || istype(W, /obj/item/device/t_scanner))
 			var/net = get_connection()
 			if(!net)
 				boutput(user, "<span style=\"color:blue\">No electrical current detected.</span>")
@@ -242,10 +233,9 @@
 				var/obj/window/WI
 				var/win_thin = 0
 				var/win_dir = 2
-//				var/turf/UT = get_turf(user)
+				var/turf/UT = get_turf(user)
 				var/turf/ST = get_turf(src)
 
-/*
 				if (UT && isturf(UT) && ST && isturf(ST))
 					// We're inside the grill.
 					if (UT == ST)
@@ -257,26 +247,15 @@
 						if (win_dir in list(NORTH, EAST, SOUTH, WEST))
 							win_thin = 1
 
-				win_thin = 0 //mbc : nah this is annoying. you can just make a thindow using the popup menu and push it into place anyway.
-							 singh : if you're gonna disable it like this why not just comment out the entire thing and save the pointless checks
-*/
-
 				if (ST && isturf(ST))
 					if (S.reinforcement)
-						if (map_settings)
-							if (win_thin)
-								WI = new map_settings.rwindows_thin (ST)
-							else
-								WI = new map_settings.rwindows (ST)
+						if (map_setting && map_setting == "COG2" && win_thin == 0)
+							WI = new /obj/window/auto/reinforced(ST)
 						else
 							WI = new /obj/window/reinforced(ST)
-
 					else
-						if (map_settings)
-							if (win_thin)
-								WI = new map_settings.windows_thin (ST)
-							else
-								WI = new map_settings.windows(ST)
+						if (map_setting && map_setting == "COG2" && win_thin == 0)
+							WI = new /obj/window/auto(ST)
 						else
 							WI = new /obj/window(ST)
 
@@ -285,7 +264,6 @@
 						WI.setMaterial(S.material)
 					WI.dir = win_dir
 					WI.ini_dir = win_dir
-					logTheThing("station", usr, null, "builds a [WI.name] (<b>Material:</b> [WI.material && WI.material.mat_id ? "[WI.material.mat_id]" : "*UNKNOWN*"]) at ([showCoords(usr.x, usr.y, usr.z)] in [usr.loc.loc])")
 				else
 					user.show_text("<b>Error:</b> Couldn't spawn window. Try again and please inform a coder if the problem persists.", "red")
 					return
@@ -301,34 +279,28 @@
 		// electrocution check
 
 		var/OSHA_is_crying = 1
-		var/dmg_mod = 0
-		if ((src.material && src.material.hasProperty("electrical") && src.material.getProperty("electrical") < 30))
+		if ((src.material && src.material.getProperty(PROP_ELECTRICAL) < 40))// fucka you || istype(W,/obj/item/raw_material/shard))
 			OSHA_is_crying = 0
 
-		if ((src.material && src.material.hasProperty("electrical") && src.material.getProperty("electrical") > 30))
-			dmg_mod = 60 - src.material.getProperty("electrical")
-
-		if (OSHA_is_crying && shock(user, 100 - dmg_mod))
+		if (OSHA_is_crying && shock(user, 100))
 			return
 
 		// Things that will electrocute you
 
-		if (issnippingtool(W))
+		if (istype(W, /obj/item/wirecutters))
 			damage_slashing(src.health_max)
 			src.visible_message("<span style=\"color:red\"><b>[usr]</b> cuts apart the [src] with [W].</span>")
 			playsound(src.loc, 'sound/items/Wirecutter.ogg', 100, 1)
 
-		else if (isscrewingtool(W) && (istype(src.loc, /turf/simulated) || src.anchored))
+		else if ((istype(W, /obj/item/screwdriver) && (istype(src.loc, /turf/simulated) || src.anchored)))
 			playsound(src.loc, 'sound/items/Screwdriver.ogg', 100, 1)
 			src.anchored = !( src.anchored )
 			src.visible_message("<span style=\"color:red\"><b>[usr]</b> [src.anchored ? "fastens" : "unfastens"] [src].</span>")
 			return
 
 		else
-			user.lastattacked = src
-			attack_particle(user,src)
 			src.visible_message("<span style=\"color:red\"><b>[usr]</b> attacks [src] with [W].</span>")
-			playsound(src.loc, 'sound/impact_sounds/Metal_Hit_Light_1.ogg', 80, 1)
+			playsound(src.loc, 'sound/effects/grillehit.ogg', 80, 1)
 			switch(W.damtype)
 				if("fire")
 					damage_heat(W.force)
@@ -343,7 +315,7 @@
 		if (istext(special_icon_state))
 			icon_state = initial(icon_state) + "-" + special_icon_state
 		else
-			var/diff = get_fraction_of_percentage_and_whole(health,health_max)
+			var/diff = get_x_percentage_of_y(health,health_max)
 			switch(diff)
 				if(-INFINITY to 25)
 					icon_state = initial(icon_state) + "-3"
@@ -362,7 +334,7 @@
 		if(src.material)
 			R.setMaterial(src.material)
 		else
-			var/datum/material/M = getMaterial("steel")
+			var/datum/material/M = getCachedMaterial("steel")
 			R.setMaterial(M)
 
 	proc/get_connection()
@@ -402,10 +374,6 @@
 			if (density)
 				return prob(50)
 			return 1
-
-		if (density && istype(mover, /obj/window))
-			return 1
-
 		return ..()
 
 	HasEntered(AM as mob|obj)

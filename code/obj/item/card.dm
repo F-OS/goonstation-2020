@@ -18,23 +18,15 @@ GAUNTLET CARDS
 	var/list/files = list("tools" = 1)
 	module_research_type = /obj/item/card
 
-	disposing()
-		if (istype(src.loc,/obj/machinery/bot))
-			var/obj/machinery/bot/B = src.loc
-			if (B.botcard == src)
-				B.botcard = null
-		..()
-
 /obj/item/card/emag
-	desc = "It's a card with a magnetic strip attached to some circuitry. Commonly referred to as an EMAG"
-	name = "Electromagnetic Card"
+	desc = "It's a card with a magnetic strip attached to some circuitry."
+	name = "cryptographic sequencer"
 	icon_state = "emag"
 	item_state = "card-id"
 	flags = FPRINT | TABLEPASS | SUPPRESSATTACK
 	layer = 6.0 // TODO fix layer
 	is_syndicate = 1
 	mats = 8
-	contraband = 6
 	module_research = list("malfunction" = 25)
 	module_research_type = /obj/item/card/emag
 
@@ -50,8 +42,8 @@ GAUNTLET CARDS
 //delicious fake emag
 	attack_hand(mob/user as mob)
 		boutput(user, "<span class='combat'>Turns out that card was actually a kind of [pick("deadly chameleon","spiny anteater","sex toy that George Melons likes to use","Syndicate Top Trumps Card","bag of neckbeard shavings")] in disguise! It stabs you!</span>")
-		user.changeStatus("paralysis", 100)
-		SPAWN_DBG(10)
+		user.paralysis = 8
+		spawn(10)
 			var/obj/storage/closet/C = new/obj/storage/closet(get_turf(user))
 			user.set_loc(C)
 			C.layer = OBJ_LAYER
@@ -59,27 +51,18 @@ GAUNTLET CARDS
 			C.desc = "What? It's just an ordinary closet."
 			C.welded = 1
 
-/obj/item/card/data
-	name = "data card"
-	icon_state = "data"
-	item_state = "card-id"
-	desc = "A microchipped card used for storing data."
-	var/datum/reagent_group_account/reagent_account = null
-
 // ID CARDS
 
 /obj/item/card/id
 	name = "identification card"
 	icon_state = "id"
-	uses_multiple_icon_states = 1
 	item_state = "card-id"
-	desc = "A standardized NanoTrasen microchipped identification card that contains data that is scanned when attempting to access various doors and computers."
+	desc = "A standardized NanoTrasen Identification Card. Ties into many systems station-wide."
 	var/access = list()
 	var/registered = null
 	var/assignment = null
 	var/title = null
 	var/emagged = 0
-	var/datum/reagent_group_account/reagent_account = null
 
 	// YOU START WITH  NO  CREDITS
 	// WOW
@@ -88,12 +71,10 @@ GAUNTLET CARDS
 
 	//It's a..smart card.  Sure.
 	var/datum/computer/file/cardfile = null
+	desc = "An microchipped identification card that contains data that is scanned when attempting to access various doors and computers on the station."
 
 	proc/update_name()
 		name = "[src.registered]'s ID Card ([src.assignment])"
-
-	registered_owner()
-		.= registered
 
 /obj/item/card/id/New()
 	..()
@@ -149,12 +130,11 @@ GAUNTLET CARDS
 		O.anchored = 1
 		O.name = "Explosion"
 		O.layer = NOLIGHT_EFFECTS_LAYER_BASE
-		O.pixel_x = -92
-		O.pixel_y = -96
-		O.icon = 'icons/effects/214x246.dmi'
+		O.pixel_x = -17
+		O.icon = 'icons/effects/hugeexplosion.dmi'
 		O.icon_state = "explosion"
-		SPAWN_DBG(35) qdel(O)
-		user.gib()
+		spawn(35) qdel(O)
+		spawn(5) user.gib()
 
 /obj/item/card/id/attack_self(mob/user as mob)
 	user.visible_message("[user] shows you: [bicon(src)] [src.name]: assignment: [src.assignment]", "You show off your card: [bicon(src)] [src.name]: assignment: [src.assignment]")
@@ -175,7 +155,7 @@ GAUNTLET CARDS
 		all_accesses -= new_access
 		if (istype(src, /obj/item/card/id/syndicate)) // Nuke ops unable to exit their station (Convair880).
 			src.access += access_syndicate_shuttle
-		DEBUG_MESSAGE("[get_access_desc(new_access)] added to [src]")
+		DEBUG("[get_access_desc(new_access)] added to [src]")
 	src.emagged = 1
 
 /obj/item/card/id/verb/read()
@@ -227,10 +207,10 @@ GAUNTLET CARDS
 	input = strip_html(input, MAX_MESSAGE_LEN, 1)
 	if (strip_bad_stuff_only)
 		return input
-	var/list/namecheck = splittext(trim(input), " ")
+	var/list/namecheck = dd_text2list(trim(input), " ")
 	for(var/i = 1, i <= namecheck.len, i++)
 		namecheck[i] = capitalize(namecheck[i])
-	input = jointext(namecheck, " ")
+	input = dd_list2text(namecheck, " ")
 	return input
 
 /obj/item/card/id/temporary
@@ -245,10 +225,10 @@ GAUNTLET CARDS
 
 /obj/item/card/id/temporary/New()
 	..()
-	SPAWN_DBG(0) //to give time for duration and starting access to be set
+	spawn(0) //to give time for duration and starting access to be set
 		starting_access = access
 		end_time = ticker.round_elapsed_ticks + duration*10
-		SPAWN_DBG(duration * 10)
+		spawn(duration * 10)
 			if(access == starting_access) //don't delete access if it's modified with an ID computer
 				access = list()
 
@@ -308,38 +288,3 @@ GAUNTLET CARDS
 			else
 				assignment = "what the fuck ([matches] rounds played)"
 		name = "[registered]'s ID Card ([assignment])"
-
-// Experimental item that may be made into a 100k spacebux reward in the future?
-/obj/item/card/license_to_kill
-	name = "License to Kill"
-	desc = "The bearer of this license is allowed to kill any player they like, but only as long as it is in their inventory. Yes, even if you arent an antag. No, you dont need to ahelp this we already know if you have it. Get to it!"
-	icon_state="fingerprint1"
-	var/mob/owner = null
-
-	New()
-		..()
-		processing_items.Add(src)
-
-	process()
-		if(!owner) return
-		if(!isInContents(src,owner))
-			boutput(owner, "<h3><span style=\"color:red\">You have lost your license to kill!</span></h3>")
-			logTheThing("combat",owner,null,"dropped their license to kill")
-			logTheThing("admin",owner,null,"dropped their license to kill")
-			message_admins("[key_name(owner)] dropped their license to kill")
-			owner = null
-
-	pickup(mob/user as mob)
-		if(user != owner)
-			logTheThing("combat",user,null,"picked up a license to kill")
-			logTheThing("admin",user,null,"picked up a license to kill")
-			message_admins("[key_name(user)] picked up a license to kill")
-			boutput(user, "<h3><span style=\"color:red\">You now have a license to kill!</span></h3>")
-			if(owner)
-				boutput(owner, "<h2>You have lost your license to kill!</h2>")
-				logTheThing("combat",user,null,"dropped their license to kill")
-				logTheThing("admin",user,null,"dropped their license to kill")
-				message_admins("[key_name(user)] dropped their license to kill")
-			owner = user
-		..()
-

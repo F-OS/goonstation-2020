@@ -112,13 +112,11 @@ ClearSpecificOverlays(1, "key0", "key1", "key2") 	//Same as above but retains ca
 #define P_IMAGE 2
 #define P_ISTATE 3
 
-/atom/var/list/overlay_refs = null
+/atom/var/list/overlay_refs = list()
 
 /atom/proc/UpdateOverlays(var/image/I, var/key, var/force=0, var/retain_cache = 0)
 	if(!key)
 		CRASH("UpdateOverlays called without a key.")
-	if (!src.overlay_refs)
-		src.overlay_refs = list()
 
 	var/list/prev_data
 	//List to store info about the last state of the icon
@@ -129,10 +127,6 @@ ClearSpecificOverlays(1, "key0", "key1", "key2") 	//Same as above but retains ca
 	else if(!prev_data) //We don't have data and we won't add an overlay
 		return 0
 
-	//Wire: Temp debugging to narrow down on a runtime
-	if (!I && key == 1 && force == 0 && retain_cache == 0)
-		world.log << "\[[time2text(world.timeofday,"hh:mm:ss")]] (Temp Overlay Debug) prev_data is: [json_encode(prev_data)]"
-
 	var/hash = hash_image(I)
 	var/image/prev_overlay = prev_data[P_IMAGE] //overlay_refs[key]
 	if(!force && (prev_overlay == I) && hash == prev_data[P_ISTATE] ) //If it's the same image as the other one and the hashes match then do not update
@@ -141,7 +135,6 @@ ClearSpecificOverlays(1, "key0", "key1", "key2") 	//Same as above but retains ca
 	var/index = prev_data[P_INDEX]
 	if(index > 0) //There is an existing overlay in place in this slot, remove it
 		src.overlays.Cut(index, index+1) //Fuck yoooou byond (this gotta be by index or it'll fail if the same thing's in overlays several times)
-	
 		prev_data[P_INDEX] = 0
 		for(var/ikey in overlay_refs) //Because we're storing the position of each overlay in the list we need to shift our indices down to stay synched
 			var/list/L = overlay_refs[ikey]
@@ -168,8 +161,6 @@ ClearSpecificOverlays(1, "key0", "key1", "key2") 	//Same as above but retains ca
 
 /atom/proc/ClearAllOverlays(var/retain_cache=0) //Some men just want to watch the world burn
 	if(src.overlays.len)
-		if (!src.overlay_refs)
-			src.overlay_refs = list()
 		src.overlays.Cut()
 		if(retain_cache)
 			for(var/key in src.overlay_refs)
@@ -191,8 +182,6 @@ ClearSpecificOverlays(1, "key0", "key1", "key2") 	//Same as above but retains ca
 
 
 /atom/proc/GetOverlayImage(var/key)
-	if (!src.overlay_refs)
-		src.overlay_refs = list()
 	//Never rely on this proc returning an image.
 	var/list/ov_data = overlay_refs[key]
 

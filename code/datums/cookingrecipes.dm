@@ -21,6 +21,12 @@
 	output = /obj/item/reagent_containers/food/snacks/burger/humanburger
 	useshumanmeat = 1
 
+/datum/cookingrecipe/monkeyburger
+	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
+	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/monkeymeat
+	cookbonus = 13
+	output = /obj/item/reagent_containers/food/snacks/burger/monkeyburger
+
 /datum/cookingrecipe/fishburger
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/fish
@@ -53,33 +59,6 @@
 	cookbonus = 14
 	output = /obj/item/reagent_containers/food/snacks/burger/cheeseburger_m
 
-/datum/cookingrecipe/luauburger
- 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
- 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/
- 	item3 = /obj/item/reagent_containers/food/snacks/plant/pineappleslice
- 	cookbonus = 15
- 	output = /obj/item/reagent_containers/food/snacks/burger/luauburger
-
-/datum/cookingrecipe/coconutburger
- 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
- 	item2 = /obj/item/reagent_containers/food/snacks/plant/coconutmeat/
- 	cookbonus = 13
- 	output = /obj/item/reagent_containers/food/snacks/burger/coconutburger
-
-/datum/cookingrecipe/tikiburger
- 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
- 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/
- 	item3 = /obj/item/reagent_containers/food/snacks/plant/pineappleslice
- 	item4 = /obj/item/reagent_containers/food/snacks/plant/coconutmeat/
- 	cookbonus = 18
- 	output = /obj/item/reagent_containers/food/snacks/burger/tikiburger
-
-/datum/cookingrecipe/monkeyburger
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/monkeymeat
-	cookbonus = 13
-	output = /obj/item/reagent_containers/food/snacks/burger/monkeyburger
-
 /datum/cookingrecipe/assburger
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
 	item2 = /obj/item/clothing/head/butt
@@ -91,12 +70,6 @@
 	item2 = /obj/item/organ/heart
 	cookbonus = 15
 	output = /obj/item/reagent_containers/food/snacks/burger/heartburger
-
-/datum/cookingrecipe/flockburger
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
-	item2 = /obj/item/organ/brain/flockdrone
-	cookbonus = 15
-	output = /obj/item/reagent_containers/food/snacks/burger/flockburger
 
 /datum/cookingrecipe/brainburger
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
@@ -124,12 +97,6 @@
 	cookbonus = 14
 	output = /obj/item/reagent_containers/food/snacks/burger/bigburger
 
-/datum/cookingrecipe/butterburger
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/butter
-	cookbonus = 15
-	output = /obj/item/reagent_containers/food/snacks/burger/butterburger
-
 /datum/cookingrecipe/monster
 	item1 = /obj/item/reagent_containers/food/snacks/burger/bigburger
 	amt1 = 4
@@ -150,33 +117,16 @@
 	cookbonus = 10
 	output = /obj/item/reagent_containers/food/snacks/donkpocket/warm
 
-/datum/cookingrecipe/honkpocket
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
-	item2 = /obj/item/reagent_containers/food/snacks/meatball
-	item3 = /obj/item/instrument/bikehorn
-	cookbonus = 10
-	output = /obj/item/reagent_containers/food/snacks/donkpocket/honk/warm
-
 /datum/cookingrecipe/donkpocket2
 	item1 = /obj/item/reagent_containers/food/snacks/donkpocket
 	cookbonus = 10
 	output = /obj/item/reagent_containers/food/snacks/donkpocket/warm
 
 /datum/cookingrecipe/donut
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough_circle
+	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/sugar
 	cookbonus = 6
 	output = /obj/item/reagent_containers/food/snacks/donut
-
-/datum/cookingrecipe/bagel
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough_circle
-	cookbonus = 6
-	output = /obj/item/reagent_containers/food/snacks/bagel
-
-/datum/cookingrecipe/crumpet //another good idea for this is to cook a trumpet
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/holey_dough
-	cookbonus = 6
-	output = /obj/item/reagent_containers/food/snacks/crumpet
 
 /datum/cookingrecipe/ice_cream_cone
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough_s
@@ -189,12 +139,6 @@
 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/sugar
 	cookbonus = 5
 	output = /obj/item/reagent_containers/food/snacks/candy/nougat
-
-/datum/cookingrecipe/candy_cane
-	item1 = /obj/item/plant/herb/mint
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/sugar
-	cookbonus = 5
-	output = /obj/item/reagent_containers/food/snacks/candy/candy_cane
 
 /datum/cookingrecipe/waffles
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
@@ -224,13 +168,6 @@
 	item2 = /obj/item/reagent_containers/food/snacks/meatball
 	cookbonus = 16
 	output = /obj/item/reagent_containers/food/snacks/spaghetti/meatball
-
-/datum/cookingrecipe/spaghetti_pg
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/spaghetti
-	item2 = /obj/item/reagent_containers/food/snacks/condiment/ketchup
-	item3 = /obj/item/reagent_containers/food/snacks/pizza
-	cookbonus = 16
-	output = /obj/item/reagent_containers/food/snacks/spaghetti/pizzaghetti
 
 /datum/cookingrecipe/spooky_bread
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
@@ -472,21 +409,6 @@
 	cookbonus = 12
 	output = /obj/item/reagent_containers/food/snacks/sandwich/meatball
 
-/datum/cookingrecipe/sandwich_egg
-	item1 = /obj/item/reagent_containers/food/snacks/breadslice
-	amt1 = 2
-	item2 = /obj/item/reagent_containers/food/snacks/eggsalad
-	cookbonus = 7
-	output = /obj/item/reagent_containers/food/snacks/sandwich/eggsalad
-
-/datum/cookingrecipe/sandwich_bm
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/meat/bacon/raw
-	item2 = /obj/item/reagent_containers/food/snacks/breadloaf/honeywheat
-	item3 = /obj/item/reagent_containers/food/snacks/plant/carrot
-	item4 = /obj/item/reagent_containers/food/snacks/plant/cucumber
-	cookbonus = 12
-	output = /obj/item/reagent_containers/food/snacks/sandwich/banhmi
-
 /datum/cookingrecipe/sandwich_custom
 	item1 = /obj/item/reagent_containers/food/snacks/breadslice
 	amt1 = 2
@@ -519,7 +441,6 @@
 
 					if (snack.reagents)
 						snack.reagents.trans_to(customSandwich, 25)
-					customSandwich.food_effects += snack.food_effects
 
 					//fillings += snack.name
 					if (snack.food_color)
@@ -539,7 +460,6 @@
 			else
 				if (snack.reagents)
 					snack.reagents.trans_to(customSandwich, 25)
-				customSandwich.food_effects += snack.food_effects
 
 				fillings += snack.name
 				if (snack.food_color && !istype(snack, /obj/item/reagent_containers/food/snacks/ingredient) && prob(50))
@@ -617,35 +537,7 @@
 
 		return customSandwich
 
-/datum/cookingrecipe/pizza
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/pizza3
-	cookbonus = 18
-	output = null
 
-	specialOutput(obj/submachine/ourCooker)
-		if (!ourCooker)
-			return null
-
-		var/obj/item/reagent_containers/food/snacks/pizza/customPizza = new /obj/item/reagent_containers/food/snacks/pizza (ourCooker)
-
-		for (var/obj/item/reagent_containers/food/snacks/ingredient/pizza3/P in ourCooker)
-			var/toppingstext = null
-			if(P.toppingstext)
-				toppingstext = P.toppingstext
-				customPizza.name = "[toppingstext] pizza"
-				customPizza.desc = "A pizza with [toppingstext] toppings. Looks pretty [pick("good","dang good","delicious","scrumptious","heavenly","alright")]."
-			else
-				customPizza.name = "pizza"
-				customPizza.desc = 	"A plain cheese and tomato pizza. Looks pretty alright."
-			customPizza.overlays += P.overlays
-			customPizza.num = P.num
-			customPizza.topping = P.topping
-			customPizza.topping_colors = P.topping_colors
-			customPizza.heal_amt = P.heal_amt
-			P.reagents.trans_to(customPizza, P.reagents.total_volume)
-			customPizza.food_effects += P.food_effects
-
-		return customPizza
 
 /datum/cookingrecipe/cheesetoast
 	item1 = /obj/item/reagent_containers/food/snacks/breadslice
@@ -659,13 +551,6 @@
 	cookbonus = 5
 	output = /obj/item/reagent_containers/food/snacks/toastbacon
 
-/datum/cookingrecipe/eggtoast
-	item1 = /obj/item/reagent_containers/food/snacks/breadslice
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	item3 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	cookbonus = 5
-	output = /obj/item/reagent_containers/food/snacks/toastegg
-
 /datum/cookingrecipe/elvischeesetoast
 	item1 = /obj/item/reagent_containers/food/snacks/breadslice/elvis
 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/cheese
@@ -677,13 +562,6 @@
 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/bacon
 	cookbonus = 5
 	output = /obj/item/reagent_containers/food/snacks/toastbacon/elvis
-
-/datum/cookingrecipe/elviseggtoast
-	item1 = /obj/item/reagent_containers/food/snacks/breadslice/elvis
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	amt2 = 2
-	cookbonus = 5
-	output = /obj/item/reagent_containers/food/snacks/toastegg/elvis
 
 /datum/cookingrecipe/breakfast
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/meat/bacon
@@ -754,12 +632,6 @@
 	cookbonus = 4
 	output = /obj/item/reagent_containers/food/snacks/cookie/spooky
 
-/datum/cookingrecipe/cookie_butter
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough_cookie
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/butter
-	cookbonus = 4
-	output = /obj/item/reagent_containers/food/snacks/cookie/butter
-
 //Moon pies!
 /datum/cookingrecipe/moon_pie
 	item1 = /obj/item/reagent_containers/food/snacks/cookie
@@ -817,14 +689,6 @@
 	item3 = /obj/item/reagent_containers/food/snacks/candy
 	cookbonus = 6
 	output = /obj/item/reagent_containers/food/snacks/moon_pie/chocolate
-
-/datum/cookingrecipe/onionchips
-	item1 = /obj/item/reagent_containers/food/snacks/onion_slice
-	item2 = /obj/item/reagent_containers/food/snacks/onion_slice
-	item3 = /obj/item/reagent_containers/food/snacks/plant/garlic
-	item4 = /obj/item/reagent_containers/food/snacks/ingredient/cheese
-	cookbonus = 15
-	output = /obj/item/reagent_containers/food/snacks/onionchips
 
 /datum/cookingrecipe/fries
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/chips
@@ -961,16 +825,8 @@
 		var/pieName
 		var/contentAmount = ourCooker.contents.len - 2
 		var/count = 1
-		var/found1 = 0
-		var/found2 = 0
 		for (var/obj/item/T in ourCooker.contents)
-
-			if (T.type == item1 && !found1)
-				found1 = true
-				continue
-
-			if (T.type == item2 && !found2)
-				found2 = true
+			if (T.type == item1 || T.type == item2)
 				continue
 
 			anItem = T
@@ -1041,12 +897,6 @@
 	cookbonus = 10
 	output = /obj/item/reagent_containers/food/snacks/soup/gruel
 
-/datum/cookingrecipe/porridge
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/rice
-	amt1 = 2
-	cookbonus = 10
-	output = /obj/item/reagent_containers/food/snacks/soup/porridge
-
 /datum/cookingrecipe/oatmeal
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/oatmeal
 	cookbonus = 10
@@ -1057,21 +907,6 @@
 	amt1 = 2
 	cookbonus = 8
 	output = /obj/item/reagent_containers/food/snacks/soup/tomato
-
-/datum/cookingrecipe/mint_chutney
-	item1 = /obj/item/plant/herb/mint
-	item2 = /obj/item/reagent_containers/food/snacks/plant/chili
-	item3 = /obj/item/reagent_containers/food/snacks/plant/garlic
-	item4 = /obj/item/reagent_containers/food/snacks/plant/onion
-	cookbonus = 14
-	output = /obj/item/reagent_containers/food/snacks/soup/mint_chutney
-
-/datum/cookingrecipe/refried_beans
-	item1 = /obj/item/reagent_containers/food/snacks/plant/bean
-	amt1 = 2
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/bacon
-	cookbonus = 14
-	output = /obj/item/reagent_containers/food/snacks/soup/refried_beans
 
 /datum/cookingrecipe/chili
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/meat/
@@ -1114,12 +949,6 @@
 	cookbonus = 6
 	output = /obj/item/reagent_containers/food/snacks/candy/candy_apple
 
-/datum/cookingrecipe/candy_apple_poison
-	item1 = /obj/item/reagent_containers/food/snacks/plant/apple/stick/poison
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/sugar
-	cookbonus = 6
-	output = /obj/item/reagent_containers/food/snacks/candy/candy_apple/poison
-
 //Cakes!
 /datum/cookingrecipe/cake_batter
 	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough_s
@@ -1159,25 +988,6 @@
 	cookbonus = 14
 	output = /obj/item/reagent_containers/food/snacks/cake/downs
 
-#ifdef XMAS
-
-/datum/cookingrecipe/cake_fruit
-	item1 = /obj/item/reagent_containers/food/snacks/yuckburn
-	item2 = /obj/item/reagent_containers/food/snacks/yuck
-	cookbonus = 14
-	output = null
-
-	specialOutput(var/obj/submachine/ourCooker)
-		if (!ourCooker)
-			return null
-
-		var fruitcake = new /obj/item/reagent_containers/food/snacks/cake/fruit
-		playsound(ourCooker.loc, "sound/effects/splat.ogg", 50, 1)
-
-		return fruitcake
-
-#endif
-
 /datum/cookingrecipe/cake_custom
 	item1 = /obj/item/reagent_containers/food/snacks/cake/batter
 	cookbonus = 14
@@ -1206,7 +1016,7 @@
 			B.name = "[rand(50) ? "yellow" : "white"] cake"
 
 		B.desc = "Mmm! A delicious-looking [B.name]!"
-		B.food_effects += S.food_effects
+
 		return B
 
 
@@ -1348,148 +1158,3 @@
 	item2 = /obj/item/reagent_containers/food/snacks/ingredient/oatmeal
 	cookbonus = 6
 	output = /obj/item/reagent_containers/food/snacks/granola_bar
-
-/datum/cookingrecipe/hardboiled
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	cookbonus = 4
-	output = /obj/item/reagent_containers/food/snacks/ingredient/egg/hardboiled
-
-/datum/cookingrecipe/eggsalad
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/egg/hardboiled
-	item2 = /obj/item/reagent_containers/food/snacks/salad
-	item3 = /obj/item/reagent_containers/food/snacks/condiment/mayo
-	cookbonus = 6
-	output = /obj/item/reagent_containers/food/snacks/eggsalad
-
-/datum/cookingrecipe/biscuit
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/flour
-	cookbonus = 4
-	output = /obj/item/reagent_containers/food/snacks/biscuit
-
-/datum/cookingrecipe/hardtack
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/dough
-	item2 = /obj/item/reagent_containers/food/snacks/condiment/ironfilings
-	cookbonus = 8
-	output = /obj/item/reagent_containers/food/snacks/hardtack
-
-/datum/cookingrecipe/macguffin
-	item1 = /obj/item/reagent_containers/food/snacks/emuffin
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat
-	item3 = /obj/item/reagent_containers/food/snacks/ingredient/cheese
-	item4 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	amt1 = 2
-	cookbonus = 8
-	output = /obj/item/reagent_containers/food/snacks/macguffin
-
-/datum/cookingrecipe/haggis
-	item1 = /obj/item/organ/
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/oatmeal
-	item3 = /obj/item/reagent_containers/food/snacks/plant/onion
-	cookbonus = 18
-	output = /obj/item/reagent_containers/food/snacks/haggis
-
-/datum/cookingrecipe/haggass
-	item1 = /obj/item/clothing/head/butt
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/oatmeal
-	item3 = /obj/item/reagent_containers/food/snacks/plant/onion
-	cookbonus = 18
-	output = /obj/item/reagent_containers/food/snacks/haggis/ass
-
-/datum/cookingrecipe/scotch_egg
-	item1 = /obj/item/reagent_containers/food/snacks/breadslice
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/meat/
-	item3 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	cookbonus = 6
-	output = /obj/item/reagent_containers/food/snacks/scotch_egg
-
-/datum/cookingrecipe/rice_ball
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/rice
-	cookbonus = 5
-	output = /obj/item/reagent_containers/food/snacks/rice_ball
-
-/datum/cookingrecipe/nigiri_roll
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/meat/fish
-	item2 = /obj/item/reagent_containers/food/snacks/rice_ball
-	cookbonus = 2
-	output = /obj/item/reagent_containers/food/snacks/nigiri_roll
-
-/datum/cookingrecipe/sushi_roll
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/meat/fish
-	item2 = /obj/item/reagent_containers/food/snacks/rice_ball
-	item3 = /obj/item/reagent_containers/food/snacks/rice_ball
-	item4 = /obj/item/reagent_containers/food/snacks/ingredient/seaweed
-	cookbonus = 2
-	output = /obj/item/reagent_containers/food/snacks/sushi_roll
-
-/datum/cookingrecipe/riceandbeans
-	item1 = /obj/item/reagent_containers/food/snacks/plant/bean
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/rice
-	cookbonus = 10
-	output = /obj/item/reagent_containers/food/snacks/riceandbeans
-
-/datum/cookingrecipe/friedrice
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/rice
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	item3 = /obj/item/reagent_containers/food/snacks/plant/onion
-	item4 = /obj/item/reagent_containers/food/snacks/plant/garlic
-	cookbonus = 10
-	output = /obj/item/reagent_containers/food/snacks/friedrice
-
-/datum/cookingrecipe/omurice
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/rice
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/egg
-	item3 = /obj/item/reagent_containers/food/snacks/condiment/ketchup
-	cookbonus = 8
-	output = /obj/item/reagent_containers/food/snacks/omurice
-
-/datum/cookingrecipe/risotto
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/rice
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/butter
-	item3 = /obj/item/reagent_containers/food/snacks/plant/onion
-	item4 = /obj/item/reagent_containers/food/snacks/plant/garlic
-	cookbonus = 10
-	output = /obj/item/reagent_containers/food/snacks/risotto
-
-// Recipe for zongzi is a WIP; we're gonna need rice balls or something
-
-/datum/cookingrecipe/beefood
-	item1 = /obj/item/reagent_containers/food/snacks/ingredient/honey
-	item2 = /obj/item/plant/wheat
-	item3 = /obj/item/reagent_containers/food/snacks/yuck
-	cookbonus = 22
-	output = /obj/item/reagent_containers/food/snacks/beefood
-
-/datum/cookingrecipe/b_cupcake
-	item1 = /obj/item/reagent_containers/food/snacks/beefood
-	item2 = /obj/item/reagent_containers/food/snacks/ingredient/sugar
-	item3 = /obj/item/reagent_containers/food/snacks/ingredient/royal_jelly
-	item4 = /obj/item/device/light/candle/small
-	cookbonus = 22
-	output = /obj/item/reagent_containers/food/snacks/b_cupcake
-
-	specialOutput(var/obj/submachine/ourCooker)
-		if (!ourCooker)
-			return null
-
-		var/obj/item/reagent_containers/food/snacks/b_cupcake = new /obj/item/reagent_containers/food/snacks/b_cupcake
-
-		b_cupcake.desc = "A little birthday cupcake for a bee. May not taste good to non-bees."
-		var/icon/I = new /icon('icons/obj/foodNdrink/food_dessert.dmi',"b_cupcake")
-		var/random_color = rgb(rand(1,255), rand(1,255), rand(1,255))
-		I.Blend(random_color, ICON_ADD)
-		b_cupcake.icon = I
-
-		return b_cupcake
-
-/datum/cookingrecipe/butters
-	item1 = /obj/item/clothing/head/butt
-	item2 = /obj/item/reagent_containers/food/drinks/milk
-	cookbonus = 14
-	output = /obj/item/reagent_containers/food/snacks/condiment/butters
-
-/datum/cookingrecipe/lipstick
-	item1 = /obj/item/pen/crayon
-	item2 = /obj/item/item_box/figure_capsule
-	cookbonus = 10
-	output = /obj/item/pen/crayon/lipstick

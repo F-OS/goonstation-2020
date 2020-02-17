@@ -5,7 +5,7 @@
 /turf/unsimulated/wall/adaptive
 	var/base_name = null
 
-	fullbright = 1 // temporary measure
+	RL_Ignore = 1 // temporary measure
 	desc = "A magically infused wall. It appears to glow without emitting light."
 
 	New()
@@ -24,7 +24,7 @@
 		if (istype(W, /turf/unsimulated/wall/adaptive))
 			W:adapt()
 
-	disposing()
+	Del()
 		var/turf/N = locate(x, y+1, z)
 		var/turf/S = locate(x, y-1, z)
 		var/turf/W = locate(x-1, y, z)
@@ -172,7 +172,7 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 		if (id)
 			wizard_zone_controller.triggerables += src
 
-	disposing()
+	Del()
 		qdel(opener)
 		..()
 
@@ -192,9 +192,9 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 			return
 		src.opening = -1
 		src.RL_SetOpacity(1)
-		src.set_density(1)
+		src.density = 1
 		flick("wizard_false_wall_closing", src)
-		SPAWN_DBG(10)
+		spawn(10)
 			src.icon_state = "wizard_false_wall"
 			src.opening = 0
 
@@ -205,9 +205,9 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 			return
 		src.opening = 1
 		flick("wizard_false_wall_opening", src)
-		src.icon_state = "wizard_floor"
-		SPAWN_DBG(12)
-			src.set_density(0)
+		spawn(12)
+			src.density = 0
+			src.icon_state = "wizard_floor"
 			src.opening = 0
 			src.RL_SetOpacity(0)
 
@@ -235,7 +235,7 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 		if (istype(W, /turf/unsimulated/wall/adaptive))
 			W:adapt()
 
-	disposing()
+	Del()
 		var/turf/N = locate(x, y+1, z)
 		var/turf/S = locate(x, y-1, z)
 		var/turf/W = locate(x-1, y, z)
@@ -314,7 +314,7 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 			O.pixel_y = 2
 			O.pixel_x = 0
 
-	disposing()
+	Del()
 		for (var/obj/O in dummies)
 			qdel(O)
 		..()
@@ -600,13 +600,12 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 
 	New()
 		..()
-		//icon_state = name
+		icon_state = name
 		over_image = image(icon, name)
 
 	quartz
 		name = "enchanted quartz"
 		assoc_material = /datum/material/crystal/wizard/quartz
-		icon_state = "quartz"
 
 	topaz
 		name = "enchanted topaz"
@@ -614,14 +613,12 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 		light_g = 0.8
 		light_b = 0.5
 		assoc_material = /datum/material/crystal/wizard/topaz
-		icon_state = "topaz"
 
 	amethyst
 		name = "enchanted amethyst"
 		light_r = 0.6
 		light_g = 0.4
 		assoc_material = /datum/material/crystal/wizard/amethyst
-		icon_state = "amethyst"
 
 	ruby
 		name = "enchanted ruby"
@@ -629,7 +626,6 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 		light_g = 0.1
 		light_b = 0.2
 		assoc_material = /datum/material/crystal/wizard/ruby
-		icon_state = "ruby"
 
 	sapphire
 		name = "enchanted sapphire"
@@ -637,7 +633,6 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 		light_g = 0.4
 		light_b = 0.7
 		assoc_material = /datum/material/crystal/wizard/sapphire
-		icon_state = "sapphire"
 
 	emerald
 		name = "enchanted emerald"
@@ -645,7 +640,6 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 		light_g = 0.8
 		light_b = 0.4
 		assoc_material = /datum/material/crystal/wizard/emerald
-		icon_state = "emerald"
 
 /obj/wizard_light
 	name = "empty crystal socket"
@@ -801,7 +795,7 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 		if (!written)
 			boutput(usr, "<span style=\"color:red\">You cannot decipher the runes written in the book.</span>")
 		else
-			usr.Browse(written, "window=tome;size=200x400")
+			usr << browse(written, "window=tome;size=200x400")
 
 /obj/bookcase
 	name = "bookcase"
@@ -821,7 +815,7 @@ var/global/datum/wizard_zone_controller/wizard_zone_controller
 			effect_overlay = null
 		..()
 
-	disposing()
+	Del()
 		if (effect_overlay)
 			qdel(effect_overlay)
 		..()

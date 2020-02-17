@@ -1,6 +1,6 @@
 /obj/machinery/meter
 	name = "meter"
-	icon = 'icons/obj/atmospherics/meter.dmi'
+	icon = 'icons/obj/meter.dmi'
 	icon_state = "meterX"
 	var/obj/machinery/atmospherics/pipe/target = null
 	anchored = 1.0
@@ -10,21 +10,17 @@
 
 /obj/machinery/meter/New()
 	..()
-	SPAWN_DBG(10)
+	spawn(10)
 		src.target = locate(/obj/machinery/atmospherics/pipe) in loc
 
 	return 1
-
-/obj/machinery/meter/disposing()
-	radio_controller.remove_object(src, "[frequency]")
-	..()
 
 /obj/machinery/meter/process()
 	if(!target)
 		icon_state = "meterX"
 		return 0
 
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		icon_state = "meter0"
 		return 0
 
@@ -53,7 +49,7 @@
 			if(prob(50))
 				playsound(src.loc, "sound/machines/hiss.ogg", 50, 1)
 				noiselimiter = 1
-				SPAWN_DBG(60)
+				spawn(60)
 				noiselimiter = 0
 
 
@@ -92,11 +88,11 @@
 
 /obj/machinery/meter/Click()
 
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 
 	var/t = null
-	if (get_dist(usr, src) <= 3 || isAI(usr))
+	if (get_dist(usr, src) <= 3 || istype(usr, /mob/living/silicon/ai))
 		if (src.target)
 			var/datum/gas_mixture/environment = target.return_air()
 			if(environment)

@@ -11,15 +11,10 @@ datum/controller/process/machines
 
 		Station_VNet = new /datum/v_space/v_space_network()
 
-	proc/d_print()
-		for(var/obj/machinery/machine in src.machines)
-			boutput(world,"[machine.name] : [machine.type]")
-
 	doWork()
 		src.atmos_machines = global.atmos_machines
 		var/c = 0
-		for(var/obj/machinery/machine in atmos_machines)
-			if( machine.z == 4 && !Z4_ACTIVE ) continue
+		for(var/obj/machinery/atmospherics/machine in atmos_machines)
 #ifdef MACHINE_PROCESSING_DEBUG
 			var/t = world.time
 #endif
@@ -57,7 +52,6 @@ datum/controller/process/machines
 
 		src.machines = global.machines
 		for(var/obj/machinery/machine in src.machines)
-			if( machine.z == 4 && !Z4_ACTIVE ) continue
 #ifdef MACHINE_PROCESSING_DEBUG
 			var/t = world.time
 #endif

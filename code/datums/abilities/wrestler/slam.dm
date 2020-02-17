@@ -1,7 +1,6 @@
 /datum/targetable/wrestler/slam
 	name = "Slam (grab)"
 	desc = "Slam a grappled opponent into the floor."
-	icon_state = "Slam"
 	targeted = 0
 	target_anything = 0
 	target_nodamage_check = 0
@@ -27,16 +26,13 @@
 			return 1
 
 		var/mob/living/HH = G.affecting
-		if(check_target_immunity( HH ))
-			M.visible_message("<span style='color:red'>You seem to attack [M]!</span>")
-			return 1
 		HH.set_loc(M.loc)
 		M.dir = get_dir(M, HH)
 		HH.dir = get_dir(HH, M)
 
 		M.visible_message("<span style=\"color:red\"><B>[M] lifts [HH] up!</B></span>")
 
-		SPAWN_DBG (0)
+		spawn (0)
 			if (HH)
 				animate(HH, transform = matrix(180, MATRIX_ROTATE), time = 1, loop = 0)
 			sleep (15)
@@ -141,14 +137,13 @@
 					fluff = "atomic [fluff]"
 					playsound(M.loc, "sound/effects/explosionfar.ogg", 60, 1)
 
-			playsound(M.loc, "sound/impact_sounds/Flesh_Break_1.ogg", 75, 1)
+			playsound(M.loc, "sound/effects/fleshbr1.ogg", 75, 1)
 			M.visible_message("<span style=\"color:red\"><B>[M] [fluff] [HH]!</B></span>")
 
-			if (!isdead(HH))
+			if (HH.stat != 2)
 				HH.emote("scream")
-				HH.changeStatus("weakened", 2 SECONDS)
-				HH.changeStatus("stunned", 2 SECONDS)
-				HH.force_laydown_standup()
+				HH.weakened += 2
+				HH.stunned += 2
 
 				switch (G.state)
 					if (2)

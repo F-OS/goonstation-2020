@@ -59,7 +59,7 @@
 	relaymove(var/mob/user, direction)
 		if (can_move)
 			can_move = 0
-			SPAWN_DBG (10)
+			spawn (10)
 				can_move = 1
 			step(src,direction)
 		return
@@ -121,7 +121,7 @@
 				user.show_text("You are too far away to do that.", "red")
 			return
 		//Okay, enough scanning shit without actual icons yo.
-		if (!isnull(initial(target.icon)) && !isnull(initial(target.icon_state)) && target.icon && target.icon_state && (isitem(target) || istype(target, /obj/shrub) || istype(target, /obj/critter) || istype(target, /obj/machinery/bot))) // cogwerks - added more fun
+		if (!isnull(initial(target.icon)) && !isnull(initial(target.icon_state)) && target.icon && target.icon_state && (istype(target, /obj/item) || istype(target, /obj/shrub) || istype(target, /obj/critter) || istype(target, /obj/machinery/bot))) // cogwerks - added more fun
 			if (!cham)
 				cham = new(src)
 				cham.master = src
@@ -155,7 +155,7 @@
 			boutput(usr, "<span style=\"color:blue\">You deactivate the [src].</span>")
 			anim.loc = get_turf(src)
 			flick("emppulse",anim)
-			SPAWN_DBG (8)
+			spawn (8)
 				anim.loc = src //Back in the box with ye
 		else
 			if (istype(src.loc, /obj/dummy/chameleon)) //No recursive chameleon projectors!!
@@ -171,7 +171,7 @@
 			boutput(usr, "<span style=\"color:blue\">You activate the [src].</span>")
 			anim.loc = get_turf(src)
 			flick("emppulse",anim)
-			SPAWN_DBG (8)
+			spawn (8)
 				anim.loc = src //Back in the box with ye
 
 	proc/disrupt()
@@ -185,7 +185,7 @@
 				A.set_loc(get_turf(cham))
 			cham.loc = src
 			can_use = 0
-			SPAWN_DBG (100)
+			spawn (100)
 				can_use = 1
 
 /obj/item/device/chameleon/bomb
@@ -235,7 +235,7 @@
 			if (user && ismob(user))
 				user.show_text("You are too far away to do that.", "red")
 			return
-		if (!isnull(initial(target.icon)) && !isnull(initial(target.icon_state)) && target.icon && target.icon_state && (isitem(target) || istype(target, /obj/shrub) || istype(target, /obj/critter) || istype(target, /obj/machinery/bot))) // cogwerks - added more fun
+		if (!isnull(initial(target.icon)) && !isnull(initial(target.icon_state)) && target.icon && target.icon_state && (istype(target, /obj/item) || istype(target, /obj/shrub) || istype(target, /obj/critter) || istype(target, /obj/machinery/bot))) // cogwerks - added more fun
 			playsound(src, "sound/weapons/flash.ogg", 100, 1, 1)
 			boutput(user, "<span style=\"color:blue\">Scanned [target].</span>")
 			src.name = target.name

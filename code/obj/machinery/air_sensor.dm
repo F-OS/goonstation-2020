@@ -79,7 +79,3 @@ obj/machinery/air_sensor
 		if(radio_controller)
 			set_frequency(frequency)
 
-	disposing()
-		radio_controller.remove_object(src, "[frequency]")
-		..()
-

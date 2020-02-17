@@ -23,9 +23,6 @@
 		R.set_reagent_temp(src.frytemp)
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (isghostdrone(user) || isAI(user))
-			boutput(usr, "<span style=\"color:red\">The [src] refuses to interface with you, as you are not a properly trained chef!</span>")
-			return
 		if (src.fryitem)
 			boutput(user, "<span style=\"color:red\">There is already something in the fryer!</span>")
 			return
@@ -40,7 +37,7 @@
 			else
 				logTheThing("combat", user, null, "pours chemicals [log_reagents(W)] into the [src] at [log_loc(src)].") // Logging for the deep fryer (Convair880).
 				src.visible_message("<span style=\"color:blue\">[user] pours [W:amount_per_transfer_from_this] units of [W]'s contents into [src].</span>")
-				playsound(src.loc, "sound/impact_sounds/Liquid_Slosh_1.ogg", 100, 1)
+				playsound(src.loc, "sound/effects/slosh.ogg", 100, 1)
 				W.reagents.trans_to(src, W:amount_per_transfer_from_this)
 				if (!W.reagents.total_volume) boutput(user, "<span style=\"color:red\"><b>[W] is now empty.</b></span>")
 
@@ -48,7 +45,6 @@
 
 		else if (istype(W, /obj/item/grab))
 			if (!W:affecting) return
-			user.lastattacked = src
 			src.visible_message("<span style=\"color:red\"><b>[user] is trying to shove [W:affecting] into [src]!</b></span>")
 			if(!do_mob(user, W:affecting) || !W)
 				return
@@ -71,7 +67,7 @@
 
 			return
 
-		if (W.w_class > src.max_wclass || istype(W, /obj/item/storage) || istype(W, /obj/item/storage/secure) || istype(W, /obj/item/plate))
+		if (W.w_class > src.max_wclass || istype(W, /obj/item/storage) || istype(W, /obj/item/storage/secure))
 			boutput(user, "<span style=\"color:red\">There is no way that could fit!</span>")
 			return
 
@@ -93,9 +89,6 @@
 				UnsubscribeProcess()
 
 	attack_hand(mob/user as mob)
-		if (isghostdrone(user))
-			boutput(usr, "<span style=\"color:red\">The [src] refuses to interface with you, as you are not a properly trained chef!</span>")
-			return
 		if (!src.fryitem)
 			boutput(user, "<span style=\"color:red\">There is nothing in the fryer.</span>")
 			return
@@ -109,23 +102,18 @@
 		return
 
 	process()
-		if (status & BROKEN)
+		if (stat & BROKEN)
 			UnsubscribeProcess()
 			return
 
 		if (!src.reagents.has_reagent("grease"))
 			src.reagents.add_reagent("grease", 25)
 
-		//DaerenNote: so it turned out hellmixes + self-heating mixes constantly got dragged to the src.frytemp
-		//so i fixed that, heated stuff won't get cooled by the fryer now b/c thats lame + i am not going to thermodynamics this shit to model equilibrium
-		if (src.frytemp >= src.reagents.total_temperature)
-			src.reagents.set_reagent_temp(src.frytemp) // I'd love to have some thermostat logic here to make it heat up / cool down slowly but aaaaAAAAAAAAAAAAA (exposing it to the frytemp is too slow)
+		src.reagents.set_reagent_temp(src.frytemp) // I'd love to have some thermostat logic here to make it heat up / cool down slowly but aaaaAAAAAAAAAAAAA (exposing it to the frytemp is too slow)
 
 		if(!src.fryitem)
 			UnsubscribeProcess()
 			return
-		else 
-			src.cooktime++
 
 		if (!src.fryitem.reagents)
 			var/datum/reagents/R = new/datum/reagents(50)
@@ -136,38 +124,34 @@
 		src.reagents.trans_to(src.fryitem, 2)
 
 		if (src.cooktime < 60)
-			
+			src.cooktime++
 			if (src.cooktime == 30)
 				playsound(src.loc, "sound/machines/ding.ogg", 50, 1)
 				src.visible_message("<span style=\"color:blue\">[src] dings!</span>")
 			else if (src.cooktime == 60) //Welp!
 				src.visible_message("<span style=\"color:red\">[src] emits an acrid smell!</span>")
 		else if(src.cooktime >= 120)
-			
-			if((src.cooktime % 5) == 0 && prob(10))
+			src.cooktime++
+			if((src.cooktime % 5) == 0)
 				src.visible_message("<span style=\"color:red\">[src] sprays burning oil all around it!</span>")
-				fireflash(src, 1)
+				fireflash(src, 5)
 
 		return
 
-	custom_suicide = 1
-	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
+	suicide(var/mob/usr as mob)
 		if (src.fryitem)
 			return 0
-		user.visible_message("<span style='color:red'><b>[user] climbs into the deep fryer! How is that even possible?!</b></span>")
+		usr.visible_message("<span style=\"color:red\"><b>[usr] climbs into the deep fryer! How is that even possible?!</b></span>")
 
-		user.set_loc(src)
+		usr.set_loc(src)
 		src.cooktime = 0
-		src.fryitem = user
+		src.fryitem = usr
 		src.icon_state = "fryer1"
-		user.TakeDamage("head", 0, 175)
-		user.updatehealth()
+		usr.TakeDamage("head", 0, 175)
+		usr.updatehealth()
 		SubscribeToProcess()
-		SPAWN_DBG(500)
-			if (user && !isdead(user))
-				user.suiciding = 0
+		spawn(100)
+			usr.suiciding = 0
 		return 1
 
 	proc/eject_food()
@@ -178,7 +162,7 @@
 		var/obj/item/reagent_containers/food/snacks/fry_holder/fryholder = new /obj/item/reagent_containers/food/snacks/fry_holder(src)
 
 		if (src.cooktime >= 60)
-			if (ismob(src.fryitem))
+			if (istype(src.fryitem, /mob))
 				var/mob/M = src.fryitem
 				M.ghostize()
 			else
@@ -193,9 +177,6 @@
 
 			src.fryitem.reagents.add_reagent("grease", 50)
 			fryholder.desc = "A heavily fried...something.  Who can tell anymore?"
-		else
-			if (istype(src.fryitem, /obj/item/reagent_containers/food/snacks))
-				fryholder.food_effects += fryitem:food_effects
 
 		var/icon/composite = new(src.fryitem.icon, src.fryitem.icon_state)//, src.fryitem.dir, 1)
 		for(var/O in src.fryitem.underlays + src.fryitem.overlays)
@@ -222,7 +203,7 @@
 		fryholder.icon = composite
 		fryholder.overlays = fryitem.overlays
 		fryholder.set_loc(get_turf(src))
-		if (ismob(fryitem))
+		if (istype(fryitem, /mob))
 			fryholder.amount = 5
 		else
 			fryholder.amount = src.fryitem.w_class

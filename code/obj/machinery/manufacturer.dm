@@ -53,11 +53,11 @@
 	var/sound_happy = 'sound/machines/chime.ogg'
 	var/sound_grump = 'sound/machines/buzz-two.ogg'
 	var/sound_beginwork = 'sound/machines/computerboot_pc.ogg'
-	var/sound_damaged = 'sound/impact_sounds/Metal_Hit_Light_1.ogg'
-	var/sound_destroyed = 'sound/impact_sounds/Machinery_Break_1.ogg'
+	var/sound_damaged = 'sound/effects/grillehit.ogg'
+	var/sound_destroyed = 'sound/effects/robogib.ogg'
 	power_usage = 200
 	var/static/list/sounds_malfunction = list('sound/machines/engine_grump1.ogg','sound/machines/engine_grump2.ogg','sound/machines/engine_grump3.ogg',
-	'sound/machines/glitch1.ogg','sound/machines/glitch2.ogg','sound/machines/glitch3.ogg','sound/impact_sounds/Metal_Clang_1.ogg','sound/impact_sounds/Metal_Hit_Heavy_1.ogg','sound/machines/romhack1.ogg','sound/machines/romhack3.ogg')
+	'sound/machines/glitch1.ogg','sound/machines/glitch2.ogg','sound/machines/glitch3.ogg','sound/effects/clang.ogg','sound/effects/bang.ogg','sound/machines/romhack1.ogg','sound/machines/romhack3.ogg')
 	var/static/list/text_flipout_adjective = list("an awful","a terrible","a loud","a horrible","a nasty","a horrendous")
 	var/static/list/text_flipout_noun = list("noise","racket","ruckus","clatter","commotion","din")
 	var/list/text_bad_output_adjective = list("janky","crooked","warped","shoddy","shabby","lousy","crappy","shitty")
@@ -86,7 +86,7 @@
 		src.work_display = image('icons/obj/manufacturer.dmi', "")
 		src.activity_display = image('icons/obj/manufacturer.dmi', "")
 		src.panel_sprite = image('icons/obj/manufacturer.dmi', "")
-		SPAWN_DBG(0)
+		spawn(0)
 			src.build_icon()
 
 	disposing()
@@ -96,16 +96,11 @@
 		src.panel_sprite = null
 		src.output_target = null
 		src.beaker = null
-		src.available.len = 0
-		src.available = null
-		src.download.len = 0
-		src.download = null
-		src.hidden.len = 0
-		src.hidden = null
-		src.queue.len = 0
-		src.queue = null
-		src.nearby_turfs.len = 0
-		src.nearby_turfs = null
+		src.available = list()
+		src.download = list()
+		src.hidden = list()
+		src.queue = list()
+		src.nearby_turfs = list()
 		src.sound_happy = null
 		src.sound_grump = null
 		src.sound_beginwork = null
@@ -127,9 +122,9 @@
 				boutput(usr, "<span style=\"color:red\">It's rather badly damaged. It probably needs some wiring replaced inside.</span>")
 			else
 				boutput(usr, "<span style=\"color:red\">It's a bit damaged. It looks like it needs some welding done.</span>")
-		if	(status & BROKEN)
+		if	(stat & BROKEN)
 			boutput(usr, "<span style=\"color:red\">It seems to be damaged beyond the point of operability.</span>")
-		if	(status & NOPOWER)
+		if	(stat & NOPOWER)
 			boutput(usr, "<span style=\"color:red\">It seems to be offline.</span>")
 		switch(src.dismantle_stage)
 			if(1)
@@ -140,7 +135,7 @@
 				boutput(usr, "<span style=\"color:red\">It's partially dismantled. To deconstruct it, use a wrench. To repair it, add some cable.</span>")
 
 	process()
-		if (status & NOPOWER)
+		if (stat & NOPOWER)
 			return
 
 		power_usage = src.powconsumption + 200
@@ -152,7 +147,7 @@
 			use_power(src.powconsumption)
 			if (src.timeleft < 1)
 				src.output_loop(src.queue[1])
-				SPAWN_DBG(0)
+				spawn(0)
 					if (src.queue.len < 1)
 						src.manual_stop = 0
 						playsound(src.loc, src.sound_happy, 50, 1)
@@ -192,7 +187,10 @@
 		var/damage = 0
 		damage = round(((P.power/6)*P.proj_data.ks_ratio), 1.0)
 
-		if(src.material) src.material.triggerOnBullet(src, src, P)
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 		if (!damage)
 			return
@@ -202,38 +200,35 @@
 			src.take_damage(damage)
 
 	power_change()
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			src.build_icon()
 		else
 			if(powered() && src.dismantle_stage < 3)
-				status &= ~NOPOWER
+				stat &= ~NOPOWER
 				src.build_icon()
 			else
-				SPAWN_DBG(rand(0, 15))
-					status |= NOPOWER
+				spawn(rand(0, 15))
+					stat |= NOPOWER
 					src.build_icon()
 
 	attack_hand(var/mob/user as mob)
-		if (free_resource_amt > 0)
-			claim_free_resources()
-
 		if(src.electrified != 0)
-			if (!(status & NOPOWER || status & BROKEN))
+			if (!(stat & NOPOWER || stat & BROKEN))
 				if (src.manuf_zap(user, 33))
 					return
 
 		user.machine = src
-		var/list/dat = list("<B>[src.name]</B>")
+		var/dat = "<B>[src.name]</B>"
 		//dat += "<A href='?src=\ref[src];shake=0'>(shake)</A>"
 
-		if (src.panelopen || isAI(user))
+		if (src.panelopen)
 			var/list/manuwires = list(
 			"Amber" = 1,
 			"Teal" = 2,
 			"Indigo" = 3,
 			"Lime" = 4,
 			)
-			var/list/pdat = list("<B>[src] Maintenance Panel</B><hr>")
+			var/pdat = "<B>[src] Maintenance Panel</B><hr>"
 			for(var/wiredesc in manuwires)
 				var/is_uncut = src.wires & APCWireColorToFlag[manuwires[wiredesc]]
 				pdat += "[wiredesc] wire: "
@@ -245,7 +240,7 @@
 				pdat += "<br>"
 
 			pdat += "<br>"
-			if (status & BROKEN || status & NOPOWER)
+			if (stat & BROKEN || stat & NOPOWER)
 				pdat += "The yellow light is off.<BR>"
 				pdat += "The blue light is off.<BR>"
 				pdat += "The white light is off.<BR>"
@@ -256,12 +251,12 @@
 				pdat += "The white light is [src.hacked ? "on" : "off"].<BR>"
 				pdat += "The red light is on.<BR>"
 
-			user.Browse(pdat.Join(), "window=manupanel")
+			user << browse(pdat, "window=manupanel")
 			onclose(user, "manupanel")
 
-		if (status & BROKEN || status & NOPOWER)
+		if (stat & BROKEN || stat & NOPOWER)
 			dat = "The screen is blank."
-			user.Browse(dat.Join(), "window=manufact;size=400x500")
+			user << browse(dat, "window=manufact;size=400x500")
 			onclose(user, "manufact")
 			return
 
@@ -293,44 +288,19 @@
 			dat += "<small>"
 			if (src.category != "Downloaded")
 				for(var/datum/manufacture/A in src.available)
-					var/list/mats_used = material_check(A)
-
 					if (istext(src.search) && !findtext(A.name, src.search, 1, null))
 						continue
 					else if (istext(src.category) && src.category != A.category)
 						continue
-
-					if (isnull(mats_used))
-						dat += "<BR><font color = 'red'><b><u>[A.name]</u></b></font> "		//change this name to red if can't be made
-					else
-						dat += "<BR><A href='?src=\ref[src];disp=\ref[A]'><b><u>[A.name]</u></b></A> "		//change this name to normal if available
-
+					dat += "<BR><A href='?src=\ref[src];disp=\ref[A]'><b><u>[A.name]</u></b></A> "
 					if (istext(A.category))
 						dat += "([A.category])"
 					dat += "<br>"
-
 					var/list_count = 1
 					for (var/X in A.item_paths)
 						if (list_count != 1) dat += ", "
-						var/found = 0
-						var/list/usable_materials = get_mat_ids(A)
-
-						//get all mat_ids in this manufacturable	needed to get the actual material to use in the material pattern match
-						for (var/mat_id in usable_materials)
-							if (usable_materials[mat_id] < A.item_amounts[list_count])
-								continue
-							var/datum/material/mat = getMaterial(mat_id)
-							if (match_material_pattern(X, mat))
-								found = 1
-								break
-
-						if (found)
-							dat += "[A.item_amounts[list_count]] [A.item_names[list_count]]"		//change this line to red if mising <font color = "red">
-						else
-							dat += "<font color = 'red'>[A.item_amounts[list_count]] [A.item_names[list_count]]</font>"		//change this line to red if mising <font color = "red">
-
+						dat += "[A.item_amounts[list_count]] [A.item_names[list_count]]"
 						list_count++
-
 					if (A.time == 0 || src.speed == 0)
 						dat += "<br><b>Time:</b> ERROR<br>"
 					else
@@ -405,40 +375,24 @@
 
 		dat += "<hr>"
 
-		user.Browse(dat.Join(), "window=manufact;size=450x500")
+		user << browse(dat, "window=manufact;size=450x500")
 		onclose(user, "manufact")
-
-		interact_particle(user,src)
-
-	// Validate that an item is inside this machine for HREF check purposes
-	proc/validate_disp(var/datum/manufacture/M)
-		if(src.available && src.available.Find(M))
-			return 1
-
-		if(src.download && src.download.Find(M))
-			return 1
-
-		if(src.hacked && src.hidden && src.hidden.Find(M))
-			return 1
-
-		return 0
-
 
 	Topic(href, href_list)
 
 		if(!(href_list["cutwire"] || href_list["pulsewire"]))
-			if(status & BROKEN || status & NOPOWER)
+			if(stat & BROKEN || stat & NOPOWER)
 				return
 
 		if(usr.stat || usr.restrained())
 			return
 
 		if(src.electrified != 0)
-			if (!(status & NOPOWER || status & BROKEN))
+			if (!(stat & NOPOWER || stat & BROKEN))
 				if (src.manuf_zap(usr, 10))
 					return
 
-		if ((usr.contents.Find(src) || ((get_dist(src, usr) <= 1 || isAI(usr)) && istype(src.loc, /turf))))
+		if ((usr.contents.Find(src) || ((get_dist(src, usr) <= 1) && istype(src.loc, /turf))))
 			usr.machine = src
 
 			if (src.malfunction && prob(10))
@@ -455,7 +409,7 @@
 					var/ejectamt = 0
 					var/turf/ejectturf = get_turf(usr)
 					for(var/obj/item/O in src.contents)
-						if (O.material && O.material.name == mat_name)
+						if (O.material && O.material.mat_id == mat_name)
 							if (!ejectamt)
 								ejectamt = input(usr,"How many units do you want to eject?","Eject Materials") as num
 								if (ejectamt <= 0 || src.mode != "ready" || get_dist(src, usr) > 1)
@@ -501,7 +455,11 @@
 					last_queue_op = world.time
 
 				src.queue -= src.queue[operation]
-				begin_work(1)//pesky exploits
+				if (src.queue.len == 0)
+					src.manual_stop = 0
+					src.error = null
+					src.mode = "ready"
+					src.build_icon()
 
 			if (href_list["page"])
 				var/operation = text2num(href_list["page"])
@@ -545,12 +503,6 @@
 					return
 				else
 					last_queue_op = world.time
-
-				// Verify that there is no href fuckery abound
-				if(!validate_disp(I))
-					// Since a manufacturer may get unhacked or a downloaded item could get deleted between someone
-					// opening the window and clicking the button we can't assume intent here, so no cluwne
-					return
 
 				if (isnull(material_check(I)))
 					boutput(usr, "<span style=\"color:red\">Insufficient usable materials to manufacture that item.</span>")
@@ -611,13 +563,13 @@
 					return
 				src.reagents.remove_reagent(the_reagent,howmuch)
 
-			if ((href_list["cutwire"]) && (src.panelopen || isAI(usr)))
+			if ((href_list["cutwire"]) && (src.panelopen))
 				if (src.electrified)
 					if (src.manuf_zap(usr, 100))
 						return
 				var/twire = text2num(href_list["cutwire"])
-				if (!usr.find_tool_in_hand(TOOL_SNIPPING))
-					boutput(usr, "You need a snipping tool!")
+				if (!( istype(usr.equipped(), /obj/item/wirecutters) ))
+					boutput(usr, "You need wirecutters!")
 					return
 				else if (src.isWireColorCut(twire))
 					src.mend(twire)
@@ -625,10 +577,10 @@
 					src.cut(twire)
 				src.build_icon()
 
-			if ((href_list["pulsewire"]) && (src.panelopen || isAI(usr)))
+			if ((href_list["pulsewire"]) && (src.panelopen))
 				var/twire = text2num(href_list["pulsewire"])
-				if ( !(usr.find_tool_in_hand(TOOL_PULSING) || isAI(usr)) )
-					boutput(usr, "You need a multitool or similar!")
+				if (!istype(usr.equipped(), /obj/item/device/multitool))
+					boutput(usr, "You need a multitool!")
 					return
 				else if (src.isWireColorCut(twire))
 					boutput(usr, "You can't pulse a cut wire.")
@@ -695,7 +647,7 @@
 			if (amtload) boutput(user, "<span style=\"color:blue\">[amtload] materials loaded from [W]!</span>")
 			else boutput(user, "<span style=\"color:red\">No materials loaded!</span>")
 
-		else if (isscrewingtool(W))
+		else if (istype(W, /obj/item/screwdriver))
 			if (!src.panelopen)
 				src.panelopen = 1
 			else
@@ -746,7 +698,7 @@
 					if (src.health >= 50)
 						boutput(user, "<span style=\"color:blue\">The wiring is fully repaired. Now you need to weld the external plating.</span>")
 
-		else if (iswrenchingtool(W))
+		else if (istype(W,/obj/item/wrench))
 			var/do_action = 0
 			if (istype(W,src.base_material_class) && src.accept_loading(user))
 				if (alert(user,"What do you want to do with [W]?","[src.name]","Dismantle/Construct","Load it in") == "Load it in")
@@ -769,21 +721,21 @@
 					return
 				src.build_icon()
 
-		else if (ispryingtool(W) && src.dismantle_stage == 1)
+		else if (istype(W,/obj/item/crowbar) && src.dismantle_stage == 1)
 			user.visible_message("<b>[user]</b> pries off [src]'s plating.")
 			playsound(src.loc, "sound/items/Crowbar.ogg", 50, 1)
 			src.dismantle_stage = 2
 			new /obj/item/sheet/steel/reinforced(src.loc)
 			src.build_icon()
 
-		else if (issnippingtool(W) && src.dismantle_stage == 2)
-			if (!(status & NOPOWER))
+		else if (istype(W,/obj/item/wirecutters) && src.dismantle_stage == 2)
+			if (!(stat & NOPOWER))
 				if (src.manuf_zap(user,100))
 					return
 			user.visible_message("<b>[user]</b> disconnects [src]'s cabling.")
 			playsound(src.loc, "sound/items/Wirecutter.ogg", 50, 1)
 			src.dismantle_stage = 3
-			src.status |= NOPOWER
+			src.stat |= NOPOWER
 			var/obj/item/cable_coil/cut/C = new /obj/item/cable_coil/cut(src.loc)
 			C.amount = 1
 			src.build_icon()
@@ -798,7 +750,7 @@
 			user.visible_message("<b>[user]</b> adds cabling to [src].")
 			src.dismantle_stage = 2
 			qdel(W)
-			src.status &= ~NOPOWER
+			src.stat &= ~NOPOWER
 			src.manuf_zap(user,100)
 			src.build_icon()
 
@@ -819,25 +771,25 @@
 
 		else
 			..()
-			user.lastattacked = src
 			if (W.hitsound)
 				playsound(src.loc, W.hitsound, 50, 1)
 			if (W.force)
 				var/damage = W.force
 				damage /= 3
-				if (user.is_hulk())
-					damage *= 4
-				if (iscarbon(user))
+				if (istype(user,/mob/living/carbon/))
 					var/mob/living/carbon/C = user
-					if (C.bioHolder && C.bioHolder.HasEffect("strong"))
-						damage *= 2
+					if (C.bioHolder)
+						if (C.bioHolder.HasEffect("hulk"))
+							damage *= 4
+						if (C.bioHolder.HasEffect("strong"))
+							damage *= 2
 				if (damage >= 5)
 					src.take_damage(damage)
 
 		src.updateUsrDialog()
 
 	MouseDrop(over_object, src_location, over_location)
-		if(!isliving(usr))
+		if(!istype(usr,/mob/living/))
 			boutput(usr, "<span style=\"color:red\">Only living mobs are able to set the manufacturer's output target.</span>")
 			return
 
@@ -859,7 +811,7 @@
 
 		else if (istype(over_object,/obj/machinery/manufacturer/))
 			var/obj/machinery/manufacturer/M = over_object
-			if (M.status & BROKEN || M.status & NOPOWER || M.dismantle_stage > 0)
+			if (M.stat & BROKEN || M.stat & NOPOWER || M.dismantle_stage > 0)
 				boutput(usr, "<span style=\"color:red\">You can't use a non-functioning manufacturer as an output target.</span>")
 			else
 				src.output_target = M
@@ -882,7 +834,7 @@
 		if (!O || !user)
 			return
 
-		if(!isliving(user))
+		if(!istype(user,/mob/living/))
 			boutput(user, "<span style=\"color:red\">Only living mobs are able to use the manufacturer's quick-load feature.</span>")
 			return
 
@@ -912,7 +864,7 @@
 			if (amtload) boutput(user, "<span style=\"color:blue\">[amtload] materials loaded from [O]!</span>")
 			else boutput(user, "<span style=\"color:red\">No material loaded!</span>")
 
-		else if (isitem(O) && src.accept_loading(user,1))
+		else if (istype(O, /obj/item/) && src.accept_loading(user,1))
 			user.visible_message("<span style=\"color:blue\">[user] begins quickly stuffing materials into [src]!</span>")
 			var/staystill = user.loc
 			for(var/obj/item/M in view(1,user))
@@ -938,13 +890,13 @@
 	proc/accept_loading(var/mob/user,var/allow_silicon = 0)
 		if (!user)
 			return 0
-		if (src.status & BROKEN || src.status & NOPOWER)
+		if (src.stat & BROKEN || src.stat & NOPOWER)
 			return 0
 		if (src.dismantle_stage > 0)
 			return 0
-		if (!isliving(user))
+		if (!istype(user, /mob/living/))
 			return 0
-		if (issilicon(user) && !allow_silicon)
+		if (istype(user, /mob/living/silicon) && !allow_silicon)
 			return 0
 		var/mob/living/L = user
 		if (L.stat || L.transforming)
@@ -971,9 +923,9 @@
 			if(WIRE_MALF)
 				src.malfunction = 1
 			if(WIRE_POWER)
-				if(!(src.status & BROKEN || src.status & NOPOWER))
+				if(!(src.stat & BROKEN || src.stat & NOPOWER))
 					src.manuf_zap(usr,100)
-					src.status |= NOPOWER
+					src.stat |= NOPOWER
 
 	proc/mend(var/wireColor)
 		var/wireFlag = APCWireColorToFlag[wireColor]
@@ -985,9 +937,9 @@
 			if(WIRE_MALF)
 				src.malfunction = 0
 			if(WIRE_POWER)
-				if (!(src.status & BROKEN) && (src.status & NOPOWER))
+				if (!(src.stat & BROKEN) && (src.stat & NOPOWER))
 					src.manuf_zap(usr,100)
-					src.status &= ~NOPOWER
+					src.stat &= ~NOPOWER
 
 	proc/pulse(var/wireColor)
 		var/wireIndex = APCWireColorToIndex[wireColor]
@@ -999,17 +951,17 @@
 			if (WIRE_MALF)
 				src.malfunction = !src.malfunction
 			if (WIRE_POWER)
-				if(!(src.status & BROKEN || src.status & NOPOWER))
+				if(!(src.stat & BROKEN || src.stat & NOPOWER))
 					src.manuf_zap(usr,100)
 
 	proc/manuf_zap(mob/user, prb)
-		if(issilicon(user) || isAI(user))
+		if(istype(user, /mob/living/silicon/))
 			return 0
 		if(!prob(prb))
 			return 0
-		if(src.status & (BROKEN|NOPOWER))
+		if(src.stat & (BROKEN|NOPOWER))
 			return 0
-		if(ishuman(user))
+		if(istype(user, /mob/living/carbon/human/))
 			if (istype(user:gloves, /obj/item/clothing/gloves/yellow))
 				return 0
 
@@ -1062,53 +1014,42 @@
 			return 1
 		else if (copytext(pattern, 4, 5) == "-") // wildcard
 			var/firstpart = copytext(pattern, 1, 4)
-			var/secondpart = text2num(copytext(pattern, 5))
+			var/secondpart = copytext(pattern, 5)
 			switch(firstpart)
 				// this was kind of thrown together in a panic when i felt shitty so if its horrible
 				// go ahead and clean it up a bit
 				if ("MET")
-
 					if (mat.material_flags & MATERIAL_METAL)
 						// maux hardness = 15
 						// bohr hardness = 33
 						switch(secondpart)
 							if(2)
-								return mat.getProperty("hard") >= 15
+								return mat.getProperty(PROP_HARDNESS) >= 15
 							if(3 to INFINITY)
-								return mat.getProperty("hard") >= 30
+								return mat.getProperty(PROP_HARDNESS) >= 30
 							else
 								return 1
 				if ("CRY")
-					return (mat.material_flags & MATERIAL_CRYSTAL)
-				if ("REF")
-					return (mat.getProperty("reflective") >= 50)
+					return (mat.material_flags & MATERIAL_CRYSTAL) == MATERIAL_CRYSTAL
 				if ("CON")
 					switch(secondpart)
 						if(2)
-							return (mat.getProperty("electrical") >= 75) && (mat.material_flags & MATERIAL_METAL) || (mat.getProperty("electrical") >= 75) && (mat.material_flags & MATERIAL_CRYSTAL) //Wow! Claretine has a use again!
+							return (mat.getProperty(PROP_ELECTRICAL) >= 75)  || (mat.material_flags & MATERIAL_METAL)
 						else
-							return (mat.getProperty("electrical") >= 50) && (mat.material_flags & MATERIAL_METAL) || (mat.getProperty("electrical") >= 50) && (mat.material_flags & MATERIAL_CRYSTAL)
+							return (mat.getProperty(PROP_ELECTRICAL) >= 50) || (mat.material_flags & MATERIAL_METAL)
 				if ("INS")
 					switch(secondpart)
 						if(2)
-							return mat.getProperty("electrical") <= 20 && (mat.material_flags & MATERIAL_CLOTH) || mat.getProperty("electrical") <= 20 && (mat.material_flags & MATERIAL_RUBBER)
+							return mat.getProperty(PROP_ELECTRICAL) <= 20 || (mat.material_flags & MATERIAL_CLOTH ) || (mat.material_flags & MATERIAL_RUBBER)
 						else
-							return mat.getProperty("electrical") <= 47 && (mat.material_flags & MATERIAL_CLOTH) || mat.getProperty("electrical") <= 47 && (mat.material_flags & MATERIAL_RUBBER)
+							return mat.getProperty(PROP_ELECTRICAL) <= 47 || (mat.material_flags & MATERIAL_CLOTH) || (mat.material_flags & MATERIAL_RUBBER)
 				if ("DEN")
-					switch(secondpart)
-						if(3)
-							return mat.getProperty("density") >= 75  && (mat.material_flags & MATERIAL_CRYSTAL)
-						if(2)
-							return mat.getProperty("density") >= 60  && (mat.material_flags & MATERIAL_CRYSTAL)
-						else
-							return mat.getProperty("density") >= 40  && (mat.material_flags & MATERIAL_CRYSTAL)
+					return mat.getProperty(PROP_HARDNESS) >= 30   || (mat.material_flags & MATERIAL_CRYSTAL)
 				if ("POW")
 					if (mat.material_flags & MATERIAL_ENERGY)
 						switch(secondpart)
-							if(3)
-								return mat.getProperty("radioactive") >= 55 //soulsteel and erebite basically
 							if(2)
-								return mat.getProperty("radioactive") >= 10
+								return mat.getProperty(PROP_ENERGY) >= 10
 							else
 								return 1
 				if ("FAB")
@@ -1117,21 +1058,14 @@
 			return 1
 		return 0
 
-	//return list of all mat_ids of a manufacturable
-	proc/get_mat_ids(datum/manufacture/M)
-		var/list/usable = src.contents
-		var/list/usable_materials = cuttings.Copy()
-		for (var/obj/item/I in usable)
-			if (istype(I, src.base_material_class) && I.material)
-				usable_materials[I.material.mat_id] += 10
-
-		return usable_materials
-
 	proc/material_check(datum/manufacture/M)
 		var/list/usable = src.contents
 		var/list/materials = list()
-		var/list/usable_materials = get_mat_ids(M)
+		var/list/usable_materials = cuttings.Copy()
 		materials.len = M.item_paths.len
+		for (var/obj/item/I in usable)
+			if (istype(I, src.base_material_class) && I.material)
+				usable_materials[I.material.mat_id] += 10
 
 		for (var/i = 1; i <= M.item_paths.len; i++)
 			var/pattern = M.item_paths[i]
@@ -1149,7 +1083,7 @@
 					var/available = usable_materials[mat_id]
 					if (available < amount)
 						continue
-					var/datum/material/mat = getMaterial(mat_id)
+					var/datum/material/mat = getCachedMaterial(mat_id)
 					if (match_material_pattern(pattern, mat))
 						materials[i] = mat_id
 						found = 1
@@ -1177,7 +1111,7 @@
 		return mats
 
 	proc/begin_work(var/new_production = 1)
-		if (status & NOPOWER || status & BROKEN)
+		if (stat & NOPOWER || stat & BROKEN)
 			return
 		if (!src.queue.len)
 			src.manual_stop = 0
@@ -1290,7 +1224,7 @@
 				for (var/obj/item/I in src)
 					if (I.material && istype(I, src.base_material_class) && I.material.mat_id == mat_id)
 						src.contents -= I
-						pool(I)
+						qdel(I)
 						if (amount < 10)
 							src.cuttings[mat_id] += 10 - amount
 							amount = 0
@@ -1310,7 +1244,7 @@
 		if (ispath(product))
 			if (istype(M,/datum/manufacture/))
 				var/atom/movable/A = new product(src)
-				if (isitem(A))
+				if (istype(A,/obj/item/))
 					var/obj/item/I = A
 					M.modify_output(src, I, src.materials_in_use)
 					I.set_loc(src.get_output_location(I))
@@ -1354,7 +1288,7 @@
 			return
 
 	proc/flip_out()
-		if (status & BROKEN || status & NOPOWER || !src.malfunction)
+		if (stat & BROKEN || stat & NOPOWER || !src.malfunction)
 			return
 		animate_shake(src,5,rand(3,8),rand(3,8))
 		src.visible_message("<span style=\"color:red\">[src] makes [pick(src.text_flipout_adjective)] [pick(src.text_flipout_noun)]!</span>")
@@ -1393,7 +1327,7 @@
 	proc/build_icon()
 		icon_state = "fab[src.icon_base ? "-[src.icon_base]" : null]"
 
-		if (status & BROKEN)
+		if (stat & BROKEN)
 			src.UpdateOverlays(null, "work")
 			src.UpdateOverlays(null, "activity")
 			icon_state = "[src.icon_base]-broken"
@@ -1402,7 +1336,7 @@
 			src.UpdateOverlays(null, "activity")
 			icon_state = "fab-noplate"
 
-		if (!(status & NOPOWER) && !(status & BROKEN))
+		if (!(stat & NOPOWER) && !(stat & BROKEN))
 			if (src.malfunction && prob(50))
 				switch  (rand(1,4))
 					if (1) src.activity_display.icon_state = "light-ready"
@@ -1441,7 +1375,7 @@
 				mat_amts[O.material.name] += 10
 		for (var/mat_id in cuttings)
 			var/amount = cuttings[mat_id]
-			var/datum/material/mat = getMaterial(mat_id)
+			var/datum/material/mat = getCachedMaterial(mat_id)
 			mat_amts[mat.name] += amount
 
 		if (mat_amts.len)
@@ -1513,15 +1447,7 @@
 	proc/load_item(var/obj/item/O,var/mob/living/user)
 		if (!O)
 			return
-
-		if (O.amount > 1)
-			var/amtCopy = O.amount //Need to run the loop on a copy or the loop will be shortened by us splitting the stack. (since that reduces O.amount)
-			for(var/i=0, i<(amtCopy - 1), i++)
-				var/obj/item/S = O.split_stack(1)
-				if(S) S.set_loc(src)
-
 		O.set_loc(src)
-
 		if (user && O)
 			user.u_equip(O)
 			O.dropped()
@@ -1544,32 +1470,25 @@
 				src.flip_out()
 			if (src.malfunction && prob(40))
 				src.flip_out()
-			if (src.health <= 25 && !(src.status & BROKEN))
+			if (src.health <= 25 && !(src.stat & BROKEN))
 				src.visible_message("<span style=\"color:red\"><b>[src.name] breaks down and stops working!</b></span>")
-				src.status |= BROKEN
+				src.stat |= BROKEN
 		else
-			if (src.health >= 60 && src.status & BROKEN)
+			if (src.health >= 60 && src.stat & BROKEN)
 				src.visible_message("<span style=\"color:red\"><b>[src.name] looks like it can function again!</b></span>")
-				status &= ~BROKEN
+				stat &= ~BROKEN
 
 		src.build_icon()
 
 	proc/claim_free_resources()
-		if (mats == "Built")
-			free_resource_amt = 0
 		if (free_resources.len && free_resource_amt > 0)
 			var/looper = src.free_resource_amt
-			free_resource_amt = 0
 
 			while (looper > 0)
 				looper--
 				for (var/X in src.free_resources)
 					if (ispath(X))
-						var/atom/movable/A = unpool(X)
-						A.set_loc(src)
-						LAGCHECK(LAG_HIGH)
-		else
-			logTheThing("debug", null, null, "<b>obj/manufacturer:</b> [src.name]-[src.type] empty free resources list!")
+						new X(src)
 
 	proc/get_output_location(var/atom/A,var/ejection = 0)
 		if (!src.output_target)
@@ -1592,7 +1511,7 @@
 
 		else if (istype(src.output_target,/obj/machinery/manufacturer))
 			var/obj/machinery/manufacturer/M = src.output_target
-			if (M.status & BROKEN || M.status & NOPOWER || M.dismantle_stage > 0)
+			if (M.stat & BROKEN || M.stat & NOPOWER || M.dismantle_stage > 0)
 				src.output_target = null
 				return src.loc
 			if (A && istype(A,M.base_material_class))
@@ -1617,15 +1536,12 @@
 	item_state = "sheet"
 	var/datum/manufacture/blueprint = null
 
-
-
- 	//TODO : pooling i guess cause other paper does
 	New(var/loc,var/schematic = null)
 		if (!schematic)
 			if (ispath(src.blueprint))
 				src.blueprint = get_schematic_from_path(src.blueprint)
 			else
-				pool(src)
+				qdel(src)
 				return 0
 		else
 			if (istext(schematic))
@@ -1638,43 +1554,12 @@
 			return 0
 
 		src.name = "Manufacturer Blueprint: [src.blueprint.name]"
-		src.desc = "This blueprint will allow a manufacturer unit to build a [src.blueprint.name]"
+		src.desc = "This blueprint will allow a manufacturer unit to build [src.blueprint.name]"
 
 		src.pixel_x = rand(-4,4)
 		src.pixel_y = rand(-4,4)
 
 		return 1
-
-/******************** Cloner Blueprints *******************/
-
-/obj/item/paper/manufacturer_blueprint/clonepod
-	blueprint = /datum/manufacture/mechanics/clonepod
-
-/obj/item/paper/manufacturer_blueprint/clonegrinder
-	blueprint = /datum/manufacture/mechanics/clonegrinder
-
-/obj/item/paper/manufacturer_blueprint/clone_scanner
-	blueprint = /datum/manufacture/mechanics/clone_scanner
-
-/******************** Loafer Blueprints *******************/
-
-/obj/item/paper/manufacturer_blueprint/loafer
-	blueprint = /datum/manufacture/mechanics/loafer
-
-
-/******************** Alastor Pattern Thruster Blueprints *******************/
-/obj/item/paper/manufacturer_blueprint/thrusters
-	icon = 'icons/obj/writing.dmi'
-	icon_state = "blueprint"
-	desc = "Seems like theres traces of charcoal on the paper. Huh."
-	blueprint = /datum/manufacture/thrusters
-
-/******************** Alastor Pattern Thruster Blueprints *******************/
-/obj/item/paper/manufacturer_blueprint/alastor
-	icon = 'icons/obj/writing.dmi'
-	icon_state = "blueprint"
-	desc = "Seems like theres traces of charcoal on the paper. Huh."
-	blueprint = /datum/manufacture/alastor
 
 // Fabricator Defines
 
@@ -1682,60 +1567,19 @@
 	name = "General Manufacturer"
 	desc = "A manufacturing unit calibrated to produce tools and general purpose items."
 	free_resource_amt = 5
-	free_resources = list(/obj/item/material_piece/mauxite,
-		/obj/item/material_piece/pharosium,
-		/obj/item/material_piece/molitz)
-	available = list(/datum/manufacture/screwdriver,
-		/datum/manufacture/wirecutters,
-		/datum/manufacture/wrench,
-		/datum/manufacture/crowbar,
-		/datum/manufacture/extinguisher,
-		/datum/manufacture/welder,
-		/datum/manufacture/soldering,
-		/datum/manufacture/flashlight,
-		/datum/manufacture/weldingmask,
-		/datum/manufacture/multitool,
-		/datum/manufacture/metal,
-		/datum/manufacture/metalR,
-		/datum/manufacture/glass,
-		/datum/manufacture/glassR,
-		/datum/manufacture/atmos_can,
-		/datum/manufacture/circuit_board,
-		/datum/manufacture/cable,
-		/datum/manufacture/powercell,
-		/datum/manufacture/powercellE,
-		/datum/manufacture/powercellC,
-		/datum/manufacture/light_bulb,
-		/datum/manufacture/red_bulb,
-		/datum/manufacture/yellow_bulb,
-		/datum/manufacture/green_bulb,
-		/datum/manufacture/cyan_bulb,
-		/datum/manufacture/blue_bulb,
-		/datum/manufacture/purple_bulb,
-		/datum/manufacture/blacklight_bulb,
-		/datum/manufacture/light_tube,
-		/datum/manufacture/red_tube,
-		/datum/manufacture/yellow_tube,
-		/datum/manufacture/green_tube,
-		/datum/manufacture/cyan_tube,
-		/datum/manufacture/blue_tube,
-		/datum/manufacture/purple_tube,
-		/datum/manufacture/blacklight_tube,
-		/datum/manufacture/jumpsuit,
-		/datum/manufacture/shoes,
-		/datum/manufacture/breathmask,
-		/datum/manufacture/fluidcanister,
-		/datum/manufacture/patch)
-	hidden = list(/datum/manufacture/RCDammo,
-		/datum/manufacture/RCDammolarge,
-		/datum/manufacture/bottle,
-		/datum/manufacture/vuvuzela,
-		/datum/manufacture/harmonica,
-		/datum/manufacture/bikehorn,
-		/datum/manufacture/stunrounds,
-		/datum/manufacture/bullet_22,
-		/datum/manufacture/bullet_smoke,
-		/datum/manufacture/stapler)
+	free_resources = list(/obj/item/material_piece/mauxite,/obj/item/material_piece/pharosium,/obj/item/material_piece/molitz)
+	available = list(/datum/manufacture/screwdriver,/datum/manufacture/wirecutters,/datum/manufacture/wrench,/datum/manufacture/crowbar,
+/datum/manufacture/extinguisher,/datum/manufacture/welder,/datum/manufacture/soldering,/datum/manufacture/flashlight,/datum/manufacture/weldingmask,
+/datum/manufacture/multitool,/datum/manufacture/metal,/datum/manufacture/metalR,/datum/manufacture/glass,
+/datum/manufacture/glassR,/datum/manufacture/atmos_can,/datum/manufacture/circuit_board,
+/datum/manufacture/cable,/datum/manufacture/powercell,/datum/manufacture/powercellE,/datum/manufacture/powercellC,
+/datum/manufacture/light_bulb,/datum/manufacture/red_bulb,/datum/manufacture/yellow_bulb,/datum/manufacture/green_bulb,
+/datum/manufacture/cyan_bulb,/datum/manufacture/blue_bulb,/datum/manufacture/purple_bulb,/datum/manufacture/blacklight_bulb,
+/datum/manufacture/light_tube,/datum/manufacture/red_tube,/datum/manufacture/yellow_tube,/datum/manufacture/green_tube,
+/datum/manufacture/cyan_tube,/datum/manufacture/blue_tube,/datum/manufacture/purple_tube,/datum/manufacture/blacklight_tube,
+/datum/manufacture/jumpsuit,/datum/manufacture/shoes,/datum/manufacture/breathmask,/datum/manufacture/patch)
+	hidden = list(/datum/manufacture/RCDammo,/datum/manufacture/RCDammolarge,/datum/manufacture/bottle,/datum/manufacture/vuvuzela,/datum/manufacture/harmonica,
+/datum/manufacture/bikehorn,/datum/manufacture/stunrounds,/datum/manufacture/bullet_22,/datum/manufacture/bullet_smoke,/datum/manufacture/stapler)
 
 /obj/machinery/manufacturer/robotics
 	name = "Robotics Fabricator"
@@ -1763,17 +1607,15 @@
 	/datum/manufacture/robo_leg_r_light,
 	/datum/manufacture/robo_leg_l_light,
 	/datum/manufacture/robo_leg_treads,
-	/datum/manufacture/robo_module,
+	/datum/manufacture/robo_stmodule,
 	/datum/manufacture/cyberheart,
 	/datum/manufacture/cybereye,
 	/datum/manufacture/cybereye_meson,
 	/datum/manufacture/cybereye_spectro,
 	/datum/manufacture/cybereye_prodoc,
 	/datum/manufacture/cybereye_camera,
-	/datum/manufacture/core_frame,
 	/datum/manufacture/shell_frame,
 	/datum/manufacture/ai_interface,
-	/datum/manufacture/latejoin,
 	/datum/manufacture/shell_cell,
 	/datum/manufacture/cable,
 	/datum/manufacture/powercell,
@@ -1783,11 +1625,9 @@
 	/datum/manufacture/wrench,
 	/datum/manufacture/scalpel,
 	/datum/manufacture/circular_saw,
-	/datum/manufacture/surgical_scissors,
-	/datum/manufacture/hemostat,
-	/datum/manufacture/suture,
 	/datum/manufacture/stapler,
 	/datum/manufacture/surgical_spoon,
+	/datum/manufacture/suture,
 	/datum/manufacture/implanter,
 	/datum/manufacture/secbot,
 	/datum/manufacture/medbot,
@@ -1811,26 +1651,14 @@
 	/datum/manufacture/robup_efficiency,
 	/datum/manufacture/robup_repair,
 	/datum/manufacture/implant_robotalk,
-	/datum/manufacture/sbradio,
 	/datum/manufacture/implant_health,
-	/datum/manufacture/cyberappendix,
-	/datum/manufacture/cyberpancreas,
-	/datum/manufacture/cyberspleen,
-	/datum/manufacture/cyberintestines,
-	/datum/manufacture/cyberstomach,
-	/datum/manufacture/cyberkidney,
-	/datum/manufacture/cyberliver,
-	/datum/manufacture/cyberlung_left,
-	/datum/manufacture/cyberlung_right,
 	/datum/manufacture/rods2,
 	/datum/manufacture/metal,
 	/datum/manufacture/glass)
 
 	hidden = list(/datum/manufacture/flash,
 	/datum/manufacture/cybereye_thermal,
-	/datum/manufacture/cybereye_laser,
-	/datum/manufacture/cyberbutt,
-	/datum/manufacture/robup_expand)
+	/datum/manufacture/cyberbutt)
 
 /obj/machinery/manufacturer/medical
 	name = "Medical Fabricator"
@@ -1843,52 +1671,29 @@
 	/obj/item/material_piece/pharosium,
 	/obj/item/material_piece/molitz)
 
-	available = list(
-		/datum/manufacture/scalpel,
-		/datum/manufacture/circular_saw,
-		/datum/manufacture/surgical_scissors,
-		/datum/manufacture/hemostat,
-		/datum/manufacture/suture,
-		/datum/manufacture/stapler,
-		/datum/manufacture/surgical_spoon,
-		/datum/manufacture/prodocs,
-		/datum/manufacture/glasses,
-		/datum/manufacture/visor,
-		/datum/manufacture/deafhs,
-		/datum/manufacture/hypospray,
-		/datum/manufacture/patch,
-		/datum/manufacture/mender,
-		/datum/manufacture/latex_gloves,
-		/datum/manufacture/surgical_mask,
-		/datum/manufacture/surgical_shield,
-		/datum/manufacture/scrubs_white,
-		/datum/manufacture/scrubs_teal,
-		/datum/manufacture/scrubs_maroon,
-		/datum/manufacture/scrubs_blue,
-		/datum/manufacture/scrubs_purple,
-		/datum/manufacture/scrubs_orange,
-		/datum/manufacture/scrubs_pink,
-		/datum/manufacture/patient_gown,
-		/datum/manufacture/blindfold,
-		/datum/manufacture/muzzle,
-		/datum/manufacture/body_bag,
-		/datum/manufacture/implanter,
-		/datum/manufacture/implant_health,
-		/datum/manufacture/crowbar,
-		/datum/manufacture/extinguisher,
-		/datum/manufacture/cyberappendix,
-		/datum/manufacture/cyberpancreas,
-		/datum/manufacture/cyberspleen,
-		/datum/manufacture/cyberintestines,
-		/datum/manufacture/cyberstomach,
-		/datum/manufacture/cyberkidney,
-		/datum/manufacture/cyberliver,
-		/datum/manufacture/cyberlung_left,
-		/datum/manufacture/cyberlung_right,
-		/datum/manufacture/rods2,
-		/datum/manufacture/metal,
-		/datum/manufacture/glass
-	)
+	available = list(/datum/manufacture/scalpel,
+	/datum/manufacture/circular_saw,
+	/datum/manufacture/suture,
+	/datum/manufacture/stapler,
+	/datum/manufacture/surgical_spoon,
+	/datum/manufacture/prodocs,
+	/datum/manufacture/visor,
+	/datum/manufacture/deafhs,
+	/datum/manufacture/hypospray,
+	/datum/manufacture/patch,
+	/datum/manufacture/scrubs_white,
+	/datum/manufacture/scrubs_teal,
+	/datum/manufacture/scrubs_maroon,
+	/datum/manufacture/scrubs_blue,
+	/datum/manufacture/surgical_mask,
+	/datum/manufacture/surgical_shield,
+	/datum/manufacture/implanter,
+	/datum/manufacture/implant_health,
+	/datum/manufacture/crowbar,
+	/datum/manufacture/extinguisher,
+	/datum/manufacture/rods2,
+	/datum/manufacture/metal,
+	/datum/manufacture/glass)
 
 	hidden = list(/datum/manufacture/cyberheart,
 	/datum/manufacture/cybereye)
@@ -1899,42 +1704,14 @@
 	icon_state = "fab-mining"
 	icon_base = "mining"
 	free_resource_amt = 2
-	free_resources = list(/obj/item/material_piece/mauxite,
-	/obj/item/material_piece/pharosium,
-	/obj/item/material_piece/molitz)
-	available = list(/datum/manufacture/pick,
-	/datum/manufacture/powerpick,
-	/datum/manufacture/blastchargeslite,
-	/datum/manufacture/blastcharges,
-	/datum/manufacture/powerhammer,
-	/datum/manufacture/drill,
-	/datum/manufacture/conc_gloves,
-	/datum/manufacture/jumpsuit,
-	/datum/manufacture/shoes,
-	/datum/manufacture/breathmask,
-	/datum/manufacture/engspacesuit,
-	/datum/manufacture/industrialarmor,
-	/datum/manufacture/industrialboots,
-	/datum/manufacture/powercell,
-	/datum/manufacture/powercellE,
-	/datum/manufacture/powercellC,
-	/datum/manufacture/oresatchel,
-	/datum/manufacture/oresatchelL,
-	/datum/manufacture/jetpack,
-	/datum/manufacture/geoscanner,
-	/datum/manufacture/eyes_meson,
-	/datum/manufacture/flashlight,
-	/datum/manufacture/ore_accumulator,
-	/datum/manufacture/rods2,
-	/datum/manufacture/metal,
-#ifdef UNDERWATER_MAP
-	/datum/manufacture/jetpackmkII,
-#endif
-	/datum/manufacture/mining_magnet)
-
-	hidden = list(/datum/manufacture/RCD,
-	/datum/manufacture/RCDammo,
-	/datum/manufacture/RCDammolarge)
+	free_resources = list(/obj/item/material_piece/mauxite,/obj/item/material_piece/pharosium,/obj/item/material_piece/molitz)
+	available = list(/datum/manufacture/pick,/datum/manufacture/powerpick,/datum/manufacture/blastchargeslite,/datum/manufacture/blastcharges,
+/datum/manufacture/powerhammer,/datum/manufacture/drill,/datum/manufacture/conc_gloves,/datum/manufacture/jumpsuit,/datum/manufacture/shoes,
+/datum/manufacture/breathmask,/datum/manufacture/engspacesuit,/datum/manufacture/industrialarmor,/datum/manufacture/industrialboots,
+/datum/manufacture/powercell,/datum/manufacture/powercellE,/datum/manufacture/powercellC,/datum/manufacture/oresatchel,/datum/manufacture/oresatchelL,
+/datum/manufacture/jetpack,/datum/manufacture/geoscanner,/datum/manufacture/eyes_meson,/datum/manufacture/flashlight,/datum/manufacture/ore_accumulator,
+/datum/manufacture/rods2,/datum/manufacture/metal,/datum/manufacture/mining_magnet)
+	hidden = list(/datum/manufacture/RCD,/datum/manufacture/RCDammo,/datum/manufacture/RCDammolarge)
 
 /obj/machinery/manufacturer/hangar
 	name = "Ship Component Fabricator"
@@ -1942,34 +1719,11 @@
 	icon_state = "fab-hangar"
 	icon_base = "hangar"
 	free_resource_amt = 2
-	free_resources = list(
-		/obj/item/material_piece/mauxite,
-		/obj/item/material_piece/pharosium,
-		/obj/item/material_piece/molitz
-	)
-	available = list(
-		/datum/manufacture/putt/engine,
-		/datum/manufacture/putt/boards,
-		/datum/manufacture/putt/control,
-		/datum/manufacture/putt/parts,
-		/datum/manufacture/pod/engine,
-		/datum/manufacture/pod/boards,
-		/datum/manufacture/pod/armor_light,
-		/datum/manufacture/pod/armor_heavy,
-		/datum/manufacture/pod/armor_industrial,
-		/datum/manufacture/pod/control,
-		/datum/manufacture/pod/parts,
-		/datum/manufacture/cargohold,
-		/datum/manufacture/orescoop,
-		/datum/manufacture/conclave,
-		/datum/manufacture/communications/mining,
-		/datum/manufacture/pod/weapon/mining,
-		/datum/manufacture/pod/weapon/mining/drill,
-		/datum/manufacture/pod/weapon/ltlaser,
-		/datum/manufacture/engine2,
-		/datum/manufacture/engine3,
-		/datum/manufacture/pod/lock
-	)
+	free_resources = list(/obj/item/material_piece/mauxite,/obj/item/material_piece/pharosium,/obj/item/material_piece/molitz)
+	available = list(/datum/manufacture/putt/engine,/datum/manufacture/putt/boards,/datum/manufacture/putt/control,/datum/manufacture/putt/parts,/datum/manufacture/pod/engine,/datum/manufacture/pod/boards,/datum/manufacture/pod/armor_light,/datum/manufacture/pod/armor_heavy,
+/datum/manufacture/pod/armor_industrial,/datum/manufacture/pod/control,/datum/manufacture/pod/parts,/datum/manufacture/cargohold,
+/datum/manufacture/conclave,/datum/manufacture/pod/weapon/mining,/datum/manufacture/pod/weapon/ltlaser,/datum/manufacture/engine2,
+/datum/manufacture/engine3,/datum/manufacture/pod/lock)
 
 /obj/machinery/manufacturer/uniform // add more stuff to this as needed, but it should be for regular uniforms the HoP might hand out, not tons of gimmicks. -cogwerks
 	name = "Uniform Manufacturer"
@@ -1979,85 +1733,7 @@
 	free_resource_amt = 5
 	free_resources = list(/obj/item/material_piece/cloth/cottonfabric)
 	accept_blueprints = 0
-	available = list(/datum/manufacture/shoes,	//hey if you update these please remember to add it to /hop_and_uniform's list too
-	/datum/manufacture/shoes_brown,
-	/datum/manufacture/shoes_white,
-	/datum/manufacture/jumpsuit,
-	/datum/manufacture/jumpsuit_white,
-	/datum/manufacture/jumpsuit_red,
-	/datum/manufacture/jumpsuit_yellow,
-	/datum/manufacture/jumpsuit_green,
-	/datum/manufacture/jumpsuit_pink,
-	/datum/manufacture/jumpsuit_blue,
-	/datum/manufacture/jumpsuit_brown,
-	/datum/manufacture/jumpsuit_black,
-	/datum/manufacture/jumpsuit_orange,
-	/datum/manufacture/suit_black,
-	/datum/manufacture/dress_black,
-	/datum/manufacture/hat_black,
-	/datum/manufacture/hat_white,
-	/datum/manufacture/hat_blue,
-	/datum/manufacture/hat_yellow,
-	/datum/manufacture/hat_red,
-	/datum/manufacture/hat_green,
-	/datum/manufacture/hat_tophat,
-	/datum/manufacture/backpack,
-	/datum/manufacture/satchel)
-
-	hidden = list(/datum/manufacture/breathmask,
-	/datum/manufacture/patch)
-	///datum/manufacture/hermes) //all hail the shoe lord - needs adjusting for the new movement system which I cba to do right now
-
-/// cogwerks - a gas extractor for the engine
-
-/obj/machinery/manufacturer/gas
-	name = "Gas Extractor"
-	desc = "A manufacturing unit that can produce gas canisters from certain ores."
-	icon_state = "fab-mining"
-	icon_base = "mining"
-	accept_blueprints = 0
-	available = list(
-	/datum/manufacture/atmos_can,
-	/datum/manufacture/air_can/large,
-	/datum/manufacture/o2_can,
-	/datum/manufacture/co2_can,
-	/datum/manufacture/n2_can,
-	/datum/manufacture/plasma_can)
-
-// a blank manufacturer for mechanics
-
-/obj/machinery/manufacturer/mechanic
-	name = "Reverse-Engineering Fabricator"
-	desc = "A manufacturing unit designed to create new things from blueprints."
-	icon_state = "fab-hangar"
-	icon_base = "hangar"
-	free_resource_amt = 2
-	free_resources = list(/obj/item/material_piece/mauxite,/obj/item/material_piece/pharosium,/obj/item/material_piece/molitz)
-
-/obj/machinery/manufacturer/personnel
-	name = "Personnel Equipment Manufacturer"
-	desc = "A manufacturing unit that produces important identification and access equipment."
-	icon_state = "fab-access"
-	icon_base = "access"
-	free_resource_amt = 2
-	free_resources = list(/obj/item/material_piece/mauxite,/obj/item/material_piece/pharosium,/obj/item/material_piece/molitz)
-	available = list(/datum/manufacture/id_card, /datum/manufacture/implant_access,	/datum/manufacture/implanter) //hey if you update these please remember to add it to /hop_and_uniform's list too
-	hidden = list(/datum/manufacture/id_card_gold, /datum/manufacture/implant_access_infinite)
-
-//combine personnel + uniform manufactuer here. this is 'cause destiny doesn't have enough room! arrg!
-//and i hate this, i do, but you're gonna have to update this list whenever you update /personnel or /uniform
-/obj/machinery/manufacturer/hop_and_uniform
-	name = "Personnel Manufacturer"
-	desc = "A manufacturing unit calibrated to produce workplace uniforms and identification equipment."
-	icon_state = "fab-access"
-	icon_base = "access"
-	free_resource_amt = 5
-	free_resources = list(/obj/item/material_piece/cloth/cottonfabric,/obj/item/material_piece/mauxite,/obj/item/material_piece/pharosium,/obj/item/material_piece/molitz)
-	accept_blueprints = 0
-	available = list(/datum/manufacture/id_card,
-	/datum/manufacture/implant_access,
-	/datum/manufacture/implanter,
-	/datum/manufacture/shoes,
+	available = list(/datum/manufacture/shoes,
 	/datum/manufacture/shoes_brown,
 	/datum/manufacture/shoes_white,
 	/datum/manufacture/jumpsuit,
@@ -2079,27 +1755,25 @@
 	/datum/manufacture/hat_green,
 	/datum/manufacture/hat_tophat)
 
-	hidden = list(/datum/manufacture/id_card_gold,
-	/datum/manufacture/implant_access_infinite,
-	/datum/manufacture/breathmask,
-	/datum/manufacture/patch)
+/// cogwerks - a gas extractor for the engine
 
-/obj/machinery/manufacturer/qm // This manufacturer just creates different crated and boxes for the QM. Lets give their boring lives at least something more interesting.
-	name = "Crate Manufacturer"
-	desc = "A manufacturing unit calibrated to produce different crates and boxes."
-	icon_state = "fab-crates"
-	icon_base = "crates"
-	free_resource_amt = 5
-	free_resources = list(/obj/item/material_piece/mauxite)
+/obj/machinery/manufacturer/gas
+	name = "Gas Extractor"
+	desc = "A manufacturing unit that can produce gas canisters from certain ores."
+	icon_state = "fab-mining"
+	icon_base = "mining"
 	accept_blueprints = 0
-	available = list(/datum/manufacture/crate,	//hey if you update these please remember to add it to /hop_and_uniform's list too
-	/datum/manufacture/packingcrate,
-	/datum/manufacture/pizzabox,
-	/datum/manufacture/wooden,
-	/datum/manufacture/medical,
-	/datum/manufacture/biohazard)
+	available = list(/datum/manufacture/atmos_can,/datum/manufacture/o2_can,/datum/manufacture/co2_can,/datum/manufacture/plasma_can)
 
-	hidden = list(/datum/manufacture/classcrate)
+// a blank manufacturer for mechanics
+
+/obj/machinery/manufacturer/mechanic
+	name = "Reverse-Engineering Fabricator"
+	desc = "A manufacturing unit designed to create new things from blueprints."
+	icon_state = "fab-hangar"
+	icon_base = "hangar"
+	free_resource_amt = 2
+	free_resources = list(/obj/item/material_piece/mauxite,/obj/item/material_piece/pharosium,/obj/item/material_piece/molitz)
 
 #undef WIRE_EXTEND
 #undef WIRE_POWER

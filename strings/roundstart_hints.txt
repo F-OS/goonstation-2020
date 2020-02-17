@@ -1,11 +1,12 @@
 You can step over crates by click-dragging yourself onto them.
-Hold space and click on a tile to throw your current item there
+Hold shift and click on a tile to throw your current item there
 You can switch hands by pressing the Page Up key.
 Hold Alt and click on something to examine it.
 Hold Ctrl and click on a nearby object to start pulling it.
 You can drop your current item by pressing the Home key.
 You can toggle throw mode on and off by pressing the Delete key.
 Hold Ctrl and press F to fart. All the cool kids are doing it.
+Press the End key to run southwest. I don't know why that's a thing.
 If you suspect someone's being shit, adminhelp it with F1.
 Admins can always see adminhelps no matter whether they are currently on the server or not.
 Admins may not be able to give you feedback about certain subjects, IE identities of traitors.
@@ -40,4 +41,3 @@ Beware the syndicate drones out in the asteroid belt.
 Stuck in space? Throwing an item will propel you in the opposite direction.
 Need more supplies for your workplace? Check your PDA for the supply request program, or use one of the supply consoles near the cargo belts.
 The cargo routing system is great for quick escapes.
-Antagonist status is rolled before job selection, so if you have Security Officer or Head of Security set as your favorite job, you can still be selected to be a bad guy!

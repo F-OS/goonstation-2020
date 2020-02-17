@@ -25,19 +25,15 @@
 			return
 		if (prisoner)
 			return
-		if (isliving(user))
+		if (istype(user,/mob/living/))
 			O.visible_message("<span style=\"color:red\"><b>[O]</b> suddenly pulls [user.name] inside and slams shut!</span>")
 			user.set_loc(O)
 			prisoner = user
-			SPAWN_DBG(imprison_time)
-				if (O) //ZeWaka: Fix for null.contents
-					for(var/obj/I in O.contents)
-						I.set_loc(get_turf(O))
-					if (prisoner.loc == O)
-						prisoner.set_loc(get_turf(O))
-						O.visible_message("<span style=\"color:red\"><b>[O]</b> releases [user.name] and shuts down!</span>")
-					else
-						O.visible_message("<span style=\"color:red\"><b>[O]</b> shuts down strangely!</span>")
-					prisoner = null
-					O.ArtifactDeactivated()
+			spawn(imprison_time)
+				for(var/obj/I in O.contents)
+					I.set_loc(get_turf(O))
+				prisoner.set_loc(get_turf(O))
+				prisoner = null
+				O.visible_message("<span style=\"color:red\"><b>[O]</b> releases [user.name] and shuts down!</span>")
+				O.ArtifactDeactivated()
 			return

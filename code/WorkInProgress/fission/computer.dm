@@ -108,43 +108,38 @@
 		usr.machine = src
 
 		if(href_list["reactor"])
-			var/obj/machinery/fission/reactor/R = locate(href_list["reactor"]) in theEngine.reactors
+			var/obj/machinery/fission/reactor/R = locate(href_list["reactor"])
 
 			selectedReactor = R
 			src.screen = 2.0
 
 		else if(href_list["raise"])
-			if(selectedReactor)
-				var/obj/item/rod/R = locate(href_list["raise"]) in selectedReactor.controlRods
-				selectedReactor.rodsLowered = 0
-				R.lowered = 0
+			var/obj/item/rod/R = locate(href_list["raise"])
+			selectedReactor.rodsLowered = 0
+			R.lowered = 0
 
 		else if(href_list["low"])
-			if(selectedReactor)
-				var/obj/item/rod/R = locate(href_list["low"]) in selectedReactor.controlRods
-				selectedReactor.rodsLowered = 1
-				R.lowered = 1
+			var/obj/item/rod/R = locate(href_list["low"])
+			selectedReactor.rodsLowered = 1
+			R.lowered = 1
 
 		else if(href_list["flush"])
-			if (selectedReactor)
-				var/obj/item/rod/fuel/F = locate(href_list["flush"]) in selectedReactor.fuelRods
-				F.amount = 0
+			var/obj/item/rod/fuel/F = locate(href_list["flush"])
+			F.amount = 0
 
 		else if(href_list["eject"])
-			if (selectedReactor)
-				var/obj/item/rod/R = locate(href_list["eject"]) in selectedReactor.fuelRods
-				if(R in selectedReactor.fuelRods)
-					selectedReactor.fuelRods.Remove(R)
-					// Keep the list length at 5
-					selectedReactor.fuelRods.len = 5
-				else if(R in selectedReactor.controlRods)
-					selectedReactor.controlRods.Remove(R)
-					// Keep the list length at 5
-					selectedReactor.controlRods.len = 5
-				else
-					boutput(world, "Unable to remove [R] from lists")
-				usr.put_in_hand_or_drop(R) // try to eject it into the users hand, if we can
-				R.set_loc(selectedReactor.loc)
+			var/obj/item/rod/R = locate(href_list["eject"])
+			if(R in selectedReactor.fuelRods)
+				selectedReactor.fuelRods.Remove(R)
+				// Keep the list length at 5
+				selectedReactor.fuelRods.len = 5
+			else if(R in selectedReactor.controlRods)
+				selectedReactor.controlRods.Remove(R)
+				// Keep the list length at 5
+				selectedReactor.controlRods.len = 5
+			else
+				boutput(world, "Unable to remove [R] from lists")
+			R.set_loc(selectedReactor.loc)
 
 		else if(href_list["operation"])
 			switch(href_list["operation"])

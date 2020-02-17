@@ -14,31 +14,30 @@
 
 /obj/machinery/computer/operating/New()
 	..()
-	SPAWN_DBG(5)
+	spawn(5)
 		src.table = locate(/obj/machinery/optable, orange(2,src))
 
 /obj/machinery/computer/operating/attack_ai(mob/user)
 	add_fingerprint(user)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	interact(user)
 
 /obj/machinery/computer/operating/attack_hand(mob/user)
 	add_fingerprint(user)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	interact(user)
 
-/obj/machinery/computer/operating/attackby(obj/item/I as obj, user as mob)
-	if (isscrewingtool(I))
+/obj/machinery/computer/operating/attackby(I as obj, user as mob)
+	if(istype(I, /obj/item/screwdriver))
 		playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		if(do_after(user, 20))
-			if (src.status & BROKEN)
+			if (src.stat & BROKEN)
 				boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 				var/obj/computerframe/A = new /obj/computerframe( src.loc )
 				if(src.material) A.setMaterial(src.material)
-				var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-				G.set_loc(src.loc)
+				new /obj/item/raw_material/shard/glass( src.loc )
 				var/obj/item/circuitboard/operating/M = new /obj/item/circuitboard/operating( A )
 				for (var/obj/C in src)
 					C.set_loc(src.loc)
@@ -64,10 +63,10 @@
 	return
 
 /obj/machinery/computer/operating/proc/interact(mob/user)
-	if ( (get_dist(src, user) > 1 ) || (status & (BROKEN|NOPOWER)) )
-		if (!issilicon(user) && !isAI(user))
+	if ( (get_dist(src, user) > 1 ) || (stat & (BROKEN|NOPOWER)) )
+		if (!istype(user, /mob/living/silicon))
 			user.machine = null
-			user.Browse(null, "window=op")
+			user << browse(null, "window=op")
 			return
 
 	user.machine = src
@@ -96,13 +95,13 @@
 <BR>
 <B>No Patient Detected</B>
 "}
-	user.Browse(dat, "window=op")
+	user << browse(dat, "window=op")
 	onclose(user, "op")
 
 /obj/machinery/computer/operating/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 //		if (href_list["update"])
 //			src.interact(usr)
@@ -110,7 +109,7 @@
 
 /obj/machinery/computer/operating/process()
 	..()
-	if (status & (BROKEN | NOPOWER))
+	if (stat & (BROKEN | NOPOWER))
 		return
 	use_power(250)
 

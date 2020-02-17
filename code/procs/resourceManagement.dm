@@ -5,16 +5,15 @@
 
 
 //Generates file paths for browser resources when used in html tags e.g. <img>
-/proc/resource(file, group)
+/proc/resource(file)
 	if (!file) return
+
 	var/path
-	if (cdn)
-		path = "[cdn]/[file]?serverrev=[vcs_revision]"
+	if (CDN_ENABLED && cdn && config.env == "prod") //Or local tester with internet...
+		path = "[cdn]/[file]"
 	else
-		if (findtext(file, "{{resource")) //Got here via the dumb regex proc (local only)
-			file = group
 		if (findtext(file, "/"))
-			var/list/parts = splittext(file, "/")
+			var/list/parts = dd_text2list(file, "/")
 			file = parts[parts.len]
 		path = file
 
@@ -22,36 +21,27 @@
 
 
 //Returns the file contents for storage in memory or further processing during runtime (e.g. many html files)
-/proc/grabResource(path, preventCache = 0)
+/proc/grabResource(path)
 	if (!path) return 0
 
-	Z_LOG_DEBUG("Resource/Grab", "[path]")
 	var/file
 
 	//File exists in cache, just return that
 	if (!disableResourceCache && cachedResources[path])
-		Z_LOG_DEBUG("Resource/Grab", "[path] - cache hit")
 		file = cachedResources[path]
 	//Not in cache, go grab it
 	else
-		if (cdn)
-			Z_LOG_DEBUG("Resource/Grab", "[path] - requesting from CDN")
+		if (CDN_ENABLED && cdn && config.env == "prod") //Or local tester with internet...
 			//Actually get the file contents from the CDN
-			var/http[] = world.Export("[cdn]/[path]?serverrev=[vcs_revision]")
+			var/http[] = world.Export("[cdn]/[path]")
 			if (!http || !http["CONTENT"])
-				Z_LOG_ERROR("Resource/Grab", "[path] - failed to get from CDN")
 				CRASH("CDN DEBUG: No file found for path: [path]")
 				return ""
 			file = file2text(http["CONTENT"])
 		else //No CDN, grab from local directory
-			Z_LOG_DEBUG("Resource/Grab", "[path] - locally loaded, parsing")
 			file = parseAssetLinks(file("browserassets/[path]"))
 
-		Z_LOG_DEBUG("Resource/Grab", "[path] - complete")
-
-		//Cache the file in memory if resource caching is globally enabled, and not disabled for this item
-		if (!disableResourceCache && !preventCache)
-			Z_LOG_DEBUG("Resource/Grab", "[path] - stored in cache")
+		if (!disableResourceCache)
 			cachedResources[path] = file
 
 	return file
@@ -103,7 +93,7 @@
 //Replace placeholder tags with the raw filename (minus any subdirs), only for localservers
 /proc/doAssetParse(path)
 	if (findtext(path, "/"))
-		var/list/parts = splittext(path, "/")
+		var/list/parts = dd_text2list(path, "/")
 		path = parts[parts.len]
 	return path
 
@@ -114,7 +104,7 @@
 
 	//Get file extension
 	if (path)
-		var/list/parts = splittext(path, ".")
+		var/list/parts = dd_text2list(path, ".")
 		var/ext = parts[parts.len]
 		ext = lowertext(ext)
 		//Is this file a binary thing
@@ -126,8 +116,11 @@
 	if (isfile(file))
 		fileText = file2text(file)
 	if (fileText && findtext(fileText, "{{resource"))
-		var/regex/R = new("\\{\\{resource\\(\"(.*?)\"\\)\\}\\}", "ig")
-		fileText = R.Replace(fileText, /proc/resource)
+		var/regex/R = new("/\\{\\{resource\\(\"(.*?)\"\\)\\}\\}/\[resource($1)\]/ige")
+		var/newtxt = R.Replace(fileText)
+		while(newtxt)
+			fileText = newtxt
+			newtxt = R.ReplaceNext(fileText)
 
 	return fileText
 
@@ -135,19 +128,17 @@
 //Puts all files in a directory into a list
 /proc/recursiveFileLoader(dir)
 	for(var/i in flist(dir))
+		//logTheThing("wiredebug", "<b>LOADER:</b> [i]")
 		if (copytext(i, -1) == "/") //Is Directory
-			//Skip certain directories
-			if (i == "unused/" || i == "html/" || i == "node_modules/" || i == "build/")
+			if (i == "unused/" || i == "html/")
 				continue
 			else
-				LAGCHECK(LAG_HIGH)
 				recursiveFileLoader(dir + i)
 		else //Is file
 			if (dir == "browserassets/") //skip files in base dir (hardcoding dir name here because im lazy ok)
 				continue
 			else
 				localResources["[dir][i]"] = file("[dir][i]")
-				LAGCHECK(LAG_HIGH)
 
 
 //#LongProcNames #yolo
@@ -171,7 +162,7 @@
 
 //A thing for coders locally testing to use (as they might be offline = can't reach the CDN)
 /client/proc/loadResources()
-	if (cdn || src.resourcesLoaded) return 0
+	if ((CDN_ENABLED && config.env == "prod") || src.resourcesLoaded) return 0
 	boutput(src, "<span style='color: blue;'><b>Resources are now loading, browser windows will open normally when complete.</b></span>")
 
 	src.loadResourcesFromList(localResources)

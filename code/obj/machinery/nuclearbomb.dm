@@ -5,11 +5,10 @@
 	icon_state = "nuclearbomb"//1"
 	density = 1
 	anchored = 0
-	event_handler_flags = IMMUNE_MANTA_PUSH
 	var/health = 150
 	var/armed = 0
 	var/det_time = 0
-	var/timer_default = 6000 // 10 min.
+	var/timer_default = 4800 // 8 min.
 	var/timer_modifier_disk = 1800 // +3 (crew member) or -3 (nuke ops) min.
 	var/motion_sensor_triggered = 0
 	var/done = 0
@@ -18,7 +17,6 @@
 	var/obj/item/disk/data/floppy/read_only/authentication/disk = null
 	flags = FPRINT
 	var/image/image_light = null
-	p_class = 1.5
 
 	New()
 		wirepanel = new(src)
@@ -27,10 +25,6 @@
 		#endif
 		image_light = image(src.icon, "nblight1")
 		src.UpdateOverlays(src.image_light, "light")
-		src.maptext_x = -16
-		src.maptext_y = 4
-
-		src.maptext_width = 64
 		..()
 
 	disposing()
@@ -50,12 +44,8 @@
 				S.visible_message("<span style=\"color:red\">[S] cannot withstand the intense radiation and crumbles to pieces!</span>")
 				qdel(S)
 
-
 		if (det_time && ticker.round_elapsed_ticks >= det_time)
 			explode()
-			src.maptext = "<span style=\"color: red; font-family: Fixedsys, monospace; text-align: center; vertical-align: top; -dm-text-outline: 1 black;\">--:--</span>"
-		else
-			src.maptext = "<span style=\"color: red; font-family: Fixedsys, monospace; text-align: center; vertical-align: top; -dm-text-outline: 1 black;\">[get_countdown_timer()]</span>"
 		return
 
 	examine()
@@ -91,8 +81,6 @@
 		if (!user.mind || get_dist(src, user) > 1)
 			return
 
-		user.lastattacked = src
-
 		var/datum/game_mode/nuclear/NUKEMODE = null
 		var/area/A = get_area(src)
 
@@ -105,7 +93,7 @@
 						if (!(A.type in NUKEMODE.target_location_type))
 							boutput(user, "<span style=\"color:red\">You need to deploy the bomb in [NUKEMODE.target_location_name].</span>")
 						else
-							if (alert("Deploy and arm [src.name] here?", src.name, "Yes", "No") == "Yes" && !src.armed && get_dist(src, user) <= 1 && !(user.getStatusDuration("stunned") > 0 || user.getStatusDuration("weakened") || user.getStatusDuration("paralysis") > 0 || !isalive(user) || user.restrained()))
+							if (alert("Deploy and arm [src.name] here?", src.name, "Yes", "No") == "Yes" && !src.armed && get_dist(src, user) <= 1 && !(user.stunned > 0 || user.weakened > 0 || user.paralysis > 0 || user.stat != 0 || user.restrained()))
 								src.armed = 1
 								src.anchored = 1
 								if (!src.image_light)
@@ -116,8 +104,8 @@
 									src.UpdateOverlays(src.image_light, "light")
 								//src.icon_state = "nuclearbomb2"
 								src.det_time = ticker.round_elapsed_ticks + src.timer_default
-								command_alert("A nuclear explosive has been armed in [A]. It will detonate in [src.get_countdown_timer()] minutes. All personnel must report to [A] to disarm the bomb immediately.", "Nuclear Weapon Detected")
-								world << sound('sound/machines/bomb_planted.ogg')
+								command_alert("A nuclear explosive has been armed in [A]. It will detonate in [src.get_countdown_timer()] min. All personnel must attempt to disarm the bomb immediately.", "Red Alert")
+								world << sound('sound/machines/siren_generalquarters.ogg')
 								logTheThing("bombing", user, null, "armed [src] at [log_loc(src)].")
 
 					else
@@ -137,7 +125,6 @@
 
 	attackby(obj/item/W as obj, mob/user as mob)
 		src.add_fingerprint(user)
-		user.lastattacked = src
 
 		if (ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/nuclear))
 			var/datum/game_mode/nuclear/NUKEMODE = ticker.mode
@@ -163,26 +150,7 @@
 				W.set_loc(src)
 				src.disk = W
 				src.det_time += timer_modifier
-				attack_particle(user,src)
 				return
-
-			if (istype(W, /obj/item/remote/syndicate_teleporter))
-				for(var/obj/submachine/syndicate_teleporter/S in get_turf(src)) //sender
-					for(var/obj/submachine/syndicate_teleporter/R) // receiver
-						if(R.id == S.id && S != R)
-							if(S.recharging == 1)
-								return
-							if(R.recharging == 1)
-								return
-							else
-								R.recharging = 1
-								S.recharging = 1
-								src.set_loc(R.loc)
-								showswirl(src.loc)
-								spawn(S.recharge)
-									S.recharging = 0
-								spawn(R.recharge)
-									R.recharging = 0
 
 			if (user.mind in NUKEMODE.syndicates)
 				if (src.armed == 1)
@@ -193,7 +161,7 @@
 					return
 
 			if (src.armed && src.anchored)
-				if (isscrewingtool(W))
+				if (istype(W, /obj/item/screwdriver/))
 					actions.start(new /datum/action/bar/icon/unanchorNuke(src), user)
 					return
 				//else if (istype(W,/obj/item/wirecutters/))
@@ -201,7 +169,7 @@
 				//	open_wire_panel(user)
 				//	return
 
-		if (W && !(istool(W, TOOL_SCREWING | TOOL_SNIPPING) || istype(W, /obj/item/disk/data/floppy/read_only/authentication)))
+		if (isobj(W) && !(istype(W, /obj/item/screwdriver/) || istype(W, /obj/item/disk/data/floppy/read_only/authentication) || istype(W,/obj/item/wirecutters/)))
 			switch (W.force)
 				if (0 to 19)
 					src.take_damage(W.force / 4)
@@ -214,7 +182,6 @@
 
 			logTheThing("combat", user, null, "attacks [src] with [W] at [log_loc(src)].")
 			playsound(src.loc, "sound/items/grillehit.ogg", 100, 1)
-			attack_particle(user,src)
 
 		..()
 		return
@@ -246,7 +213,10 @@
 		var/damage = 0
 		damage = round(((P.power/6)*P.proj_data.ks_ratio), 1.0)
 
-		if(src.material) src.material.triggerOnBullet(src, src, P)
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 		if (!damage)
 			return
@@ -272,7 +242,7 @@
 		if (src.health < 1)
 			src.visible_message("<b>[src]</b> breaks and falls apart into useless pieces!")
 			robogibs(src.loc,null)
-			playsound(src.loc, 'sound/impact_sounds/Machinery_Break_1.ogg', 50, 2)
+			playsound(src.loc, 'sound/effects/robogib.ogg', 50, 2)
 			var/datum/game_mode/nuclear/NUKEMODE = null
 			if(ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/nuclear))
 				NUKEMODE = ticker.mode
@@ -293,17 +263,16 @@
 			explosion(src, src.loc, 20, 30, 40, 50)
 			qdel(src)
 			return
-#ifdef MAP_OVERRIDE_MANTA
-		world.showCinematic("manta_nukies")
-#else
+
 		var/datum/hud/cinematic/cinematic = new
-		for (var/client/C in clients)
+		for (var/client/C)
 			cinematic.add_client(C)
 		cinematic.play("nuke")
-#endif
+
 		sleep(55)
 
 		enter_allowed = 0
+		score_nuked = 1
 		for(var/mob/living/carbon/human/nukee in mobs)
 			// cogwerks - making the end of nuke more exciting. oh no a nuke went off, let's all... stand around for thirty seconds
 			if(!nukee.stat)
@@ -325,7 +294,7 @@
 			Reboot_server()
 
 /datum/action/bar/icon/unanchorNuke
-	duration = 55
+	duration = 40
 	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
 	id = "unanchornuke"
 	icon = 'icons/obj/items.dmi'

@@ -158,7 +158,7 @@
 		if(src.master.active_program != src)
 			return 1
 
-		if ((!usr.contents.Find(src.master) && (!in_range(src.master, usr) || !istype(src.master.loc, /turf) || !isAI(usr))) && (!issilicon(usr) && !isAI(usr)))
+		if ((!usr.contents.Find(src.master) && (!in_range(src.master, usr) || !istype(src.master.loc, /turf))) && (!istype(usr, /mob/living/silicon)))
 			return 1
 
 		if(usr.stat || usr.restrained())
@@ -173,7 +173,7 @@
 
 		if (href_list["close"])
 			usr.machine = null
-			usr.Browse(null, "window=pda2_\ref[src]")
+			usr << browse(null, "window=pda2_\ref[src]")
 			return 0
 
 		if (href_list["quit"])

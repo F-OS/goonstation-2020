@@ -61,12 +61,13 @@
 	F["[base].f"] << mx.f
 
 /proc/matrix_deserializer(var/savefile/F, var/path, var/datum/sandbox/sandbox, var/name, var/matrix/defMx = matrix())
-	var/a
-	var/b
-	var/c
-	var/d
-	var/e
-	var/f
+	var
+		a
+		b
+		c
+		d
+		e
+		f
 
 	var/base = "[path].[name]"
 	F["[base].a"] >> a
@@ -86,24 +87,15 @@
 	var/datum/mechanics_holder/mechanics = null
 	var/level = 2
 	var/flags = FPRINT
-	var/event_handler_flags = 0
-	var/temp_flags = 0
+	var/fingerprints = null
+	var/list/fingerprintshidden = new/list()
+	var/fingerprintslast = null
+	var/blood_DNA = null
+	var/blood_type = null
 	var/last_bumped = 0
 	var/shrunk = 0
+	var/area/last_area = null
 	var/texture_size = 0  //Override for the texture size used by setTexture.
-	var/open_to_sound = 0	//If hear_talk is triggered on this object, make my contents hear_talk as well
-	var/interesting = ""
-	var/stops_space_move = 0
-
-	//Gets the atoms name with all the ugly prefixes things remove
-	proc/clean_name()
-		return strip_special(name)
-	//Same as above, but encoded too since everything ever uses HTML in the game.
-	proc/safe_name()
-		return html_encode(strip_special(name))
-
-	proc/RawClick(location,control,params)
-		return
 
 /* -------------------- name stuff -------------------- */
 	/*
@@ -118,15 +110,12 @@
 		if num is text, it'll remove that specific text from the list, once
 	*/
 
-
-	var/list/name_prefixes = null// = list()
-	var/list/name_suffixes = null// = list()
+	var/list/name_prefixes = list()
+	var/list/name_suffixes = list()
 	var/num_allowed_prefixes = 10
 	var/num_allowed_suffixes = 5
-	var/image/worn_material_texture_image = null
 
 	proc/name_prefix(var/text_to_add, var/return_prefixes = 0)
-		if( !name_prefixes ) name_prefixes = list()
 		var/prefix = ""
 		if (istext(text_to_add) && length(text_to_add) && islist(src.name_prefixes))
 			if (src.name_prefixes.len >= src.num_allowed_prefixes)
@@ -143,7 +132,6 @@
 			return prefix
 
 	proc/name_suffix(var/text_to_add, var/return_suffixes = 0)
-		if( !name_suffixes ) name_suffixes = list()
 		var/suffix = ""
 		if (istext(text_to_add) && length(text_to_add) && islist(src.name_suffixes))
 			if (src.name_suffixes.len >= src.num_allowed_suffixes)
@@ -159,7 +147,7 @@
 			return suffix
 
 	proc/remove_prefixes(var/num = 1)
-		if (!num || !name_prefixes)
+		if (!num)
 			return
 		if (istext(num)) // :v
 			src.name_prefixes -= num
@@ -172,7 +160,7 @@
 				num --
 
 	proc/remove_suffixes(var/num = 1)
-		if (!num || !name_suffixes)
+		if (!num)
 			return
 		if (istext(num))
 			src.name_suffixes -= num
@@ -191,7 +179,10 @@
 
 	var/mat_changename = 1 //Change the name of this atom when a material is applied?
 	var/mat_changedesc = 1 //Change the desc of this atom when a material is applied?
-	var/mat_changeappearance = 1 //Change the appearance of this atom when a material is applied?
+
+	var/matrix/_transform
+
+	var/list/attached_objs = list() //List of attached objects. Objects in this list will follow this atom around as it moves.
 
 	var/explosion_resistance = 0
 	var/explosion_protection = 0 //Reduces damage from explosions
@@ -201,19 +192,10 @@
 
 	//var/chem_is_open_container = 0
 	// replaced by OPENCONTAINER flags and atom/proc/is_open_container()
+
 	disposing()
 		material = null
-		if (!isnull(reagents))
-			qdel(reagents)
-			reagents = null
-		if (!isnull(mechanics))
-			qdel(mechanics)
-			mechanics = null
-		if (temp_flags & (HAS_PARTICLESYSTEM | HAS_PARTICLESYSTEM_TARGET))
-			particleMaster.ClearSystemRefs(src)
-		if (temp_flags & (HAS_BAD_SMOKE))
-			ClearBadsmokeRefs(src)
-
+		reagents = null
 		fingerprintshidden = null
 		tag = null
 		..()
@@ -291,19 +273,15 @@
 			boutput(user, "<span style=\"color:blue\">You transfer [T] units into [A].</span>")
 			return
 
-	proc/signal_event(var/event) // Right now, we only signal our container
-		if(src.loc)
-			src.loc.handle_event(event, src)
-
-	proc/handle_event(var/event, var/sender) //This is sort of like a version of Topic that is not for browsing.
+	proc/handle_event(var/event) //This is sort of like a version of Topic that is not for browsing.
 		return
 
 	//Called AFTER the material of the object was changed.
 	proc/onMaterialChanged()
 		if(istype(src.material))
-			explosion_resistance = material.hasProperty("density") ? round(material.getProperty("density") / 33) : explosion_resistance
-			explosion_protection = material.hasProperty("density") ? round(material.getProperty("density") / 33) : explosion_protection
-			if( !(flags & CONDUCT) && (src.material.getProperty("electrical") >= 50)) flags |= CONDUCT
+			explosion_resistance = material.hasProperty(PROP_COMPRESSIVE) ? round(material.getProperty(PROP_COMPRESSIVE) / 33) : explosion_resistance
+			explosion_protection = material.hasProperty(PROP_COMPRESSIVE) ? round(material.getProperty(PROP_COMPRESSIVE) / 33) : explosion_protection
+			if(!(flags & CONDUCT) && (src.material.getProperty(PROP_ELECTRICAL) / 100) >= 0.45) flags |= CONDUCT
 		return
 
 	proc/serialize_icon(var/savefile/F, var/path, var/datum/sandbox/sandbox)
@@ -322,6 +300,25 @@
 
 	proc/deserialize_postprocess()
 		return
+
+obj
+	assume_air(datum/air_group/giver)
+		if(loc)
+			return loc.assume_air(giver)
+		else
+			return null
+
+	remove_air(amount)
+		if(loc)
+			return loc.remove_air(amount)
+		else
+			return null
+
+	return_air()
+		if(loc)
+			return loc.return_air()
+		else
+			return null
 
 /atom/proc/ex_act(var/severity=0,var/last_touched=0)
 	return
@@ -347,51 +344,33 @@
 /atom/proc/allow_drop()
 	return 1
 
-//atom.event_handler_flags & USE_CHECKEXIT MUST EVALUATE AS TRUE OR THIS PROC WONT BE CALLED
 /atom/proc/CheckExit(atom/mover, turf/target)
 	//return !(src.flags & ON_BORDER) || src.CanPass(mover, target, 1, 0)
 	return 1 // fuck it
 
-//atom.event_handler_flags & USE_HASENTERED MUST EVALUATE AS TRUE OR THIS PROC WONT BE CALLED
 /atom/proc/HasEntered(atom/movable/AM as mob|obj, atom/OldLoc)
 	return
 
-//atom.event_handler_flags & USE_HASENTERED MUST EVALUATE AS TRUE OR THIS PROC WONT BE CALLED EITHER
 /atom/proc/HasExited(atom/movable/AM as mob|obj, atom/NewLoc)
 	return
 
 /atom/proc/ProximityLeave(atom/movable/AM as mob|obj)
 	return
 
-//atom.event_handler_flags & USE_PROXIMITY MUST EVALUATE AS TRUE OR THIS PROC WONT BE CALLED
 /atom/proc/HasProximity(atom/movable/AM as mob|obj)
 	return
-
-/atom/proc/EnteredFluid(obj/fluid/F as obj, /atom/oldloc)
-	.=0
-
-/atom/proc/ExitedFluid(obj/fluid/F as obj, /atom/newloc)
-	.=0
-
-/atom/proc/EnteredAirborneFluid(obj/fluid/F as obj, /atom/old_loc)
-	.=0
-
-/atom/proc/set_icon_state(var/new_state)
-	src.icon_state = new_state
-	signal_event("icon_updated")
 /*
 /atom/MouseEntered()
 	usr << output("[src.name]", "atom_label")
 */
 /atom/movable/overlay/attackby(a, b)
-	//Wire note: hascall check below added as fix for: undefined proc or verb /datum/targetable/changeling/monkey/attackby() (lmao)
-	if (src.master && hascall(src.master, "attackby"))
+	if (src.master)
 		return src.master.attackby(a, b)
 	return
 
-/atom/movable/overlay/attack_hand(a, b, c, d, e)
+/atom/movable/overlay/attack_hand(a, b, c)
 	if (src.master)
-		return src.master.attack_hand(a, b, c, d, e)
+		return src.master.attack_hand(a, b, c)
 	return
 
 /atom/movable/overlay/New()
@@ -399,27 +378,12 @@
 		src.verbs -= x
 	return
 
-/atom/movable/overlay
-	var/atom/master = null
-	anchored = 1
-
-/atom/movable/overlay/gibs
-	icon_state = "blank"
-	icon = 'icons/mob/mob.dmi'
-
-/atom/movable/overlay/gibs/proc/delaydispose()
-	SPAWN_DBG(30)
-		if (src)
-			dispose(src)
-
-/atom/movable/overlay/disposing()
-	master = null
+/atom/movable/disposing()
+	set_loc(null)
 	..()
-
 
 /atom/movable
 	layer = OBJ_LAYER
-	var/turf/last_turf = 0
 	var/last_move = null
 	var/anchored = 0
 	// var/elevation = 2    - not used anywhere
@@ -430,100 +394,16 @@
 	var/throw_range = 7
 	var/throwforce = 1
 	var/soundproofing = 5
-	appearance_flags = LONG_GLIDE | PIXEL_SCALE
-	var/l_spd = 0
-	var/list/attached_objs = null //List of attached objects. Objects in this list will follow this atom around as it moves. --SOMEPOTATO: THIS MAKES ME UNCOMFORTABLE
-	var/no_gravity = 0 //Continue moving until a wall or solid object is hit.
-	var/p_class = 3.0 // how much it slows you down while pulling it, changed this from w_class because that's gunna cause issues with items that shouldn't fit in backpacks but also shouldn't slow you down to pull (sorry grayshift)
 
+/atom/movable/overlay
+	var/atom/master = null
+	anchored = 1
 
-//some more of these event handler flag things are handled in set_loc far below . . .
-/atom/movable/New()
+/atom/movable/overlay/disposing()
+	master = null
 	..()
-	//hey this is mbc, there is probably a faster way to do this but i couldnt figure it out yet
-	if (isturf(src.loc))
-		if (src.event_handler_flags & USE_CHECKEXIT)
-			var/turf/T = src.loc
-			if (T)
-				T.checkingexit++
-		if (src.event_handler_flags & USE_CANPASS || src.density)
-			var/turf/T = src.loc
-			if (T)
-				if (bound_width + bound_height > 64)
-					for(var/turf/BT in bounds(src))
-						BT.checkingcanpass++
-				else
-					T.checkingcanpass++
-		if (src.event_handler_flags & USE_HASENTERED)
-			var/turf/T = src.loc
-			if (T)
-				T.checkinghasentered++
-		if (src.event_handler_flags & USE_PROXIMITY)
-			var/turf/T = src.loc
-			if (T)
-				T.checkinghasproximity++
-
-/atom/movable/disposing()
-	if (temp_flags & MANTA_PUSHING)
-		mantaPushList.Remove(src)
-		temp_flags &= ~MANTA_PUSHING
-
-	if (temp_flags & SPACE_PUSHING)
-		EndSpacePush(src)
-
-
-//mbc comment out becausae im pretty sure this caused issuesss!
-/*
-	if (isturf(src.loc))
-		if (src.event_handler_flags & USE_CHECKEXIT)
-			var/turf/T = src.loc
-			if (T)
-				T.checkingexit = max(T.checkingexit-1, 0)
-		if (src.event_handler_flags & USE_CANPASS || src.density)
-			var/turf/T = src.loc
-			if (T)
-				if (bound_width + bound_height > 64)
-					for(var/turf/BT in bounds(src))
-						BT.checkingcanpass = max(BT.checkingcanpass-1, 0)
-				else
-					T.checkingcanpass = max(T.checkingcanpass-1, 0)
-		if (src.event_handler_flags & USE_HASENTERED)
-			var/turf/T = src.loc
-			if (T)
-				T.checkinghasentered = max(T.checkinghasentered-1, 0)
-		if (src.event_handler_flags & USE_PROXIMITY)
-			var/turf/T = src.loc
-			if (T)
-				T.checkinghasproximity = max(T.checkinghasproximity-1, 0)
-	*/
-	last_turf = src.loc // instead rely on set_loc to clear last_turf
-	set_loc(null)
-	..()
-
 
 /atom/movable/Move(NewLoc, direct)
-
-
-	//mbc disabled for now, i dont think this does too much for visuals i cant hit 40fps anyway argh i cant even tell
-	//tile glide smoothing:
-	/*
-	var/spd = world.timeofday - src.l_move_time //standing still for a while and then moving will result in a slow glide too. this is intentional and mimics the default glide behavior.
-	if (spd != 0)
-		if (spd <= 1 || (spd <= 2 && l_spd <= 2 && spd != l_spd)) //default glide seems to look better at max run speed?
-			src.glide_size = 0
-		else
-			spd = min(spd,12 * world.tick_lag) //When spd greater than (12 * ticklag), glides start to look jittery. 12 is a magic number found through testing what looks good
-			spd = max(spd, world.tick_lag)
-			src.glide_size = (32 / spd) * world.tick_lag// * (world.tick_lag / CLIENTSIDE_TICK_LAG_SMOOTH)
-
-
-	l_spd = spd
-	*/
-
-	//for (var/atom in src) //prevent bad glides while observing or riding in vehicles. this is meant to affect mobs but i think its faster not to typecheck
-	//	var/atom/movable/A = atom
-	//	A.glide_size = src.glide_size
-
 	if (direct & (direct - 1))
 		if (direct & NORTH)
 			if (direct & EAST)
@@ -555,54 +435,9 @@
 	src.l_move_time = world.timeofday
 	if ((A != src.loc && A && A.z == src.z))
 		src.last_move = get_dir(A, src.loc)
-		if (src.attached_objs && islist(src.attached_objs) && src.attached_objs.len)
-			for (var/atom/movable/M in attached_objs)
-				M.set_loc(src.loc)
-		if (islist(src.tracked_blood))
-			src.track_blood()
+		for(var/atom/movable/M in attached_objs)
+			M.set_loc(src.loc)
 		actions.interrupt(src, INTERRUPT_MOVE)
-
-	//note : move is still called when we are steping into a wall. sometimes these are unnecesssary i think
-
-	// sometimes last_turf isnt a turf. ok.
-	if (last_turf && isturf(last_turf))
-		if (src.event_handler_flags & USE_CHECKEXIT)
-			last_turf.checkingexit = max(last_turf.checkingexit-1, 0)
-		if (src.event_handler_flags & USE_CANPASS || src.density)
-			if (bound_width + bound_height > 64)
-				for(var/turf/T in bounds(last_turf.x*32, last_turf.y*32, bound_width/2, bound_height/2, last_turf.z))
-					T.checkingcanpass = max(T.checkingcanpass-1, 0)
-			else
-				last_turf.checkingcanpass = max(last_turf.checkingcanpass-1, 0)
-		if (src.event_handler_flags & USE_HASENTERED)
-			last_turf.checkinghasentered = max(last_turf.checkinghasentered-1, 0)
-		if (src.event_handler_flags & USE_PROXIMITY)
-			last_turf.checkinghasproximity = max(last_turf.checkinghasproximity-1, 0)
-
-	if (isturf(src.loc))
-		last_turf = src.loc
-		if (src.event_handler_flags & USE_CHECKEXIT)
-			var/turf/T = src.loc
-			if (T)
-				T.checkingexit++
-		if (src.event_handler_flags & USE_CANPASS || src.density)
-			var/turf/T = src.loc
-			if (T)
-				if (bound_width + bound_height > 64)
-					for(var/turf/BT in bounds(src))
-						BT.checkingcanpass++
-				else
-					T.checkingcanpass++
-		if (src.event_handler_flags & USE_HASENTERED)
-			var/turf/T = src.loc
-			if (T)
-				T.checkinghasentered++
-		if (src.event_handler_flags & USE_PROXIMITY)
-			var/turf/T = src.loc
-			if (T)
-				T.checkinghasproximity++
-	else
-		last_turf = 0
 
 /atom/movable/verb/pull()
 	set name = "Pull"
@@ -616,8 +451,6 @@
 		return
 
 	// eyebots aint got no arms man, how can they be pulling stuff???????
-	if (!isliving(usr))
-		return
 	if (isshell(usr))
 		if (!ticker)
 			return
@@ -626,18 +459,10 @@
 		if (!istype(ticker.mode, /datum/game_mode/construction))
 			return
 	// no pulling other mobs for ghostdrones (but they can pull other ghostdrones)
-	else if (isghostdrone(usr) && ismob(src) && !isghostdrone(src))
+	else if (isghostdrone(usr) && (isliving(src) && !isghostdrone(src)))
 		return
 
-	if (issmallanimal(usr))
-		var/mob/living/critter/small_animal/C = usr
-		if (!C.can_pull(src))
-			boutput(usr,"<span style=\"color:red\"><b>[src] is too heavy for you pull in your half-spectral state!</b></span>")
-			//too spammy
-			//usr.visible_message("<span style=\"color:red\"><b>[usr] struggles, failing to pull [src]!</b></span>", "<span style=\"color:red\"><b>You struggle with [src], but it's too heavy for you to pull!</b></span>")
-			return
-
-	if (iscarbon(usr) || issilicon(usr))
+	if (istype(usr, /mob/living/carbon) || istype(usr, /mob/living/silicon))
 		add_fingerprint(usr)
 
 	if (istype(src,/obj/item/old_grenade/light_gimmick))
@@ -645,52 +470,41 @@
 		src.attack_hand(usr)
 		return
 	if (!( src.anchored ))
-		var/mob/user = usr
-		user.set_pulling(src)
-		if (user.at_gunpoint && usr.at_gunpoint.holding_at_gunpoint != user)
-			user.at_gunpoint.shoot_at_gunpoint(user)
+		usr.pulling = src
+		//Wire: Hi this was so dumb. Turns out it isn't only humans that have huds, who woulda thunk!!
+		if (usr:hud && usr:hud:pulling) //yes this uses the dreaded ":", deal with it
+			usr:hud:update_pulling()
 	return
 
 /atom/proc/get_desc(dist)
-
-// a proc to completely override the standard formatting for examine text
-// to prevent more copy paste -- cirr
-/atom/proc/special_desc(dist, mob/user)
-	return null
 
 /atom/verb/examine()
 	set name = "Examine"
 	set category = "Local"
 	set src in view(12)	//make it work from farther away
 
-	if(src.hiddenFrom && hiddenFrom.Find(usr.client)) //invislist
-		return
-
-	var/dist = get_dist(src, usr)
-	if (istype(usr, /mob/dead/target_observer))
-		dist = get_dist(src, usr:target)
-
-	// added for custom examine behaviour override - cirr
-	var/special_description = src.special_desc(dist, usr)
-
-	if(special_description)
-		boutput(usr, special_description)
-		return
-	//////////////////////////////
-
 	var/output = "This is \an [src.name]."
 
 	// Added for forensics (Convair880).
 	if (isitem(src) && src.blood_DNA)
-		output = "<span style='color:red'>This is a bloody [src.name].</span>"
+		output = "<span style=\"color:red\">This is a bloody [src.name].</span>"
+		//boutput(usr, "<span style=\"color:red\">This is a bloody [src.name].</span>")
 		if (src.desc)
-			output += "<br>[src.desc] <span style='color:red'>It seems to be covered in blood!</span>"
+			output += "<br>[src.desc] It seems to be covered in blood."
+			//boutput(usr, "[src.desc] It seems to be covered in blood.")
 	else if (src.desc)
 		output += "<br>[src.desc]"
+		/*boutput(usr, "This is \an [src.name].")
+		if (src.desc)
+			boutput(usr, src.desc)*/
 
+	var/dist = get_dist(src, usr)
+	if (istype(usr, /mob/dead/target_observer))
+		dist = get_dist(src, usr:target)
 	var/extra = src.get_desc(dist, usr)
 	if (extra)
 		output += " [extra]"
+		//boutput(usr, extra)
 
 	if (output)
 		boutput(usr, output)
@@ -707,10 +521,60 @@
 /atom/proc/hitby(atom/movable/AM as mob|obj)
 	return
 
-//mbc : sorry, i added a 'is_special' arg to this proc to avoid race conditions.
-/atom/proc/attackby(obj/item/W as obj, mob/user as mob, params, is_special = 0)
+/atom/proc/attackby(obj/item/W as obj, mob/user as mob, params)
 	if (user && W && !(W.flags & SUPPRESSATTACK))  //!( istype(W, /obj/item/grab)  || istype(W, /obj/item/spraybottle) || istype(W, /obj/item/card/emag)))
 		user.visible_message("<span class='combat'><B>[user] hits [src] with [W]!</B></span>")
+	return
+
+/atom/proc/add_fingerprint(mob/living/M as mob)
+	if(!ismob(M)) return
+	if(isnull(M)) return
+	if(isnull(M.key)) return
+	if (!( src.flags ) & 256)
+		return
+
+	if (ishuman(M))
+		var/mob/living/carbon/human/H = M
+		var/list/L = params2list(src.fingerprints)
+
+		if (H.gloves) // Fixed: now adds distorted prints even if 'fingerprintslast == ckey'. Important for the clean_forensic proc (Convair880).
+			var/gloveprints = H.gloves.distort_prints(md5(H.bioHolder.Uid), 1)
+			if (!isnull(gloveprints))
+				L -= gloveprints
+				if (L.len >= 6) //Limit fingerprints in the list to 6
+					L.Cut(1,2)
+				L += gloveprints
+				src.fingerprints = list2params(L)
+
+			if(src.fingerprintslast != H.key)
+				src.fingerprintshidden += text("(Wearing gloves). Real name: [], Key: []",H.real_name, H.key)
+				src.fingerprintslast = H.key
+
+			return 0
+
+		if (!( src.fingerprints ))
+			src.fingerprints = "[md5(H.bioHolder.Uid)]"
+			if(src.fingerprintslast != H.key)
+				src.fingerprintshidden += "Real name: [H.real_name], Key: [H.key]"
+				src.fingerprintslast = H.key
+
+			return 1
+
+		else
+			L -= md5(H.bioHolder.Uid)
+			while(L.len >= 6) // limit the number of fingerprints to 6, previously 3
+				L -= L[1]
+			L += md5(H.bioHolder.Uid)
+			src.fingerprints = list2params(L)
+			if(src.fingerprintslast != H.key)
+				src.fingerprintshidden += "Real name: [H.real_name], Key: [H.key]"
+				src.fingerprintslast = H.key
+
+	else
+		if(src.fingerprintslast != M.key)
+			src.fingerprintshidden += "Real name: [M.real_name], Key: [M.key]"
+			src.fingerprintslast = M.key
+
 	return
 
 //This will looks stupid on objects larger than 32x32. Might have to write something for that later. -Keelin
@@ -719,9 +583,6 @@
 	if (!I)
 		return
 	src.UpdateOverlays(I, key)
-
-	if(isitem(src) && key == "material")
-		worn_material_texture_image = getTexturedWornImage(src, texture, blendMode)
 	return
 
 /proc/getTexturedImage(var/atom/A, var/texture = "damaged", var/blendMode = BLEND_MULTIPLY)//, var/key = "texture")
@@ -761,55 +622,123 @@
 	finished.blend_mode = blendMode
 	return finished
 
-/proc/getTexturedWornImage(var/obj/item/A, var/texture = "damaged", var/blendMode = BLEND_MULTIPLY)
-	if (!A)
+// WHAT THE ACTUAL FUCK IS THIS SHIT
+// WHO THE FUCK WROTE THIS
+/atom/proc/add_blood(mob/living/M as mob, var/amount = 5)
+	if (!( istype(M, /mob/living) ) || !M.blood_id)
+		return 0
+	if (!( src.flags ) & 256)
 		return
-	var/icon/tex = null
-
-	//Try to find an appropriately sized icon.
-	if(istype(A, /atom/movable))
-		var/atom/movable/M = A
-		if(A.texture_size == 32 || ((M.bound_height == 32 && M.bound_width == 32) && !A.texture_size))
-			tex = icon('icons/effects/atom_textures_32.dmi', texture)
-		else if(A.texture_size == 64 || ((M.bound_height == 64 && M.bound_width == 64) && !A.texture_size))
-			tex = icon('icons/effects/atom_textures_64.dmi', texture)
+	var/b_uid = "--unidentified substance--"
+	var/b_type = "--unidentified substance--"
+	if (M.bioHolder)
+		b_uid = M.bioHolder.Uid
+		b_type = M.bioHolder.bloodType
+	if (!( src.blood_DNA ))
+		if (istype(src, /obj/item))
+			var/datum/reagent/R = reagents_cache[M.blood_id]
+			var/obj/item/source2 = src
+			source2.icon_old = src.icon
+			var/icon/I = new /icon(src.icon, src.icon_state)
+			I.Blend(new /icon('icons/effects/blood.dmi', "thisisfuckingstupid"),ICON_ADD)
+			if (R)
+				I.Blend(rgb(R.fluid_r, R.fluid_g, R.fluid_b),ICON_MULTIPLY)
+			I.Blend(new /icon('icons/effects/blood.dmi', "itemblood"),ICON_MULTIPLY)
+			I.Blend(new /icon(src.icon, src.icon_state),ICON_UNDERLAY)
+			src.icon = I
+			src.blood_DNA = b_uid
+			src.blood_type = b_type
+		else if (istype(src, /turf/simulated))
+			bleed(M, amount, 5)
+		else if (istype(src, /mob/living/carbon/human))
+			src.blood_DNA = b_uid
+			src.blood_type = b_type
 		else
-			tex = icon('icons/effects/atom_textures_32.dmi', texture)
-	else if (isicon(A))
-		var/icon/I = A
-		if(I.Height() > 32)
-			tex = icon('icons/effects/atom_textures_64.dmi', texture)
-		else
-			tex = icon('icons/effects/atom_textures_32.dmi', texture)
+			return
 	else
-		if(A.texture_size == 32)
-			tex = icon('icons/effects/atom_textures_32.dmi', texture)
-		else if(A.texture_size == 64)
-			tex = icon('icons/effects/atom_textures_64.dmi', texture)
+		var/list/L = params2list(src.blood_DNA)
+		L -= b_uid
+		while(L.len >= 6) // Increased from 3 (Convair880).
+			L -= L[1]
+		L += b_uid
+		src.blood_DNA = list2params(L)
+	return
+
+// Was clean_blood. Reworked the proc to take care of other forensic evidence as well (Convair880).
+/atom/proc/clean_forensic()
+	if (!src)
+		return
+
+	if (!( src.flags ) & 256)
+		return
+
+	// The first version accidently looped through everything for every atom. Consequently, cleaner grenades caused horrendous lag on my local server. Woops.
+	if (!ismob(src)) // Mobs are a special case.
+		if (istype(src, /obj/item) && (src.fingerprints || src.blood_DNA || src.blood_type))
+			src.fingerprints = null
+			src.blood_type = null
+
+			if (src.blood_DNA)
+				var/obj/item/CI = src
+				CI.blood_DNA = null
+				var/icon/SI = new /icon(CI.icon_old, CI.icon_state)
+				CI.icon = SI
+
+		else if (istype(src, /obj/decal/cleanable))
+			qdel(src)
+
+		else if (istype(src, /turf))
+			//src.overlays = null
+			for(var/obj/decal/cleanable/mess in get_turf(src))
+				qdel(mess)
+
+		else // Don't think it should clean doors and the like. Give the detective at least something to work with.
+			return
+
+	else
+		if (isobserver(src) || isintangible(src) || iswraith(src)) // Just in case.
+			return
+
+		if (ishuman(src))
+			var/mob/living/carbon/human/M = src
+			var/list/gear_to_clean = list(M.r_hand, M.l_hand, M.head, M.wear_mask, M.w_uniform, M.wear_suit, M.belt, M.gloves, M.glasses, M.shoes, M.wear_id, M.back)
+			for (var/obj/item/check in gear_to_clean)
+				if (check.fingerprints || check.blood_DNA || check.blood_type)
+					check.fingerprints = null
+					check.blood_type = null
+					if (check.blood_DNA)
+						check.blood_DNA = null
+						var/icon/WI = new /icon(check.icon_old, check.icon_state)
+						check.icon = WI
+
+			if (isnull(M.gloves)) // Can't clean your hands when wearing gloves.
+				M.blood_DNA = null
+				M.blood_type = null
+
+			M.fingerprints = null // Foreign fingerprints on the mob.
+			M.gunshot_residue = 0 // Only humans can have residue at the moment.
+			M.set_clothing_icon_dirty()
+
 		else
-			tex = icon('icons/effects/atom_textures_32.dmi', texture)
 
-	if (A && A.wear_image) //Wire: Fix for: Cannot read null.icon
-		var/icon/mask = null
-		mask = icon(A.wear_image.icon, A.wear_image.icon_state)
-		mask.MapColors(1,1,1, 1,1,1, 1,1,1, 1,1,1)
-		mask.Blend(tex, ICON_MULTIPLY)
-		var/image/finished = image(mask,"")
-		finished.blend_mode = blendMode
-		return finished
+			var/mob/living/L = src // Punching cyborgs does leave fingerprints for instance.
+			L.fingerprints = null
+			L.blood_DNA = null
+			L.blood_type = null
+			L.set_clothing_icon_dirty()
 
-	return null
+	return
 
 /atom/MouseDrop(atom/over_object as mob|obj|turf)
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		if (istype(over_object, /atom))
-			if (isalive(usr))
+			if (usr.stat == 0)
 				//To stop ghostdrones dragging people anywhere
 				if (isghostdrone(usr) && ismob(src) && src != usr)
 					return
 
 				/* This was SUPPOSED to make the innerItem of items act on the mousedrop instead but it doesnt work for no reason
-				if (isitem(src))
+				if (istype(src, /obj/item))
 					var/obj/item/W = src
 					if (W.useInnerItem && W.contents.len > 0)
 						target = pick(W.contents)
@@ -827,7 +756,7 @@
 	return
 
 /atom/proc/relaymove()
-	.= 0
+	return
 
 /atom/proc/on_reagent_change(var/add = 0) // if the reagent container just had something added, add will be 1.
 	return
@@ -836,7 +765,7 @@
 	return
 
 /atom/movable/Bump(var/atom/A as mob|obj|turf|area, yes)
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		if ((A && yes)) //wtf
 			A.last_bumped = world.timeofday
 			A.Bumped(src)
@@ -856,7 +785,10 @@
 //Return an atom if you want to make the projectile's effects affect that instead.
 
 /atom/proc/bullet_act(var/obj/projectile/P)
-	if(src.material) src.material.triggerOnBullet(src, src, P)
+	if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+	for(var/atom/A in src)
+		if(A.material)
+			A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 	return
 
 
@@ -870,9 +802,6 @@
 		return src
 
 	if (ismob(src)) // fuck haxploits
-		if(src:client && src:client:player && src:client:player:shamecubed)
-			loc = src:client:player:shamecubed
-			return
 		var/mob/SM = src
 		if (!(SM.client && SM.client.holder))
 			if (istype(newloc, /turf/unsimulated))
@@ -881,114 +810,26 @@
 					return
 
 	if (isturf(loc))
-		loc.Exited(src, newloc)
+		loc.Exited(src)
 
 	var/area/my_area = get_area(src)
 	var/area/new_area = get_area(newloc)
-
 	if(my_area != new_area && my_area)
-		my_area.Exited(src, newloc)
+		my_area.Exited(src)
 
-	var/oldloc = loc
 	loc = newloc
-	 //Required for objects coming out of other objects / mobs; otherwise they will not call entered on the area when a mob drops items etc. This is not a perfect solution.
-	if(((my_area != new_area && isturf(oldloc)) || !isturf(oldloc)) && new_area)
-		new_area.Entered(src, oldloc)
+
+	if(my_area != new_area && new_area)
+		new_area.Entered(src)
 
 	if(isturf(newloc))
 		var/turf/nloc = newloc
-		nloc.Entered(src, oldloc)
+		nloc.Entered(src)
 
-	if (islist(src.attached_objs) && attached_objs.len)
-		for (var/atom/movable/M in src.attached_objs)
-			M.set_loc(src.loc)
-
-
-	// We only need to do any of these checks if one of the flags is set OR density = 1
-	var/do_checks = (src.event_handler_flags & (USE_CHECKEXIT | USE_CANPASS | USE_HASENTERED | USE_HASENTERED)) || src.density == 1
-
-	if (do_checks && last_turf && isturf(last_turf))
-		if (src.event_handler_flags & USE_CHECKEXIT)
-			last_turf.checkingexit = max(last_turf.checkingexit-1, 0)
-		if (src.event_handler_flags & USE_CANPASS || src.density)
-			if (bound_width + bound_height > 64)
-				for(var/turf/T in bounds(last_turf.x*32, last_turf.y*32, bound_width/2, bound_height/2, last_turf.z))
-					T.checkingcanpass = max(T.checkingcanpass-1, 0)
-			else
-				last_turf.checkingcanpass = max(last_turf.checkingcanpass-1, 0)
-		if (src.event_handler_flags & USE_HASENTERED)
-			last_turf.checkinghasentered = max(last_turf.checkinghasentered-1, 0)
-		if (src.event_handler_flags & USE_PROXIMITY)
-			last_turf.checkinghasproximity = max(last_turf.checkinghasproximity-1, 0)
-
-	if (do_checks && isturf(src.loc))
-		last_turf = src.loc
-		if (src.event_handler_flags & USE_CHECKEXIT)
-			last_turf.checkingexit++
-		if (src.event_handler_flags & USE_CANPASS || src.density)
-			if (bound_width + bound_height > 64)
-				for(var/turf/T in bounds(src))
-					T.checkingcanpass++
-			else
-				last_turf.checkingcanpass++
-		if (src.event_handler_flags & USE_HASENTERED)
-			last_turf.checkinghasentered++
-		if (src.event_handler_flags & USE_PROXIMITY)
-			last_turf.checkinghasproximity++
-	else
-		last_turf = 0
-
-
+	for(var/atom/movable/M in attached_objs)
+		M.set_loc(src.loc)
 
 	return src
-
-//reason for having this proc is explained below
-/atom/proc/set_density(var/newdensity)
-	src.density = newdensity
-
-/atom/movable/set_density(var/newdensity)
-	//BASICALLY : if we dont have the USE_CANPASS flag, turf's checkingcanpass value relies entirely on our density.
-	//It is probably important that we update this as density changes immediately. I don't think it breaks anything currently if we dont, but still important for future.
-	if (src.density != newdensity)
-		if (isturf(src.loc))
-			if (!src.event_handler_flags & USE_CANPASS)
-				if(newdensity == 1)
-					var/turf/T = src.loc
-					if (T)
-						if (bound_width + bound_height > 64)
-							for(var/turf/BT in bounds(src))
-								BT.checkingcanpass++
-						else
-							T.checkingcanpass++
-
-				else
-					var/turf/T = src.loc
-					if (T)
-						if (bound_width + bound_height > 64)
-							for(var/turf/BT in bounds(src))
-								BT.checkingcanpass = max(BT.checkingcanpass-1, 0)
-						else
-							T.checkingcanpass = max(T.checkingcanpass-1, 0)
-	..()
-
-//same as above :)
-/atom/movable/setMaterial(var/datum/material/mat1, var/appearance = 1, var/setname = 1, var/copy = 1, var/use_descriptors = 0)
-	var/prev_mat_triggeronentered = (src.material && src.material.triggersOnEntered && src.material.triggersOnEntered.len)
-	..(mat1,appearance,setname,copy,use_descriptors)
-	var/cur_mat_triggeronentered = (src.material && src.material.triggersOnEntered && src.material.triggersOnEntered.len)
-
-	if (prev_mat_triggeronentered != cur_mat_triggeronentered)
-		if (isturf(src.loc))
-			if (!src.event_handler_flags & USE_HASENTERED)
-				if(cur_mat_triggeronentered)
-					var/turf/T = src.loc
-					if (T)
-						T.checkinghasentered++
-				else
-					var/turf/T = src.loc
-					if (T)
-						T.checkinghasentered = max(T.checkinghasentered-1, 0)
-
 
 // standardized damage procs
 
@@ -1007,43 +848,3 @@
 /atom/proc/damage_heat(var/amount)
 
 /atom/proc/damage_cold(var/amount)
-
-/proc/scaleatomall()
-	var/scalex = input(usr,"X Scale","1 normal, 2 double etc","1") as num
-	var/scaley = input(usr,"Y Scale","1 normal, 2 double etc","1") as num
-	logTheThing("admin", usr, null, "scaled every goddamn atom by X:[scalex] Y:[scaley]")
-	logTheThing("diary", usr, null, "scaled every goddamn atom by X:[scalex] Y:[scaley]", "admin")
-	message_admins("[key_name(usr)] scaled every goddamn atom by X:[scalex] Y:[scaley]")
-	for(var/atom/A in world)
-		A.Scale(scalex,scaley)
-		LAGCHECK(LAG_LOW)
-	return
-
-/proc/rotateatomall()
-	var/rot = input(usr,"Rotation","Rotation","0") as num
-	logTheThing("admin", usr, null, "rotated every goddamn atom by [rot] degrees")
-	logTheThing("diary", usr, null, "rotated every goddamn atom by [rot] degrees", "admin")
-	message_admins("[key_name(usr)] rotated every goddamn atom by [rot] degrees")
-	for(var/atom/A in world)
-		A.Turn(rot)
-		LAGCHECK(LAG_LOW)
-	return
-
-/proc/scaleatom()
-	var/atom/target = input(usr,"Target","Target") as mob|obj in world
-	var/scalex = input(usr,"X Scale","1 normal, 2 double etc","1") as num
-	var/scaley = input(usr,"Y Scale","1 normal, 2 double etc","1") as num
-	logTheThing("admin", usr, null, "scaled [target] by X:[scalex] Y:[scaley]")
-	logTheThing("diary", usr, null, "scaled [target] by X:[scalex] Y:[scaley]", "admin")
-	message_admins("[key_name(usr)] scaled [target] by X:[scalex] Y:[scaley]")
-	target.Scale(scalex, scaley)
-	return
-
-/proc/rotateatom()
-	var/atom/target = input(usr,"Target","Target") as mob|obj in world
-	var/rot = input(usr,"Rotation","Rotation","0") as num
-	logTheThing("admin", usr, null, "rotated [target] by [rot] degrees")
-	logTheThing("diary", usr, null, "rotated [target] by [rot] degrees", "admin")
-	message_admins("[key_name(usr)] rotated [target] by [rot] degrees")
-	target.Turn(rot)
-	return

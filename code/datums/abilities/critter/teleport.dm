@@ -18,7 +18,7 @@
 			return 1
 		var/turf/T = target
 		holder.owner.set_loc(T)
-		SPAWN_DBG(0)
+		spawn()
 			var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 			s.set_up(5, 1, holder.owner)
 			s.start()

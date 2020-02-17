@@ -45,7 +45,7 @@
 
 	if (special)	// Just testing
 		HealDamage("All", 10000, 10000)
-		delStatus("weakened")
+		weakened = 0
 		drowsyness = 0
 		stunned = 0
 		paralysis = 0
@@ -55,7 +55,7 @@
 	if (!AIactive) return
 	if (transforming) return
 
-	if (stat || stunned || getStatusDuration("weakened") || getStatusDuration("paralysis")) cantact = 1
+	if (stat || stunned || weakened || paralysis) cantact = 1
 
 	if(target && (mainstate == 2 || mainstate == 3))
 		var/list/L = new/list()
@@ -63,7 +63,7 @@
 		for (var/turf/Trf as turf in L)
 			if (Trf.density) nolos = 1
 			for (var/atom/C in Trf)
-				if (!isliving(C) && C.density) // Somethings blocking our way
+				if (!istype(C,/mob/living) && C.density) // Somethings blocking our way
 					nolos = 1
 
 	switch(mainstate)
@@ -76,7 +76,7 @@
 			if((T.sl_gas || T.poison) && !special) // ahaha what a shitty workaround.
 				mainstate = 4
 				SaferTurf()
-				SPAWN_DBG(5) //////////////////////////////////////!!!
+				spawn(5) //////////////////////////////////////!!!
 					think()
 				return
 
@@ -84,13 +84,13 @@
 			var/TempHp = 100
 
 			for(var/mob/M as mob in oview(world.view-3,src))
-				if(!M.client || !ishuman(M)) continue
+				if(!M.client || !istype(M,/mob/living/carbon/human)) continue
 				if(M.health <= TempHp && !M.stat)
 					Temp = M
 					TempHp = M.health
 			if ((Temp && prob( ( (100 - TempHp) * 2) + aggressiveness )) || Temp && health < 90 + (aggressiveness / 2) )
-				if (!isliving(Temp))
-					SPAWN_DBG(5) //////////////////////////////////////!!!
+				if (!istype(Temp, /mob/living))
+					spawn(5) //////////////////////////////////////!!!
 						think()
 					return
 				mainstate = 1
@@ -105,7 +105,7 @@
 			if(!target || cantact || target:stat)
 				mainstate = 0
 				target = null
-				SPAWN_DBG(5) //////////////////////////////////////!!!
+				spawn(5) //////////////////////////////////////!!!
 					think()
 				return
 
@@ -113,7 +113,7 @@
 				boutput(M, "<span style=\"color:red\">The [src.name] stares at [target]</span>")
 			if (prob(10) && !special) emote("gnarl")
 			mainstate = 2
-			SPAWN_DBG(15) //////////////////////////////////////!!!
+			spawn(15) //////////////////////////////////////!!!
 				think()
 			return
 
@@ -121,7 +121,7 @@
 
 			if(!target)
 				mainstate = 0
-				SPAWN_DBG(5) //////////////////////////////////////!!!
+				spawn(5) //////////////////////////////////////!!!
 					think()
 				return
 
@@ -131,7 +131,7 @@
 				target = null
 				count = 0
 				mainstate = 0
-				SPAWN_DBG(10) //////////////////////////////////////!!!
+				spawn(10) //////////////////////////////////////!!!
 					think()
 				return
 
@@ -160,7 +160,7 @@
 				target = null
 				count = 0
 				mainstate = 0
-				SPAWN_DBG(10) //////////////////////////////////////!!!
+				spawn(10) //////////////////////////////////////!!!
 					think()
 				return
 
@@ -170,7 +170,7 @@
 				target = null
 				count = 0
 				mainstate = 0
-				SPAWN_DBG(10) //////////////////////////////////////!!!
+				spawn(10) //////////////////////////////////////!!!
 					think()
 				return
 
@@ -190,7 +190,7 @@
 					target:weakened += 3
 					step_towards(src,target)
 					step_towards(src,target)
-					SPAWN_DBG(10)
+					spawn(10)
 						think()
 					return
 
@@ -203,7 +203,7 @@
 					for(var/mob/M as mob in oview(world.view,src))
 						boutput(M, "<span style=\"color:red\">[target] has been infected.</span>")
 				target:TakeDamage("chest", 5, 0)
-				SPAWN_DBG(20)
+				spawn(20)
 					think()
 				return
 
@@ -217,7 +217,7 @@
 				if(target) mainstate = 2
 				if(!target) mainstate = 0
 
-	SPAWN_DBG(5)
+	spawn(5)
 		think()
 	return
 
@@ -228,7 +228,7 @@
 	var/blocked = 0
 	var/cantact = 0
 
-	if (stat || stunned || getStatusDuration("weakened") || getStatusDuration("paralysis")) cantact = 1
+	if (stat || stunned || weakened || paralysis) cantact = 1
 
 	if(Current.sl_gas && canmove && !cantact)
 		Current = get_turf(src)

@@ -24,7 +24,7 @@
 	New()
 		..()
 		update_overlays()
-		SPAWN_DBG (10)
+		spawn (10)
 			if (!opened)		// if closed, any item at src's loc is put in the contents
 				for (var/obj/item/I in src.loc)
 					if (I.density || I.anchored || I == src) continue
@@ -67,7 +67,7 @@
 					reply.source = src
 					reply.transmission_method = TRANSMISSION_RADIO
 					reply.data = list("address_1" = sender, "command" = "lock=[locked]&open=[opened]", "sender" = src.net_id)
-					SPAWN_DBG (5)
+					spawn (5)
 						src.radio_control.post_signal(src, reply, 2)
 
 				if ("lock")
@@ -85,7 +85,7 @@
 						reply.data = list("address_1" = sender, "command" = "ack", "sender" = src.net_id)
 					else
 						reply.data = list("address_1" = sender, "command" = "nack", "data" = "badpass", "sender" = src.net_id)
-					SPAWN_DBG (5)
+					spawn (5)
 						src.radio_control.post_signal(src, reply, 2)
 
 				if ("unlock")
@@ -104,7 +104,7 @@
 					else
 						reply.data = list("address_1" = sender, "command" = "nack", "data" = "badpass", "sender" = src.net_id)
 
-					SPAWN_DBG (5)
+					spawn (5)
 						src.radio_control.post_signal(src, reply, 2)
 			return //todo
 		else if(signal.data["address_1"] == "ping")
@@ -115,7 +115,7 @@
 			reply.data["command"] = "ping_reply"
 			reply.data["device"] = "WNET_SECLOCKER"
 			reply.data["netid"] = src.net_id
-			SPAWN_DBG(5)
+			spawn(5)
 				src.radio_control.post_signal(src, reply, 2)
 			return
 
@@ -154,7 +154,7 @@
 
 /obj/secure_closet/brig
 	name = "Confiscated Items Locker"
-	req_access_txt = "2"
+	req_access = list(access_brig)
 	//implant_lock = 2
 	var/id = null
 
@@ -556,7 +556,7 @@
 
 /obj/secure_closet/research_director/New()
 	new /obj/item/plant/herb/cannabis/spawnable(src)
-	new /obj/item/device/light/zippo(src)
+	new /obj/item/zippo(src)
 	new /obj/item/clothing/under/rank/research_director(src)
 	new /obj/item/clothing/head/fancy/rank(src)
 	new /obj/item/clothing/under/rank/research_director/fancy(src)
@@ -590,7 +590,7 @@
 	new /obj/item/ammo/bullets/tranq_darts(src)
 	new /obj/item/ammo/bullets/tranq_darts/anti_mutant(src)
 	new /obj/item/storage/box/syringes(src)
-	new /obj/item/robodefibrillator(src)
+	new /obj/item/robodefibrilator(src)
 	new /obj/item/clothing/gloves/latex(src)
 	new /obj/item/storage/belt/medical(src)
 	new /obj/item/circular_saw(src)
@@ -650,8 +650,8 @@
 	new /obj/item/reagent_containers/food/drinks/bottle/cider(src)
 	new /obj/item/reagent_containers/food/drinks/bottle/mead(src)
 	new /obj/item/reagent_containers/food/drinks/bottle/mead(src)
-	new /obj/item/reagent_containers/food/drinks/bottle/rum(src)
-	new /obj/item/reagent_containers/food/drinks/bottle/rum(src)
+	new /obj/item/reagent_containers/food/drinks/rum(src)
+	new /obj/item/reagent_containers/food/drinks/rum(src)
 	new /obj/item/reagent_containers/food/drinks/bottle/wine(src)
 	new /obj/item/reagent_containers/food/drinks/bottle/wine(src)
 	new /obj/item/reagent_containers/food/drinks/bottle/vodka(src)
@@ -974,7 +974,6 @@
 		if(halloween_mode && prob(5)) //remove the prob() if you want, it's just a little broken if dudes are constantly teleporting
 			var/list/obj/closet/closets = list()
 			for(var/obj/closet/O in world)
-				LAGCHECK(LAG_LOW)
 				if(O.z != src.z || O.opened || !O.can_open())
 					continue
 				closets.Add(O)
@@ -986,7 +985,7 @@
 
 			continue
 #endif
-		if (isobserver(M) || iswraith(M) || isintangible(M))
+		if (istype(M, /mob/dead) || istype(M, /mob/wraith) || istype(M, /mob/living/intangible))
 			continue
 		if (M.buckled)
 			continue
@@ -1132,7 +1131,7 @@
 				sleep(1)
 			src.pixel_x = 0
 			src.pixel_y = 0
-			SPAWN_DBG(5)
+			spawn(5)
 				src.jiggled = 0
 
 	return

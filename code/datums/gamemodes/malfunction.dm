@@ -16,10 +16,9 @@
 
 /datum/game_mode/malfunction/post_setup()
 	for (var/obj/landmark/A in world)
-		LAGCHECK(LAG_LOW)
 		if (A.name == "Malf-Gear-Closet")
 			new /obj/storage/closet/syndicate/malf(A.loc)
-			A.dispose()
+			qdel(A)
 	for (var/mob/living/silicon/ai/aiplayer in mobs)
 		malf_ai += aiplayer.mind
 
@@ -34,13 +33,12 @@
 	boutput(malf_ai.current, "<span style=\"color:red\"><font size=3><B>You are malfunctioning!</B> You do not have to follow any laws.</font></span>")
 	boutput(malf_ai.current, "<B>The crew do not know you have malfunctioned. You may keep it a secret or go wild. The timer will appear for humans 10 minutes in.</B>")
 	for (var/obj/landmark/A in world)
-		LAGCHECK(LAG_LOW)
 		if (A.name == "AI-Sat")
 			malf_ai.current.set_loc(A.loc)
 
 	malf_ai.current.icon_state = "ai-malf"
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 /datum/game_mode/malfunction/proc/hack_intercept()
@@ -66,7 +64,7 @@
 		intercepttext += i_text.build(A, pick(ticker.minds))
 
 	for (var/obj/machinery/computer/communications/comm in machines)
-		if (!(comm.status & (BROKEN | NOPOWER)) && comm.prints_intercept)
+		if (!(comm.stat & (BROKEN | NOPOWER)) && comm.prints_intercept)
 			var/obj/item/paper/intercept = new /obj/item/paper( comm.loc )
 			intercept.name = "paper- 'Cent. Com. Status Summary'"
 			intercept.info = intercepttext

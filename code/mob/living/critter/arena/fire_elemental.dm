@@ -51,9 +51,3 @@
 		..()
 		abilityHolder.addAbility(/datum/targetable/critter/cauterize)
 		abilityHolder.addAbility(/datum/targetable/critter/flamethrower)
-
-	Life()
-		var/turf/T = src.loc
-		if (istype(T, /turf))
-			T.hotspot_expose(1500,200)
-		.=..()

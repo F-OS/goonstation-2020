@@ -3,28 +3,21 @@
 	var/obj/screen/health
 	var/obj/screen/disconnect
 	var/mob/living/silicon/drone/master
-	var/icon/icon_hud = 'icons/mob/hud_drone.dmi'
 	var/list/tools = list(null, null, null, null, null)
-
-	var/list/statusUiElements = list() //Assoc. List  STATUS EFFECT INSTANCE : UI ELEMENT add_screen(obj/screen/S). Used to hold the ui elements since they shouldnt be on the status effects themselves.
 
 	New(M)
 		master = M
-		charge = create_screen("health", "Condition", icon_hud, "health5", "NORTH, EAST", HUD_LAYER+1)
-		charge = create_screen("charge", "Battery", icon_hud, "charge4", "NORTH, EAST-1", HUD_LAYER+1)
-		disconnect = create_screen("disconnect", "Disconnect", icon_hud, "disconnect", "SOUTH, EAST", HUD_LAYER+1)
-		tools[1] = create_screen("tool1", "Tool 1", icon_hud, "toolslot", "NORTH, 1", HUD_LAYER+1)
-		tools[2] = create_screen("tool2", "Tool 2", icon_hud, "toolslot", "NORTH, 2", HUD_LAYER+1)
-		tools[3] = create_screen("tool3", "Tool 3", icon_hud, "toolslot", "NORTH, 3", HUD_LAYER+1)
-		tools[4] = create_screen("tool4", "Tool 4", icon_hud, "toolslot", "NORTH, 4", HUD_LAYER+1)
-		tools[5] = create_screen("tool5", "Tool 5", icon_hud, "toolslot", "NORTH, 5", HUD_LAYER+1)
+		charge = create_screen("health", "Condition", 'icons/mob/hud_drone.dmi', "health5", "NORTH, EAST", HUD_LAYER+1)
+		charge = create_screen("charge", "Battery", 'icons/mob/hud_drone.dmi', "charge4", "NORTH, EAST-1", HUD_LAYER+1)
+		disconnect = create_screen("disconnect", "Disconnect", 'icons/mob/hud_drone.dmi', "disconnect", "SOUTH, EAST", HUD_LAYER+1)
+		tools[1] = create_screen("tool1", "Tool 1", 'icons/mob/hud_drone.dmi', "toolslot", "NORTH, 1", HUD_LAYER+1)
+		tools[2] = create_screen("tool2", "Tool 2", 'icons/mob/hud_drone.dmi', "toolslot", "NORTH, 2", HUD_LAYER+1)
+		tools[3] = create_screen("tool3", "Tool 3", 'icons/mob/hud_drone.dmi', "toolslot", "NORTH, 3", HUD_LAYER+1)
+		tools[4] = create_screen("tool4", "Tool 4", 'icons/mob/hud_drone.dmi', "toolslot", "NORTH, 4", HUD_LAYER+1)
+		tools[5] = create_screen("tool5", "Tool 5", 'icons/mob/hud_drone.dmi', "toolslot", "NORTH, 5", HUD_LAYER+1)
 		update_health()
 		update_charge()
 		update_tools()
-
-	clear_master()
-		master = null
-		..()
 
 	clicked(id)
 		if (!master)
@@ -54,7 +47,7 @@
 		update_health()
 			if (!health)
 				return
-			if (isdead(master))
+			if (master.stat == 2)
 				health.icon_state = "dead"
 			else
 				switch(round(100*master.health/master.health_max))
@@ -119,47 +112,3 @@
 				add_object(tool4, HUD_LAYER+2, "NORTH, 4")
 			if (tool5)
 				add_object(tool5, HUD_LAYER+2, "NORTH, 5")
-
-		update_status_effects()
-			for(var/obj/screen/statusEffect/G in src.objects)
-				remove_screen(G)
-
-			for(var/datum/statusEffect/S in src.statusUiElements) //Remove stray effects.
-				if(!master.statusEffects || !(S in master.statusEffects) || !S.visible)
-					pool(statusUiElements[S])
-					src.statusUiElements.Remove(S)
-					qdel(S)
-
-			var/spacing = 0.6
-			var/pos_x = spacing - 0.2 - 1
-
-			if(master.statusEffects)
-				for(var/datum/statusEffect/S in master.statusEffects) //Add new ones, update old ones.
-					if(!S.visible) continue
-					if((S in statusUiElements) && statusUiElements[S])
-						var/obj/screen/statusEffect/U = statusUiElements[S]
-						U.icon = icon_hud
-						U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH+0.3"
-						U.update_value()
-						add_screen(U)
-						pos_x -= spacing
-					else
-						if(S.visible)
-							var/obj/screen/statusEffect/U = unpool(/obj/screen/statusEffect)
-							U.init(master,S)
-							U.icon = icon_hud
-							statusUiElements.Add(S)
-							statusUiElements[S] = U
-							U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH+0.3"
-							U.update_value()
-							add_screen(U)
-							pos_x -= spacing
-							animate_buff_in(U)
-			return
-
-/mob/living/silicon/drone
-	updateStatusUi()
-		if(src.hud && istype(src.hud, /datum/hud/drone))
-			var/datum/hud/drone/H = src.hud
-			H.update_status_effects()
-		return

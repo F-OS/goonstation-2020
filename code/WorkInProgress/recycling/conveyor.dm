@@ -16,15 +16,13 @@
 	var/basedir			// this is the default (forward) direction, set by the map dir
 						// note dir var can vary when the direction changes
 
+	var/list/affecting	// the list of all items that will be moved this ptick
 	var/id = ""			// the control ID	- must match controller ID
 	// following two only used if a diverter is present
 	var/divert = 0 		// if non-zero, direction to divert items
 	var/divdir = 0		// if diverting, will be conveyer dir needed to divert (otherwise dense)
-	var/move_lag = 4	// The lag at which the movement happens. Lower = faster
+	var/move_lag = 4
 	var/obj/machinery/conveyor/next_conveyor = null
-	var/obj/machinery/conveyor_switch/owner = null
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
-
 
 /obj/machinery/conveyor/north
 	dir = NORTH
@@ -42,18 +40,6 @@
 	basedir = dir
 	setdir()
 
-/obj/machinery/conveyor/disposing()
-	for(var/obj/machinery/conveyor/C in range(1,src))
-		if (C.next_conveyor == src)
-			C.next_conveyor = null
-	next_conveyor = null
-
-	if (owner) //conveyor switch could've been exploded
-		owner.conveyors -= src
-
-	machines -= src
-	..()
-
 	// set the dir and target turf depending on the operating direction
 
 /obj/machinery/conveyor/proc/setdir()
@@ -68,23 +54,23 @@
 	// update the icon depending on the operating condition
 
 /obj/machinery/conveyor/proc/update()
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		icon_state = "conveyor-b"
 		operating = 0
 
 	if(!operable)
 		operating = 0
 	if(!operating)
-		for(var/atom/A in loc.contents)
+		for(var/atom/movable/A in loc.contents)
 			walk(A, 0)
 
-	icon_state = "conveyor[(operating != 0) && !(status & NOPOWER)]"
+	icon_state = "conveyor[(operating != 0) && !(stat & NOPOWER)]"
 
 
 	// machine process
 	// move items to the target location
 /obj/machinery/conveyor/process()
-	if(status & (BROKEN | NOPOWER))
+	if(stat & (BROKEN | NOPOWER))
 		return
 	if(!operating)
 		return
@@ -93,12 +79,10 @@
 
 	..()
 
-	for(var/atom/A in loc.contents)
+	for(var/atom/movable/A in loc.contents)
 		move_thing(A)
 
 /obj/machinery/conveyor/proc/move_thing(var/atom/movable/A)
-	if (A.anchored)
-		return
 	if(isobserver(A))
 		return
 	if(istype(A, /obj/machinery/bot) && A:on)	//They drive against the motion of the conveyor, ok.
@@ -108,40 +92,30 @@
 	var/movedir = dir	// base movement dir
 	if(divert && dir==divdir)	// update if diverter present
 		movedir = divert
+	if(!A.anchored)
+		/* if (A.l_move_time == world.timeofday)
+			continue // already moved by another conveyor
+			*/
+		var/mob/M = A
+		if(istype(M) && M.buckled == src)
+			walk(M, dir, move_lag)
+		else
+			walk(A, movedir, move_lag)
 
-	/* if (A.l_move_time == world.timeofday)
-		continue // already moved by another conveyor
-		*/
-	var/mob/M = A
-	if(istype(M) && M.buckled == src)
-		M.glide_size = (32 / move_lag) * world.tick_lag
-		walk(M, dir, move_lag, (32 / move_lag) * world.tick_lag)
-		M.glide_size = (32 / move_lag) * world.tick_lag
-
-		if (src.move_lag <= 1)
-			if (prob( (1-src.move_lag) * 1.2) )
-				var/turf/T = get_edge_target_turf(src, src.dir)
-				M.throw_at(T,rand(0,5),rand(1,3))
-
-	else
-		A.glide_size = (32 / move_lag) * world.tick_lag
-		walk(A, movedir, move_lag, (32 / move_lag) * world.tick_lag)
-		A.glide_size = (32 / move_lag) * world.tick_lag
-
-/obj/machinery/conveyor/HasEntered(var/atom/movable/AM, atom/oldloc)
+/obj/machinery/conveyor/HasEntered(var/atom/movable/AM, /atom/oldloc)
 	..()
-	if(status & (BROKEN | NOPOWER))
+	if(stat & (BROKEN | NOPOWER))
 		return
 	if(!operating)
 		return
 	if(!loc)
 		return
-	//DEBUG_MESSAGE("[AM] entered conveyor at [showCoords(src.x, src.y, src.z)] and is being moved.")
+	//DEBUG("[AM] entered conveyor at [showCoords(src.x, src.y, src.z)] and is being moved.")
 	move_thing(AM)
 
 /obj/machinery/conveyor/HasExited(var/atom/movable/AM, var/atom/newloc)
 	..()
-	if(status & (BROKEN | NOPOWER))
+	if(stat & (BROKEN | NOPOWER))
 		return
 	if(!operating)
 		return
@@ -150,7 +124,7 @@
 
 	if(next_conveyor && next_conveyor.loc == newloc)
 		//Ok, they will soon walk() according to the new conveyor
-		//DEBUG_MESSAGE("[AM] exited conveyor at [showCoords(src.x, src.y, src.z)] onto another conveyor! Wow!.")
+		//DEBUG("[AM] exited conveyor at [showCoords(src.x, src.y, src.z)] onto another conveyor! Wow!.")
 		var/mob/M = AM
 		if(istype(M) && M.buckled == src) //Transfer the buckle
 			M.buckled = next_conveyor
@@ -160,7 +134,7 @@
 
 	else
 		//Stop walking, we left the belt
-		//DEBUG_MESSAGE("[AM] exited conveyor at [showCoords(src.x, src.y, src.z)] onto the cold, hard floor.")
+		//DEBUG("[AM] exited conveyor at [showCoords(src.x, src.y, src.z)] onto the cold, hard floor.")
 		var/mob/M = AM
 		if(istype(M) && M.buckled == src) //Unbuckle
 			M.buckled = null
@@ -171,12 +145,12 @@
 // attack with item, place item on conveyor
 
 /obj/machinery/conveyor/attackby(var/obj/item/I, mob/user)
-	if (istype(I, /obj/item/grab))	// special handling if grabbing a mob
+	if(istype(I, /obj/item/grab))	// special handling if grabbing a mob
 		var/obj/item/grab/G = I
 		G.affecting.Move(src.loc)
 		qdel(G)
 		return
-	else if (istype(I, /obj/item/cable_coil))	// if cable, see if a mob is present
+	else if(istype(I, /obj/item/cable_coil))	// if cable, see if a mob is present
 		var/mob/M = locate() in src.loc
 		if(M)
 			if (M == user)
@@ -188,8 +162,7 @@
 				else
 					boutput(user, "<span style=\"color:blue\">[M] must be lying down to be tied to the converyor!</span>")
 					return
-
-			M.buckled = src.loc
+			M.buckled = src
 			src.add_fingerprint(user)
 			I:use(1)
 			M.lying = 1
@@ -198,7 +171,7 @@
 
 			// else if no mob in loc, then allow coil to be placed
 
-	else if (issnippingtool(I))
+	else if(istype(I, /obj/item/wirecutters))
 		var/mob/M = locate() in src.loc
 		if(M && M.buckled == src)
 			M.buckled = null
@@ -214,7 +187,7 @@
 		return
 	// otherwise drop and place on conveyor
 
-	if (issilicon(user))
+	if (istype(user, /mob/living/silicon))
 		return
 	user.drop_item()
 	if(I && I.loc)	I.set_loc(src.loc)
@@ -243,7 +216,7 @@
 // make the conveyor broken
 // also propagate inoperability to any connected conveyor with the same ID
 /obj/machinery/conveyor/proc/broken()
-	status |= BROKEN
+	stat |= BROKEN
 	update()
 
 	var/obj/machinery/conveyor/C = locate() in get_step(src, basedir)
@@ -286,7 +259,6 @@
 	desc = "A diverter arm for a conveyor belt."
 	anchored = 1
 	layer = FLY_LAYER
-	event_handler_flags = USE_FLUID_ENTER | USE_CHECKEXIT
 	var/obj/machinery/conveyor/conv // the conveyor this diverter works on
 	var/deployed = 0	// true if diverter arm is extended
 	var/operating = 0	// true if arm is extending/contracting
@@ -325,7 +297,7 @@
 		if(SOUTHWEST)
 			divert_to = SOUTH
 			divert_from = WEST
-	SPAWN_DBG(2)
+	spawn(2)
 		// wait for map load then find the conveyor in this turf
 		conv = locate() in src.loc
 		if(conv)	// divert_from dir must match possible conveyor movement
@@ -356,7 +328,7 @@
 // toggle between arm deployed and not deployed, showing animation
 //
 /obj/machinery/diverter/proc/toggle()
-	if( status & (NOPOWER|BROKEN))
+	if( stat & (NOPOWER|BROKEN))
 		return
 
 	if(operating)
@@ -423,27 +395,17 @@
 
 /obj/machinery/conveyor_switch/New()
 	..()
-	conveyor_switches += src
 	update()
 
-	SPAWN_DBG(5)		// allow map load
+	spawn(5)		// allow map load
 		conveyors = list()
 		for(var/obj/machinery/conveyor/C in machines)
 			if(C.id == id)
 				conveyors += C
-				C.owner = src
 
 		mechanics = new(src)
 		mechanics.master = src
 		mechanics.addInput("trigger", "trigger")
-
-/obj/machinery/conveyor_switch/disposing()
-	conveyor_switches -= src
-	for(var/obj/machinery/conveyor/C in conveyors)
-		C.owner = null
-	conveyors = null
-	..()
-
 
 /obj/machinery/conveyor_switch/proc/trigger(var/inp)
 	attack_hand(usr) //bit of a hack but hey.
@@ -493,140 +455,5 @@
 		if(S.id == src.id)
 			S.position = position
 			S.update()
-		LAGCHECK(LAG_MED)
 
 	if(mechanics) mechanics.fireOutgoing(mechanics.newSignal("switchTriggered"))
-
-
-//silly proc for corners that can be flippies
-/obj/machinery/conveyor/proc/rotateme()
-	.= 0
-
-
-//for ease of mapping
-/obj/machinery/conveyor/oshan_carousel
-	id = "carousel"
-	move_lag = 5.5
-	operating = 1
-
-
-/obj/machinery/conveyor/oshan_carousel/coroner
-	var/startdir = NORTH
-	var/altdir = NORTH
-
-	New()
-		..()
-		startdir = src.dir
-
-	setdir()
-		if(operating == -1)
-			dir = altdir
-		else
-			dir = startdir
-		next_conveyor = locate(/obj/machinery/conveyor) in get_step(src,dir)
-		update()
-
-/obj/machinery/conveyor/oshan_carousel/coroner/northeast
-	startdir = NORTH
-	altdir = EAST
-
-/obj/machinery/conveyor/oshan_carousel/coroner/northwest
-	startdir = NORTH
-	altdir = WEST
-
-/obj/machinery/conveyor/oshan_carousel/coroner/southeast
-	startdir = SOUTH
-	altdir = EAST
-
-/obj/machinery/conveyor/oshan_carousel/coroner/southwest
-	startdir = SOUTH
-	altdir = WEST
-
-/obj/machinery/conveyor/oshan_carousel/coroner/westsouth
-	startdir = WEST
-	altdir = SOUTH
-
-/obj/machinery/conveyor/oshan_carousel/coroner/westnorth
-	startdir = WEST
-	altdir = NORTH
-
-/obj/machinery/conveyor/oshan_carousel/coroner/eastsouth
-	startdir = EAST
-	altdir = SOUTH
-
-/obj/machinery/conveyor/oshan_carousel/coroner/eastnorth
-	startdir = EAST
-	altdir = NORTH
-
-
-
-
-/obj/machinery/carouselpower
-	var/maxdrain = 23 MEGA WATTS
-	var/bonusdrain = 100 MEGA WATTS
-
-	var/speedup = 0
-	var/speedup_max = 3.5
-	var/speedup_bonus = 1
-	icon = 'icons/obj/fluid.dmi'
-	icon_state = "battery-0"
-	name = "carousel power unit"
-	desc = "All power dumped into this power unit will boost the speed of the station's cargo carousel."
-	density = 1
-	anchored = 1
-	event_handler_flags = USE_CANPASS | USE_FLUID_ENTER
-
-	var/icon_base = "battery-"
-	var/icon_levels = 6 //there are 7 icons of power levels (6 + 1 for unpowered)
-	var/obj/cable/attached
-
-	var/search_interval = 1 MINUTES
-	var/last_search = 0
-
-	New()
-		..()
-		attached = locate() in get_turf(src)
-
-	set_loc()
-		..()
-		attached = locate() in get_turf(src)
-
-	process()
-		..()
-		var/last_speedup = speedup
-		speedup = 0
-
-		if( attached && !(status & (BROKEN | NOPOWER)) )
-			var/datum/powernet/PN = attached.get_powernet()
-			if(PN)
-				var/power_to_use = 0
-
-				power_to_use = min ( maxdrain, PN.avail )
-				speedup = (power_to_use/maxdrain) * speedup_max
-
-				if (PN.avail > maxdrain)
-					power_to_use = min ( maxdrain+bonusdrain, PN.avail )
-					speedup += (power_to_use / bonusdrain ) * speedup_bonus
-
-				PN.newload += power_to_use
-				//use_power(power_to_use)
-
-		if (!attached)
-			if (world.time + search_interval > last_search)
-				last_search = world.time
-				attached = locate() in get_turf(src)
-
-		if (speedup != last_speedup)
-			update_belts()
-			update_icon()
-
-	proc/update_belts()
-		for(var/obj/machinery/conveyor_switch/S in conveyor_switches)
-			if(S.id == "carousel")
-				for(var/obj/machinery/conveyor/C in S.conveyors)
-					C.move_lag = max(initial(C.move_lag) - speedup, 0.1)
-				break
-
-	proc/update_icon()
-		var/ico = (speedup / speedup_max) * icon_levels
-		icon_state = "[icon_base][round(ico)]"

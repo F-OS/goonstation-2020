@@ -7,7 +7,7 @@
 	icon = 'icons/obj/disposal.dmi'
 	icon_state = "conpipe-s"
 	anchored = 0
-	density = 0
+	density = 1
 	pressure_resistance = 5*ONE_ATMOSPHERE
 	m_amt = 1850
 	level = 2
@@ -131,17 +131,6 @@
 	// weldingtool: convert to real pipe
 
 	attackby(var/obj/item/I, var/mob/user)
-		if(isscrewingtool(I))
-			boutput(user, "You take the pipe segment apart.")
-			// var/obj/item/sheet/A = new /obj/item/sheet(get_turf(src))
-			// if(src.material)
-			// 	A.setMaterial(src.material)
-			// else
-			// 	var/datum/material/M = getMaterial("steel")
-			// 	A.setMaterial(M)
-			qdel(src)
-			return
-
 		var/turf/T = src.loc
 		if(T.intact)
 			boutput(user, "You can only attach the pipe if the floor plating is removed.")
@@ -157,16 +146,16 @@
 				boutput(user, "There is already a pipe at that location.")
 				return
 
-		if (iswrenchingtool(I))
+		if(istype(I, /obj/item/wrench))
 			if(anchored)
 				anchored = 0
 				level = 2
-				set_density(1)
+				density = 1
 				boutput(user, "You detach the pipe from the underfloor.")
 			else
 				anchored = 1
 				level = 1
-				set_density(0)
+				density = 0
 				boutput(user, "You attach the pipe to the underfloor.")
 			playsound(src.loc, "sound/items/Ratchet.ogg", 100, 1)
 
@@ -182,13 +171,13 @@
 					var/atom/wloc = W.loc
 					var/turf/ploc = loc
 					boutput(user, "You begin welding [src] in place.")
-					sleep(1)
+					sleep(20)
 					if(user.loc == uloc && wloc == W.loc)
 						// REALLY? YOU DON'T FUCKING CARE ABOUT THE LOCATION OF THE PIPE? GET FUCKED <CODER>
 						if (ploc != loc)
 							boutput(user, "<span style='color:red'>As you try to weld the pipe to a completely different floor than it was originally placed on it breaks!</span>")
 							ploc = loc
-							SPAWN_DBG(0)
+							spawn(0)
 								robogibs(ploc)
 								//if (isrestrictedz(ploc.z))
 									//explosion_new(src, ploc, 3) // okay yes we don't need to explode people for this

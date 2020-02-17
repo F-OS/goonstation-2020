@@ -8,7 +8,7 @@
 	flags = FPRINT | TABLEPASS| CONDUCT
 
 /obj/item/assembly/shock_kit/New()
-	SPAWN_DBG (20)
+	spawn (20)
 		if (src)
 			if (!(src.part1 && istype(src.part1)))
 				src.part1 = new /obj/item/clothing/head/helmet(src)
@@ -31,7 +31,7 @@
 /obj/item/assembly/shock_kit/attackby(obj/item/W as obj, mob/user as mob)
 	src.add_fingerprint(user)
 
-	if (iswrenchingtool(W))
+	if (istype(W, /obj/item/wrench))
 		var/turf/T = get_turf(src)
 		if (src.part1)
 			src.part1.set_loc(T)

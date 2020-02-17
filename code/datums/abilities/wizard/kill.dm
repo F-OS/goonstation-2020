@@ -8,9 +8,6 @@
 	requires_robes = 1
 	offensive = 1
 	sticky = 1
-	voice_grim = "sound/voice/wizard/ShockingGraspGrim.ogg"
-	voice_fem = "sound/voice/wizard/ShockingGraspFem.ogg"
-	voice_other = "sound/voice/wizard/ShockingGraspLoud.ogg"
 
 	cast(mob/target)
 		if(!holder)
@@ -19,19 +16,17 @@
 		playsound(holder.owner.loc, "sound/effects/elec_bzzz.ogg", 25, 1, -1)
 		if (do_mob(holder.owner, target, 20))
 			holder.owner.say("EI NATH")
-			..()
+			playsound(holder.owner.loc, "sound/voice/wizard/ShockingGraspLoud.ogg", 50, 0, -1)
+			playsound(holder.owner.loc, "sound/effects/elec_bigzap.ogg", 25, 1, -1)
 
 			if (ishuman(target))
-				if (target.traitHolder.hasTrait("training_chaplain"))
+				if (target.bioHolder.HasEffect("training_chaplain"))
 					boutput(holder.owner, "<span style=\"color:red\">[target] has divine protection from magic.</span>")
 					target.visible_message("<span style=\"color:red\">The electric charge courses through [target] harmlessly!</span>")
 					return
-				else if (iswizard(target))
+				else if (iswizard(target) && target.wizard_spellpower())
 					target.visible_message("<span style=\"color:red\">The electric charge somehow completely misses [target]!</span>")
 					return
-				else if(check_target_immunity( target ))
-					boutput(holder.owner, "<span style='color:red'>[target] seems to be warded from the effects!</span>")
-					return 1
 
 			if (holder.owner.wizard_spellpower())
 				var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
@@ -47,8 +42,8 @@
 				target.lastattacker = holder.owner
 				target.lastattackertime = world.time
 				target.TakeDamage("chest", 0, 80, 0, DAMAGE_BURN)
-				target.changeStatus("stunned", 10 SECONDS)
-				target.changeStatus("weakened", 10 SECONDS)
+				target.stunned += 10
+				target.weakened += 10
 				target.stuttering += 15
 		else
 			return 1 // no cooldown if it fails

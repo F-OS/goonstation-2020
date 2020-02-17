@@ -12,13 +12,11 @@ body {
 }
 table {
 	width: 100%;
-	border-collapse: separate;
-	border-spacing: 0;
+	border-collapse: separate; 
+	border-spacing: 0; 
 	padding: 0;
 	*border-collapse: expression('separate', cellSpacing = '0px');
 }
-
-a {color: #58B4DC;}
 
 /* TITLEBAR START */
 #titlebar {
@@ -61,24 +59,21 @@ a {color: #58B4DC;}
 	position: absolute;
 	text-decoration: none;
 	color: white;
-	width: 35px;
-	height: 40px;
-	line-height: 40px;
+	padding: 0 5px;
+	height: 10px;
+	line-height: 10px;
 	font-size: 14px;
-  text-align: center;
 }
 #titlebar .min {
-	top: 0;
-  right: 41px;
-  line-height: 42px;
+	top: 14px;
+	right: 50px;
 }
 #titlebar .close {
-	top: 0;
-  right: 6px;
-  font-size: 15px;
+	top: 12px;
+	right: 15px;
 }
 #titlebar a:hover {
-	color: #58B4DC;
+	color: #379abe;
 }
 /* TITLEBAR END */
 
@@ -124,7 +119,7 @@ a {color: #58B4DC;}
 	left: 0;
 	word-wrap: break-word;
 	overflow: hidden;
-	border-top: 3px solid #58B4DC;
+	border-top: 3px solid #379abe;
 	border-left: 3px solid #21272c;
 	border-right: 3px solid #21272c;
 	border-bottom: 3px solid #21272c;
@@ -289,10 +284,6 @@ a {color: #58B4DC;}
 	overflow: visible;
 	cursor: pointer;
 	box-sizing: border-box;
-	outline: none;
-}
-.button[disabled] {
-	opacity: 0.5;
 }
 .button:focus {
 	border-color: transparent;
@@ -351,10 +342,10 @@ a {color: #58B4DC;}
 	left: -8px; /* width of self */
 	width: 8px;
 	height: 8px;
-	background: url({{resource("images/chui/themes/default/buttons/btn-contrast-tl.gif")}}) no-repeat left top;
+	background: url({{resource("images/chui/themes/default/btn-contrast-tl.gif")}}) no-repeat left top;
 }
 .button:active .top:before {
-	background-image: url({{resource("images/chui/themes/default/buttons/btn-contrast-active-tl.gif")}});
+	background-image: url({{resource("images/chui/themes/default/btn-contrast-active-tl.gif")}});
 }
 /* Top horiz shadow (active only) */
 .button:active .top:after {
@@ -379,7 +370,7 @@ a {color: #58B4DC;}
 }
 .button:hover .bottom, .button:active .bottom {
 	height: 4px;
-	border-bottom: 2px solid #58B4DC;
+	border-bottom: 2px solid #379abe;
 }
 .button:active .bottom {
 	border-left-color: #788492;
@@ -410,15 +401,15 @@ a {color: #58B4DC;}
 	right: -8px; /* minus width of self */
 	width: 8px;
 	height: 8px;
-	background: url({{resource("images/chui/themes/default/buttons/btn-contrast-br.gif")}}) no-repeat left top;
+	background: url({{resource("images/chui/themes/default/btn-contrast-br.gif")}}) no-repeat left top;
 }
 .button:hover .bottom:after {
 	bottom: -4px;
-	background-image: url({{resource("images/chui/themes/default/buttons/btn-contrast-hover-br.gif")}});
+	background-image: url({{resource("images/chui/themes/default/btn-contrast-hover-br.gif")}});
 }
 .button:active .bottom:after {
 	bottom: -4px;
-	background-image: url({{resource("images/chui/themes/default/buttons/btn-contrast-active-br.gif")}});
+	background-image: url({{resource("images/chui/themes/default/btn-contrast-active-br.gif")}});
 }
 
 
@@ -445,27 +436,27 @@ a {color: #58B4DC;}
 /* Dark
 BG: #21272c
 Border: #3f4b54
-Highlight: #58B4DC
+Highlight: #379abe
 Text: #fff
 */
-.dark.button,
-.dark.button .top,
+.dark.button, 
+.dark.button .top, 
 .dark.button .bottom {background-color: #21272c;}
-.dark.button:active,
+.dark.button:active, 
 .dark.button:active .top {border-color: #21272c;}
 .dark.button:active .bottom {border-left-color: #21272c;}
-.dark.button,
-.dark.button .top,
+.dark.button, 
+.dark.button .top, 
 .dark.button .bottom {border-color: #3f4b54;}
 
 .dark.button:hover .bottom,
-.dark.button:active .bottom {border-bottom-color: #58B4DC;}
+.dark.button:active .bottom {border-bottom-color: #379abe;}
 
-.dark.button .top:before {background-image: url({{resource("images/chui/themes/default/buttons/btn-standard-tl.gif")}});}
-.dark.button:active .top:before {background-image: url({{resource("images/chui/themes/default/buttons/btn-standard-active-tl.gif")}});}
-.dark.button .bottom:after {background-image: url({{resource("images/chui/themes/default/buttons/btn-standard-br.gif")}});}
-.dark.button:hover .bottom:after {background-image: url({{resource("images/chui/themes/default/buttons/btn-standard-hover-br.gif")}});}
-.dark.button:active .bottom:after {background-image: url({{resource("images/chui/themes/default/buttons/btn-standard-active-br.gif")}});}
+.dark.button .top:before {background-image: url({{resource("images/chui/themes/default/btn-standard-tl.gif")}});}
+.dark.button:active .top:before {background-image: url({{resource("images/chui/themes/default/btn-standard-active-tl.gif")}});}
+.dark.button .bottom:after {background-image: url({{resource("images/chui/themes/default/btn-standard-br.gif")}});}
+.dark.button:hover .bottom:after {background-image: url({{resource("images/chui/themes/default/btn-standard-hover-br.gif")}});}
+.dark.button:active .bottom:after {background-image: url({{resource("images/chui/themes/default/btn-standard-active-br.gif")}});}
 
 
 /*************************
@@ -485,8 +476,8 @@ Text: #fff
 .traitor-tips .center {text-align:center;margin: 0 auto;}
 .traitor-tips .image-right {padding-right: 50px;}
 
-#createobj .selector_hs {
-    width: 400px;
+#createobj .selector_hs {    
+    width: 400px; 
     overflow: auto;
 }
 
@@ -529,5 +520,3 @@ a.manulink:active {border:none 0px; font-family: "Arial", sans-serif; color: whi
 	border: 0px;
 	overflow: hidden;
 }
-
-.emoji {font-family: "Segoe UI Emoji" !important;}

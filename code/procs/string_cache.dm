@@ -12,14 +12,14 @@ var/global/list/string_cache
 			var/lineCount = 0
 			for(var/s in fileList)
 				lineCount++
-				if (!s || findtext(s, "#", 1, 2) || findtext(s, "//", 1, 3))
+				if (!s)
 					continue
 
-				stringsList = splittext(s, "@=")
+				stringsList = dd_text2list(s, "@=")
 				if(stringsList.len != 2)
 					CRASH("Invalid string list in strings/[filename] - line: [lineCount]")
 				if(findtext(stringsList[2], "@,"))
-					string_cache[filename][stringsList[1]] = splittext(stringsList[2], "@,")
+					string_cache[filename][stringsList[1]] = dd_text2list(stringsList[2], "@,")
 				else
 					string_cache[filename][stringsList[1]] = stringsList[2] // Its a single string!
 		else

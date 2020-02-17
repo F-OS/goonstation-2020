@@ -49,7 +49,7 @@
 				circuit_secured = 0
 				boutput(user, "<span style=\"color:blue\">You insert the control circuitry.</span>")
 		else if (!circuit_secured)
-			if (isscrewingtool(W))
+			if (istype(W, /obj/item/screwdriver))
 				playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 				circuit_secured = 1
 				boutput(user, "<span style=\"color:blue\">You secure the control circuitry.</span>")

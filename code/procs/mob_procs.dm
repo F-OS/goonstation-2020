@@ -52,31 +52,73 @@
 	else
 		return 0 // vOv
 
-/**
- * @param {int} tool_flag See _setup.dm for valid TOOL_X values
- * @param {string} [hand] If set, checks only in specific hand, else checks all hands
- * @returns {obj/item | 0} Tool that matched flag (and was in specific hand, if specified)
- */
-/mob/proc/find_tool_in_hand(var/tool_flag, var/hand)
-	if (hand)
-		// check specific hand
-		if (hand == "right")
-			var/obj/item/I = src.r_hand
-			if (I && (I.tool_flags & tool_flag))
-				return src.r_hand
-		else if (hand == "left")
-			var/obj/item/I = src.l_hand
-			if (I && (I.tool_flags & tool_flag))
-				return src.l_hand
+/mob/living/silicon/robot/find_in_hand(var/obj/item/I, var/this_hand)
+	if (!I)
+		return 0
+	if (!src.module_states[3] && !src.module_states[2] && !src.module_states[1])
+		return 0
+
+	if (this_hand)
+		if (this_hand == "right" || this_hand == 3)
+			if (src.module_states[3] && src.module_states[3] == I)
+				return 1
+			else
+				return 0
+		else if (this_hand == "middle" || this_hand == 2)
+			if (src.module_states[2] && src.module_states[2] == I)
+				return 1
+			else
+				return 0
+		else if (this_hand == "left" || this_hand == 1)
+			if (src.module_states[1] && src.module_states[1] == I)
+				return 1
+			else
+				return 0
+		else
+			return 0
+
+	if (src.module_states[3] && src.module_states[3] == I)
+		return src.module_states[3]
+	else if (src.module_states[2] && src.module_states[2] == I)
+		return src.module_states[2]
+	else if (src.module_states[1] && src.module_states[1] == I)
+		return src.module_states[1]
 	else
-		// check both hands
-		var/obj/item/R = src.r_hand
-		if (R && (R.tool_flags & tool_flag))
-			return src.r_hand
-		var/obj/item/L = src.l_hand
-		if (L && (L.tool_flags & tool_flag))
-			return src.l_hand
-	return null
+		return 0
+
+/mob/living/silicon/robot/find_type_in_hand(var/obj/item/I, var/this_hand)
+	if (!I)
+		return 0
+	if (!src.module_states[3] && !src.module_states[2] && !src.module_states[1])
+		return 0
+
+	if (this_hand)
+		if (this_hand == "right" || this_hand == 3)
+			if (src.module_states[3] && istype(I, src.module_states[3]))
+				return 1
+			else
+				return 0
+		else if (this_hand == "middle" || this_hand == 2)
+			if (src.module_states[2] && istype(I, src.module_states[2]))
+				return 1
+			else
+				return 0
+		else if (this_hand == "left" || this_hand == 1)
+			if (src.module_states[1] && istype(I, src.module_states[1]))
+				return 1
+			else
+				return 0
+		else
+			return 0
+
+	if (src.module_states[3] && istype(I, src.module_states[3]))
+		return src.module_states[3]
+	else if (src.module_states[2] && istype(I, src.module_states[2]))
+		return src.module_states[2]
+	else if (src.module_states[1] && istype(I, src.module_states[1]))
+		return src.module_states[1]
+	else
+		return 0
 
 /mob/proc/put_in_hand_or_drop(var/obj/item/I)
 	if (!I)
@@ -86,14 +128,68 @@
 		return 1
 	return 1
 
-/mob/proc/put_in_hand_or_eject(var/obj/item/I)
-	if (!I)
-		return 0
-	if (!src.put_in_hand(I))
-		I.set_loc(get_turf(I))
-		return 1
-	return 1
+// some procs moved out of ISN's stuff, just for some semblance of things not being scattered randomly through our WIP files
 
+/mob/proc/irradiate(var/rad_strength,var/bypass_resistance = 0, var/cap = 0)
+	if (!isnum(rad_strength))
+		return 0
+
+	var/final_rads = rad_strength
+
+	if (istype(src, /mob/living/carbon/human/))
+		var/mob/living/carbon/human/H = src
+
+		if (rad_strength >= 0 && H.bioHolder && H.bioHolder.HasEffect("rad_resist"))
+			return 0
+
+		//If the rad source has a cap we don't want to increase the current radiation amount beyond that
+		if(cap > 0)
+			if(H.radiation + rad_strength > cap) //Okay, this will overshoot the cap
+				final_rads = max(0, cap - H.radiation) //Reduce the amount of radiation we inflict to not overshoot
+
+
+		var/total_resistance = 0
+
+
+		//boutput(world, "irradiation event on [H]")
+		if (final_rads > 0 && !bypass_resistance)
+			// if we're taking damage then calculate resistances, otherwise just pass it through and heal the rads
+			if (H.wear_suit && H.wear_suit.radproof)
+				total_resistance += 2
+			else if (H.w_uniform && H.w_uniform.radproof)
+				total_resistance += 1
+			if (H.head && H.head.radproof)
+				total_resistance += 1
+			else if (H.wear_mask && H.wear_mask.radproof)
+				total_resistance += 1
+			if (H.shoes && H.shoes.radproof)
+				total_resistance += 0.5
+			if (H.gloves && H.gloves.radproof)
+				total_resistance += 0.5
+			if (H.bioHolder && H.bioHolder.HasEffect("radioactive"))
+				total_resistance += 1
+
+			//boutput(world, "calculated resistance is [total_resistance]")
+			switch (total_resistance)
+				if (-INFINITY to 0)
+				if (1)
+					final_rads *= 0.75
+				if (2)
+					final_rads *= 0.5
+				if (3 to INFINITY)
+					return 0
+			final_rads = round(final_rads,1)
+
+		//boutput(world, "adding [final_rads] to radiation")
+		H.radiation += final_rads
+		H.radiation = max(0,min(200,H.radiation))
+		// this value clamps at 200 according to human.dm so lets take care of it here rather than in the loop,
+		// less constant work going on that way
+		return final_rads
+
+	else
+		// could add something in for borgs later on
+		return 0
 
 /mob/proc/can_slip(var/walking_matters = 1)
 	return 1
@@ -118,7 +214,7 @@
 		qdel(src.organHolder.brain)
 	src.set_clothing_icon_dirty()
 
-/mob/proc/show_text(var/message, var/color = "#000000", var/hearing_check = 0, var/sight_check = 0, var/allow_corruption = 0, var/group = 0)
+/mob/proc/show_text(var/message, var/color = "#000000", var/hearing_check = 0, var/sight_check = 0, var/allow_corruption = 0)
 	if (!src.client || !istext(message) || !message)
 		// if they're not logged in, save some cycles by not bothering
 		return
@@ -133,13 +229,13 @@
 		if ("blue") color = "#0000FF"
 		if ("green") color = "#008800" // we dont want FF for this because it's fucking unreadable against white
 
-	boutput(src, "<span style='color: [color]'>[message]</span>", group)
+	boutput(src, "<span style='color: [color]'>[message]</span>")
 
 /mob/proc/sight_check(var/consciousness_check = 0)
 	return 1
 
 /mob/living/carbon/human/sight_check(var/consciousness_check = 0)
-	if (consciousness_check && (src.hasStatus("paralysis") || src.sleeping || src.stat || src.hibernating))
+	if (consciousness_check && (src.paralysis || src.sleeping || src.stat))
 		return 0
 
 	if (istype(src.glasses, /obj/item/clothing/glasses/))
@@ -155,7 +251,7 @@
 	return 1
 
 /mob/living/critter/sight_check(var/consciousness_check = 0)
-	if (consciousness_check && (src.getStatusDuration("paralysis") || src.sleeping || src.stat))
+	if (consciousness_check && (src.paralysis || src.sleeping || src.stat))
 		return 0
 	return 1
 
@@ -165,7 +261,7 @@
 /mob/living/carbon/human/eyes_protected_from_light()
 	if (!src.sight_check(1)) // Blindness etc (Convair880).
 		return 1
-	if (src.glasses && (istype(src.glasses, /obj/item/clothing/glasses/sunglasses) && !istype(src.glasses, /obj/item/clothing/glasses/sunglasses/tanning)))
+	if (src.glasses && istype(src.glasses, /obj/item/clothing/glasses/sunglasses))
 		return 1
 	if (src.eye_istype(/obj/item/organ/eye/cyber/thermal))
 		return 0
@@ -179,7 +275,7 @@
 	return
 
 // We've had like 10+ code snippets for a variation of the same thing, now it's just one mob proc (Convair880).
-/mob/living/apply_flash(var/animation_duration = 30, var/weak = 8, var/stun = 0, var/misstep = 0, var/eyes_blurry = 0, var/eyes_damage = 0, var/eye_tempblind = 0, var/burn = 0, var/uncloak_prob = 50, var/stamina_damage = 130,var/disorient_time = 60)
+/mob/living/apply_flash(var/animation_duration = 30, var/weak = 8, var/stun = 0, var/misstep = 0, var/eyes_blurry = 0, var/eyes_damage = 0, var/eye_tempblind = 0, var/burn = 0, var/uncloak_prob = 50)
 	if (!src || !isliving(src) || isintangible(src) || istype(src, /mob/living/object))
 		return
 	if (animation_duration <= 0)
@@ -203,7 +299,7 @@
 	if (safety == 0 && ishuman(src))
 		var/mob/living/carbon/human/H = src
 		var/hulk = 0
-		if (H.is_hulk())
+		if (H.bioHolder && H.bioHolder.HasEffect("hulk"))
 			mod_weak = -INFINITY
 			mod_stun = -INFINITY
 			hulk = 1
@@ -214,14 +310,6 @@
 				mod_weak = rand(1, 2)
 			mod_eyeblurry = rand(4, 6)
 			mod_eyedamage = rand(2, 3)
-		else if (istype(H.glasses, /obj/item/clothing/glasses/nightvision) || H.eye_istype(/obj/item/organ/eye/cyber/nightvision))
-			H.show_text("<b>Your night vision goggles intensify the bright flash of light.</b>", "red")
-			H.show_text("<b style=\"font-size: 200%\">IT BURNS</b>", "red")
-			mod_animation = 30
-			if (hulk == 0)
-				mod_weak = rand(3, 4)
-			mod_eyeblurry = rand(6, 8)
-			mod_eyedamage = rand(3, 5)
 
 	// No negative values.
 	animation_duration = max(0, animation_duration + mod_animation)
@@ -237,17 +325,16 @@
 	if (animation_duration <= 0)
 		return
 
-	//DEBUG_MESSAGE("Apply_flash() called for [src] at [log_loc(src)]. Safe: [safety == 1 ? "Y" : "N"], AD: [animation_duration], W: [weak], S: [stun], MS: [misstep], EB [eyes_blurry], ED: [eyes_damage], EB: [eye_tempblind], B: [burn], UP: [uncloak_prob]")
+	//DEBUG("Apply_flash() called for [src] at [log_loc(src)]. Safe: [safety == 1 ? "Y" : "N"], AD: [animation_duration], W: [weak], S: [stun], MS: [misstep], EB [eyes_blurry], ED: [eyes_damage], EB: [eye_tempblind], B: [burn], UP: [uncloak_prob]")
 
 	// Stun target mob.
 	if (safety == 0)
 		src.flash(animation_duration)
-#ifdef USE_STAMINA_DISORIENT
-		src.do_disorient(stamina_damage, weakened = weak*20, stunned = stun*20, disorient = disorient_time, remove_stamina_below_zero = 0)
-#else
-		changeStatus("weakened", weak*20)
-		changeStatus("stunned", stun*20)
-#endif
+
+		if (src.weakened < weak)
+			src.weakened = weak
+		if (src.stunned < stun)
+			src.stunned = stun
 
 		if (!issilicon(src))
 			if (eyes_damage > 0)
@@ -286,25 +373,30 @@
 	return 1
 
 /mob/living/carbon/human/hearing_check(var/consciousness_check = 0)
-	if (consciousness_check && (src.stat || src.getStatusDuration("paralysis") || src.sleeping))
+	if (consciousness_check && (src.paralysis || src.sleeping || src.stat))
 		// you may be physically capable of hearing it, but you're sure as hell not mentally able when you're out cold
-		.= 0
-	else
-		.= 1
-		if (src.ears)
-			if (src.ears.block_hearing_when_worn >= HEARING_BLOCKED)
-				return 0
-			else if (src.ears.block_hearing_when_worn <= HEARING_ANTIDEAF)
-				return 1
-
-		if (src.ear_disability || src.get_ear_damage(1))
-			.= 0
-
-/mob/living/silicon/hearing_check(var/consciousness_check = 0)
-	if (consciousness_check && (src.getStatusDuration("paralysis") || src.sleeping || src.stat))
 		return 0
 
-	if (src.ear_disability)
+	if (istype(src.ears, /obj/item/device/radio/headset/))
+		var/obj/item/device/radio/headset/HS = src.ears
+		if (HS.allow_deaf_hearing)
+			return 1
+
+	else if (istype(src.ears, /obj/item/clothing/ears/))
+		var/obj/item/clothing/ears/E = src.ears
+		if (E.block_hearing)
+			return 0
+
+	if ((src.bioHolder && src.bioHolder.HasEffect("deaf")) || src.get_ear_damage(1))
+		return 0
+
+	return 1
+
+/mob/living/silicon/hearing_check(var/consciousness_check = 0)
+	if (consciousness_check && (src.paralysis || src.sleeping || src.stat))
+		return 0
+
+	if ((src.bioHolder && src.bioHolder.HasEffect("deaf")))
 		return 0
 
 	return 1
@@ -323,7 +415,7 @@
 
 // Similar concept to apply_flash(). One proc in place of a bunch of individually implemented code snippets (Convair880).
 #define DO_NOTHING (!weak && !stun && !misstep && !slow && !drop_item && !ears_damage && !ear_tempdeaf)
-/mob/living/apply_sonic_stun(var/weak = 0, var/stun = 8, var/misstep = 0, var/slow = 0, var/drop_item = 0, var/ears_damage = 0, var/ear_tempdeaf = 0, var/stamina_damage = 130)
+/mob/living/apply_sonic_stun(var/weak = 0, var/stun = 8, var/misstep = 0, var/slow = 0, var/drop_item = 0, var/ears_damage = 0, var/ear_tempdeaf = 0)
 	if (!src || !isliving(src) || isintangible(src) || istype(src, /mob/living/object))
 		return
 	if (DO_NOTHING)
@@ -343,7 +435,7 @@
 
 	if (ishuman(src))
 		var/mob/living/carbon/human/H = src
-		if (H.is_hulk())
+		if (H.bioHolder && H.bioHolder.HasEffect("hulk"))
 			mod_weak = -INFINITY
 			mod_stun = -INFINITY
 
@@ -359,28 +451,23 @@
 	if (DO_NOTHING)
 		return
 
-	//DEBUG_MESSAGE("Apply_sonic_stun() called for [src] at [log_loc(src)]. W: [weak], S: [stun], MS: [misstep], SL: [slow], DI: [drop_item], ED: [ears_damage], EF: [ear_tempdeaf]")
+	//DEBUG("Apply_sonic_stun() called for [src] at [log_loc(src)]. W: [weak], S: [stun], MS: [misstep], SL: [slow], DI: [drop_item], ED: [ears_damage], EF: [ear_tempdeaf]")
 
 	// Stun target mob.
 	boutput(src, "<span style=\"color:red\"><b>You hear an extremely loud noise!</b></span>")
 
-
-#ifdef USE_STAMINA_DISORIENT
-	src.do_disorient(stamina_damage, weakened = weak*20, stunned = stun*20, disorient = 60, remove_stamina_below_zero = 0)
-#else
-
-	changeStatus("weakened", stun*10)
-
-	changeStatus("stunned", stun*10)
-#endif
-
+	if (src.weakened < weak)
+		src.weakened = weak
+	if (src.stunned < stun)
+		src.stunned = stun
 
 	if (!issilicon(src))
 		if (ears_damage > 0)
 			src.take_ear_damage(ears_damage)
 		if (src.misstep_chance < misstep)
 			src.change_misstep_chance(misstep)
-			src.getStatusDuration(slow*10)
+		if (src.slowed < slow)
+			src.slowed = slow
 		if (ear_tempdeaf > 0)
 			src.take_ear_damage(ear_tempdeaf, 1)
 
@@ -410,52 +497,48 @@
 	return 1
 
 /proc/his_or_her(var/mob/subject)
-	if (!subject || subject.bioHolder && subject.bioHolder.mobAppearance && subject.bioHolder.mobAppearance.pronouns)
+	if (!subject)
 		return "their"
 
-	switch (subject.gender)
-		if ("male")
-			return "his"
-		if ("female")
-			return "her"
-		else
-			return "their"
+	if (subject.gender == "male")
+		return "his"
+	else if (subject.gender == "female")
+		return "her"
+	else
+		return "their"
 
 /proc/him_or_her(var/mob/subject)
-	if (!subject || subject.bioHolder && subject.bioHolder.mobAppearance && subject.bioHolder.mobAppearance.pronouns)
-		return "them"
+	if (!subject)
+		return "their"
 
-	switch (subject.gender)
-		if ("male")
-			return "him"
-		if ("female")
-			return "her"
-		else
-			return "them"
+	if (subject.gender == "male")
+		return "him"
+	else if (subject.gender == "female")
+		return "her"
+	else
+		return "their"
 
 /proc/he_or_she(var/mob/subject)
-	if (!subject || subject.bioHolder && subject.bioHolder.mobAppearance && subject.bioHolder.mobAppearance.pronouns)
+	if (!subject)
 		return "they"
 
-	switch (subject.gender)
-		if ("male")
-			return "he"
-		if ("female")
-			return "she"
-		else
-			return "they"
+	if (subject.gender == "male")
+		return "he"
+	else if (subject.gender == "female")
+		return "she"
+	else
+		return "they"
 
 /proc/himself_or_herself(var/mob/subject)
-	if (!subject || subject.bioHolder && subject.bioHolder.mobAppearance && subject.bioHolder.mobAppearance.pronouns)
-		return "themselves"
+	if (!subject)
+		return "themself"
 
-	switch(subject.gender)
-		if ("male")
-			return "himself"
-		if ("female")
-			return "herself"
-		else
-			return "themselves"
+	if (subject.gender == "male")
+		return "himself"
+	else if (subject.gender == "female")
+		return "herself"
+	else
+		return "themself"
 
 /mob/proc/get_explosion_resistance()
 	return 0
@@ -520,12 +603,6 @@
 /mob/proc/equipped_limb()
 	return null
 
-/mob/living/critter/equipped_limb()
-	var/datum/handHolder/HH = get_active_hand()
-	if (HH)
-		return HH.limb
-	return null
-
 /mob/living/carbon/human/equipped_limb()
 	if (!hand && limbs && limbs.r_arm)
 		return limbs.r_arm.limb_data
@@ -547,7 +624,6 @@
 			return 0
 
 	if(STAMINA_NO_ATTACK_CAP && src.stamina > STAMINA_MIN_ATTACK)
-		cost = min(cost,src.stamina - STAMINA_MIN_ATTACK)
 		src.remove_stamina(cost)
 	else if (!STAMINA_NO_ATTACK_CAP)
 		src.remove_stamina(cost)
@@ -559,7 +635,7 @@
 	if (!old || !newbody || !ishuman(old) || !ishuman(newbody))
 		return
 
-	SPAWN_DBG (20) // OrganHolders etc need time to initialize. Transferring inventory doesn't.
+	spawn (20) // OrganHolders etc need time to initialize. Transferring inventory doesn't.
 		if (copy_organs && old && newbody && old.organHolder && newbody.organHolder)
 			if (old.organHolder.skull && (old.organHolder.skull.type != newbody.organHolder.skull.type))
 				var/obj/item/organ/NO = new old.organHolder.skull.type(newbody)
@@ -717,7 +793,7 @@
 			old.u_equip(CI15)
 			newbody.equip_if_possible(CI15, slot_r_hand)
 
-	SPAWN_DBG (20) // Necessary.
+	spawn (20) // Necessary.
 		if (newbody)
 			newbody.set_face_icon_dirty()
 			newbody.set_body_icon_dirty()
@@ -729,7 +805,7 @@
 /mob/proc/antagonist_overlay_refresh(var/bypass_cooldown = 0, var/remove = 0)
 	if (!bypass_cooldown && (src.last_overlay_refresh && world.time < src.last_overlay_refresh + 1200))
 		return
-	if (!(ticker && ticker.mode && current_state >= GAME_STATE_PLAYING))
+	if (!(ticker && ticker.mode && ticker.current_state >= GAME_STATE_PLAYING))
 		return
 	if (!ismob(src) || !src.client || !src.mind)
 		return
@@ -743,11 +819,9 @@
 	var/see_nukeops = 0
 	var/see_wizards = 0
 	var/see_revs = 0
-	var/see_heads = 0
 	var/see_xmas = 0
 	var/see_special = 0 // Just a pass-through. Game mode-specific stuff is handled further down in the proc.
 	var/see_everything = 0
-	var/datum/gang/gang_to_see = null
 
 	if (isadminghost(src))
 		see_everything = 1
@@ -758,8 +832,6 @@
 			var/list/datum/mind/RR = R.revolutionaries
 			if (src.mind in (HR + RR))
 				see_revs = 1
-			if (src.mind in HR)
-				see_heads = 1
 		if (istype(ticker.mode, /datum/game_mode/spy))
 			var/datum/game_mode/spy/S = ticker.mode
 			var/list/L = S.leaders
@@ -767,17 +839,19 @@
 			if (src.mind in (L + M))
 				see_special = 1
 		if (istype(ticker.mode, /datum/game_mode/gang))
-			if(src.mind.gang != null)
-				gang_to_see = src.mind.gang
+			var/datum/game_mode/gang/G = ticker.mode
+			var/list/L2 = G.leaders
+			if (src.mind in L2)
+				see_special = 1
 		if (issilicon(src)) // We need to look for borged antagonists too.
 			var/mob/living/silicon/S = src
 			if (src.mind.special_role == "syndicate robot" || (S.syndicate && !S.dependent)) // No AI shells.
 				see_traitors = 1
 				see_nukeops = 1
 				see_revs = 1
-		if (isnukeop(src))
+		if (src.mind && src.mind.special_role == "nukeop")
 			see_nukeops = 1
-		if (iswizard(src))
+		if (src.mind && src.mind.special_role == "wizard")
 			see_wizards = 1
 		if (src.mind && src.mind.special_role == "grinch")
 			see_xmas = 1
@@ -787,15 +861,13 @@
 	for (var/image/I in src.client.images)
 		if (!I) continue
 		if (I.icon == 'icons/mob/antag_overlays.dmi')
-			//DEBUG_MESSAGE("Deleted overlay ([I.icon_state]) from [src].")
+			//DEBUG("Deleted overlay ([I.icon_state]) from [src].")
 			qdel(I)
-			src.client.images -= I
-			src.client.screen -= I
 
 	if (remove)
 		return
 
-	if (!see_traitors && !see_nukeops && !see_wizards && !see_revs && !see_heads && !see_xmas && !see_special && !see_everything && gang_to_see == null)
+	if (!see_traitors && !see_nukeops && !see_wizards && !see_revs && !see_xmas && !see_special && !see_everything)
 		src.last_overlay_refresh = world.time
 		return
 
@@ -812,7 +884,7 @@
 			var/mob/living/silicon/S = M.current
 			if (M.special_role == "syndicate robot" || (S.syndicate && !S.dependent)) // No AI shells.
 				if (see_everything || see_traitors)
-					if (!see_everything && isdead(S)) continue
+					if (!see_everything && S.stat == 2) continue
 					var/I = image(antag_syndieborg, loc = M.current)
 					can_see.Add(I)
 					robot_override = 1
@@ -846,10 +918,10 @@
 						if (M.current)
 							var/I = image(antag_vampire, loc = M.current)
 							can_see.Add(I)
-				if ("hunter")
+				if ("predator")
 					if (see_everything)
 						if (M.current)
-							var/I = image(antag_hunter, loc = M.current)
+							var/I = image(antag_predator, loc = M.current)
 							can_see.Add(I)
 				if ("werewolf")
 					if (see_everything)
@@ -892,12 +964,6 @@
 							if (!see_everything && isobserver(M.current)) continue
 							var/I = image(antag_grinch, loc = M.current)
 							can_see.Add(I)
-				if ("spy_thief")
-					if (see_everything)
-						if (M.current)
-							if (!see_everything && isobserver(M.current)) continue
-							var/I = image(antag_spy_theft, loc = M.current)
-							can_see.Add(I)
 				else
 					if (see_everything)
 						if (M.current)
@@ -923,7 +989,7 @@
 					var/I = image(antag_rev, loc = M.current)
 					can_see.Add(I)
 
-		if (see_heads || see_everything)
+		if (see_everything)
 			for (var/datum/mind/M in heads)
 				if (M.current)
 					var/I = image(antag_head, loc = M.current)
@@ -959,33 +1025,30 @@
 				can_see.Add(I)
 
 	else if (istype(ticker.mode, /datum/game_mode/gang))
-		var/datum/game_mode/gang/mode = ticker.mode
-
-		for (var/datum/gang/G in mode.gangs)
-			if (G != gang_to_see && !see_everything) continue
-
-			if(G.leader && G.leader.current)
-				if (!see_everything && isobserver(G.leader.current)) continue
-				var/I = image(antag_gang_leader, loc = G.leader.current)
-				can_see.Add(I)
-
-			for(var/datum/mind/M in G.members)
-				if(M.current)
+		var/datum/game_mode/gang/G = ticker.mode
+		if (see_everything)
+			for (var/datum/mind/M in G.leaders)
+				if (M.current)
+					var/I = image(antag_gang, loc = M.current)
+					can_see.Add(I)
+		for (var/datum/mind/M in G.leaders)
+			if (M.current)
+				if (src in M.gang.members)
 					if (!see_everything && isobserver(M.current)) continue
-					var/II = image(antag_gang, loc = M.current)
-					can_see.Add(II)
+					var/I = image(antag_gang, loc = M.current)
+					can_see.Add(I)
 
 	if (can_see.len > 0)
 		//logTheThing("debug", src, null, "<b>Convair880 antag overlay:</b> [can_see.len] added with parameters all ([see_everything]), T ([see_traitors]), S ([see_nukeops]), W ([see_wizards]), R ([see_revs]), SP ([see_special])")
-		//DEBUG_MESSAGE("Overlay parameters for [src]: all ([see_everything]), T ([see_traitors]), S ([see_nukeops]), W ([see_wizards]), R ([see_revs]), SP ([see_special])")
-		//DEBUG_MESSAGE("Added [can_see.len] overlays to [src].")
+		//DEBUG("Overlay parameters for [src]: all ([see_everything]), T ([see_traitors]), S ([see_nukeops]), W ([see_wizards]), R ([see_revs]), SP ([see_special])")
+		//DEBUG("Added [can_see.len] overlays to [src].")
 		src.client.images.Add(can_see)
 
 	src.last_overlay_refresh = world.time
 	return
 
 // Avoids some C&P since multiple procs make use of this ability (Convair880).
-/mob/proc/smash_through(var/obj/target, var/list/can_smash, var/show_message = 1)
+/mob/proc/smash_through(var/obj/target, var/list/can_smash)
 	if (!src || !ismob(src) || !target || !isobj(target))
 		return 0
 
@@ -995,8 +1058,7 @@
 	for (var/S in can_smash)
 		if (S == "window" && istype(target, /obj/window))
 			var/obj/window/W = target
-			if (show_message)
-				src.visible_message("<span style=\"color:red\">[src] smashes through the window.</span>", "<span style=\"color:blue\">You smash through the window.</span>")
+			src.visible_message("<span style=\"color:red\">[src] smashes through the window.</span>", "<span style=\"color:blue\">You smash through the window.</span>")
 			W.health = 0
 			W.smash()
 			return 1
@@ -1004,21 +1066,14 @@
 		if (S == "grille" && istype(target, /obj/grille))
 			var/obj/grille/G = target
 			if (!G.shock(src, 70))
-				if (show_message)
-					G.visible_message("<span style=\"color:red\"><b>[src]</b> violently slashes [G]!</span>")
-				playsound(G.loc, "sound/impact_sounds/Metal_Hit_Light_1.ogg", 80, 1)
+				G.visible_message("<span style=\"color:red\"><b>[src]</b> violently slashes [G]!</span>")
+				playsound(G.loc, "sound/effects/grillehit.ogg", 80, 1)
 				G.damage_slashing(15)
 				return 1
 
 		if (S == "door" && istype(target, /obj/machinery/door))
 			var/obj/machinery/door/door = target
 			door.tear_apart(src)
-			return 1
-
-		if (S == "table" && istype(target, /obj/table))
-			var/obj/table/table = target
-			playsound(table.loc, "sound/impact_sounds/Generic_Hit_Heavy_1.ogg", 40, 1)
-			table.deconstruct()
 			return 1
 
 	return 0
@@ -1044,42 +1099,31 @@
 		else if (thickness == 0)
 			rendered_outside = "<span class='game say'>[my_name] (on [bicon(OL)] [OL]) <span class='message'>[message_a]</span></span>"
 		else if (thickness < 10)
-			rendered_outside = "<span class='game say'>[my_name] (inside [bicon(OL)] [OL]) <span class='message'>[message_a]</span></span>"
+			rendered_outside = "<span class='game say'>[my_name] (inside [bicon(OL)] [OL])  <span class='message'>[message_a]</span></span>"
 		else if (thickness < 20)
-			rendered_outside = "<span class='game say'>muffled <span class='name' data-ctx='\ref[src.mind]'>[src.voice_name]</span> (inside [bicon(OL)] [OL]) <span class='message'>[message_a]</span></span>"
+			rendered_outside = "<span class='game say'>muffled <span class='name' data-ctx='\ref[src.mind]'>[src.voice_name]</span> (inside [bicon(OL)] [OL])  <span class='message'>[message_a]</span></span>"
 
 	for (var/mob/M in heard)
 		if (M in processed)
 			continue
 		processed += M
 		var/thisR = rendered
-
 		if (olocs.len && !(M.loc in olocs))
 			if (rendered_outside)
 				thisR = rendered_outside
 			else
 				continue
-		else
-			if (isghostdrone(M) && !isghostdrone(src) && !istype(M, /mob/living/silicon/ghostdrone/deluxe))
-				thisR = "<span class='game say'><span class='name' data-ctx='\ref[src.mind]'>[src.voice_name]</span> <span class='message'>[message_a]</span></span>"
-
-		if (M.client && (istype(M, /mob/dead/observer)||M.client.holder) && src.mind)
-			thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.getContextFlags()]'>[thisR]</span>"
-		M.heard_say(src, message)
+		if (M.client && M.client.holder && src.mind)
+			thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[thisR]</span>"
+		M.heard_say(src)
 		M.show_message(thisR, 2)
 
 	return processed
 
+/mob/proc/abuse_clown()
+	return
 
-/mob/proc/clothing_protects_from_chems()
-	.=0
-
-/mob/living/carbon/human/clothing_protects_from_chems()
-	.= 0
-	if (\
-		(src.wear_suit 	&& src.wear_suit.permeability_coefficient 	<= 0.01) && \
-		(src.head 		&& src.head.permeability_coefficient 		<= 0.01) && \
-		(src.wear_mask 	&& src.wear_mask.permeability_coefficient 	<= 0.01) && \
-		(src.shoes 		&& src.shoes.permeability_coefficient 		<= 0.10) && \
-		(src.gloves 	&& src.gloves.permeability_coefficient 		<= 0.02 ))
-		.=1
+/mob/living/carbon/human/abuse_clown()
+	if (mind)
+		if (mind.assigned_role == "Clown")
+			score_clownabuse++

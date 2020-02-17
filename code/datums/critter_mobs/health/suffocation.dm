@@ -47,7 +47,6 @@
 			var/obj/location_as_object = loc
 			location_as_object.handle_internal_lifeform(src, breath ? 0 : volume)
 		var/breathing = 0
-		if (isnull(breath)) return //ZeWaka: fix for null.total_moles
 		var/breath_pressure = (breath.total_moles() * R_IDEAL_GAS_EQUATION * breath.temperature) / volume
 		if (breath && breath.total_moles() > 0)
 			var/o2_pp = (breath.oxygen / breath.total_moles()) * breath_pressure
@@ -65,7 +64,7 @@
 				TakeDamage(3 + o2_damage)
 				o2_damage++
 				if (prob(20))
-					holder.emote("cough")
+					spawn(0) holder.emote("cough")
 
 			if (((co2_min > 0 && co2_min <= co2_pp) || co2_min <= 0) && ((co2_max > 0 && co2_max >= co2_pp) || co2_max <= 0))
 				if (prime_breathing == "c")
@@ -79,7 +78,7 @@
 				TakeDamage(3 + co2_damage)
 				co2_damage++
 				if (prob(20))
-					holder.emote("cough")
+					spawn(0) holder.emote("cough")
 
 			if (((toxins_min > 0 && toxins_min <= toxins_pp) || toxins_min <= 0) && ((toxins_max > 0 && toxins_max >= toxins_pp) || toxins_max <= 0))
 				if (prime_breathing == "t")
@@ -100,14 +99,14 @@
 				for (var/datum/gas/sleeping_agent/SA in breath.trace_gases)
 					var/SA_pp = (SA.moles/breath.total_moles())*breath_pressure
 					if (SA_pp > sa_para_min) // Enough to make us paralysed for a bit
-						holder.changeStatus("paralysis", 30)
+						holder.paralysis = max(holder.paralysis, 3) // 3 gives them one second to wake up and run away a bit!
 						if (SA_pp > sa_sleep_min) // Enough to make us sleep as well
 							holder.sleeping = max(holder.sleeping, 2)
 					else if (SA_pp > 0.01)	// There is sleeping gas in their lungs, but only a little, so give them a bit of a warning
 						if (prob(20))
-							holder.emote(pick("giggle", "laugh"))
+							spawn(0) holder.emote(pick("giggle", "laugh"))
 				for (var/datum/gas/rad_particles/RV in breath.trace_gases)
-					holder.changeStatus("radiation", RV.moles,  2)
+					holder.irradiate(RV.moles/10,1)
 
 			if (breath.temperature > heat_tolerance && !holder.is_heat_resistant())
 				if (prob(20))
@@ -138,7 +137,7 @@
 				if (istype(C))
 					C.hud.set_suffocating(0)
 		if (losebreath && prob(75))
-			holder.emote("gasp")
+			spawn(0) holder.emote("gasp")
 
 		if (breath)
 			loc.assume_air(breath)

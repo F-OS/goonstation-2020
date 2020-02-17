@@ -1,170 +1,131 @@
-//Access levels moved to _accessLevels.dm
-/*
- * List of access groups; if any access group has its access criteria met, access is granted (i.e. logical or).
- * Each access group must have all of its access requirements met (i.e. logical and).
- * The access groups may be flattened to a single access number (e.g. list(1) being equivalent to list(list(1)), and list(1, 2) being equivalent to list(list(1), list(2)).
- */
+// Note: Don't forget to check and modify /obj/machinery/computer/card (the ID computer) as needed
+//       when you re-enable old credentials or add new ones.
+//       Also check proc/get_access_desc() (ID computer lookup) at the bottom of this file.
+
+/var/const
+	access_fuck_all = 0 //Because completely empty access lists can make things grump
+	access_security = 1
+	access_brig = 2
+	access_armory = 3 // Unused and replaced by maxsec (HoS-exclusive).
+	access_forensics_lockers = 4
+	access_medical = 5
+	access_morgue = 6
+	access_tox = 7
+	access_tox_storage = 8
+	access_medlab = 9
+	access_medical_lockers = 10
+	access_research_director = 11
+	access_maint_tunnels = 12
+	access_external_airlocks = 13 // Unused. Most are all- or maintenance access these days.
+	access_emergency_storage = 14
+	access_change_ids = 15
+	access_ai_upload = 16
+	access_teleporter = 17
+	access_eva = 18
+	access_heads = 19 // Mostly just the bridge.
+	access_captain = 20
+	access_all_personal_lockers = 21 // Unused. Personal lockers are always linked to ID that was swiped first.
+	access_chapel_office = 22
+	access_tech_storage = 23
+	access_research = 24
+	access_bar = 25
+	access_janitor = 26
+	access_crematorium = 27
+	access_kitchen = 28
+	access_robotics = 29
+	access_hangar = 30 // Unused. Theoretically the pod hangars, but not implemented as such in practice.
+	access_cargo = 31 // QM.
+	access_construction = 32 // Unused.
+	access_chemistry = 33
+	access_dwaine_superuser = 34 // So it's not the same as the RD's office and locker.
+	access_hydro = 35
+	access_mail = 36 // Unused.
+	access_maxsec = 37 // The HoS' armory.
+	access_securitylockers = 38
+	access_carrypermit = 39 // Are allowed to carry sidearms as far as guardbuddies and secbots are concerned.
+	access_engineering = 40 // General engineering area and substations.
+	access_engineering_storage = 41 // Main metal/tool storage things.
+	access_engineering_eva = 42 // Engineering space suits. Currently unused.
+	access_engineering_power = 43 // APCs and related supplies.
+	access_engineering_engine = 44 // Engine room.
+	access_engineering_mechanic = 45 // Electronics lab.
+	access_engineering_atmos = 46 // Engineering's supply of gas canisters.
+	access_engineering_control = 48 // Engine control room.
+	access_engineering_chief = 49 // CE's office.
+
+	access_mining_shuttle = 47
+	access_mining = 50
+	access_mining_outpost = 51
+
+	access_syndicate_shuttle = 52 // Also to the listening post.
+	access_medical_director = 53
+	access_head_of_personnel = 55
+
+	access_special_club = 54 //Shouldnt be used for general gameplay. Used for adminevents.
+
 /obj/var/list/req_access = null
-/*
- * Text version of req_access, converted on instantiation (useful for applying vars to specific instances in a map)
- * Syntax is "x|y;z", where "|" delimit access groups, and ";" delimit access within each group.
- * To set to no access requirements, set this to an empty string.
- * To not affect requirements, this should be null.
- */
-/obj/var/req_access_txt = null
+/obj/var/req_access_txt = "0"
+/obj/var/req_only_one_required = 0
 /obj/New()
+
+	if(src.req_access_txt && src.req_access_txt != "0")
+		var/req_access_str = params2list(req_access_txt)
+		req_access = list()
+		for(var/x in req_access_str)
+			var/n = text2num(x)
+			if(n)
+				req_access += n
 	..()
-	src.update_access_from_txt()
 
-/*
- * Overrides the object's req_access var based on what's in req_access_txt (if set).
- */
-/obj/proc/update_access_from_txt()
-	// null req_access_txt means no change
-	if (!isnull(src.req_access_txt))
-		// empty string (or "0") req_access_txt means set to no access required
-		if (src.req_access_txt && src.req_access_txt != "0")
-			// reset src.req_access to build it up
-			src.req_access = list()
-			var/list/access_group_txts = splittext(src.req_access_txt, "|")
-			// loop through the access groups, adding them to src.req_access as they are resolved
-			for (var/access_group_txt in access_group_txts)
-				// sanity check for an empty access group (e.g. src.req_access_txt is "1|"), giving an empty string as the last access group
-				if (access_group_txt)
-					var/list/access_group = list()
-					var/list/access_group_strings = splittext(access_group_txt, ";")
-					// loop through the access group, adding them to the list for this group
-					for (var/access_string in access_group_strings)
-						// sanity check for an empty access string (e.g. src.req_access_txt is "1;", giving an empty string as the last access string
-						if (access_string)
-							// parse the access string
-							var/access_code = text2num(access_string)
-							if (!isnull(access_code))
-								// numerical code
-								access_group += access_code
-							else
-								// string code
-								// TODO: some sensible lookup, possibly using access_name_lookup (but they're VERY wordy)
-					// add to the src.req_access list (assuming non-empty)
-					if (access_group.len > 1)
-						// add the whole access group
-						// odd syntax is because += with a list on the right appends the items of the list, not the list itself, so we wrap in a list so it only unpacks once
-						src.req_access += list(access_group)
-					else if (access_group.len == 1)
-						// add the single element
-						src.req_access += access_group[1]
-		else
-			src.req_access = null
-
-/**
- * @param {mob} M Mob of which to check the credentials
- * @return {bool} Whether mob has sufficient access
- */
-/obj/proc/allowed(mob/M)
-	// easy out for if no access is required
+//returns 1 if this mob has sufficient access to use this object
+/obj/proc/allowed(mob/M, acceptIfAny=0)
+	//check if it doesn't require any access at all
 	if (src.check_access(null))
 		return 1
 	if (M && ismob(M))
-		// check in-hand first
-		if (src.check_access(M.equipped()))
+		if (src.check_access(M.equipped(), acceptIfAny))
 			return 1
-		// check if they are wearing a card that has access
 		if (ishuman(M))
 			var/mob/living/carbon/human/H = M
-			if (src.check_access(H.wear_id))
+			//if they are holding or wearing a card that has access, that works
+			if (src.check_access(H.wear_id, acceptIfAny))
 				return 1
-		// check if they are a silicon with access
-		else if (issilicon(M) || isAIeye(M))
-			var/mob/living/silicon/S
-			if (isAIeye(M))
-				var/mob/dead/aieye/E = M
-				S = E.mainframe
-			else
-				S = M
-			// check if their silicon-card has access
-			if (src.check_access(S.botcard))
+		else if (issilicon(M))
+			var/mob/living/silicon/S = M
+			if (src.check_access(S.botcard, acceptIfAny))
 				return 1
-		// check implant (last, so as to avoid using it unnecessarily)
-		if (src.check_implanted_access(M))
-			return 1
 	return 0
 
 
-/obj/proc/has_access_requirements()
-	.= 1
-	// no requirements
-	if (!src.req_access)
-		return 0
-	// something's very wrong
-	if (!istype(src.req_access, /list))
-		return 0
-	// no requirements (also clean up src.req_access)
-	if (src.req_access.len == 0)
-		src.req_access = null
-		return 0
-
-/*
- * @param {/obj/item} I Item of which to check the credentials
- * @return {bool} Whether item has sufficient access
- */
-/obj/proc/check_access(obj/item/I)
-	// no requirements
-	if (!src.req_access)
+/obj/proc/check_access(obj/item/I, acceptAny=0)
+	if(!src.req_access) //no requirements
 		return 1
-	// something's very wrong
-	if (!istype(src.req_access, /list))
-		return 1
-	// no requirements (also clean up src.req_access)
-	if (src.req_access.len == 0)
-		src.req_access = null
+	if(!istype(src.req_access, /list)) //something's very wrong
 		return 1
 
 	if (istype(I, /obj/item/device/pda2))
 		var/obj/item/device/pda2/P = I
 		if (P.ID_card)
 			I = P.ID_card
-	else if (istype(I, /obj/item/magtractor))
-		var/obj/item/magtractor/mag = I
-		if (istype(mag.holding, /obj/item/card/id))
-			I = mag.holding
 	var/obj/item/card/id/ID = I
-	// not ID
 	if (!istype(ID))
 		return 0
-	// no access
-	if (!ID.access)
+	var/list/L = src.req_access
+	if(!L.len) //no requirements
+		return 1
+	if(!ID.access) //not ID or no access
 		return 0
 
-	for (var/req_access_group in src.req_access)
-		var/has_access = 1
-		// access group is a list
-		if (islist(req_access_group))
-			var/list/req_access_group_list = req_access_group
-			for (var/req in req_access_group_list)
-				// if missing access within this access group, move on to the next
-				if (!(req in ID.access))
-					has_access = 0
-					break
-		// access group is a single number
-		else if (!(req_access_group in ID.access))
-			has_access = 0
-		// meets all access requirements for the access group
-		if (has_access)
-			return 1
-	return 0
-
-/**
- * @param {mob} M Mob of which to check the implanted credentials
- * @return {bool} Whether mob has sufficient access via its implant
- */
-/obj/proc/check_implanted_access(mob/M)
-	var/has_access = 0
-	for (var/obj/item/implant/access/I in M)
-		if (I.owner != M)
-			continue
-		if (check_access(I.access))
-			has_access = I.used()
-	return has_access
+	if (acceptAny)
+		for(var/req in src.req_access)
+			if (req in ID.access)
+				return 1
+		return 0
+	else
+		for(var/req in src.req_access)
+			if(!(req in ID.access)) //doesn't have this access
+				return 0
+	return 1
 
 // I moved all the duplicate definitions from jobs.dm to this global lookup proc.
 // Advantages: can be used by other stuff (bots etc), and there's less code to maintain (Convair880).
@@ -181,20 +142,16 @@
 						access_crematorium, access_kitchen, access_robotics, access_cargo,
 						access_research, access_hydro, access_mail, access_ai_upload)
 		if("Head of Security")
-#ifdef RP_MODE
-			var/list/hos_access = get_all_accesses()
-			hos_access += access_maxsec
-			return hos_access
-#else
+			if (map_setting == "DESTINY")
+				var/list/hos_access = get_all_accesses()
+				hos_access += access_maxsec
+				return hos_access
 			return list(access_security, access_carrypermit, access_maxsec, access_brig, access_securitylockers, access_forensics_lockers, access_armory,
-						access_tox, access_tox_storage, access_chemistry, access_medical, access_morgue, access_medlab,
+						access_tox, access_tox_storage, access_chemistry, access_medical, access_medlab,
 						access_emergency_storage, access_change_ids, access_eva, access_heads, access_medical_lockers,
 						access_all_personal_lockers, access_tech_storage, access_maint_tunnels, access_bar, access_janitor,
 						access_crematorium, access_kitchen, access_robotics, access_cargo,
-						access_research, access_dwaine_superuser, access_hydro, access_mail, access_ai_upload,
-						access_engineering, access_teleporter, access_engineering_engine, access_engineering_power,
-						access_mining)
-#endif
+						access_research, access_dwaine_superuser, access_hydro, access_mail, access_ai_upload)
 		if("Research Director")
 			return list(access_research, access_research_director, access_dwaine_superuser,
 						access_tech_storage, access_maint_tunnels, access_heads, access_eva, access_tox,
@@ -216,22 +173,18 @@
 
 		///////////////////////////// Security
 		if("Security Officer")
-#ifdef RP_MODE // trying out giving them more access for RP
-			return list(access_security, access_brig, access_forensics_lockers, access_armory,
-				access_medical, access_medlab, access_morgue, access_securitylockers,
-				access_tox, access_tox_storage, access_chemistry, access_carrypermit,
-				access_emergency_storage, access_chapel_office, access_kitchen, access_medical_lockers,
-				access_bar, access_janitor, access_crematorium, access_robotics, access_cargo, access_construction, access_hydro, access_mail,
-				access_engineering, access_maint_tunnels, access_external_airlocks,
-				access_tech_storage, access_engineering_storage, access_engineering_eva,
-				access_engineering_power, access_engineering_engine, access_mining_shuttle,
-				access_engineering_control, access_engineering_mechanic, access_mining, access_mining_outpost,
-				access_research, access_engineering_atmos, access_hangar)
-#else
-			return list(access_security, access_carrypermit, access_securitylockers, access_brig, access_maint_tunnels,
-			access_medical, access_morgue, access_crematorium, access_research, access_cargo, access_engineering,
-			access_chemistry, access_bar, access_kitchen, access_hydro)
-#endif
+			if (map_setting == "DESTINY") // trying out giving them more access for RP
+				return list(access_security, access_brig, access_forensics_lockers, access_armory,
+					access_medical, access_medlab, access_morgue, access_securitylockers,
+					access_tox, access_tox_storage, access_chemistry, access_carrypermit,
+					access_emergency_storage, access_chapel_office, access_kitchen, access_medical_lockers,
+					access_bar, access_janitor, access_crematorium, access_robotics, access_cargo, access_construction, access_hydro, access_mail,
+					access_engineering, access_maint_tunnels, access_external_airlocks,
+					access_tech_storage, access_engineering_storage, access_engineering_eva,
+					access_engineering_power, access_engineering_engine, access_mining_shuttle,
+					access_engineering_control, access_engineering_mechanic, access_mining, access_mining_outpost,
+					access_research, access_engineering_atmos, access_hangar)
+			return list(access_security, access_carrypermit, access_securitylockers, access_brig, access_maint_tunnels, access_medical, access_morgue, access_crematorium, access_research)
 		if("Vice Officer")
 			return list(access_security, access_carrypermit, access_securitylockers, access_brig, access_maint_tunnels,access_hydro,access_bar,access_kitchen)
 		if("Detective", "Forensic Technician")
@@ -251,8 +204,6 @@
 						access_medical_lockers, access_medical, access_morgue)
 		if("Medical Assistant")
 			return list(access_maint_tunnels, access_tech_storage, access_medical, access_morgue)
-		if("Psychologist")
-			return list(access_medical, access_maint_tunnels)
 
 		///////////////////////////// Science
 		if("Scientist")
@@ -297,23 +248,23 @@
 			return list(access_bar)
 		if("Waiter")
 			return list(access_bar, access_kitchen)
-		if("Clown", "Boxer", "Barber", "Mime")
+		if("Clown", "Boxer", "Barber")
 			return list(access_maint_tunnels)
-		if("Assistant", "Staff Assistant", "Technical Assistant", "Radio Show Host")
+		if("Assistant", "Staff Assistant", "Technical Assistant")
 			return list(access_maint_tunnels, access_tech_storage)
 		if("Mailman")
-			return list(access_maint_tunnels, access_mail, access_heads, access_cargo, access_hangar)
+			return list(access_maint_tunnels, access_mail)
 
 		//////////////////////////// Other or gimmick
+		if("Rescue Worker")
+			return get_all_accesses()
 		if("VIP")
 			return list(access_heads, access_carrypermit) // Their cane is contraband.
-		if("Diplomat")
-			return list(access_heads)
 		if("Space Cowboy")
 			return list(access_maint_tunnels, access_carrypermit)
 		if("Club member")
 			return list(access_special_club)
-		if("Inspector", "Communications Officer")
+		if("Inspector")
 			return list(access_security, access_tox, access_tox_storage, access_chemistry, access_medical, access_medlab,
 						access_emergency_storage, access_eva, access_heads, access_tech_storage, access_maint_tunnels, access_bar, access_janitor,
 						access_kitchen, access_robotics, access_cargo, access_research, access_hydro)
@@ -321,7 +272,7 @@
 		else
 			return list()
 
-/proc/get_all_accesses()  // not adding the special stuff to this
+/proc/get_all_accesses()
 	return list(access_security, access_brig, access_forensics_lockers, access_armory,
 	            access_medical, access_medlab, access_morgue, access_securitylockers,
 	            access_tox, access_tox_storage, access_chemistry, access_carrypermit,
@@ -334,20 +285,6 @@
 	            access_engineering_power, access_engineering_engine, access_mining_shuttle,
 	            access_engineering_control, access_engineering_mechanic, access_engineering_chief, access_mining, access_mining_outpost,
 	            access_research, access_research_director, access_dwaine_superuser, access_engineering_atmos, access_hangar, access_medical_director, access_special_club)
-
-/proc/syndicate_spec_ops_access() //syndie spec ops need to get out of the listening post.
-	return list(access_security, access_brig, access_forensics_lockers, access_armory,
-	            access_medical, access_medlab, access_morgue, access_securitylockers,
-	            access_tox, access_tox_storage, access_chemistry, access_carrypermit,
-	            access_emergency_storage, access_change_ids, access_ai_upload,
-	            access_teleporter, access_eva, access_heads, access_captain, access_all_personal_lockers, access_head_of_personnel,
-	            access_chapel_office, access_kitchen, access_medical_lockers,
-	            access_bar, access_janitor, access_crematorium, access_robotics, access_cargo, access_construction, access_hydro, access_mail,
-	            access_engineering, access_maint_tunnels, access_external_airlocks,
-	            access_tech_storage, access_engineering_storage, access_engineering_eva,
-	            access_engineering_power, access_engineering_engine, access_mining_shuttle,
-	            access_engineering_control, access_engineering_mechanic, access_engineering_chief, access_mining, access_mining_outpost,
-	            access_research, access_research_director, access_dwaine_superuser, access_engineering_atmos, access_hangar, access_medical_director, access_special_club, access_syndicate_shuttle)
 
 var/list/access_name_lookup //Generated at round start.
 
@@ -472,144 +409,3 @@ var/list/access_name_lookup //Generated at round start.
 			return "Head of Personnel's Office"
 		if(access_dwaine_superuser)
 			return "DWAINE Superuser"
-
-
-
-proc/colorAirlock(access)
-	switch(access)
-		if(1,2,3,4,37,38)
-			return "sec"
-		if(5,6,9,10,24,27,29)
-			return "med"
-		if(7,8,24,33)
-			return "sci"
-		if(12,23,31)
-			return "maint"
-		if(11,18 to 20,49,53,55)
-			return "com"
-		if(40 to 48,50,51)
-			return "eng"
-		else
-			return null
-
-
-
-//retrieves a map-appropriate airlock path
-//access: a numerical access value
-//variant: text string for the type you want (Glass, Standard, Alternate)
-//technically you can skip both
-
-proc/fetchAirlock(access,variant)
-	var/chroma = colorAirlock(access)
-	switch(variant)
-		if("Glass")
-			if(chroma == "com")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/glass/command"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/glass/command/alt"
-					else return "/obj/machinery/door/airlock/glass/command"
-			else if(chroma == "eng")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/glass/engineering"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/glass/engineering/alt"
-					else return "/obj/machinery/door/airlock/glass/engineering"
-			else if(chroma == "sec")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/glass"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/glass/security/alt"
-					else return "/obj/machinery/door/airlock/glass"
-			else if(chroma == "med")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/glass"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/glass/medical"
-					else return "/obj/machinery/door/airlock/glass/medical"
-			else if(chroma == "sci")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/glass"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/glass/chemistry"
-					else return "/obj/machinery/door/airlock/glass"
-			else if(chroma == "maint")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/glass"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/glass/maintenance"
-					else return "/obj/machinery/door/airlock/glass"
-			else
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/glass"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/glass"
-					else return "/obj/machinery/door/airlock/glass"
-		if("Alternate")
-			if(chroma == "com")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/command/alt"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/command/alt"
-					else return "/obj/machinery/door/airlock/command"
-			else if(chroma == "eng")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/engineering/alt"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/engineering/alt"
-					else return "/obj/machinery/door/airlock/engineering"
-			else if(chroma == "sec")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/security/alt"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/security/alt"
-					else return "/obj/machinery/door/airlock/security"
-			else if(chroma == "med")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/medical/alt"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/medical"
-					else return "/obj/machinery/door/airlock/medical"
-			else if(chroma == "sci")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/medical/alt"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/toxins"
-					else return "/obj/machinery/door/airlock/medical"
-			else if(chroma == "maint")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/classic"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/maintenance"
-					else return "/obj/machinery/door/airlock/classic"
-			else
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets"
-					else return "/obj/machinery/door/airlock"
-		else
-			if(chroma == "com")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/command"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/command"
-					else return "/obj/machinery/door/airlock/command"
-			else if(chroma == "eng")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/engineering"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/engineering"
-					else return "/obj/machinery/door/airlock/engineering"
-			else if(chroma == "sec")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/security"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/security"
-					else return "/obj/machinery/door/airlock/security"
-			else if(chroma == "med")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/medical"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/medical"
-					else return "/obj/machinery/door/airlock/medical"
-			else if(chroma == "sci")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/medical"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/chemistry"
-					else return "/obj/machinery/door/airlock/medical"
-			else if(chroma == "maint")
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro/maintenance"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets/maintenance"
-					else return "/obj/machinery/door/airlock/maintenance"
-			else
-				switch(map_setting)
-					if("COG2") return "/obj/machinery/door/airlock/pyro"
-					if("DESTINY") return "/obj/machinery/door/airlock/gannets"
-					else return "/obj/machinery/door/airlock"
-
-
-

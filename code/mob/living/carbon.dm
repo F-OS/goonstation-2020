@@ -1,7 +1,7 @@
 // carbon-based lifeforms
 
 /mob/living/carbon/
-	gender = MALE // WOW RUDE
+	gender = MALE
 	var/list/stomach_contents = list()
 	var/last_eating = 0
 
@@ -29,6 +29,12 @@
 
 /mob/living/carbon/get_stamina()
 	return stamina
+
+/mob/proc/get_max_stamina()
+	return 0
+
+/mob/living/carbon/get_max_stamina()
+	return stamina_max
 
 //Adds a stamina max modifier with the given key. This uses unique keys to allow for "categories" of max modifiers - so you can only have one food buff etc.
 //If you get a buff of a category you already have, nothing will happen.
@@ -59,12 +65,7 @@
 	var/val = 0
 	for(var/x in stamina_mods_max)
 		val += stamina_mods_max[x]
-
-	var/stam_mod_items = 0
-	for(var/obj/item/C in src.get_equipped_items())
-		stam_mod_items += C.getProperty("stammax")
-
-	return (val + stam_mod_items)
+	return val
 
 //Adds a stamina regen modifier with the given key. This uses unique keys to allow for "categories" of regen modifiers - so you can only have one food buff etc.
 //If you get a buff of a category you already have, nothing will happen.
@@ -95,10 +96,6 @@
 	var/val = 0
 	for(var/x in stamina_mods_regen)
 		val += stamina_mods_regen[x]
-
-	var/stam_mod_items = 0
-	for(var/obj/item/C in src.get_equipped_items())
-		stam_mod_items += C.getProperty("stamregen")
 	return val
 
 //Restores stamina
@@ -119,20 +116,12 @@
 /mob/living/carbon/remove_stamina(var/x)
 	if(!isnum(x)) return
 	if(prob(4) && ishellbanned(src)) //Chances are this will happen during combat
-		SPAWN_DBG(rand(5, 80)) //Detach the cause (hit, reduced stamina) from the consequence (disconnect)
+		spawn(rand(5, 80)) //Detach the cause (hit, reduced stamina) from the consequence (disconnect)
 			var/dur = src.client.fake_lagspike()
-			SPAWN_DBG(dur)
+			spawn(dur)
 				del(src.client)
 
-	var/stam_mod_items = 0
-	for(var/obj/item/C in src.get_equipped_items())
-		stam_mod_items += C.getProperty("stamcost")
-
-	var/percReduction = 0
-	if(stam_mod_items)
-		percReduction = (x * (stam_mod_items / 100))
-
-	stamina = max(STAMINA_NEG_CAP, stamina - (x - percReduction) )
+	stamina = max(STAMINA_NEG_CAP, stamina - x)
 	if(src.stamina_bar) src.stamina_bar.update_value(src)
 	return
 
@@ -152,33 +141,29 @@
 //STAMINA UTILITY PROCS
 
 //Responsible for executing critical hits to stamina
-/mob/proc/handle_stamina_crit(var/damage)
-	.=0
-//ddoub le dodbleu
-/mob/living/carbon/handle_stamina_crit(var/damage)
-	damage = max(damage,10)
-	damage *= 4
-	//playsound(src.loc, "sound/impact_sounds/Generic_Punch_1.ogg", 50, 1, -1)
+/mob/proc/handle_stamina_crit()
+	return
+
+/mob/living/carbon/handle_stamina_crit()
+	//playsound(src.loc, "sound/misc/critpunch.ogg", 50, 1, -1)
 	if(src.stamina >= 1 )
 		if(STAMINA_CRIT_DROP)
 			src.set_stamina(min(src.stamina,STAMINA_CRIT_DROP_NUM))
 		else
-			src.set_stamina (max(0,src.stamina - damage))
-			src.stamina_stun()
+			src.set_stamina(round(src.stamina / STAMINA_CRIT_DIVISOR))
 		if(STAMINA_STUN_ON_CRIT)
-			src.changeStatus("stunned", STAMINA_STUN_ON_CRIT_SEV)
+			src.stunned = max(src.stunned, STAMINA_STUN_ON_CRIT_SEV)
 	else if(src.stamina <= 0)
 		if(STAMINA_CRIT_DROP)
 			src.set_stamina(min(src.stamina * 2,STAMINA_CRIT_DROP_NUM))
 		else
-			src.set_stamina (max(0,src.stamina - damage))
-			src.stamina_stun()
+			src.set_stamina(round(src.stamina * STAMINA_CRIT_DIVISOR))
 		if(STAMINA_STUN_ON_CRIT)
-			src.changeStatus("stunned", STAMINA_STUN_ON_CRIT_SEV)
+			src.stunned = max(src.stunned, STAMINA_STUN_ON_CRIT_SEV)
 		if(STAMINA_NEG_CRIT_KNOCKOUT)
-			if(!src.getStatusDuration("weakened"))
+			if(!src.weakened)
 				src.visible_message("<span style=\"color:red\">[src] collapses!</span>")
-				src.changeStatus("weakened", (STAMINA_STUN_CRIT_TIME)*10)
+			src.weakened = max(src.weakened, STAMINA_STUN_TIME * 2)
 	stamina_stun() //Just in case.
 	return
 
@@ -194,42 +179,10 @@
 		var/chance = STAMINA_SCALING_KNOCKOUT_BASE
 		chance += (src.stamina / STAMINA_NEG_CAP) * STAMINA_SCALING_KNOCKOUT_SCALER
 		if(prob(chance))
-			if(!src.getStatusDuration("weakened"))
+			if(!src.weakened)
 				src.visible_message("<span style=\"color:red\">[src] collapses!</span>")
-				src.changeStatus("weakened", (STAMINA_STUN_TIME)*10)
-				src.force_laydown_standup()
+			src.weakened = max(src.weakened, STAMINA_STUN_TIME)
 	return
-
-
-//new disorient thing
-/mob/proc/force_laydown_standup() //the real force laydown lives in Life.dm
-	.=0
-
-/mob/proc/do_disorient(var/stamina_damage, var/weakened, var/stunned, var/paralysis, var/disorient = 60, var/remove_stamina_below_zero = 0)
-	if (stunned)
-		src.changeStatus("stunned", stunned)
-	if (weakened)
-		src.changeStatus("weakened", weakened)
-	if (paralysis)
-		src.changeStatus("paralysis", paralysis)
-
-	if (weakened || paralysis)
-		src.force_laydown_standup()
-
-
-//Do stamina damage + disorient above 0 stamina. Stun/Weaken/Paralyze when we hit or drop below 0.
-/mob/living/carbon/do_disorient(var/stamina_damage, var/weakened, var/stunned, var/paralysis, var/disorient = 60, var/remove_stamina_below_zero = 0)
-	if (remove_stamina_below_zero)
-		src.remove_stamina(stamina_damage)
-	else if (src.stamina > 0)
-		src.remove_stamina(min(stamina_damage, src.stamina))
-
-	if(src.stamina <= 0)
-		.= 1
-		..()
-	else
-		.= 0
-		src.changeStatus("disorient", disorient)
 
 //STAMINA UTILITY PROCS
 
@@ -241,57 +194,10 @@
 /mob/living/carbon/Move(NewLoc, direct)
 	. = ..()
 	if(.)
+		if(src.nutrition)
+			src.nutrition--
 		if(src.bioHolder && src.bioHolder.HasEffect("fat") && src.m_intent == "run")
 			src.bodytemperature += 2
-
-		//SLIP handling
-		if (!src.throwing && !src.lying && isturf(NewLoc))
-			var/turf/T = NewLoc
-			if (T.turf_flags & MOB_SLIP)
-				switch (T.wet)
-					if (1)
-						if (locate(/obj/item/clothing/under/towel) in T)
-							src.inertia_dir = 0
-							T.wet = 0
-							return
-						if (src.can_slip())
-							src.pulling = null
-							src.throwing = 1
-							SPAWN_DBG(0) // this stops the entire server from crashing when SOMEONE (read: wonk) space lubes the entire station
-								step(src, src.dir)
-								src.throwing = 0
-							boutput(src, "<span style=\"color:blue\">You slipped on the wet floor!</span>")
-							playsound(T, "sound/misc/slip.ogg", 50, 1, -3)
-							src.changeStatus("stunned", 2 SECONDS)
-							src.changeStatus("weakened", 2 SECONDS)
-							src.unlock_medal("I just cleaned that!", 1)
-							src.force_laydown_standup()
-						else
-							src.inertia_dir = 0
-							return
-					if (2) //lube
-						src.pulling = null
-						src.changeStatus("weakened", 35)
-						boutput(src, "<span style=\"color:blue\">You slipped on the floor!</span>")
-						playsound(T, "sound/misc/slip.ogg", 50, 1, -3)
-						/*
-						SPAWN_DBG(0)
-							step(src, src.dir)
-							for (var/i = 4, i>0, i--)
-								if (!isturf(src.loc) || !step(src, src.dir) || i == 1)
-									src.throwing = 0
-									break
-						*/
-						var/atom/target = get_edge_target_turf(src, src.dir)
-						SPAWN_DBG(0) src.throw_at(target, 12, 1)
-					if (3) // superlube
-						src.pulling = null
-						src.changeStatus("weakened", 6 SECONDS)
-						playsound(T, "sound/misc/slip.ogg", 50, 1, -3)
-						boutput(src, "<span style=\"color:blue\">You slipped on the floor!</span>")
-						var/atom/target = get_edge_target_turf(src, src.dir)
-						SPAWN_DBG(0) src.throw_at(target, 30, 1)
-						random_brute_damage(src, 10)
 
 /mob/living/carbon/relaymove(var/mob/user, direction)
 	if(user in src.stomach_contents)
@@ -306,7 +212,7 @@
 				for(var/mob/M in viewers(user, null))
 					if(M.client)
 						M.show_message(text("<span style=\"color:red\"><B>[user] attacks [src]'s stomach wall with the [I.name]!</span>"), 2)
-				playsound(user.loc, "sound/impact_sounds/Slimy_Hit_3.ogg", 50, 1)
+				playsound(user.loc, "sound/effects/attackblob.ogg", 50, 1)
 
 				if(prob(get_brute_damage() - 50))
 					src.gib()
@@ -315,32 +221,13 @@
 	for(var/mob/M in src)
 		if(M in src.stomach_contents)
 			src.stomach_contents.Remove(M)
-		if (!isobserver(M))
-			src.visible_message("<span style=\"color:red\"><B>[M] bursts out of [src]!</B></span>")
-		else if (istype(M, /mob/dead/target_observer))
-			M.cancel_camera()
-
 		M.set_loc(src.loc)
+		src.visible_message("<span style=\"color:red\"><B>[M] bursts out of [src]!</B></span>")
 	. = ..(give_medal)
 
 /mob/living/carbon/proc/urinate()
-	SPAWN_DBG(0)
-		var/obj/item/reagent_containers/pee_target = src.find_type_in_hand(/obj/item/reagent_containers, "[src.hand ? "left" : "right"]")
-		if(pee_target && pee_target.reagents && pee_target.reagents.total_volume < pee_target.reagents.maximum_volume && ( \
-			istype(pee_target, /obj/item/reagent_containers/balloon) || \
-			istype(pee_target, /obj/item/reagent_containers/food/drinks/drinkingglass) || \
-			istype(pee_target, /obj/item/reagent_containers/glass/beaker) || \
-			istype(pee_target, /obj/item/reagent_containers/glass/wateringcan)
-			))
-			src.visible_message("<span style=\"color:red\"><B>[src] pees in [pee_target]!</B></span>")
-			playsound(get_turf(src), "sound/misc/pourdrink.ogg", 50, 1)
-			pee_target.reagents.add_reagent("urine", 20)
-			return
-
-		// possibly change the text colour to the gray emote text
-		src.visible_message(pick("<B>[src]</B> unzips their pants and pees on the floor.", "<B>[src]</B> pisses all over the floor!", "<B>[src]</B> makes a big piss puddle on the floor."))
-
-		var/obj/decal/cleanable/urine/U = make_cleanable(/obj/decal/cleanable/urine, src.loc)
+	spawn(0)
+		var/obj/decal/cleanable/urine/U = new(src.loc)
 
 		// Flag the urine stain if the pisser is trying to make fake initropidril
 		if(src.reagents.has_reagent("tongueofdog"))
@@ -380,21 +267,19 @@
 
 /mob/living/carbon/lastgasp()
 	// making this spawn a new proc since lastgasps seem to be related to the mob loop hangs. this way the loop can keep rolling in the event of a problem here. -drsingh
-	SPAWN_DBG(0)
-		if (!src || !src.client) return														// break if it's an npc or a disconnected player
-		var/enteredtext = winget(src, "mainwindow.input", "text")							// grab the text from the input bar
-		if ((copytext(enteredtext,1,6) == "say \"") && length(enteredtext) > 5)				// check if the player is trying to say something
-			winset(src, "mainwindow.input", "text=\"\"")									// clear the player's input bar to register death / unconsciousness
-			var/grunt = pick("NGGH","OOF","UGH","ARGH","BLARGH","BLUH","URK")				// pick a grunt to append
-			src.say(copytext(enteredtext,6,0) + "--" + grunt, ignore_stamina_winded = 1)	// say the thing they were typing and grunt
+	spawn(0)
+		if (!src || !src.client) return											// break if it's an npc or a disconnected player
+		var/enteredtext = winget(src, "mainwindow.input", "text")				// grab the text from the input bar
+		if ((copytext(enteredtext,1,6) == "say \"") && length(enteredtext) > 5)	// check if the player is trying to say something
+			winset(src, "mainwindow.input", "text=\"\"")						// clear the player's input bar to register death / unconsciousness
+			var/grunt = pick("NGGH","OOF","UGH","ARGH","BLARGH","BLUH","URK")	// pick a grunt to append
+			src.say(copytext(enteredtext,6,0) + "--" + grunt)					// say the thing they were typing and grunt
 
 // cogwerks - fix for soulguard and revive
 /mob/living/carbon/proc/remove_ailments()
-	if (src.ailments)
-		for (var/datum/ailment_data/disease/D in src.ailments)
+	if(src.ailments)
+		for(var/datum/ailment_data/disease/D in src.ailments)
 			src.cure_disease(D)
-		for (var/datum/ailment_data/malady/M in src.ailments)
-			src.cure_disease(M)
 
 /mob/living/carbon/full_heal()
 	src.remove_ailments()
@@ -408,9 +293,6 @@
 /mob/living/carbon/take_brain_damage(var/amount)
 	if (..())
 		return
-
-	if (src.traitHolder && src.traitHolder.hasTrait("reversal"))
-		amount *= -1
 
 	src.brainloss = max(0,min(src.brainloss + amount,120))
 
@@ -426,11 +308,7 @@
 	if (..())
 		return
 
-	if (src.traitHolder && src.traitHolder.hasTrait("reversal"))
-		amount *= -1
-
 	if (src.bioHolder && src.bioHolder.HasEffect("resist_toxic"))
-		src.toxloss = 0
 		return
 
 	src.toxloss = max(0,src.toxloss + amount)
@@ -441,7 +319,6 @@
 		return
 
 	if (src.bioHolder && src.bioHolder.HasEffect("breathless"))
-		src.oxyloss = 0
 		return
 
 	src.oxyloss = max(0,src.oxyloss + amount)

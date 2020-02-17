@@ -1,7 +1,6 @@
 /datum/targetable/vampire/plague_touch
 	name = "Diseased touch"
 	desc = "Infects the target with a deadly, non-contagious disease."
-	icon_state = "badtouch" //brought to you by the bloodhound gang
 	targeted = 1
 	target_nodamage_check = 1
 	max_range = 1
@@ -29,7 +28,7 @@
 			boutput(M, __red("[target] is too far away."))
 			return 1
 
-		if (isdead(target))
+		if (target.stat == 2)
 			boutput(M, __red("It would be a waste of time to infect the dead."))
 			return 1
 
@@ -39,11 +38,10 @@
 
 		var/mob/living/L = target
 
-		//playsound(M.loc, 'sound/impact_sounds/Generic_Shove_1.ogg', 50, 1, -1)
-		//M.visible_message("<span style=\"color:blue\">[M] shakes [L], trying to wake them up!</span>")
-		M.shake_awake(target)
+		playsound(M.loc, 'sound/weapons/thudswoosh.ogg', 50, 1, -1)
+		M.visible_message("<span style=\"color:blue\">[M] shakes [L], trying to wake them up!</span>")
 		L.add_fingerprint(M) // Why not leave some forensic evidence?
-		if (!(L.bioHolder && L.traitHolder.hasTrait("training_chaplain")))
+		if (!(L.bioHolder && L.bioHolder.HasEffect("training_chaplain")))
 			L.contract_disease(/datum/ailment/disease/vamplague, null, null, 1) // path, name, strain, bypass resist
 
 		if (istype(H)) H.blood_tracking_output(src.pointCost)

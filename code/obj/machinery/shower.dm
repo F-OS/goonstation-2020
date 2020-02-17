@@ -25,14 +25,10 @@
 		return
 
 	attack_ai(mob/user as mob)
-		return attack_hand(user)
+		return
 
 	attack_hand(mob/user as mob)
 		src.on = !src.on
-		if (src.on)
-			SubscribeToProcess()
-		else
-			UnsubscribeProcess()
 		boutput(user, "You turn [src.on ? "on" : "off"] the shower head.")
 #ifdef HALLOWEEN
 		if(halloween_mode && prob(15))
@@ -44,9 +40,8 @@
 		if(!on || (world.time < src.last_spray + SPRAY_DELAY))
 			return
 
-		if(status & (NOPOWER)) //It has a powered pump or something.
+		if(stat & (NOPOWER)) //It has a powered pump or something.
 			src.on = 0
-			UnsubscribeProcess()
 			return
 
 		src.spray()
@@ -80,14 +75,14 @@
 				// Added. We don't care about unmodified shower heads, though (Convair880).
 				if (ismob(A))
 					var/mob/M = A
-					if (!isdead(M))
+					if (M.stat != 2)
 						if ((!src.reagents.has_reagent("water") && !src.reagents.has_reagent("cleaner")) || ((src.reagents.has_reagent("water") && src.reagents.has_reagent("cleaner")) && src.reagents.reagent_list.len > 2))
 							logTheThing("combat", M, null, "is hit by chemicals [log_reagents(src)] from a shower head at [log_loc(M)].")
 
 				src.reagents.reaction(A, 1, 40) // why the FUCK was this ingest ?? ?? ? ?? ? ?? ? ?? ? ???
 
-		SPAWN_DBG(50)
-			if (src && src.reagents && src.reagents.total_volume)
+		spawn(50)
+			if (src && src.reagents.total_volume)
 				src.reagents.del_reagent(default_reagent)
 				src.reagents.remove_any(40)
 

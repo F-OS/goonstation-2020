@@ -30,16 +30,8 @@
 
 	var/list/last_tools = list()
 	var/mob/living/silicon/ghostdrone/master
-	var/icon/icon_hud = 'icons/mob/hud_drone.dmi'
-
-	var/list/statusUiElements = list() //Assoc. List  STATUS EFFECT INSTANCE : UI ELEMENT add_screen(obj/screen/S). Used to hold the ui elements since they shouldnt be on the status effects themselves.
 
 	var/obj/screen/hud
-
-
-	clear_master()
-		master = null
-		..()
 
 	proc
 		toggle_equipment()
@@ -108,8 +100,8 @@
 				if (i > master.tools.len)
 					break
 				var/obj/item/I = master.tools[i]
-				var/obj/screen/hud/S = screen_tools[sid]
-				var/obj/screen/hud/BG = screen_tools_bg[sid]
+				var/obj/screen/S = screen_tools[sid]
+				var/obj/screen/BG = screen_tools_bg[sid]
 				S.name = I.name
 				BG.name = I.name
 				S.icon = I.icon
@@ -118,8 +110,6 @@
 				S.underlays = I.underlays.Copy()
 				S.color = I.color
 				S.alpha = I.alpha
-				S.item = I
-				BG.item = I
 				S.screen_loc = "[x], [y - sid]"
 				BG.screen_loc = "[x], [y - sid]"
 				add_screen(BG)
@@ -177,17 +167,17 @@
 		create_screen("", "", 'icons/mob/hud_common.dmi', "hotbar_side", "CENTER+3, SOUTH+1", HUD_LAYER, SOUTHEAST)
 		create_screen("", "", 'icons/mob/hud_common.dmi', "hotbar_side", "CENTER+3, SOUTH", HUD_LAYER, WEST)
 
-		mod1 = create_screen("mod1", "Tool", icon_hud, "toolslot", "CENTER-2, SOUTH", HUD_LAYER+1)
+		mod1 = create_screen("mod1", "Tool", 'icons/mob/hud_drone.dmi', "toolslot", "CENTER-2, SOUTH", HUD_LAYER+1)
 
-		create_screen("store", "Store", icon_hud, "store", "CENTER-1, SOUTH", HUD_LAYER+1)
-		charge = create_screen("charge", "Battery", icon_hud, "charge4", "CENTER, SOUTH", HUD_LAYER+1)
+		create_screen("store", "Store", 'icons/mob/hud_drone.dmi', "store", "CENTER-1, SOUTH", HUD_LAYER+1)
+		charge = create_screen("charge", "Battery", 'icons/mob/hud_drone.dmi', "charge4", "CENTER, SOUTH", HUD_LAYER+1)
 
-		pulling = create_screen("pulling", "Pulling", icon_hud, "pull0", "CENTER+1, SOUTH", HUD_LAYER+1)
-		face = create_screen("face", "Customize Face", icon_hud, "custface", "CENTER+2, SOUTH", HUD_LAYER+1)
+		pulling = create_screen("pulling", "Pulling", 'icons/mob/hud_drone.dmi', "pull0", "CENTER+1, SOUTH", HUD_LAYER+1)
+		face = create_screen("face", "Customize Face", 'icons/mob/hud_drone.dmi', "custface", "CENTER+2, SOUTH", HUD_LAYER+1)
 
-		health = create_screen("health", "Health", icon_hud, "health0", "EAST, NORTH")
-		oxy = create_screen("oxy", "Oxygen", icon_hud, "oxy0", "EAST, NORTH-1")
-		temp = create_screen("temp", "Temperature", icon_hud, "temp0", "EAST, NORTH-2")
+		health = create_screen("health", "Health", 'icons/mob/hud_drone.dmi', "health0", "EAST, NORTH")
+		oxy = create_screen("oxy", "Oxygen", 'icons/mob/hud_drone.dmi', "oxy0", "EAST, NORTH-1")
+		temp = create_screen("temp", "Temperature", 'icons/mob/hud_drone.dmi', "temp0", "EAST, NORTH-2")
 
 		if (master.active_tool)
 			set_active_tool(master.tools.Find(master.active_tool))
@@ -195,13 +185,7 @@
 		update_pulling()
 		update_health()
 		update_equipment()
-	scrolled(id, dx, dy, loc, parms, obj/screen/hud/scr)
-		if(!master) return
 
-		if(scr.item)
-			if(dy < 0) items_screen += 7
-			else items_screen -= 7
-			update_equipment()
 	clicked(id)
 		if (!master)
 			return
@@ -251,8 +235,6 @@
 				out(master, "<span style='color: blue;'>Your charge is: [master.cell.charge]/[master.cell.maxcharge]</span>")
 			if ("health")
 				out(master, "<span style='color: blue;'>Your health is: [master.health / master.max_health * 100]%</span>")
-			if ("oxy", "temp")
-				out(master, scan_atmospheric(get_turf(master)))
 			else
 				//Handle box BG clicks
 				if (length(id) >= 10)
@@ -274,10 +256,7 @@
 
 		update_charge()
 			if (master.cell)
-				var/pct = round(100*master.cell.charge/master.cell.maxcharge, 1)
-				charge.maptext = "<span style='text-align: center; font-family: \"Small Fonts\"; font-size: 7px; font-weight: bold; -dm-text-outline: 1px black; color: white;'>[pct]%</span>"
-				charge.maptext_y = 11
-				switch(pct)
+				switch(round(100*master.cell.charge/master.cell.maxcharge))
 					if(75 to INFINITY)
 						charge.icon_state = "charge4"
 					if(50 to 75)
@@ -292,22 +271,19 @@
 				charge.icon_state = "charge-none"
 
 		update_health()
-			if (!isdead(master))
-				var/pct = (master.health / master.max_health) * 100
-				health.maptext = "<span style='text-align: center; font-family: \"Small Fonts\"; font-size: 7px; font-weight: bold; -dm-text-outline: 1px black; color: white;'>[pct]%</span>"
-				health.maptext_y = 1
-				switch(pct)
-					if(100 to INFINITY)
+			if (master.stat != 2)
+				switch(master.health)
+					if(10 to INFINITY)
 						health.icon_state = "health5"
-					if(80 to 100)
+					if(8 to 10)
 						health.icon_state = "health4"
-					if(60 to 80)
+					if(6 to 8)
 						health.icon_state = "health3"
-					if(40 to 60)
+					if(4 to 6)
 						health.icon_state = "health2"
-					if(20 to 40)
+					if(2 to 4)
 						health.icon_state = "health1"
-					if(0 to 20)
+					if(0 to 2)
 						health.icon_state = "health0"
 					else
 						health.icon_state = "dead"
@@ -326,96 +302,10 @@
 					oxy.icon_state = "oxy[environment.oxygen/total*environment.return_pressure() < 17]"
 				else
 					oxy.icon_state = "oxy1"
-				var/maptextc = "#ffffff"
 				switch (environment.temperature)
-					if (773 to INFINITY)
+					if (350 to INFINITY)
 						temp.icon_state = "temp1"
-						maptextc = "#ff4040"
-					if (330 to 773)
-						temp.icon_state = "temp1"
-						maptextc = "#ffbc9c"
-					if (280 to 330)
+					if (280 to 350)
 						temp.icon_state = "temp0"
 					else
 						temp.icon_state = "temp-1"
-						maptextc = "#9cbcff"
-
-				temp.maptext_y = 19
-				temp.maptext = "<span style='text-align: center; font-family: \"Small Fonts\"; font-size: 7px; font-weight: bold; -dm-text-outline: 1px black; color: [maptextc];'>[environment.temperature >= (1000 + T0C) ? "ERR" : "[round(environment.temperature - T0C)]'"]</span>"
-
-		update_ability_hotbar()
-			if (!master.client)
-				return
-			if(isdead(master))
-				return
-
-			for(var/obj/screen/ability/topBar/genetics/G in master.client.screen)
-				master.client.screen -= G
-			for(var/obj/screen/pseudo_overlay/PO in master.client.screen)
-				master.client.screen -= PO
-			for(var/obj/ability_button/B in master.client.screen)
-				master.client.screen -= B
-			var/pos_x = 1
-			var/pos_y = 0
-
-			for(var/obj/ability_button/B2 in master.item_abilities)
-				B2.screen_loc = "NORTH-[pos_y],[pos_x]"
-				master.client.screen += B2
-				pos_x++
-				if(pos_x > 15)
-					pos_x = 1
-					pos_y++
-
-			if (istype(master.loc,/obj/vehicle/))
-				var/obj/vehicle/V = master.loc
-				for(var/obj/ability_button/B2 in V.ability_buttons)
-					B2.screen_loc = "NORTH-[pos_y],[pos_x]"
-					master.client.screen += B2
-					pos_x++
-					if(pos_x > 15)
-						pos_x = 1
-						pos_y++
-
-		update_status_effects()
-			for(var/obj/screen/statusEffect/G in src.objects)
-				remove_screen(G)
-
-			for(var/datum/statusEffect/S in src.statusUiElements) //Remove stray effects.
-				if(!master.statusEffects || !(S in master.statusEffects) || !S.visible)
-					pool(statusUiElements[S])
-					src.statusUiElements.Remove(S)
-					qdel(S)
-
-			var/spacing = 0.6
-			var/pos_x = spacing - 0.2 - 1
-
-			if(master.statusEffects)
-				for(var/datum/statusEffect/S in master.statusEffects) //Add new ones, update old ones.
-					if(!S.visible) continue
-					if((S in statusUiElements) && statusUiElements[S])
-						var/obj/screen/statusEffect/U = statusUiElements[S]
-						U.icon = icon_hud
-						U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH+0.3"
-						U.update_value()
-						add_screen(U)
-						pos_x -= spacing
-					else
-						if(S.visible)
-							var/obj/screen/statusEffect/U = unpool(/obj/screen/statusEffect)
-							U.init(master,S)
-							U.icon = icon_hud
-							statusUiElements.Add(S)
-							statusUiElements[S] = U
-							U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH+0.3"
-							U.update_value()
-							add_screen(U)
-							pos_x -= spacing
-							animate_buff_in(U)
-			return
-
-/mob/living/silicon/ghostdrone
-	updateStatusUi()
-		if(src.hud && istype(src.hud, /datum/hud/ghostdrone))
-			var/datum/hud/ghostdrone/H = src.hud
-			H.update_status_effects()
-		return

@@ -13,17 +13,18 @@ var/global/datum/ehjax/ehjax = new /datum/ehjax()
 								"/datum/chui/proc/debug",
 								"/datum/chui/proc/close",
 								"/datum/chatOutput/proc/doneLoading",
+								"/datum/chatOutput/proc/debug",
 								"/datum/chatOutput/proc/ping",
 								"/datum/chatOutput/proc/handleContextMenu",
-								"/datum/chatOutput/proc/analyzeClientData"
+								"/datum/chatOutput/proc/analyzeClientData",
 							)
 
 	proc
 		send(client/C, window, data)
 			if (!C || !window || !data) return
-			if (!isclient(C)) return
+			if (!istype(C, /client)) return
 			if (istype(data, /list))
-				data = json_encode(data)
+				data = list2json(data)
 
 			C << output("[data]", "[window]:[callbackName]")
 
@@ -32,13 +33,12 @@ var/global/datum/ehjax/ehjax = new /datum/ehjax()
 				/**
 				 * Calls a proc from a javascript source and callsback with any data
 				 *
-				 * @href_list["proc"] (string) The proc to call (no paths included)
+				 * @href_list["call"] (string) The proc to call (no paths included)
 				 * @href_list["window"] (string) The browser window name to send return data to (required for callback)
-				 * @href_list["param"] (string) A url-encoded array of arguments to pass to the proc (e.g. param[foo]=bar&param[bar]=foo)
+				 * @href_list["params"] (string) A url-encoded array of arguments to pass to the proc (e.g. params[foo]=bar&params[bar]=foo)
 				 * @href_list["type"] (string) Type of proc to call. If none, assumes global proc.
 				 * @href_list["datum"] (string) Requires type=datum. Name of the datum the proc belongs to (/datum/ path not required)
 				 * 								Note: datum is relative to client ONLY.
-				 * @href_list["passClient"] (boolean) Whether or not to send the client to the called proc
 				 *
 				 * @return (string) If the call proc returns data and window is set, will send the proc return string to ehjaxCallback javascript function.
 				 *
@@ -66,9 +66,6 @@ var/global/datum/ehjax/ehjax = new /datum/ehjax()
 							var/subKey = copytext(key, 7, -1)
 							var/item = href_list[key]
 							params[subKey] = item
-
-					if (href_list["passClient"] && (href_list["passClient"] == "1" || href_list["passClient"] == "true"))
-						params += C
 
 					var/data
 					if (href_list["type"])

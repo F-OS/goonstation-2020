@@ -1,4 +1,4 @@
-//#ifdef DEBUG
+#ifdef DEBUG
 
 
 

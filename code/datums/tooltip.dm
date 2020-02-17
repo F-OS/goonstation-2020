@@ -1,591 +1,143 @@
 /*
-Tooltips v2.1 - 20/02/18
+Tooltips v1.1 - 22/10/15
 Developed by Wire (#goonstation on irc.synirc.net)
-- Optimization and improvements aimed at avoiding stolen-focus issues
+- Added support for screen_loc pixel offsets. Should work. Maybe.
+- Added init function to more efficiently send base vars
 
 Configuration:
-- Set the window and file vars on /datum/tooltipHolder below
+- Set control to the correct skin element (remember to actually place the skin element)
+- Set file to the correct path for the .html file (remember to actually place the html file)
 - Attach the datum to the user client on login, e.g.
 	/client/New()
-		src.tooltipHolder = new /datum/tooltipHolder(src)
-		src.tooltipHolder.clearOld() //Clears tooltips stuck from a previous connection
+		src.tooltips = new /datum/tooltip(src)
 
 Usage:
 - Define mouse event procs on your (probably HUD) object and simply call the show and hide procs respectively:
 	/obj/screen/hud
 		MouseEntered(location, control, params)
-			usr.client.tooltipHolder.showHover(src, list(
-				"params" = params,
-				"content" = (src.desc ? src.desc : null)
-			))
+			usr.client.tooltip.show(src, params, title = src.name, content = src.desc)
 
 		MouseExited()
-			usr.client.tooltipHolder.hideHover()
-
-- You may use flags defined in _setup.dm to tweak the tooltip. For example to align it centered:
-	usr.client.tooltipHolder.showHover(src, list(
-		"params" = params,
-		"content" = (src.desc ? src.desc : null),
-		"flags" = TOOLTIP_CENTERED
-	))
-
-- You can define manual pixel offsets to force the tooltip go a certain direction.
-- Both values are optional. You can define an x offset without a y offset.
-- Note that the values are pixels based on byond tile size. E.g. an offset of 32 will move it a whole tile
-	usr.client.tooltipHolder.showHover(src, list(
-		"params" = params,
-		"content" = (src.desc ? src.desc : null),
-		"offset" = list("x" = 10, "y" = 20)
-	))
+			usr.client.tooltip.hide()
+- You may use flags defined below this comment block to tweak the tooltip. For example to align it centered:
+	usr.client.tooltip.show(src, params, title = src.name, content = src.desc, flags = TOOLTIP_CENTERED)
 
 Customization:
-- Theming can be done by passing a "theme" key in the options list and using css in the html file to change the look
+- Theming can be done by passing the theme var to show() and using css in the html file to change the look
 - For your convenience some pre-made themes are included
-
-Options:
-- Valid values for the options list are:
-	- params (required)
-	- title (required if no "content" key)
-	- content (required if no "title" key)
-	- theme (defaults to "default")
-	- size (defaults to auto-sizing to content, is given in widthxheight e.g. 300x200, auto does what it sounds like)
-	- special (a string to tell the JS to do something ~special~ e.g. edge cases)
-	- flags (bitwise property using tooltip alignment flags)
-	- offset (manual pixel offsets)
-	- transition (string determining how the tooltip should animate in)
 
 Notes:
 - You may have noticed 90% of the work is done via javascript on the client. Gotta save those cycles man.
 - This is entirely untested in any other codebase besides goonstation so I have no idea if it will port nicely. Good luck!
 */
 
+//Alignment around the turf. Any can be combined with center (top and bottom for horizontal centering, left and right for vertical).
+#define TOOLTIP_BOTTOM 0
+#define TOOLTIP_TOP 1
+#define TOOLTIP_RIGHT 2
+#define TOOLTIP_LEFT 4
+#define TOOLTIP_CENTER 8
 
-//Prints a whole bunch of shit to the in-game chat
-//#define TOOLTIP_DEBUG 1
-
-
-#ifdef TOOLTIP_DEBUG
-/proc/tooltipDebugOut(who, msg)
-	out(who, "<span style='font-size: 0.85em'>\[[time2text(world.realtime, "hh:mm:ss")]\] <strong>(TOOLTIP DEBUG | DM)</strong> [msg]</span>")
-#endif
-
-var/global/list/atomTooltips = new()
-
-/datum/tooltipHolder
-	//Configurable vars
-	var/window = "tooltip" //whatchu want the window to be called
-	var/file = "html/tooltip.html" //the browser content file
-
-	//Internal use only, don't fuck with these
-	var/client/owner
-	var/list/tooltips = new()
-	var/datum/tooltip/transient = null
-	var/inPod = 0 //for fuck sake
+/datum/tooltip
+	var
+		client/owner
+		control = "mainwindow.tooltip"
+		file = "html/tooltip.html"
+		showing = 0
+		queueHide = 0
+		init = 0
 
 
 	New(client/C)
-		if (!C) return 0
-		src.owner = C
+		if (C)
+			src.owner = C
 
-		//For local-testing fallback
-		if (!cdn)
-			var/list/tooltipResources = list(
-				"browserassets/js/jquery.min.js",
-				"browserassets/js/jquery.waitForImages.js",
-				"browserassets/js/errorHandler.js",
-				"browserassets/js/animatePopup.js",
-				"browserassets/js/tooltip.js",
-				"browserassets/css/fonts/fontawesome-webfont.eot",
-				"browserassets/css/fonts/fontawesome-webfont.svg",
-				"browserassets/css/fonts/fontawesome-webfont.ttf",
-				"browserassets/css/fonts/fontawesome-webfont.woff",
-				"browserassets/css/font-awesome.css",
-				"browserassets/css/tooltip.css"
-			)
-			src.owner.loadResourcesFromList(tooltipResources)
+			//For local-testing fallback
+			if (!CDN_ENABLED || config.env == "dev")
+				var/list/tooltipResources = list(
+					"browserassets/js/jquery.min.js",
+					"browserassets/js/tooltip.js",
+					"browserassets/css/tooltip.css"
+				)
+				src.owner.loadResourcesFromList(tooltipResources)
 
-		src.transient = src.add(clone = 0, stuck = 0)
-
-		return 1
-
-
-	//Get rid of any stuck orphaned tooltips (usually from reconnecting)
-	proc/clearOld()
-		if (!src.owner) return // Guard against bad/missing clients
-		var/windows = winget(src.owner, null, "windows")
-		var/list/windowIDs = params2list(windows)
-		for (var/windowID in windowIDs)
-			if (src.owner && dd_hasprefix(windowID, src.window))
-				winset(src.owner, windowID, "parent=")
-
-
-	proc/add(atom/thing = null, clone = 1, stuck = 1)
-		var/datum/tooltip/tooltip = new(src.owner, src, clone, stuck, thing)
-		src.tooltips.Add(tooltip)
-		return tooltip
-
-
-	proc/remove(datum/tooltip/tooltip)
-		if (tooltip in src.tooltips)
-			qdel(tooltip)
-			return 1
-
-		return 0
-
-
-	proc/getTooltipFor(atom/thing)
-		if (!istype(thing)) return 0
-
-		for (var/datum/tooltip/t in src.tooltips)
-			if (t.A == thing)
-				return t
-
-
-	proc/showHover(atom/thing, list/options)
-		//User just HATES tooltips :(
-		if (src.owner.preferences.tooltip_option == TOOLTIP_NEVER)
-			return 0
-
-		//User wants to see tooltips on alt-key-held only, what a weirdo
-		if (src.owner.preferences.tooltip_option == TOOLTIP_ALT)
-			if (!owner.check_key(KEY_EXAMINE))
-				return 0
-
-		src.transient.show(thing, options)
-
-
-	proc/hideHover()
-		src.transient.hide()
-
-
-	proc/showClickTip(atom/thing, list/options)
-		var/datum/tooltip/clickTip = src.getTooltipFor(thing)
-
-		//Clicktip for this atom doesn't exist yet, create it
-		if (!clickTip)
-			clickTip = src.add(thing)
-
-		//Some stuff relies on currently-viewed-machine being set
-		if (src.owner.mob)
-			src.owner.mob.machine = thing
-
-		if (clickTip.visible)
-			//Clicktip is currently showing, just update it
-			clickTip.changeContent(options["title"], options["content"])
-		else
-			//Show clicktip (and position it ourselves if necessary)
-			if (!options["params"])
-				options["params"] = thing.getScreenParams()
-			clickTip.show(thing, options)
-			clickTip.bindCloseHandler()
-
-
-	proc/hideClickTip(atom/thing)
-		var/datum/tooltip/clickTip = src.getTooltipFor(thing)
-
-		if (clickTip)
-			clickTip.hide()
-
-
-/datum/tooltip
-	//Internal use only, don't fuck with these
-	var/datum/tooltipHolder/holder
-	var/screenProperties = ""
-	var/window
-	var/file
-	var/client/owner
-	var/atom/A
-	var/showing = 0
-	var/init = 0
-	var/uid = 0
-	var/isClone = 0
-	var/isStuck = 1
-	var/creating = 0
-	var/created = 0
-	var/visible = 0
-	var/hasCloseHandler = 0
-	//var/list/specialFlags = new()
-	var/list/savedOptions
-
-
-	New(client/C, datum/tooltipHolder/tipHolder, clone = 1, stuck = 1, atom/thing = null)
-		if (!C) return 0
-		src.owner = C
-		src.holder = tipHolder
-		src.isClone = clone
-		src.isStuck = stuck
-		src.A = thing //HARD DELETE FIX IT!!
-
-		src.window = tipHolder.window
-		src.file = tipHolder.file
-
-		if (clone && thing)
-			var/list/atomTipRefs = new()
-			atomTipRefs.Add(src)
-			atomTooltips[thing] = atomTipRefs
-
-		#ifdef TOOLTIP_DEBUG
-		tooltipDebugOut(src.owner, "New() called. clone: [clone]. stuck: [stuck]. thing: [thing] (\ref[thing])")
-		#endif
-
-		return 1
-
-
-	disposing()
-		if (src.A && atomTooltips[src.A] && (src in atomTooltips[src.A]))
-			var/list/atomTipRefs = atomTooltips[src.A]
-			atomTipRefs.Remove(src)
-
-		if (src.owner)
-			if (src.holder && (src in holder.tooltips))
-				src.holder.tooltips.Remove(src)
-
-			if (src.hasCloseHandler)
-				src.closeHandler()
-
-			src.owner << browse(null, "window=[src.window]")
-
-		A = null
+			src.owner << browse(grabResource(src.file), "window=[src.control]")
 
 		..()
 
 
-	Topic(href, href_list[])
-		switch (href_list["action"])
-			if ("log")
-				out(src.owner, "<span style='font-size: 0.85em'>\[[time2text(world.realtime, "hh:mm:ss")]\] <strong>(TOOLTIP DEBUG | JS)</strong> [href_list["msg"]]</span>")
-			if ("show")
-				src.show2(src.savedOptions)
-			if ("hide")
-				var/force = href_list["force"] ? text2num(href_list["force"]) : 0
-				src.hide(force, 1)
-
-
-	proc/create()
-		if (!src.created && !src.creating)
-			src.creating = 1
-			src.screenProperties = src.owner.screenSizeHelper.getData()
-
-			if (src.isClone)
-				src.uid = "[world.timeofday][rand(1,10000)]"
-				var/newWindow = "[src.window][src.uid]"
-				winclone(src.owner, newWindow, src.window)
-				src.window = newWindow
-
-			#ifdef TOOLTIP_DEBUG
-			tooltipDebugOut(src.owner, "create() called")
-			#endif
-
-			var/fileText = replacetext(grabResource(src.file), "TOOLTIPREFPLACE", "\ref[src]");
-			#ifdef TOOLTIP_DEBUG
-			fileText = replacetext(fileText, "var tooltipDebug = false;", "var tooltipDebug = true;")
-			#endif
-
-			//Create the window, and set options on the browser control (while at the same time forcing focus back to the map)
-			src.owner << browse(fileText, "window=[src.window];titlebar=0;can_close=0;can_resize=0;can-minimize=0;border=0;size=1,1;")
-			winset(src.owner, null, "mapwindow.map.focus=true;[src.window].alpha=0;[src.window].pos=0,0;[src.window].background-color=[transparentColor];[src.window].transparent-color=[transparentColor];")
-			return 1
-		return 0
-
-
-	proc/show(atom/thing, list/options)
-		if (src.showing || !thing || !istype(thing) || !src.owner || !options || !options["params"] || (!options["title"] && !options["content"]) || (options["flags"] && !isnum(options["flags"])))
-			return 0
-
-		#ifdef TOOLTIP_DEBUG
-		tooltipDebugOut(src.owner, "show() called. args: [html_encode(json_encode(args))]")
-		#endif
-
-		if (options["title"])
-			options["title"] = stripTextMacros(options["title"])
-		if (options["content"])
-			options["content"] = stripTextMacros(options["content"])
-
-		if (!options["theme"])
-			options["theme"] = "default"
-
-		//if (options["theme"] == "default" && "tooltipTheme" in thing.vars)
-		//	options["theme"] = thing.vars["tooltipTheme"]
-
-		//if (options["special"] == "none" && "tooltipSpecial" in thing.vars)
-		//	options["special"] = thing.vars["tooltipSpecial"]
-
-		//I hate that I need this
-		if (src.holder.inPod)
-			options["special"] = "pod"
-
-		src.showing = 1
-		src.A = thing
-		src.savedOptions = options
-
-		if (src.created)
-			src.show2(options)
-		else
-			src.create()
-
-
-	proc/show2(options)
-		if (!src.created || src.creating)
-			src.created = 1
-			src.creating = 0
-
-		src.visible = 1
-		var/list/params = new()
-
+	proc/show(atom/movable/thing, params = null, title = null, content = null, theme = "default", special = "none", flags = 0)
+		if (!thing || !params || (!title && !content) || !src.owner || !isnum(flags)) return 0
 		if (!src.init)
 			//Initialize some vars
 			src.init = 1
-			params["init"] = list(
-				"iconSize" = world.icon_size,
-				"window" = src.window,
-				"map" = json_encode(list("parent" = "mapwindow", "control" = "map", "helper" = "mapSizeHelper")),
-				"screen" = src.screenProperties
-			)
+			src.owner << output(list2params(list(world.icon_size, src.control)), "[src.control]:tooltip.init")
 
-		if (options["flags"])
-			var/list/extra = new()
-			if (options["flags"] & TOOLTIP_TOP)
-				extra += "top"
-			if (options["flags"] & TOOLTIP_RIGHT)
-				extra += "right"
-			if (options["flags"] & TOOLTIP_LEFT)
-				extra += "left"
-			if (options["flags"] & TOOLTIP_CENTER)
-				extra += "center"
+		src.showing = 1
 
-			params["flags"] = extra
-			//src.specialFlags = extra
+		if (title && content)
+			title = "<h1>[title]</h1>"
+			content = "<p>[content]</p>"
+		else if (title && !content)
+			title = "<p>[title]</p>"
+		else if (!title && content)
+			content = "<p>[content]</p>"
 
-		params["cursor"] = islist(options["params"]) ? list2params(options["params"]) : options["params"]
-		params["screenLoc"] = istype(src.A, /atom/movable) ? (src.A:screen_loc) : null
+		if (theme == "default" && "tooltipTheme" in thing.vars)
+			theme = thing.vars["tooltipTheme"]
 
-		#ifdef TOOLTIP_DEBUG
-		//Payload: { "cursor": "icon-x=11;icon-y=22;screen-loc=6:11,2:22", "screenLoc": "CENTER-2, SOUTH+1", "flags": [] }. Theme: item. Special: none
-		tooltipDebugOut(src.owner, "show2() calling update. Params: [json_encode(params)]. Theme: [options["theme"]]. Size: [options["size"]]. Special: [options["special"]]")
-		#endif
+		if (special == "none" && "tooltipSpecial" in thing.vars)
+			special = thing.vars["tooltipSpecial"]
 
-		var/viewX = src.owner.view
-		var/viewY = src.owner.view
-		if (istext(src.owner.view))
-			var/list/viewSizes = splittext(src.owner.view, "x")
-			viewX = (text2num(viewSizes[1]) - 1) / 2
-			viewY = (text2num(viewSizes[2]) - 1) / 2
+		//Dumb special case handling that I can't think of a better solution for
+		if (src.owner.mob && (istype(src.owner.mob.loc, /obj/machinery/vehicle/pod_smooth) || istype(src.owner.mob.loc, /obj/machinery/vehicle/miniputt) || istype(src.owner.mob.loc, /obj/machinery/colosseum_putt)))
+			special = "pod"
+
+		//Make our dumb param object
+		var/extra = "\["
+		if (flags)
+			if (flags & TOOLTIP_TOP)
+				extra += "\"top\","
+			if (flags & TOOLTIP_RIGHT)
+				extra += "\"right\","
+			if (flags & TOOLTIP_LEFT)
+				extra += "\"left\","
+			if (flags & TOOLTIP_CENTER)
+				extra += "\"center\","
+		extra = "[(flags ? copytext(extra, 1, -1) : extra)]\]"
+		params = {"{ "cursor": "[params]", "screenLoc": "[thing.screen_loc]", "flags": [extra] }"}
+
+		//out(src.owner, "Params: [params]. Theme: [theme]. Special: [special]") //DEBUG
 
 		//Send stuff to the tooltip
-		src.owner << output(list2params(list(
-				json_encode(params),
-				json_encode(options),
-				viewX,
-				viewY,
-				src.isStuck
-			)), "[src.window].browser:tooltip.update")
+		src.owner << output(list2params(list(params, src.owner.view, "[title][content]", theme, special)), "[src.control]:tooltip.update")
 
+		//If a hide() was hit while we were showing, run hide() again to avoid stuck tooltips
 		src.showing = 0
-		return 1
-
-
-	proc/changeContent(title = "", content = "")
-		if (!title && !content) return 0
-
-		src.owner << output(list2params(list(title, content)), "[src.window].browser:tooltip.changeContent")
+		if (src.queueHide)
+			src.hide()
 
 		return 1
 
 
-	proc/hide(force = 0, fromJS = 0)
-		if (!force && (!src.created || !src.owner || !src.visible)) return 0
-
-		src.visible = 0
-
-		#ifdef TOOLTIP_DEBUG
-		tooltipDebugOut(src.owner, "hide() called. force: [force]. fromJS: [fromJS]. src.visible: [src.visible]. src.created: [src.created]. src.isStuck: [src.isStuck]")
-		#endif
-
-		if (!fromJS)
-			src.owner << output(1, "[src.window].browser:tooltip.setInterrupt")
-
-		winset(src.owner, src.window, "alpha=0;size=1x1;pos=0,0")
-
-		if (src.hasCloseHandler)
-			src.closeHandler()
-
-		return 1
-
-
-	proc/position(params)
-		src.owner << output(list2params(list(params)), "[src.window].browser:tooltip.position")
-
-
-	proc/isVisible()
-		var/visible = winget(src.owner, src.window, "alpha")
-		return visible != "0"
-
-
-	proc/detachMachine()
-		if (src.owner && src.owner.mob)
-			if (src.owner.mob.machine && istype(src.owner.mob.machine, /obj/machinery))
-				src.owner.mob.machine.current_user = null
-
-			src.owner.mob.machine = null
-
-
-	proc/closeHandler()
-		if (!src.hasCloseHandler) return 0
-
-		src.detachMachine()
-		src.hasCloseHandler = 0
-
-
-	proc/bindCloseHandler()
-		src.hasCloseHandler = 1
-
-
-/client/proc/resizeTooltipEvent()
-	if (src.tooltipHolder)
-		for (var/datum/tooltip/t in src.tooltipHolder.tooltips)
-			t.hide()
-
-
-/client/proc/cmd_tooltip_debug()
-	set name = "Debug Tooltips"
-	set desc = "Returns the amount of tooltips in existence everywhere"
-	set category = "Debug"
-
-	admin_only
-
-	var/holderCount = 0
-	var/tooltipCount = 0
-	for (var/client/C in clients)
-		if (C.tooltipHolder)
-			holderCount++
-			for (var/datum/tooltip/t in C.tooltipHolder.tooltips)
-				tooltipCount++
-
-	var/msg = {"----------<br />
-		<strong>[holderCount]</strong> tooltip holder datums exist<br />
-		<strong>[tooltipCount]</strong> tooltip datums exist<br />
-		<strong>[length(atomTooltips)]</strong> atoms have tooltips<br />
-		<strong>atomTooltips:</strong> [json_encode(atomTooltips)]<br />
-	----------"}
-
-	out(src, msg)
-
-
-//Mimics the params list given in Click() or MouseEntered()
-//Useful if you don't have access to the params those supply (e.g. programmatically showing a tooltip)
-/atom/proc/getScreenParams()
-	set src in view()
-
-	if (!usr || !usr.client)
-		return 0
-
-	var/atom/screenCenter = usr.client.virtual_eye
-	var/viewCenterX = usr.client.view
-	var/viewCenterY = usr.client.view
-
-	if (istext(usr.client.view))
-		var/list/viewSizes = splittext(usr.client.view, "x")
-		viewCenterX = (text2num(viewSizes[1])-1)/2
-		viewCenterY = (text2num(viewSizes[2])-1)/2
-
-	var/xDist = screenCenter.x - src.x
-	var/yDist = screenCenter.y - src.y
-	var/screenX = (viewCenterX + 1) - xDist
-	var/screenY = (viewCenterY + 1) - yDist
-
-	if (src.pixel_x || src.pixel_y)
-		var/iconWidth
-		var/iconHeight
-		var/iconSize = getIconSize()
-		if (islist(iconSize))
-			iconWidth = iconSize["width"]
-			iconHeight = iconSize["height"]
+	proc/hide()
+		if (src.queueHide)
+			spawn(1)
+				winshow(src.owner, src.control, 0)
 		else
-			iconWidth = iconHeight = iconSize
+			winshow(src.owner, src.control, 0)
 
-		if (src.pixel_x)
-			screenX += round(src.pixel_x / iconWidth)
+		src.queueHide = src.showing ? 1 : 0
 
-		if (src.pixel_y)
-			screenY += round(src.pixel_y / iconHeight)
+		return 1
 
-	var/list/params = list(
-		"icon-x" = 1,
-		"icon-y" = 1,
-		"screen-loc" = "[screenX]:1,[screenY]:1"
-	)
-
-	return params
-
-
-
-//Hides click-toggle tooltips on player movement
-/mob/OnMove()
-	..()
-
-	if (usr && src.client && src.client.tooltipHolder)
-		for (var/datum/tooltip/t in src.client.tooltipHolder.tooltips)
-			if (t.isStuck)
-				t.hide()
-
-
-
-//Look this just makes sense ok
-/mob/death(gibbed)
-	..(gibbed)
-
-	if (usr && src.client && src.client.tooltipHolder)
-		for (var/datum/tooltip/t in src.client.tooltipHolder.tooltips)
-			t.hide()
-
-
-/atom/disposing()
-	if ((src in atomTooltips) && islist(atomTooltips[src]))
-		var/list/thingTooltips = atomTooltips[src]
-
-		for (var/datum/tooltip/t in thingTooltips)
-			qdel(t)
-
-		atomTooltips.Remove(src)
-
-	..()
-
-
+/*
 // DEBUG
-#ifdef TOOLTIP_DEBUG
 /client/verb/reloadTooltip()
-	set name = "Reload Tooltips"
+	set name = "Reload Tooltip"
 
-	for (var/datum/tooltip/t in src.tooltipHolder.tooltips)
-		qdel(t)
+	src.tooltip = null
+	src.tooltip = new(src)
 
-	del(src.tooltipHolder)
-	src.tooltipHolder = new /datum/tooltipHolder(src)
-
-	out(src, "Reloaded tooltips")
-#endif
-
-/* experiments with trigger tracking, probably horribly performance intensive
-/mob/OnMove()
-	..()
-
-	if (usr && src.client)
-		for (var/datum/tooltip/t in src.client.tooltipHolder.tooltips)
-			if (t.trackThing)
-				if (src in view(usr))
-					var/list/objLoc = t.A.getScreenParams()
-
-					//Payload: { "cursor": "icon-x=11;icon-y=22;screen-loc=6:11,2:22", "screenLoc": "CENTER-2, SOUTH+1", "flags": [] }. Theme: item. Special: none
-					var/list/payload = new()
-					payload["cursor"] = "icon-x=1;icon-y=1;screen-loc=[objLoc["screen_x"]]:1,[objLoc["screen_y"]]:1"
-					payload["screenLoc"] = t.A.screen_loc
-					payload["flags"] = t.specialFlags
-
-					t.position(json_encode(payload))
-
-				else
-					t.hide()
-
-			else
-				t.hide()
+	out(src, "Reloaded")
 */

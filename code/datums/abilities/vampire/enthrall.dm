@@ -1,23 +1,22 @@
 /datum/targetable/vampire/enthrall
 	name = "Enthrall"
-	desc = "Cast this ability on a dead human to revive them as a loyal thrall. Thralls will weaken as their blood drains : use this ability on existing thralls to donate additional blood."
-	icon_state = "enthrall"
+	desc = "Makes the target a loyal mindslave. Takes a long time to cast."
 	targeted = 1
 	target_nodamage_check = 1
 	max_range = 1
-	cooldown = 300
-	pointCost = 100 //copy pasted below. sorry.
+	cooldown = 1800
+	pointCost = 400
 	when_stunned = 0
 	not_when_handcuffed = 1
 	restricted_area_check = 2
-	unlock_message = "You have gained Enthrall. It allows you to enslave dead humans."
+	unlock_message = "You have gained enthrall. It allows you to enslave humans and synthetics."
 
 	cast(mob/target)
 		if (!holder)
 			return 1
 
 		var/mob/living/M = holder.owner
-		//var/datum/abilityHolder/vampire/H = holder
+		var/datum/abilityHolder/vampire/H = holder
 
 		if (!M || !target || !ismob(target))
 			return 1
@@ -30,121 +29,41 @@
 			boutput(M, __red("[target] is too far away."))
 			return 1
 
-		if (!ishuman(target))
+		if (target.stat == 2)
+			boutput(M, __red("[target] is dead!"))
 			return 1
 
-		actions.start(new/datum/action/bar/private/icon/vampire_enthrall_ghoul(target, src), M)
-		return 1 //not 0, we dont awnna deduct points until cast finishes
-
-/datum/targetable/vampire/speak_thrall
-	name = "Speak to Ghouls"
-	desc = "Telepathically speak to all of your undead thralls."
-	icon_state = "ghoulspeak"
-	targeted = 0
-	target_nodamage_check = 1
-	max_range = 1
-	cooldown = 1
-	pointCost = 0
-	when_stunned = 1
-	not_when_handcuffed = 0
-	restricted_area_check = 0
-	unlock_message = "You have gained 'Speak to Ghouls'. It allows you to telepathically speak to all of your undead thralls."
-
-	cast(mob/target)
-		if (!holder)
+		if (!target.mind || !target.client)
+			boutput(M, __red("[target] is braindead!"))
 			return 1
 
-		var/mob/living/M = holder.owner
-		var/datum/abilityHolder/vampire/H = holder
-		if (!M)
+		if (target.is_mentally_dominated_by(M))
+			boutput(M, __red("[target] is already loyal to you."))
 			return 1
 
-		var/message = html_encode(input("Choose something to say:","Enter Message.","") as null|text)
-		if (!message)
-			return
-		logTheThing("say", holder.owner, holder.owner.name, "[message]")
+		// Don't remove this unless you are willing to adjust all existing mindslave-related procs for this very rare and specific case.
+		if (checktraitor(target))
+			boutput(M, __red("[target] is not susceptible to being enthralled!"))
+			return 1
 
-		.= H.transmit_ghoul_msg(message, M)
+		if (issilicon(target))
+			var/mob/living/silicon/S = target
+			if (!S.syndicate_possible)
+				boutput(M, __red("[target] is not susceptible to being enthralled!"))
+				return 1
 
+		if (istype(H) && H.vamp_isbiting)
+			boutput(M, __red("You are already biting someone!"))
+			return 1
+
+		actions.start(new/datum/action/bar/private/icon/vampire_enthrall(target, src), M)
+		if (istype(H)) H.blood_tracking_output(src.pointCost)
 		return 0
 
-
-/datum/action/bar/private/icon/vampire_enthrall_ghoul
-	duration = 20
+/datum/action/bar/private/icon/vampire_enthrall
+	duration = 250
 	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
 	id = "vampire_enthrall"
-	icon = 'icons/ui/actions.dmi'
-	icon_state = "enthrall"
-	var/mob/living/carbon/human/target
-	var/datum/targetable/vampire/enthrall/enslave
-
-	New(Target, Enslave)
-		target = Target
-		enslave = Enslave
-		..()
-
-	onStart()
-		..()
-
-		var/mob/living/M = owner
-
-		if (!enslave || get_dist(M, target) > enslave.max_range || target == null || M == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-		if (!isdead(target) && !istype(target.mutantrace, /datum/mutantrace/vamp_zombie))
-			boutput(M, __red("[target] needs to be dead first."))
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-		M.visible_message("<span style=\"color:red\"><B>[M] stabs [target] with their sharp fingers!</B></span>")
-		boutput(M, __blue("You begin to pump your [pick("polluted","spooky","bad","gross","icky","evil","necrotic")] blood into [target]'s chest."))
-		boutput(target, __red("You feel cold . . ."))
-
-	onUpdate()
-		..()
-
-		var/mob/living/M = owner
-
-		if (!enslave || get_dist(M, target) > enslave.max_range || target == null || M == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-
-	onEnd()
-		..()
-
-		var/mob/living/M = owner
-		var/datum/abilityHolder/vampire/H = enslave.holder
-
-		if (!istype(target.mutantrace, /datum/mutantrace/vamp_zombie))
-			H.make_thrall(target)
-		else
-			target.full_heal()
-
-		if (target in H.ghouls)
-			//and add blood!
-			var/datum/mutantrace/vamp_zombie/V = target.mutantrace
-			if (V)
-				V.blood_points += 200
-
-			H.blood_tracking_output(100)
-
-			H.deductPoints(100)
-
-			boutput(M, __blue("You donate 200 blood points to [target]."))
-			boutput(target, __blue("[M] has donated you 200 blood points. Your health is temporarily increased."))
-		else
-			boutput(M, __blue("You were not able to enthrall [target] - their ghost has departed."))
-
-	onInterrupt()
-		..()
-		boutput(owner, __red("Your attempt to enthrall the target was interrupted!"))
-/*
-/datum/action/bar/private/icon/vampire_enthrall_old
-	duration = 180
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
-	id = "vampire_enthrall_old"
 	icon = 'icons/mob/screen1.dmi'
 	icon_state = "grabbed"
 	var/mob/living/target
@@ -162,7 +81,7 @@
 		var/mob/living/M = owner
 		var/datum/abilityHolder/vampire/H = enslave.holder
 
-		if (!enslave || get_dist(M, target) > enslave.max_range || target == null || M == null)
+		if (!enslave || get_dist(M, target) > enslave.max_range || target == null || M == null || target.stat == 2 || !target.mind || !target.client)
 			interrupt(INTERRUPT_ALWAYS)
 			return
 
@@ -180,15 +99,15 @@
 
 		var/mob/living/M = owner
 
-		if (!enslave || get_dist(M, target) > enslave.max_range || target == null || M == null || isdead(target) || !target.mind || !target.client)
+		if (!enslave || get_dist(M, target) > enslave.max_range || target == null || M == null || target.stat == 2 || !target.mind || !target.client)
 			interrupt(INTERRUPT_ALWAYS)
 			return
 
-		if (target.bioHolder && target.traitHolder.hasTrait("training_chaplain"))
+		if (target.bioHolder && target.bioHolder.HasEffect("training_chaplain"))
 			boutput(M, __red("Wait, this is a chaplain!!! <B>AGDFHSKFGBLDFGLHSFDGHDFGH</B>"))
 			boutput(target, __blue("Your divine protection saves you from enthrallment, and brands [M] as a thing of evil!"))
 			M.emote("scream")
-			M.changeStatus("weakened", 150)
+			M.weakened = max(M.weakened, 15)
 			M.name_suffix("the Dracula")
 			M.UpdateName()
 			M.TakeDamage("chest", 0, 30)
@@ -220,8 +139,8 @@
 			boutput(M, __blue("You continue to pump blood into [target]."))
 
 		if (complete >= 0.8 && last_complete < 0.8)
-			if (!target.getStatusDuration("paralysis"))
-				target.setStatus("paralysis", max(target.getStatusDuration("paralysis"), 100))
+			if (!target.paralysis)
+				target.paralysis = max(target.paralysis, 10)
 			if (issilicon(target))
 				boutput(target, __red("Low temperature reggggggg92309392"))
 				boutput(target, __red("<b>MEM ERR BLK 0  ADDR 30FC500 HAS 010F NOT 0000</b>"))
@@ -244,8 +163,11 @@
 				ticker.mode.Agimmicks += target.mind
 
 		boutput(target, __red("<b>You awaken filled with purpose - you must serve your master, [M.real_name]!</B>"))
+		target << browse(grabResource("html/mindslave/implanted.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
+		if (issilicon(target))
+			boutput(target, __red("<b>You must serve your master. All previous laws are irrelevant.</b>"))
 
-		target.delStatus("paralysis")
+		target.paralysis = 0
 		if (istype(H)) H.vamp_isbiting = null
 		target.vamp_beingbitten = 0
 
@@ -263,11 +185,10 @@
 
 		if (target)
 			target.vamp_beingbitten = 0
-			if (!isdead(target))
+			if (target.stat != 2)
 				if (issilicon(target))
 					boutput(target, __blue("System temperature appears to return to normal."))
 				else
 					boutput(target, __blue("The overwhelming feeling of coldness appears to recede. You immediately feel better."))
 
 		boutput(M, __red("Your attempt to enthrall the target was interrupted!"))
-*/

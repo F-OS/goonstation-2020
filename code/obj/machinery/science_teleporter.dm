@@ -69,7 +69,7 @@ var/ZSUBTRACT = 0
 				break
 
 	process()
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			return
 		use_power(500)
 
@@ -105,7 +105,7 @@ var/ZSUBTRACT = 0
 				dat += "<br>[b.name] ([b.x]/[b.y]/[b.z]) <A href='?src=\ref[src];restorebookmark=\ref[b]'>Restore</A> <A href='?src=\ref[src];deletebookmark=\ref[b]'>Delete</A>"
 
 		user.machine = src
-		user.Browse("<TITLE>Teleport Computer</TITLE><b>Target Coordinates</b><BR>[dat]", "window=t_computer;size=400x600")
+		user << browse("<TITLE>Teleport Computer</TITLE><b>Target Coordinates</b><BR>[dat]", "window=t_computer;size=400x600")
 		onclose(user, "t_computer")
 		return
 
@@ -285,7 +285,7 @@ var/ZSUBTRACT = 0
 			sleep(5)
 
 			src.linked_pad.icon_state = "pad0"
-			SPAWN_DBG(35)
+			spawn(35)
 
 			linked_pad.recharging = 0
 
@@ -314,7 +314,7 @@ var/ZSUBTRACT = 0
 			sleep(5)
 
 			src.linked_pad.icon_state = "pad0"
-			SPAWN_DBG(35)
+			spawn(35)
 
 			linked_pad.recharging = 0
 
@@ -330,7 +330,7 @@ var/ZSUBTRACT = 0
 			return
 
 		else
-			usr.Browse(null, "window=t_computer")
+			usr << browse(null, "window=t_computer")
 			src.updateUsrDialog()
 			return
 
@@ -382,7 +382,7 @@ var/ZSUBTRACT = 0
 			XSUBTRACT = rand(0,100)
 			YSUBTRACT = rand(0,100)
 			ZSUBTRACT = rand(0,world.maxz)
-			SPAWN_DBG(10) processbadeffect(pick("flash","buzz","scatter","ignite","chill"))
+			spawn(10) processbadeffect(pick("flash","buzz","scatter","ignite","chill"))
 		/*if(prob(1) && !locate(/obj/dfissure_to) in get_step(src.linked_pad, EAST))
 			new/obj/dfissure_to(get_step(src.linked_pad, EAST))*/ // why would anyone ever want to complete Hemera Station if spamming bad coords on this is so much easier
 
@@ -405,7 +405,7 @@ var/ZSUBTRACT = 0
 			XSUBTRACT = rand(0,100)
 			YSUBTRACT = rand(0,100)
 			ZSUBTRACT = rand(0,world.maxz)
-			SPAWN_DBG(5) processbadeffect(pick("flash","buzz","minorsummon","tinyfire","chill"))
+			spawn(5) processbadeffect(pick("flash","buzz","minorsummon","tinyfire","chill"))
 
 	proc/doubleportal(var/turf/target)
 		if (!target)
@@ -431,7 +431,7 @@ var/ZSUBTRACT = 0
 			XSUBTRACT = rand(0,100)
 			YSUBTRACT = rand(0,100)
 			ZSUBTRACT = rand(0,world.maxz)
-			SPAWN_DBG(10) processbadeffect(pick("flash","buzz","scatter","ignite","chill"))
+			spawn(10) processbadeffect(pick("flash","buzz","scatter","ignite","chill"))
 		if(prob(5) && !locate(/obj/dfissure_to) in get_step(src.linked_pad, EAST))
 			new/obj/dfissure_to(get_step(src.linked_pad, EAST))
 		else
@@ -446,14 +446,14 @@ var/ZSUBTRACT = 0
 
 	proc/maintainportal(var/obj/perm_portal/P)
 		if(!P) return
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			badreceive()
 			portals -= P
 			qdel(P)
 			return
 		use_power(25000)
 		if(prob(1)) badreceive()
-		SPAWN_DBG(10)
+		spawn(10)
 			maintainportal(P)
 
 	proc/badsend()
@@ -599,7 +599,6 @@ var/ZSUBTRACT = 0
 				var/list/turfs = new
 				var/turf/target = null
 				for(var/turf/T in world)
-					LAGCHECK(LAG_LOW)
 					if(T.x>world.maxx-4 || T.x<4)	continue
 					if(T.y>world.maxy-4 || T.y<4)	continue
 					if (is_allowed(T))
@@ -660,7 +659,6 @@ var/ZSUBTRACT = 0
 			if("getrandom")
 				var/turfs = list()
 				for(var/turf/T in world)
-					LAGCHECK(LAG_LOW)
 					if(!contents) continue
 					turfs += T
 				var/turf = pick(turfs)
@@ -722,7 +720,7 @@ var/ZSUBTRACT = 0
 	var/recharging = 0
 
 	process()
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			return
 		use_power(500)
 */

@@ -24,10 +24,9 @@ h1, h2, h3, h4, h5, h6 {color: #00f;font-family: Georgia, Verdana, sans-serif;}
 .mentorooc {color: #7b00ff;}
 .mentorlooc {color: #a24cff;}
 .medal {color: #808000;}
-/*.say {}*/
-.blobsay {color: #CA446A;}
+.say {}
+.blobsay {color: #F4AB0E;}
 .deadsay {color: #5c00e6;}
-.hivesay {color: #663500;}
 .radio {color: #008000;}
 .sec_radio {color: #E00000;}
 .alert {color: #ff0000;}

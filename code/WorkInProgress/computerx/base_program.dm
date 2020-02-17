@@ -24,7 +24,7 @@
 		var/tmp/setup_string = null
 
 		os_call(var/call_params, var/datum/computer/file/terminal_program/caller, var/datum/computer/file/file)
-			if(!master || master.status & (NOPOWER|BROKEN))
+			if(!master || master.stat & (NOPOWER|BROKEN))
 				return 1
 			if(!caller || !call_params)
 				return 1
@@ -42,7 +42,7 @@
 		if(meta_params)
 			src.metadata += params2list(meta_params)
 
-	disposing()
+	Del()
 		if(master)
 			master.processing_programs.Remove(src)
 		..()
@@ -54,10 +54,10 @@
 		if((!istype(holder)) || (!istype(master)))
 			return 1
 
-		if(master.status & (NOPOWER|BROKEN))
+		if(master.stat & (NOPOWER|BROKEN))
 			return 1
 
-		if ((!usr.contents.Find(src.master) && (!in_range(src.master, usr) || !istype(src.master.loc, /turf))) && (!issilicon(usr)))
+		if ((!usr.contents.Find(src.master) && (!in_range(src.master, usr) || !istype(src.master.loc, /turf))) && (!istype(usr, /mob/living/silicon)))
 			return 1
 
 		if(!(holder in src.master.contents) && !(holder.loc in src.master.contents))
@@ -92,7 +92,7 @@
 			if((!istype(holder)) || (!istype(master)))
 				return 1
 
-			if(master.status & (NOPOWER|BROKEN))
+			if(master.stat & (NOPOWER|BROKEN))
 				return 1
 
 			if(!(holder in src.master.contents) && !(holder.loc in src.master.contents))
@@ -133,7 +133,7 @@
 			if((!istype(holder)) || (!istype(master)))
 				return 1
 
-			if(master.status & (NOPOWER|BROKEN))
+			if(master.stat & (NOPOWER|BROKEN))
 				return 1
 
 			if(!(holder in src.master.contents) && !(holder.loc in src.master.contents))

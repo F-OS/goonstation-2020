@@ -1,4 +1,3 @@
-/* outdated
 var/datum/telescope_manager/tele_man
 var/list/telescope_computers = list()
 
@@ -8,7 +7,7 @@ var/list/telescope_computers = list()
 	var/list/events_found = list()
 
 	proc/setup()
-		var/types = childrentypesof(/datum/telescope_event)
+		var/types = (typesof(/datum/telescope_event) - /datum/telescope_event)
 		for(var/x in types)
 			var/datum/telescope_event/R = new x(src)
 			events_inactive.Add(R.id)
@@ -183,7 +182,7 @@ var/list/telescope_computers = list()
 		return attack_hand(user)
 
 	attack_hand(mob/user as mob)
-		if(status & (BROKEN|NOPOWER))
+		if(stat & (BROKEN|NOPOWER))
 			return
 
 		if(using && (!using.client || using.client.inactivity >= 1200 || get_dist(src, using) > 1))
@@ -231,7 +230,7 @@ var/list/telescope_computers = list()
 		user << browse(html, "window=telescope;size=800x435;can_resize=0;can_minimize=0;can_close=1")
 		onclose(user, "telescope", src)
 
-		SPAWN_DBG(10)
+		spawn(10)
 			callJsFunc(usr, "setRef", list("\ref[src]")) //This is shit but without it, it calls the JS before the window is open and doesn't work.
 			loadContent("Starmap", "#contentInner")
 		return
@@ -362,4 +361,3 @@ var/list/telescope_computers = list()
 		var/paramsJS = list2params(params)
 		client << output(paramsJS,"telescope.browser:[funcName]")
 		return
-		*/

@@ -22,7 +22,7 @@
 
 	New(var/is_control = 0)
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			if (src.holder)
 				var/icon/hud_style = hud_style_selection[get_hud_style(src.holder.owner)]
 				if (isicon(hud_style))
@@ -49,7 +49,7 @@
 		simsController.simsMotives -= src
 		..()
 
-	disposing()
+	Del()
 		if (hud)
 			qdel(hud)
 		..()
@@ -117,15 +117,12 @@
 			var/warning = getWarningMessage()
 			if (warning)
 				showOwner(warning)
-				warning_cooldown = 40
+				warning_cooldown = 20
 		else
 			warning_cooldown--
 		onLife()
 
 	proc/mayStandardDeplete()
-		if (holder && holder.owner && (holder.owner.nodamage || holder.owner.hibernating))
-			value = 100
-			return 0
 		return 1
 
 	proc/getWarningMessage()
@@ -197,16 +194,17 @@
 		var/criminal = -1 //-1 unset, 0 law-abiding citizen, 1 traitor
 
 		mayStandardDeplete()
-			if (..())
-				if (!ticker || !ticker.mode)
-					return 0
-				//Let's save the results of this so we're not doing a bunch of thingy in list every life cycle
-				if (criminal > 0)
-					return 0
-				else if(criminal < 0 || prob(5)) //But let's refresh it once / 20 cycles or so
-					criminal = (holder.owner.mind in ticker.mode.traitors) || (holder.owner.mind in ticker.mode.Agimmicks)
-					return !criminal
-				return 1
+			if (!ticker || !ticker.mode)
+				return 0
+
+			//Let's save the results of this so we're not doing a bunch of thingy in list every life cycle
+			if (criminal > 0)
+				return 0
+			else if(criminal < 0 || prob(5)) //But let's refresh it once / 20 cycles or so
+				criminal = (holder.owner.mind in ticker.mode.traitors) || (holder.owner.mind in ticker.mode.Agimmicks)
+				return !criminal
+
+			return 1
 
 		getWarningMessage()
 			if (value < 25)
@@ -237,10 +235,10 @@
 		var/protection = 20
 
 		mayStandardDeplete()
-			if (..())
-				if (protection > 0)
-					protection--
-					return 0
+			if (protection > 0)
+				protection--
+				return 0
+			else
 				return 1
 
 		onIncrease()
@@ -254,12 +252,14 @@
 				for (var/mob/living/carbon/human/H in viewers(2, holder.owner))
 					if (H != holder.owner && prob(30 - value) * 2)
 						//H.stunned = max(holder.owner.stunned, 1) <- Let's not punish others for our poor choices in life - unrealistic but more fun
-						H.vomit()
 						H.visible_message("<span style=\"color:red\">[H] throws up all over \himself. Gross!</span>")
+						playsound(H.loc, "sound/effects/splat.ogg", 50, 1)
 						boutput(H, "<span style=\"color:red\">You are [pick("disgusted", "revolted", "repelled", "sickened", "nauseated")] by [holder.owner]'s [pick("smell", "odor", "body odor", "scent", "fragrance", "bouquet", "savour", "tang", "whiff")]!</span>")
-				holder.owner.changeStatus("stunned", 1 SECONDS)
+						new /obj/decal/cleanable/vomit(H.loc)
+				holder.owner.stunned = max(holder.owner.stunned, 1)
 				holder.owner.visible_message("<span style=\"color:red\">[holder.owner] throws up all over \himself. Gross!</span>")
-				holder.owner.vomit()
+				playsound(holder.owner.loc, "sound/effects/splat.ogg", 50, 1)
+				new /obj/decal/cleanable/vomit(holder.owner.loc)
 				showOwner("<span style=\"color:red\">You are [pick("disgusted", "revolted", "repelled", "sickened", "nauseated")] by your own [pick("smell", "odor", "body odor", "scent", "fragrance", "bouquet", "savour", "tang", "whiff")]!</span>")
 			if (value < 5 && prob(1))
 				var/datum/pathogen/P = unpool(/datum/pathogen)
@@ -280,7 +280,7 @@
 	bladder
 		name = "bladder"
 		icon_state = "bladder"
-		depletion_rate = 0.15//53
+		depletion_rate = 0.53
 		drain_rate = 0.8
 		gain_rate = 0.8
 
@@ -300,18 +300,16 @@
 			showOwner("<span style=\"color:red\"><b>You piss all over yourself!</b></span>")
 			modifyValue(100)
 			holder.affectMotive("hygiene", -100)
-			holder.owner.changeStatus("stunned", 2 SECONDS)
+			holder.owner.stunned = max(holder.owner.stunned, 2)
 			if (ishuman(holder.owner))
 				var/mob/living/carbon/human/H = holder.owner
 				if (H.w_uniform)
-					var/obj/item/clothing/U = H.w_uniform
-					U.add_stain("piss-soaked")
-					//U.name = "piss-soaked [initial(U.name)]"
+					var/obj/item/U = H.w_uniform
+					U.name = "piss-soaked [initial(U.name)]"
 				else if (H.wear_suit)
-					var/obj/item/clothing/U = H.wear_suit
-					U.add_stain("piss-soaked")
-					//U.name = "piss-soaked [initial(U.name)]"
-			make_cleanable(/obj/decal/cleanable/urine,holder.owner.loc)
+					var/obj/item/U = H.wear_suit
+					U.name = "piss-soaked [initial(U.name)]"
+			new /obj/decal/cleanable/urine(holder.owner.loc)
 
 	comfort
 		name = "comfort"
@@ -320,14 +318,13 @@
 		gain_rate = 1.5
 
 		mayStandardDeplete()
-			if (..())
-				if (holder.owner.buckled)
-					return 0
-				if (locate(/obj/stool/chair) in holder.owner.loc)
-					return 0
-				if (holder.owner.lying && (locate(/obj/stool/bed) in holder.owner.loc))
-					return 0
-				return 1
+			if (holder.owner.buckled)
+				return 0
+			if (locate(/obj/stool/chair) in holder.owner.loc)
+				return 0
+			if (holder.owner.lying && (locate(/obj/stool/bed) in holder.owner.loc))
+				return 0
+			return 1
 
 		getWarningMessage()
 			if (value < 25)
@@ -353,14 +350,13 @@
 		depletion_rate = 0.25
 
 		mayStandardDeplete()
-			if (..())
-				if (isrestrictedz(holder.owner.z))
-					return 0
-				if (!ticker || !ticker.mode)
-					return 0
-				if ((holder.owner.mind in ticker.mode.traitors) || (holder.owner.mind in ticker.mode.Agimmicks))
-					return 0
-				return 1
+			if (isrestrictedz(holder.owner.z))
+				return 0
+			if (!ticker || !ticker.mode)
+				return 0
+			if ((holder.owner.mind in ticker.mode.traitors) || (holder.owner.mind in ticker.mode.Agimmicks))
+				return 0
+			return 1
 
 		getWarningMessage()
 			if (value < 25)
@@ -390,8 +386,7 @@
 		depletion_rate = 0
 
 		mayStandardDeplete()
-			if (..())
-				return 0
+			return 0
 
 		getWarningMessage()
 			var/a_mess = pick("mess", "clusterfuck", "disorder", "disarray", "clutter", "landfill", "dump")
@@ -414,28 +409,27 @@
 	energy
 		name = "energy"
 		icon_state = "energy"
-		depletion_rate = 0.08
+		depletion_rate = 0.28
 
 		gain_rate = 1.5
 
 		var/forced_sleep = 0
 
 		mayStandardDeplete()
-			if (..())
-				// JFC fuck mobs
-				if (holder.owner.asleep)
-					return 0
-				if (holder.owner.getStatusDuration("weakened"))
-					return 0
-				if (holder.owner.getStatusDuration("paralysis"))
-					return 0
-				if (holder.owner.lying)
-					return 0
-				if (holder.owner.sleeping)
-					return 0
-				if (holder.owner.resting)
-					return 0
-				return 1
+			// JFC fuck mobs
+			if (holder.owner.asleep)
+				return 0
+			if (holder.owner.weakened)
+				return 0
+			if (holder.owner.paralysis)
+				return 0
+			if (holder.owner.lying)
+				return 0
+			if (holder.owner.sleeping)
+				return 0
+			if (holder.owner.resting)
+				return 0
+			return 1
 
 		onLife()
 			var/mob/living/L = holder.owner
@@ -456,6 +450,11 @@
 				if (locate(/obj/stool/bed) in holder.owner.loc)
 					sm *= 2
 				modifyValue(sm * 4)
+			if (L.asleep || L.lying)
+				if (locate(/obj/poolwater) in get_turf(L))
+					showOwner("<span style=\"color:red\">You are drowning!</span>")
+					L.losebreath++
+					L.take_oxygen_deprivation(5)
 
 		onDeplete()
 			showOwner("<span style=\"color:red\"><b>You cannot stay awake anymore!</b></span>")
@@ -477,24 +476,16 @@
 	var/list/datum/simsHolder/simsHolders = list()
 	var/list/datum/simsMotive/simsMotives = list()
 
-#ifdef RP_MODE
-	var/provide_plumbobs = 0
-#else
+
 	var/provide_plumbobs = 1
-#endif
 
 	New()
 		..()
-		SPAWN_DBG(10) //Give it some time to finish creating the simsController because fak
-			for (var/M in childrentypesof(/datum/simsMotive))
-				motives[M] = new M(1)
-#ifdef RP_MODE
-			SPAWN_DBG(0)
-				set_multiplier(0.3)
-#endif
+		spawn(10) //Give it some time to finish creating the simsController because fak
+			for (var/T in typesof(/datum/simsMotive) - /datum/simsMotive)
+				motives[T] = new T(1)
 
 	Topic(href, href_list)
-		usr_admin_only
 		if (href_list["mot"])
 			var/datum/simsMotive/M = locate(href_list["mot"])
 			if (!istype(M) || M != motives[M.type])
@@ -520,9 +511,7 @@
 		else if (href_list["profile"])
 			var/mod = text2num(href_list["profile"])
 			if (!isnum(mod))
-				mod = input("Enter custom profile rate.", "Custom rate") as null|num
-				if (!isnum(mod))
-					return
+				return
 			set_multiplier(mod)
 			showControls(usr)
 		else if (href_list["toggle_plum"])
@@ -548,7 +537,7 @@
 	proc/set_multiplier(var/mult) //Set a profile on all simsMotives
 		if(!isnum(mult)) return
 		for(var/datum/simsMotive/SM in simsMotives)
-			//SM.gain_rate = initial(SM.gain_rate) * mult
+			SM.gain_rate = initial(SM.gain_rate) * mult
 			SM.drain_rate = initial(SM.drain_rate) * mult
 			SM.depletion_rate = initial(SM.depletion_rate) * mult
 
@@ -567,16 +556,15 @@
 		o += {"<a href='?src=\ref[src];toggle_plum=1'>Plumbobs: [provide_plumbobs ? "On" : "Off"]</a><br>
 
 				<h3>Profiles</h3>
-				<table style='font-size:80%'><tr>
-				<td><a href='?src=\ref[src];profile=ham'>Custom</a></td>
-				<td><a href='?src=\ref[src];profile=0.3'>RP Default(0.3)</a></td>
-				<td><a href='?src=\ref[src];profile=0.2'>V. Low (0.2)</a></td>
-				<td><a href='?src=\ref[src];profile=0.4'>Low (0.4)</a></td>
-				<td><a href='?src=\ref[src];profile=0.6'>Med-low (0.6)</a></td>
-				<td><a href='?src=\ref[src];profile=1'>Standard (1)</a></td>
-				<td><a href='?src=\ref[src];profile=1.5'>High (1.5)</a></td>
-				<td><a href='?src=\ref[src];profile=2'>Very High (2)</a></td>
-				<td><a href='?src=\ref[src];profile=4'>Doom (4)</a></td>
+				<table><tr>
+				<td><a href='?src=\ref[src];profile=0.1'>RP</a></td>
+				<td><a href='?src=\ref[src];profile=0.2'>V. Low</a></td>
+				<td><a href='?src=\ref[src];profile=0.4'>Low</a></td>
+				<td><a href='?src=\ref[src];profile=0.6'>Med-low</a></td>
+				<td><a href='?src=\ref[src];profile=1'>Standard</a></td>
+				<td><a href='?src=\ref[src];profile=1.5'>High</a></td>
+				<td><a href='?src=\ref[src];profile=2'>Very High</a></td>
+				<td><a href='?src=\ref[src];profile=4'>Doom</a></td>
 				</tr></table>"}
 		o += "<table><tr><td><b>Name</b></td><td><b>Standard depletion rate</b></td><td><b>Gain rate</b></td><td>Drain rate</td></tr>"
 		for (var/T in motives)
@@ -590,7 +578,7 @@
 
 		o += "</table>"
 		o += "</body></html>"
-		user.Browse(o, "window=sims_controller;size=500x400")
+		user << browse(o, "window=sims_controller;size=500x400")
 
 
 var/global/datum/simsControl/simsController = new()
@@ -623,7 +611,7 @@ var/global/datum/simsControl/simsController = new()
 					SY++
 					H.hud.add_screen(hud)
 
-	rp
+	destiny
 		New()
 			..()
 			addMotive(/datum/simsMotive/hunger)
@@ -652,7 +640,7 @@ var/global/datum/simsControl/simsController = new()
 				var/datum/simsMotive/M = motives[name]
 				var/obj/screen/hud/hud = M.hud
 				H.hud.remove_screen(hud)
-			if (plumbob && islist(H.attached_objs))
+			if (plumbob)
 				H.attached_objs -= plumbob
 				plumbob.loc = null
 		if (plumbob)
@@ -663,7 +651,7 @@ var/global/datum/simsControl/simsController = new()
 		motives.len = 0
 		simsController.simsHolders -= src
 
-	disposing()
+	Del()
 		cleanup()
 		..()
 
@@ -704,8 +692,6 @@ var/global/datum/simsControl/simsController = new()
 			return M.value
 
 	proc/affectMotive(var/name, var/affection)
-		if (owner.nodamage)
-			return
 		if (name in motives)
 			var/datum/simsMotive/M = motives[name]
 			M.modifyValue(affection)
@@ -713,7 +699,6 @@ var/global/datum/simsControl/simsController = new()
 	proc/Life()
 		if (disposed)
 			return
-
 		for (var/name in motives)
 			var/datum/simsMotive/M = motives[name]
 			M.Life()
@@ -764,8 +749,6 @@ var/global/datum/simsControl/simsController = new()
 	if (!M)
 		M = input("Please, select a player!", "Attach Plumbob") as null|anything in mobs
 	var/obj/effect/plumbob/P = new(get_turf(M))
-	if (!islist(M.attached_objs))
-		M.attached_objs = list()
 	M.attached_objs += P
 	P.owner = M
 	if (ishuman(M))

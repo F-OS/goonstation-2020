@@ -9,7 +9,7 @@
 			react_volume = R.total_volume
 		var/fract = react_volume / R.total_volume
 		if (method == 1)
-			var/datum/reagent/S = R.get_reagent("styptic_powder")
+			var/datum/reagent/S = R.get_reagent("stypic_powder")
 			if (S)
 				holder.emote("scream")
 				boutput(holder, "<span style=\"color:blue\">The styptic powder stings like hell as it closes some of your wounds.</span>")
@@ -23,3 +23,4 @@
 			return
 		if (holder.bodytemperature < T0C - 45 && holder.reagents.has_reagent("cryoxadone"))
 			HealDamage(12)
+			

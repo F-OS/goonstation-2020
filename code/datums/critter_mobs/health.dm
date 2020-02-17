@@ -23,9 +23,8 @@
 		holder = M
 		value = maximum_value
 
-	proc/TakeDamage(var/amt, var/bypass_multiplier = 0)
-		if (!bypass_multiplier)
-			amt *= damage_multiplier
+	proc/TakeDamage(var/amt)
+		amt *= damage_multiplier
 		if (minimum_value < maximum_value)
 			value = max(minimum_value, min(value - amt, maximum_value))
 		else

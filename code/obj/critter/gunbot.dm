@@ -24,7 +24,7 @@
 			if (C.health < 0) continue
 			if (C.name == src.attacker) src.attack = 1
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 
@@ -36,11 +36,11 @@
 
 				playsound(src.loc, "sound/weapons/Gunshot.ogg", 50, 1)
 				var/tturf = get_turf(target)
-				SPAWN_DBG(1)
+				spawn(1)
 					Shoot(tturf, src.loc, src)
-				SPAWN_DBG(4)
+				spawn(4)
 					Shoot(tturf, src.loc, src)
-				SPAWN_DBG(6)
+				spawn(6)
 					Shoot(tturf, src.loc, src)
 
 				src.attack = 0
@@ -63,11 +63,11 @@
 
 				playsound(src.loc, "sound/weapons/Gunshot.ogg", 50, 1)
 				var/tturf = get_turf(target)
-				SPAWN_DBG(1)
+				spawn(1)
 					Shoot(tturf, src.loc, src)
-				SPAWN_DBG(4)
+				spawn(4)
 					Shoot(tturf, src.loc, src)
-				SPAWN_DBG(6)
+				spawn(6)
 					Shoot(tturf, src.loc, src)
 
 				src.attack = 0
@@ -83,13 +83,13 @@
 			var/obj/item/drop1 = pick(/obj/item/electronics/battery,/obj/item/electronics/board,/obj/item/electronics/buzzer,/obj/item/electronics/frame,/obj/item/electronics/resistor,/obj/item/electronics/screen,/obj/item/electronics/relay, /obj/item/parts/robot_parts/arm/left, /obj/item/parts/robot_parts/arm/right)
 			var/obj/item/drop2 = pick(/obj/item/electronics/battery,/obj/item/electronics/board,/obj/item/electronics/buzzer,/obj/item/electronics/frame,/obj/item/electronics/resistor,/obj/item/electronics/screen,/obj/item/electronics/relay, /obj/item/parts/robot_parts/arm/left, /obj/item/parts/robot_parts/arm/right)
 
-			make_cleanable( /obj/decal/cleanable/robot_debris,Ts)
+			new /obj/decal/cleanable/robot_debris(Ts)
 			new drop1(Ts)
-			make_cleanable( /obj/decal/cleanable/robot_debris,Ts)
+			new /obj/decal/cleanable/robot_debris(Ts)
 			new drop2(Ts)
-			make_cleanable( /obj/decal/cleanable/robot_debris,Ts)
+			new /obj/decal/cleanable/robot_debris(Ts)
 
-		SPAWN_DBG(0)
+		spawn()
 			var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 			s.set_up(3, 1, src)
 			s.start()

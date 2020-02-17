@@ -40,7 +40,7 @@ var/compx_gridx_max = 5
 		if(!compx_grid_spacer)
 			compx_grid_spacer = new
 
-		SPAWN_DBG(4)
+		spawn(4)
 			if(ispath(src.setup_starting_drive))
 				new src.setup_starting_drive(src)
 
@@ -80,7 +80,7 @@ var/compx_gridx_max = 5
 
 
 	process()
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			return
 		use_power(250)
 
@@ -171,21 +171,21 @@ var/compx_gridx_max = 5
 
 
 	power_change()
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			icon_state = src.base_icon_state
 			src.icon_state += "b"
 
 		else if(powered())
 			icon_state = src.base_icon_state
-			status &= ~NOPOWER
+			stat &= ~NOPOWER
 		else
-			SPAWN_DBG(rand(0, 15))
+			spawn(rand(0, 15))
 				icon_state = src.base_icon_state
 				src.icon_state += "0"
-				status |= NOPOWER
+				stat |= NOPOWER
 
 	meteorhit(var/obj/O as obj)
-		if(status & BROKEN)	qdel(src)
+		if(stat & BROKEN)	qdel(src)
 		set_broken()
 		var/datum/effects/system/harmless_smoke_spread/smoke = new /datum/effects/system/harmless_smoke_spread()
 		smoke.set_up(5, 0, src)
@@ -209,13 +209,13 @@ var/compx_gridx_max = 5
 	blob_act(var/power)
 		if (prob(power * 2.5))
 			set_broken()
-			src.set_density(0)
+			src.density = 0
 
 	proc
 		set_broken()
 			icon_state = src.base_icon_state
 			icon_state += "b"
-			status |= BROKEN
+			stat |= BROKEN
 
 		set_graphic_mode(var/new_mode = 0, mob/user as mob)
 			if(!user || !user.client)
@@ -303,7 +303,7 @@ var/compx_gridx_max = 5
 			src.updateUsrDialog()
 			src.host_program = null
 
-			SPAWN_DBG(20)
+			spawn(20)
 				//src.restarting = 0
 				src.post_system()
 
@@ -367,7 +367,7 @@ var/compx_gridx_max = 5
 	set name = ".compcommand"
 
 	//boutput(world, "compx command: \"[commandstring]\"")
-	var/list/commands = splittext(commandstring,"%")
+	var/list/commands = dd_text2list(commandstring,"%")
 	if(commands.len < 2)
 		return
 	var/command = commands[2]

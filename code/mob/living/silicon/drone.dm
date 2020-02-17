@@ -45,8 +45,8 @@
 	var/datum/material/mat_plating = null
 	var/disabled = 0
 	var/panelopen = 0
-	var/sound_damaged = 'sound/impact_sounds/Metal_Hit_Light_1.ogg'
-	var/sound_destroyed = 'sound/impact_sounds/Machinery_Break_1.ogg'
+	var/sound_damaged = 'sound/effects/grillehit.ogg'
+	var/sound_destroyed = 'sound/effects/robogib.ogg'
 	var/list/beeps_n_boops = list('sound/machines/twobeep.ogg','sound/machines/ping.ogg','sound/machines/chime.ogg','sound/machines/buzz-two.ogg','sound/machines/buzz-sigh.ogg')
 	var/list/glitchy_noise = list('sound/effects/glitchy1.ogg','sound/effects/glitchy2.ogg','sound/effects/glitchy3.ogg')
 	var/list/glitch_con = list("kind of","a little bit","somewhat","a bit","slightly","quite","rather")
@@ -77,8 +77,13 @@
 		src.botcard.access = get_all_accesses()
 
 	Life(datum/controller/process/mobs/parent)
+		set invisibility = 0
+
 		if (..(parent))
 			return 1
+
+		if (src.transforming)
+			return
 
 		//hud.update_health()
 		if (hud)
@@ -92,9 +97,6 @@
 
 	examine()
 		..()
-		if(src.hiddenFrom && hiddenFrom.Find(usr.client)) //invislist
-			return
-
 		if (src.controller)
 			boutput(usr, "It is currently active and being controlled by someone.")
 		else
@@ -107,7 +109,6 @@
 
 	movement_delay()
 		var/tally = 0
-		tally += movement_delay_modifier
 		for (var/obj/item/parts/robot_parts/drone/DP in src.contents)
 			tally += DP.weight
 		if (src.propulsion && istype(src.propulsion))
@@ -128,7 +129,7 @@
 				if (src.health >= src.health_max)
 					boutput(user, "<span style=\"color:red\">It isn't damaged!</span>")
 					return
-				if (get_fraction_of_percentage_and_whole(src.health,src.health_max) < 33)
+				if (get_x_percentage_of_y(src.health,src.health_max) < 33)
 					boutput(user, "<span style=\"color:red\">You need to use wire to fix the cabling first.</span>")
 					return
 				if (WELD.get_fuel() > 1)
@@ -146,7 +147,7 @@
 				boutput(user, "<span style=\"color:red\">It isn't damaged!</span>")
 				return
 			var/obj/item/cable_coil/C = W
-			if (get_fraction_of_percentage_and_whole(src.health,src.health_max) >= 33)
+			if (get_x_percentage_of_y(src.health,src.health_max) >= 33)
 				boutput(usr, "<span style=\"color:red\">The cabling looks fine. Use a welder to repair the rest of the damage.</span>")
 				return
 			C.use(1)
@@ -202,35 +203,32 @@
 		hud.set_active_tool(switchto)
 
 	click(atom/target, params)
-		var/obj/item/equipped = src.active_tool
-		var/use_delay = !(target in src.contents) && !istype(target,/obj/screen) && (!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (equipped && equipped.flags & USEDELAY))
-		if (use_delay && world.time < src.next_click)
-			return src.next_click - world.time
+		if ((!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (src.active_tool && src.active_tool.flags & USEDELAY)) && world.time < src.next_click)
+			return
+
+		var/inrange = in_range(target, src)
+		var/obj/item/W = src.active_tool
+		if ((W && (inrange || (W.flags & EXTRADELAY))))
+			target.attackby(W, src)
+			if (W)
+				W.afterattack(target, src, inrange)
 
 		if (get_dist(src, target) > 0)
 			dir = get_dir(src, target)
 
-		var/reach = can_reach(target, src)
-		if (equipped && (reach || (equipped.flags & EXTRADELAY)))
-			if (use_delay)
-				src.next_click = world.time + (equipped ? equipped.click_delay : src.click_delay)
-
-			target.attackby(equipped, src)
-			if (equipped)
-				equipped.afterattack(target, src, reach)
-
-			if (src.lastattacked == target && use_delay) //If lastattacked was set, this must be a combat action!! Use combat click delay.
-				src.next_click = world.time + (equipped ? max(equipped.click_delay,src.combat_click_delay) : src.combat_click_delay)
-				src.lastattacked = null
+		if (!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (W && W.flags & USEDELAY))
+			if (world.time < src.next_click)
+				return src.next_click - world.time
+			src.next_click = world.time + 5
 
 	Bump(atom/movable/AM as mob|obj, yes)
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			if ((!( yes ) || src.now_pushing))
 				return
 			src.now_pushing = 1
 			if(ismob(AM))
 				var/mob/tmob = AM
-				if(ishuman(tmob) && tmob.bioHolder && tmob.bioHolder.HasEffect("fat"))
+				if(istype(tmob, /mob/living/carbon/human) && tmob.bioHolder && tmob.bioHolder.HasEffect("fat"))
 					src.visible_message("<span style=\"color:red\"><b>[src]</b> can't get past [AM.name]'s fat ass!</span>")
 					src.now_pushing = 0
 					src.unlock_medal("That's no moon, that's a GOURMAND!", 1)
@@ -256,7 +254,7 @@
 			boutput(src, "You are currently muted.")
 			return
 
-		if (isdead(src))
+		if (src.stat == 2)
 			message = trim(copytext(sanitize(message), 1, MAX_MESSAGE_LEN))
 			return src.say_dead(message)
 
@@ -429,7 +427,7 @@
 						if(src.material)
 							S.setMaterial(src.material)
 						else
-							var/datum/material/M = getMaterial("steel")
+							var/datum/material/M = getCachedMaterial("steel")
 							S.setMaterial(M)
 
 						qdel(src)
@@ -448,7 +446,7 @@
 			else
 				boutput(user, "<span style=\"color:red\">Need more welding fuel!</span>")
 
-		else if (iswrenchingtool(W))
+		else if(istype(W, /obj/item/wrench))
 			switch(construct_stage)
 				if(0)
 					change_stage(1)

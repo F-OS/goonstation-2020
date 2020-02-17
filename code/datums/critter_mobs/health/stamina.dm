@@ -14,6 +14,6 @@
 
 	on_deplete()
 		holder.visible_message("<span style='color:red'>[holder] collapses!</span>")
-		holder.changeStatus("paralysis", 60)
+		holder.paralysis = max(holder.paralysis, 5)
 
 	// @todo finish this

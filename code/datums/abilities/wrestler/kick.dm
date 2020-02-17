@@ -1,7 +1,6 @@
 /datum/targetable/wrestler/kick
 	name = "Kick"
 	desc = "A powerful kick, sends people flying away from you. Also useful for escaping from bad situations."
-	icon_state = "Kick"
 	targeted = 1
 	target_anything = 0
 	target_nodamage_check = 1
@@ -30,10 +29,6 @@
 			boutput(M, __red("[target] is too far away."))
 			return 1
 
-		if(check_target_immunity( target ))
-			M.visible_message("<span style='color:red'>You seem to attack [target]!</span>")
-			return 1
-
 		M.emote("scream")
 		M.emote("flip")
 		M.dir = turn(M.dir, 90)
@@ -47,11 +42,10 @@
 
 		var/turf/T = get_edge_target_turf(M, get_dir(M, get_step_away(target, M)))
 		if (T && isturf(T))
-			SPAWN_DBG(0)
+			spawn(0)
 				target.throw_at(T, 3, 2)
-				target.changeStatus("weakened", 2 SECONDS)
-				target.changeStatus("stunned", 2 SECONDS)
-				target.force_laydown_standup()
+				target.weakened++
+				target.stunned += 2
 
 		logTheThing("combat", M, target, "uses the kick wrestling move on %target% at [log_loc(M)].")
 		return 0

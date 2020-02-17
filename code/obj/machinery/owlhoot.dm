@@ -3,7 +3,6 @@
 	desc = "A portable flashing... device? Hoot."
 	icon = 'icons/obj/hooty.dmi'
 	icon_state = "owl"
-	event_handler_flags = USE_PROXIMITY | USE_FLUID_ENTER
 	var/base_state = "owl"
 	anchored = 0
 	density = 1
@@ -14,7 +13,7 @@
 		if (src.last_flash && world.time < src.last_flash + 10)
 			return
 
-		playsound(src.loc, "sound/voice/animal/hoot.ogg", 100, 1)
+		playsound(src.loc, "sound/misc/hoot.ogg", 100, 1)
 		flick("[base_state]_flash", src)
 		src.last_flash = world.time
 
@@ -30,7 +29,7 @@
 						src.flash()
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (iswrenchingtool(W))
+		if (istype(W, /obj/item/wrench))
 			add_fingerprint(user)
 			src.anchored = !src.anchored
 

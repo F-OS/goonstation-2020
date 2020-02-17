@@ -5,15 +5,12 @@
 	targeted = 0
 	cooldown = 100
 	requires_robes = 1
-	voice_grim = "sound/voice/wizard/ForcewallGrim.ogg"
-	voice_fem = "sound/voice/wizard/ForcewallFem.ogg"
-	voice_other = "sound/voice/wizard/ForcewallLoud.ogg"
 
 	cast()
 		if(!holder)
 			return
 		holder.owner.say("BRIXHUN MOHTYR")
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/ForcewallLoud.ogg", 50, 0, -1)
 		if(!holder.owner.wizard_spellpower())
 			boutput(holder.owner, "<span style=\"color:red\">Your spell is weak without a staff to focus it!</span>")
 
@@ -37,7 +34,7 @@
 			if (holder.owner.wizard_spellpower()) forcefield4 =  new /obj/forcefield(locate(holder.owner.x,holder.owner.y + 2,holder.owner.z))
 			if (holder.owner.wizard_spellpower()) forcefield5 =  new /obj/forcefield(locate(holder.owner.x,holder.owner.y - 2,holder.owner.z))
 
-		SPAWN_DBG(300)
+		spawn(300)
 			qdel(forcefield1)
 			qdel(forcefield2)
 			qdel(forcefield3)

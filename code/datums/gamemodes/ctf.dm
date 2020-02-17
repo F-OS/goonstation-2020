@@ -27,7 +27,7 @@
 			continue
 		mob_check++
 		if(mob_check <= total_mobs/2) //add to red team else to green
-			SPAWN_DBG(0)
+			spawn()
 				if(M.client)
 					boutput(M, "You are in the Red Team!")
 					qdel(M.wear_suit)
@@ -67,7 +67,7 @@
 						boutput(world, "No red team spawn point detected")
 					M.client.team = "Red"
 		else
-			SPAWN_DBG(0)
+			spawn()
 				if(M.client)
 					boutput(M, "You are in the Green Team!")
 					qdel(M.wear_suit)
@@ -112,7 +112,7 @@
 	abandon_allowed = 1
 	setup_game()
 
-	SPAWN_DBG (50)
+	spawn (50)
 		var/obj/L = locate("landmark*Red-Flag")
 		if (L)
 			new /obj/item/ctf_flag/red(L.loc)

@@ -38,18 +38,12 @@
     function requestDisable(e) {
       var button = $(e.currentTarget);
       jax("disable", {name: button.data("process-name")});
-    } 
-
-    function requestEdit(e) {
-      var button = $(e.currentTarget);
-      jax("edit", {name: button.data("process-name")});
-    }    	
+    }    
     
     function initProcessTableButtons() {
       $(".kill-btn").on("click", requestKill);
       $(".enable-btn").on("click", requestEnable);
       $(".disable-btn").on("click", requestDisable);
-	  $(".edit-btn").on("click", requestEdit);
     }
     
     window.setRef = setRef;

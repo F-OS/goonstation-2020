@@ -17,12 +17,6 @@
 /obj/screen/disposing()
 	if (clients)
 		for(var/client/C in clients)
-			if (C.mob && ishuman(C.mob))
-				var/mob/living/carbon/human/H = C.mob
-				if (H.hud)
-					H.hud.inventory_bg -= src
-					H.hud.inventory_items -= src
-
 			C.screen -= src
 		clients.len = 0
 	clients = null
@@ -54,7 +48,7 @@
 		if (C && istype(C))
 			src.desc = src.getDesc(C)
 		if (ishuman(C))
-			SPAWN_DBG(0)
+			spawn(0)
 				var/icon/hud_style = hud_style_selection[get_hud_style(C)]
 				if (isicon(hud_style))
 					src.icon = hud_style
@@ -96,17 +90,10 @@
 
 	//WIRE TOOLTIPS
 	MouseEntered(location, control, params)
-		if (usr.client.tooltipHolder)
-			usr.client.tooltipHolder.showHover(src, list(
-				"params" = params,
-				"title" = src.name,
-				"content" = (src.desc ? src.desc : null),
-				"theme" = src.tooltipTheme
-			))
+		usr.client.tooltip.show(src, params, title = src.name, content = (src.desc ? src.desc : null), theme = src.tooltipTheme)
 
 	MouseExited()
-		if (usr.client.tooltipHolder)
-			usr.client.tooltipHolder.hideHover()
+		usr.client.tooltip.hide()
 
 /obj/screen/intent_sel/clicked(list/params)
 	var/icon_x = text2num(params["icon-x"])
@@ -120,7 +107,7 @@
 		if (icon_x > 16) //Upper Right
 			user.a_intent = INTENT_DISARM
 			src.icon_state = "disarm"
-			if(literal_disarm && ishuman(user))
+			if(literal_disarm && istype(user,/mob/living/carbon/human))
 				var/mob/living/carbon/human/H = user
 				H.limbs.l_arm.sever()
 				H.limbs.r_arm.sever()
@@ -142,3 +129,89 @@
 	switch(src.name)
 		if("stamina")
 			out(usr, src.desc)
+		if("act_intent")
+			if(params.Find("left"))
+				switch(usr.a_intent)
+					if(INTENT_HELP)
+						usr.a_intent = INTENT_DISARM
+						usr.hud_used.action_intent.icon_state = "disarm"
+					if(INTENT_DISARM)
+						usr.a_intent = INTENT_HARM
+						usr.hud_used.action_intent.icon_state = "harm"
+					if(INTENT_HARM)
+						usr.a_intent = INTENT_GRAB
+						usr.hud_used.action_intent.icon_state = "grab"
+					if(INTENT_GRAB)
+						usr.a_intent = INTENT_HELP
+						usr.hud_used.action_intent.icon_state = "help"
+			else
+				switch(usr.a_intent)
+					if(INTENT_HELP)
+						usr.a_intent = INTENT_GRAB
+						usr.hud_used.action_intent.icon_state = "grab"
+					if(INTENT_DISARM)
+						usr.a_intent = INTENT_HELP
+						usr.hud_used.action_intent.icon_state = "help"
+					if(INTENT_HARM)
+						usr.a_intent = INTENT_DISARM
+						usr.hud_used.action_intent.icon_state = "disarm"
+					if(INTENT_GRAB)
+						usr.a_intent = INTENT_HARM
+						usr.hud_used.action_intent.icon_state = "harm"
+		if("pull")
+			usr.pulling = null
+//Robot specific && Hivebot things
+		if("module")
+			if(istype(usr, /mob/living/silicon/robot)||istype(usr, /mob/living/silicon/hivebot))
+				if(usr:module) return
+				usr:pick_module()
+
+		if("radio")
+			if(istype(usr, /mob/living/silicon/robot)||istype(usr, /mob/living/silicon/hivebot))
+				usr:radio_menu()
+		if("panel")
+			if(istype(usr, /mob/living/silicon/robot)||istype(usr, /mob/living/silicon/hivebot))
+				usr:installed_modules()
+
+		if("store")
+			if(istype(usr, /mob/living/silicon/robot)||istype(usr, /mob/living/silicon/hivebot))
+				usr:uneq_active()
+
+		if("module1")
+			if(istype(usr,/mob/living/silicon/robot/)) usr:swap_hand(1)
+			else
+				if(usr:module_states[1])
+					if(usr:module_active != usr:module_states[1])
+						usr:inv1.icon_state = "inv1 +a"
+						usr:inv2.icon_state = "inv2"
+						usr:inv3.icon_state = "inv3"
+						usr:module_active = usr:module_states[1]
+					else
+						usr:inv1.icon_state = "inv1"
+						usr:module_active = null
+
+		if("module2")
+			if(istype(usr,/mob/living/silicon/robot/)) usr:swap_hand(2)
+			else
+				if(usr:module_states[2])
+					if(usr:module_active != usr:module_states[2])
+						usr:inv1.icon_state = "inv1"
+						usr:inv2.icon_state = "inv2 +a"
+						usr:inv3.icon_state = "inv3"
+						usr:module_active = usr:module_states[2]
+					else
+						usr:inv2.icon_state = "inv2"
+						usr:module_active = null
+
+		if("module3")
+			if(istype(usr,/mob/living/silicon/robot/)) usr:swap_hand(3)
+			else
+				if(usr:module_states[3])
+					if(usr:module_active != usr:module_states[3])
+						usr:inv1.icon_state = "inv1"
+						usr:inv2.icon_state = "inv2"
+						usr:inv3.icon_state = "inv3 +a"
+						usr:module_active = usr:module_states[3]
+					else
+						usr:inv3.icon_state = "inv3"
+						usr:module_active = null

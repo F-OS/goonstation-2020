@@ -11,7 +11,7 @@
 
 /datum/game_mode/traitor/announce()
 	boutput(world, "<B>The current game mode is - Traitor!</B>")
-	boutput(world, "<B>There is a syndicate traitor on the [station_or_ship()]. Do not let the traitor succeed!!</B>")
+	boutput(world, "<B>There is a syndicate traitor on the station. Do not let the traitor succeed!!</B>")
 
 /datum/game_mode/traitor/pre_setup()
 
@@ -25,10 +25,10 @@
 	var/token_wraith = 0
 
 	if(traitor_scaling)
-		num_traitors = max(1, min(round((num_players + randomizer) / 6), traitors_possible)) // adjust the randomizer as needed
+		num_traitors = max(1, min(round((num_players + randomizer) / 8), traitors_possible)) // adjust the randomizer as needed
 
-	if(num_traitors > 2 && prob(10))
-		num_traitors -= 2
+	if(num_traitors > 3 && prob(10))
+		num_traitors -= 3
 		num_wraiths = 1
 
 
@@ -54,20 +54,29 @@
 		message_admins("[key_name(tplayer.current)] successfully redeemed an antag token.")
 		/*num_traitors--
 		num_traitors = max(num_traitors, 0)*/
-
-	var/list/chosen_traitors = antagWeighter.choose(pool = possible_traitors, role = "traitor", amount = num_traitors, recordChosen = 1)
-	traitors |= chosen_traitors
-	for (var/datum/mind/traitor in traitors)
-		traitor.special_role = "traitor"
+	for(var/j = 0, j < num_traitors, j++)
+		if (!possible_traitors.len)
+			break
+		var/datum/mind/traitor = pick(possible_traitors)
+		traitors += traitor
 		possible_traitors.Remove(traitor)
+
+	for(var/datum/mind/traitor in traitors)
+		if(!traitor || !istype(traitor))
+			traitors.Remove(traitor)
+			continue
+		if(istype(traitor))
+			traitor.special_role = "traitor"
 
 	if(num_wraiths)
 		var/list/possible_wraiths = get_possible_wraiths(num_wraiths)
-		var/list/chosen_wraiths = antagWeighter.choose(pool = possible_wraiths, role = "wraith", amount = num_wraiths, recordChosen = 1)
-		for (var/datum/mind/wraith in chosen_wraiths)
+		for(var/j = 0, j < num_wraiths, j++)
+			if (!possible_wraiths.len)
+				break
+			var/datum/mind/wraith = pick(possible_wraiths)
 			traitors += wraith
-			wraith.special_role = "wraith"
 			possible_wraiths.Remove(wraith)
+			wraith.special_role = "wraith"
 
 	return 1
 
@@ -78,11 +87,10 @@
 
 		switch(traitor.special_role)
 			if("traitor")
-			#ifdef RP_MODE
-				objective_set_path = pick(typesof(/datum/objective_set/traitor/rp_friendly))
-			#else
-				objective_set_path = pick(typesof(/datum/objective_set/traitor))
-			#endif
+				if(traitor.assigned_role in list("Captain","Head of Personnel","Head of Security","Chief Engineer","Research Director"))
+					objective_set_path = pick(typesof(/datum/objective_set/traitor/hard))
+				else
+					objective_set_path = pick(typesof(/datum/objective_set/traitor/easy))
 
 				new objective_set_path(traitor)
 				equip_traitor(traitor.current)
@@ -94,7 +102,7 @@
 			if ("wraith")
 				generate_wraith_objectives(traitor)
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 /datum/game_mode/traitor/proc/get_possible_traitors(minimum_traitors=1)
@@ -163,7 +171,7 @@
 		intercepttext += i_text.build(A, pick(traitors))
 /*
 	for (var/obj/machinery/computer/communications/comm in machines)
-		if (!(comm.status & (BROKEN | NOPOWER)) && comm.prints_intercept)
+		if (!(comm.stat & (BROKEN | NOPOWER)) && comm.prints_intercept)
 			var/obj/item/paper/intercept = new /obj/item/paper( comm.loc )
 			intercept.name = "paper- 'Cent. Com. Status Summary'"
 			intercept.info = intercepttext
@@ -172,7 +180,7 @@
 			comm.messagetext.Add(intercepttext)
 */
 
-	for (var/obj/machinery/communications_dish/C in comm_dishes)
+	for (var/obj/machinery/communications_dish/C in machines)
 		C.add_centcom_report("Cent. Com. Status Summary", intercepttext)
 
 	command_alert("Summary downloaded and printed out at all communications consoles.", "Enemy communication intercept. Security Level Elevated.")

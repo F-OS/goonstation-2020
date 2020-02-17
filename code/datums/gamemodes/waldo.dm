@@ -25,23 +25,23 @@
 
 	var/num_waldos = max(1, min(round(num_players / 6), waldos_possible))
 
-	var/list/chosen_waldos = antagWeighter.choose(pool = possible_waldos, role = "waldo", amount = num_waldos, recordChosen = 1)
-	for (var/datum/mind/waldo in chosen_waldos)
+	for(var/j = 0, j < num_waldos, j++)
+		var/datum/mind/waldo = pick(possible_waldos)
 		waldos += waldo
-		waldo.assigned_role = "MODE" //So they aren't chosen for other jobs.
-		possible_waldos.Remove(waldo)	
+		possible_waldos.Remove(waldo)
 
+	for(var/datum/mind/waldo_mind in waldos)
+		waldo_mind.assigned_role = "MODE" //So they aren't chosen for other jobs.
 	return 1
 
 /datum/game_mode/waldo/post_setup()
 	var/num_waldos = waldos.len
 	for (var/obj/landmark/A in world)
-		LAGCHECK(LAG_LOW)
 		if (A.name == "Teleport-Scroll")
 			var/scrollcount
 			for (scrollcount = num_waldos, scrollcount > 0, scrollcount--)
 				new /obj/item/teleportation_scroll(A.loc)
-			A.dispose()
+			qdel(A)
 			continue
 	var/k = 1
 	for(var/datum/mind/waldo in waldos)
@@ -135,7 +135,7 @@
 //			waldo.current << browse('waldo.jpg',"window=some;titlebar=1;size=550x400;can_minimize=0;can_resize=0")
 
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 /datum/game_mode/waldo/proc/get_possible_waldos()
@@ -291,7 +291,7 @@
 		intercepttext += i_text.build(A, pick(waldos))
 /*
 	for (var/obj/machinery/computer/communications/comm in machines)
-		if (!(comm.status & (BROKEN | NOPOWER)) && comm.prints_intercept)
+		if (!(comm.stat & (BROKEN | NOPOWER)) && comm.prints_intercept)
 			var/obj/item/paper/intercept = new /obj/item/paper( comm.loc )
 			intercept.name = "paper- 'Cent. Com. Status Summary'"
 			intercept.info = intercepttext
@@ -300,7 +300,7 @@
 			comm.messagetext.Add(intercepttext)
 */
 	for (var/obj/machinery/communications_dish/C in machines)
-		if(! (C.status & (BROKEN|NOPOWER) ) )
+		if(! (C.stat & (BROKEN|NOPOWER) ) )
 			C.messagetitle.Add("Cent. Com. Status Summary")
 			C.messagetext.Add(intercepttext)
 
@@ -311,7 +311,7 @@
 	var/wizdeathcount = 0
 	for (var/datum/mind/W in waldos)
 		wizcount++
-		if(!W.current || isdead(W.current)) wizdeathcount++
+		if(!W.current || W.current.stat == 2) wizdeathcount++
 	if (wizcount == wizdeathcount)
 		if (wizcount >= 2) boutput(world, "<span style=\"color:red\"><FONT size=3><B>Waldo and friends have been killed by the crew!</B></FONT></span>")
 		else boutput(world, "<span style=\"color:red\"><FONT size=3><B>Waldo has been killed by the crew!</B></FONT></span>")
@@ -369,7 +369,7 @@ datum/game_mode/waldo/check_finished()
 	var/wizdeathcount = 0
 	for (var/datum/mind/W in waldos)
 		wizcount++
-		if(!W.current || isdead(W.current)) wizdeathcount++
+		if(!W.current || W.current.stat == 2) wizdeathcount++
 
 	if (wizcount == wizdeathcount) return 1
 	else return ..()

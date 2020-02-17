@@ -3,7 +3,7 @@
 	desc = "A small electronic device able to ignite combustable substances."
 	icon_state = "igniter"
 	var/status = 1.0
-	flags = FPRINT | TABLEPASS| CONDUCT | ONBELT | USEDELAY
+	flags = FPRINT | TABLEPASS| CONDUCT
 	item_state = "electronic"
 	m_amt = 100
 	throwforce = 5
@@ -12,10 +12,6 @@
 	throw_range = 10
 	mats = 2
 	module_research = list("science" = 1, "miniaturization" = 5, "devices" = 3)
-
-	//blcok spamming shit because inventory uncaps click speed and kinda makes this an exploit
-	//its still a bit stronger than non-inventory interactions, why not
-	var/last_ignite = 0
 
 /obj/item/device/igniter/attack(mob/M as mob, mob/user as mob)
 	if (ishuman(M))
@@ -75,7 +71,7 @@
 		src.set_loc(R)
 		R.part2 = src
 		src.add_fingerprint(user)
-	else if ((istype(W, /obj/item/device/analyzer/healthanalyzer) && !( src.status )))
+	else if ((istype(W, /obj/item/device/healthanalyzer) && !( src.status )))
 
 		var/obj/item/assembly/anal_ignite/R = new /obj/item/assembly/anal_ignite( user ) // Hehehe anal
 		W.set_loc(R)
@@ -90,7 +86,7 @@
 		src.set_loc(R)
 		R.part2 = src
 		src.add_fingerprint(user)
-	else if (istype(W, /obj/item/device/multitool)) // check specifically for a multitool
+	else if ((istype(W, /obj/item/device/multitool) && !(src.status)))
 
 		var/obj/item/assembly/detonator/R = new /obj/item/assembly/detonator(user);
 		W.loc = R
@@ -111,35 +107,31 @@
 		src.add_fingerprint(user)
 		user.show_message("<span style=\"color:blue\">You hook up the igniter to the multitool's panel.</span>")
 
-	if (isscrewingtool(W))
-		src.status = !(src.status)
-		if (src.status)
-			user.show_message("<span style=\"color:blue\">The igniter is ready!</span>")
-		else
-			user.show_message("<span style=\"color:blue\">The igniter can now be attached!</span>")
-		src.add_fingerprint(user)
-
+	if (!( istype(W, /obj/item/screwdriver) ))
+		return
+	src.status = !( src.status )
+	if (src.status)
+		user.show_message("<span style=\"color:blue\">The igniter is ready!</span>")
+	else
+		user.show_message("<span style=\"color:blue\">The igniter can now be attached!</span>")
+	src.add_fingerprint(user)
 	return
 
 /obj/item/device/igniter/attack_self(mob/user as mob)
 
 	src.add_fingerprint(user)
-	SPAWN_DBG( 5 )
+	spawn( 5 )
 		ignite()
 		return
 	return
 
-/obj/item/device/igniter/proc/can_ignite()
-	return (world.time >= last_ignite + src.combat_click_delay/2)
-
 /obj/item/device/igniter/afterattack(atom/target, mob/user as mob)
-	if (!ismob(target) && target.reagents && can_ignite())
+	if (!ismob(target) && target.reagents)
 		boutput(usr, "<span style=\"color:blue\">You heat \the [target.name]</span>")
 		target.reagents.temperature_reagents(20000,50)
-		last_ignite = world.time
 
 /obj/item/device/igniter/proc/ignite()
-	if (src.status && can_ignite())
+	if (src.status)
 		var/turf/location = src.loc
 
 		if (src.master)
@@ -148,7 +140,6 @@
 		location = get_turf(location)
 		if(location)
 			location.hotspot_expose((isturf(location) ? 3000 : 30000),2000)
-		last_ignite = world.time
 
 	return
 

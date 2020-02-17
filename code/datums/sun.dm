@@ -47,11 +47,9 @@
 
 	for(var/obj/machinery/power/tracker/T in machines)
 		T.set_angle(angle)
-		LAGCHECK(LAG_LOW)
 
 	for(var/obj/machinery/power/solar/S in machines)
 		occlusion(S)
-		LAGCHECK(LAG_LOW)
 
 
 // for a solar panel, trace towards sun to see if we're in shadow
@@ -73,7 +71,6 @@
 		if(T.density)			// if we hit a solid turf, panel is obscured
 			S.obscured = 1
 			return
-		LAGCHECK(LAG_MED)
 
 	S.obscured = 0		// if hit the edge or stepped 20 times, not obscured
 	S.update_solar_exposure()

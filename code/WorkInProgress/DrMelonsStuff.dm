@@ -27,7 +27,7 @@
 				src.visible_message("<span style=\"color:red\">The <B>[src]</B> splutters to a halt.</span>")
 				playsound(src, 'sound/machines/ding.ogg', 50, 1)
 			else
-				SPAWN_DBG(50)
+				spawn(50)
 					var/datum/chemical_reaction/smoke/S = new
 					S.on_reaction(reagents)
 					reagents.total_volume -= 5
@@ -92,17 +92,29 @@
 			boutput(user, "<span style=\"color:blue\">You flip the switch on the FogMachine-3000 to the Off position.</span>")
 			return
 
+
+
+/proc/honk(var/string)
+	var/modded = ""
+	var/list/text_tokens = dd_text2list(string, " ")
+	for(var/token in text_tokens)
+		modded += "HONK "
+	modded += "HONK!"
+	if(prob(15))
+		modded += " - HOOOOOONNNKKK!!!"
+
+	return modded
+
 /obj/machinery/bathtub
 	name = "bathtub"
 	desc = "Now, that looks cosy!"
 	icon = 'icons/obj/stationobjs.dmi'
 	icon_state = "bathtub"
 	flags = OPENCONTAINER
-	var/static/image/fluid_icon
+	var/static/image/fluid_icon = image("icon" = 'icons/obj/stationobjs.dmi', "icon_state" = "fluid_bathtub")
 	var/static/image/fluid_icon_feet = image("icon" = 'icons/obj/stationobjs.dmi', "icon_state" = "fluid_bathtub_feet")
 	var/static/image/bath_edge = image("icon" = 'icons/obj/stationobjs.dmi', "icon_state" = "bath_edge", "layer" = FLOAT_LAYER)
 	var/mob/living/carbon/human/myuser = null
-	var/default_reagent = "water"
 
 	New()
 		..()
@@ -124,21 +136,18 @@
 		src.overlays = null
 
 		if(reagents.total_volume)
-			ENSURE_IMAGE(src.fluid_icon, src.icon_state, "fluid-bathtub")
-			var/datum/color/average = reagents.get_average_color()
-			fluid_icon.color = average.to_rgba()
+			icon_state = "bathtub"
+
 			src.overlays += fluid_icon
 
 		if(src.myuser)
 			src.overlays += src.myuser
-			// Don't really see the purpose of this; re-add if you believe otherwise
-			// if(reagents.total_volume)
-				// src.overlays += fluid_icon_feet
+			if(reagents.total_volume)
+				src.overlays += fluid_icon_feet
 
 		src.overlays += bath_edge
 
 	attack_hand(mob/user as mob)
-		if (user.stat || user.getStatusDuration("paralysis") || user.getStatusDuration("stunned") || user.getStatusDuration("weakened") || isAI(user)) return
 		if (src.myuser)
 			boutput(user, "<span style=\"color:red\">You pull [src.myuser] out of the bath!</span>")
 			src.eject_user()
@@ -189,7 +198,7 @@
 		return
 
 	MouseDrop_T(mob/living/carbon/human/target, mob/user)
-		if (src.myuser || !istype(target) || target.buckled || LinkBlocked(target.loc,src.loc) || get_dist(user, src) > 1 || get_dist(user, target) > 1 || user.getStatusDuration("paralysis") || user.getStatusDuration("stunned") || user.getStatusDuration("weakened") || user.stat || isAI(user))
+		if (src.myuser || !istype(target) || target.buckled || LinkBlocked(target.loc,src.loc) || get_dist(user, src) > 1 || get_dist(user, target) > 1 || user.paralysis || user.stunned || user.weakened || user.stat || istype(user, /mob/living/silicon/ai))
 			return
 
 		var/msg
@@ -221,15 +230,6 @@
 	is_open_container()
 		return 1
 
-/obj/machinery/bathtub/verb/draw_bath()
-    set name = "Draw A Bath" // idea: emagging bathtub makes the bath spit out a photo of itself when you draw a bath?
-    set src in oview(1)
-    set category = "Local"
-    if (get_dist(usr, src) <= 1 && !usr.stat)
-        src.reagents.add_reagent(default_reagent,120)
-        usr.visible_message("<span style=\"color:red\">[usr] draws a bath.</span>",\
-        "<span style=\"color:green\">You draw a nice bath!</span>")
-
 /obj/item/clothing/head/apprentice
 	proc/fantasia()
 		if(ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/wizard))
@@ -237,8 +237,8 @@
 				src.visible_message("<span style=\"color:red\">[src] begins to twitch and move!</span>")
 				var/moveto = locate(M.x + rand(-1,1),M.y + rand(-1, 1),src.z)
 				//make the mops move
-				if (istype(moveto, /turf/simulated/floor) || istype(moveto, /turf/simulated/floor/shuttle) || istype(moveto, /turf/simulated/aprilfools/floor) || istype(moveto, /turf/unsimulated/floor) || istype(moveto, /turf/unsimulated/aprilfools)) step_towards(M, moveto)
-				SPAWN_DBG(50)
+				if (istype(moveto, /turf/simulated/floor) || istype(moveto, /turf/simulated/shuttle/floor) || istype(moveto, /turf/simulated/aprilfools/floor) || istype(moveto, /turf/unsimulated/floor) || istype(moveto, /turf/unsimulated/aprilfools)) step_towards(M, moveto)
+				spawn(50)
 					src.visible_message("<span style=\"color:blue\">Thankfully, [src] settles down.</span>")
 		else
 			for (var/obj/item/mop/M in orange(5,src))

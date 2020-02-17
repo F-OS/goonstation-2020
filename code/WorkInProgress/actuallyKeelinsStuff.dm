@@ -1,1413 +1,11 @@
 //This file contains stuff that is still *mostly* my code.
-
-/proc/testEffectRgb(var/atom/A)
-	A.render_target = "\ref[A]"
-	var/f
-
-	var/obj/O = new(A.loc)
-
-	var/image/red = image(null,O)
-	red.render_source = A.render_target
-	red.filters += filter(type="color", color=list(1,0,0, 0,0,0, 0,0,0, 0,0,0))
-	red.filters += filter(type="ripple", x=0, y=0, size=rand()*2.5+1, repeat=rand()*2.5+1, radius=0)
-	red.render_target = "*" + A.render_target + "-red"
-	f = red.filters[red.filters.len]
-	animate(f, size=f:size, time=0, loop=-1, radius=0, flags=ANIMATION_PARALLEL)
-	animate(size=0, radius=rand()*10+10, time=rand()*20+10)
-	red.appearance_flags = KEEP_APART
-	addGlobalImage(red, red.render_target)
-
-	var/image/green = image(null,O)
-	green.render_source = A.render_target
-	green.filters += filter(type="color", color=list(0,0,0, 0,1,0, 0,0,0, 0,0,0))
-	green.filters +=  filter(type="ripple", x=0, y=0, size=rand()*2.5+1, repeat=rand()*2.5+1, radius=0)
-	green.render_target = "*" + A.render_target + "-green"
-	f = green.filters[green.filters.len]
-	animate(f, size=f:size, time=0, loop=-1, radius=0, flags=ANIMATION_PARALLEL)
-	animate(size=0, radius=rand()*10+10, time=rand()*20+10)
-	green.appearance_flags = KEEP_APART
-	addGlobalImage(green, green.render_target)
-
-	var/image/blue = image(null,O)
-	blue.render_source = A.render_target
-	blue.filters += filter(type="color", color=list(0,0,0, 0,0,0, 0,0,1, 0,0,0))
-	blue.filters += filter(type="ripple", x=0, y=0, size=rand()*2.5+1, repeat=rand()*2.5+1, radius=0)
-	blue.render_target = "*" + A.render_target + "-blue"
-	f = blue.filters[blue.filters.len]
-	animate(f, size=f:size, time=0, loop=-1, radius=0, flags=ANIMATION_PARALLEL)
-	animate(size=0, radius=rand()*10+10, time=rand()*20+10)
-	blue.appearance_flags = KEEP_APART
-	addGlobalImage(blue, blue.render_target)
-
-	var/image/composite = image(null,O)
-	//composite.render_target = "*" + A.render_target + "-composite"
-	composite.filters += filter(type="layer", render_source = red.render_target, blend_mode = BLEND_ADD)
-	composite.filters += filter(type="layer", render_source = green.render_target, blend_mode = BLEND_ADD)
-	composite.filters += filter(type="layer", render_source = blue.render_target, blend_mode = BLEND_ADD)
-	composite.override = 1
-	composite.appearance_flags = KEEP_TOGETHER
-	addGlobalImage(composite, A.render_target + "-rgbeffect")
-
-	//A.filters += filter(type="layer", render_source = composite.render_target)
-
-	return
-
-var/list/electiles = list()
-
-/proc/electile(numb as num)
-	for(var/X in electiles)
-		del(X)
-	for(var/turf/T in view())
-		var/obj/overlay/O = new(T)
-		O.icon = icon('icons/effects/electile.dmi')
-		O.icon_state = "v[numb][pick("a","b","c")]"
-		electiles.Add(O)
-
-/proc/testburning()
-	for(var/i=0, i<5, i++)
-		var/atom/A = null
-		while(A == null || istype(A, /obj/overlay) || isturf(A) || A.invisibility)
-			A = pick(view(usr, 5))
-		A.setStatus("burning", 60 SECONDS)
-	return
-
-
-//http://www.byond.com/forum/post/2522992
-/obj/testportal
-	name = "BLAH"
-	vis_flags = VIS_HIDE
-	appearance_flags = KEEP_TOGETHER
-
-	proc/setup()
-		plane = FLOAT_PLANE
-		layer = FLOAT_LAYER
-
-		var/image/compImage = image('icons/effects/effects.dmi',src,"null")
-		compImage.render_target = "*portaltrg"
-
-		var/turf/trgTurf = locate(src.x+1, src.y, src.z)
-		compImage.vis_contents += trgTurf
-		compImage.appearance_flags = KEEP_TOGETHER
-
-		var/image/alphaMask = image('icons/effects/effects.dmi',src,"portaltest")
-		alphaMask.render_target = "*portalmask"
-
-		compImage.filters += filter(type="alpha", render_source="*portalmask")
-
-		src.underlays += alphaMask
-		src.underlays += compImage
-
-		src.filters += filter(type="layer", render_source="*portaltrg")
-		..()
-		return
-
-	New()
-		spawn(50) setup()
-
-/atom/proc/cabinetGlassIcon(var/atom/A, var/targetWidth = 12, var/targetHeight= 10, var/iconSize = 32)
-	var/icon/I = icon(A.icon, A.icon_state)
-	var/list/results = getIconBounds(I, A.icon_state)
-	I.Shift(SOUTH, results["bottom"]-1, 1)
-	I.Shift(WEST, results["left"]-1, 1)
-	var/sizeX = results["top"] - results["bottom"]
-	var/sizeY = results["right"] - results["left"]
-	var/factorX = targetWidth / sizeX
-	var/factorY = targetHeight / sizeY
-	var/scalingFactor = -1
-	if(factorX < factorY)
-		scalingFactor = factorX
-	else if (factorY < factorX)
-		scalingFactor = factorY
-	else if (factorX == factorY)
-		scalingFactor = factorX
-	if(scalingFactor < 1)
-		I.Scale(iconSize*scalingFactor, iconSize*scalingFactor)
-		I.Shift(EAST,((sizeX * scalingFactor) / 2) / 2)
-
-	var/icon/backGlass = icon('icons/obj/cabinet.dmi', "slot_empty")
-	var/icon/glass = icon('icons/obj/cabinet.dmi', "slot_transparent")
-	I.Blend(backGlass, ICON_UNDERLAY)
-	I.Blend(glass, ICON_OVERLAY)
-
-	return I
-
-/proc/getIconBounds(var/icon/I, var/icon_state)
-	var/list/results = list("bottom" = INFINITY, "left" = INFINITY, "top" = 0, "right" = 0)
-	for(var/x=1, x<=I.Width(), x++)
-		for(var/y=1, y<=I.Height(), y++)
-			var/pixel = I.GetPixel(x, y, null)
-			if(pixel != null)
-				if(y < results["bottom"]) results["bottom"] = y
-				if(y > results["top"]) results["top"] = y
-				if(x < results["left"]) results["left"] = x
-				if(x > results["right"]) results["right"] = x
-
-	return results
-
-/obj/decal/cleanable/markerdrawing
-	name = "marker doodles"
-	desc = "someone drew something here"
-	var/list/arteests = list()
-
-/obj/item/permmarker
-	name = "Permanent Marker"
-	icon = 'icons/obj/items.dmi'
-	icon_state = "marker"
-	inhand_image_icon = 'icons/mob/inhand/hand_weapons.dmi'
-	color = "#0099ff"
-
-	var/drawing = 0
-	var/mouseDown = 0
-	var/datum/gunTarget/target = null
-	var/startingLoc = null
-	var/obj/decal/cleanable/markerdrawing/currentDecal = null
-	var/icon/currentIcon = null
-	var/lastx = -1
-	var/lasty = -1
-	var/obj/decal/cleanable/markerdrawing/lastDecal = null
-
-	onMouseDrag(src_object,atom/over_object,src_location,over_location,src_control,over_control,params)
-		if(target == null) target = new()
-		if(!over_object || !istype(over_object, /atom)) return
-		target.params = params2list(params)
-		target.target = over_object
-		target.user = usr
-		if(over_object.loc != startingLoc && over_object != startingLoc) return
-		if(currentDecal != null)
-			draw()
-
-	onMouseDown(atom/object,location,control,params)
-		if(object == src || (!isturf(object.loc) && !isturf(object))) return
-		if(!object || !istype(object, /atom)) return
-		if(target == null) target = new()
-		target.params = params2list(params)
-		target.target = object
-		target.user = usr
-		startingLoc = get_turf(object)
-		mouseDown = 1
-		var/obj/decal/cleanable/markerdrawing/M = (locate(/obj/decal/cleanable/markerdrawing) in startingLoc)
-		if(M != null)
-			currentDecal = M
-			currentIcon = icon(M.icon)
-			currentDecal.icon = currentIcon
-		else
-			currentDecal = make_cleanable(/obj/decal/cleanable/markerdrawing,startingLoc)
-			currentIcon = icon('icons/effects/effects.dmi', "nothing")
-			currentDecal.icon = currentIcon
-		if(!currentDecal.arteests.Find(usr))
-			currentDecal.arteests.Add(usr)
-		draw()
-
-	onMouseUp(object,location,control,params)
-		mouseDown = 0
-
-	proc/draw()
-		if(currentDecal != null && currentIcon != null && target != null)
-			var/pox = text2num(target.params["icon-x"])
-			var/poy = text2num(target.params["icon-y"])
-
-			/* not working
-			if(lastx != -1 && lasty != -1 && lastDecal == currentDecal)
-				if(abs(lastx - pox) > 1 || abs(lasty - poy) > 1)
-					while(lastx != pox && lasty != poy)
-						if(lastx < pox) lastx++
-						if(lastx > pox) lastx--
-						if(lasty < poy) lasty++
-						if(lasty > poy) lasty--
-						currentIcon.DrawBox(color,lastx,lasty)
-			*/
-
-			currentIcon.DrawBox(color,pox,poy)
-			lastx = pox
-			lasty = poy
-			lastDecal = currentDecal
-
-		currentDecal.icon = currentIcon
-		return
-
-	attack_self(mob/user as mob)
-		var/col = (input(user, "Choose a color", "Permanent Marker") as color)
-		color = col
-		return
-
-/proc/testMapLoad()
-	var/mapPath = input(usr, "Enter map path:", "", "assets/maps/prefabs/wizard_tower.dmm")
-	var/loaded = file2text(mapPath)
-
-	if(loaded)
-		boutput(usr, "<span style=\"color:red\">GRABBED '[mapPath]' FROM LOCAL FILESYSTEM</span>")
-	else
-		boutput(usr, "<span style=\"color:red\">COULDNT LOAD '[mapPath]'</span>")
-		return
-
-	var/trgX = input(usr, "Enter target X:", "", 1) as num
-	var/trgY = input(usr, "Enter target Y:", "", 1) as num
-	var/trgZ = input(usr, "Enter target Z:", "", 1) as num
-
-	if(trgX && trgY && trgZ)
-		var/startTime = world.timeofday
-		var/dmm_suite/D = new/dmm_suite()
-		if(loaded && lentext(loaded))
-			usr.loc = locate(trgX,trgY,trgZ)
-			D.read_map(loaded,trgX,trgY,trgZ)
-			boutput(usr, "<span style=\"color:red\">LOADED '[mapPath]' IN [((world.timeofday - startTime)/10)] SEC</span>")
-		else
-			boutput(usr, "<span style=\"color:red\">COULDNT LOAD '[mapPath]'</span>")
-	return
-
-/proc/endoftheworldasweknowit()
-	var/list/L = list()
-	for(var/turf/T in world)
-		if(T.type == /turf/space) continue
-		if(T.z == 1)
-			L.Add(T)
-
-	var/turf/TLast = pick(L)
-	L.Remove(TLast)
-
-	while(L.len >= 1)
-		var/turf/TA = pick(L)
-		L.Remove(TA)
-		TLast.vis_contents += TLast
-		TLast = TA
-
-/proc/endoftheworldasweknowit2()
-	var/list/L = list()
-	for(var/turf/T in world)
-		if(T.type == /turf/space) continue
-		if(T.z == 1)
-			L.Add(T)
-
-	while(L.len >= 1)
-		var/turf/TA = pick(L)
-		L.Remove(TA)
-		var/turf/TB = pick(L)
-		L.Remove(TB)
-		TA.vis_contents += TB
-
-/proc/fixthisshitplease()
-	for(var/turf/T in world)
-		if(T.z == 1)
-			T.vis_contents.Cut()
-
-/obj/fancyportal
-	name = ""
-	mouse_opacity = 0
-	desc = ""
-	density = 1
-	opacity = 0
-	anchored = 1
-	var/targetX = 2
-	var/targetY = 2
-	var/targetZ = 2
-	var/target_tag = null
-	var/datum/light/light
-
-	New()
-		light = new /datum/light/point
-		light.set_color(0.3, 0.6, 0.8)
-		light.set_brightness(0.5)
-		light.attach(src)
-		light.enable()
-		SPAWN_DBG(6)
-			if (target_tag)
-				var/atom/target = locate(target_tag)
-				if(target)
-					targetX = target.x
-					targetY = target.y
-					targetZ = target.z
-					updateVis()
-		updateVis()
-		..()
-
-	proc/setTarget(var/atom/A)
-		if (A)
-			targetX = A.x
-			targetY = A.y
-			targetZ = A.z
-			updateVis()
-		return
-
-	onVarChanged(variable, oldval, newval)
-		. = 0
-		switch(variable)
-			if ("targetZ")
-				updateVis()
-			if ("targetY")
-				updateVis()
-			if ("targetY")
-				updateVis()
-
-	proc/updateVis()
-		src.overlays.Cut()
-		vis_contents = list()
-		vis_contents += locate(targetX, targetY, targetZ)
-
-		var/icon/mask = null
-		mask = icon('icons/effects/effects.dmi',"portalcutout")
-		mask.Blend(getFlatIcon(src.loc), ICON_MULTIPLY)
-		var/image/finished = image(mask,"",layer = 13)
-		src.overlays += image('icons/effects/effects.dmi',"portalshade",layer = 12)
-		src.overlays += image('icons/effects/effects.dmi',"portal",layer = 13)
-		src.overlays += finished
-		return
-
-	Bumped(atom/movable/AM)
-		var/turf/T = locate(targetX, targetY, targetZ)
-		if(T)
-			AM.set_loc(T)
-		else
-			src.visible_message("<span style='color: red; font-weight: bold'>The portal collapses in on itself!</span>")
-			var/obj/sparks = unpool(/obj/effects/sparks)
-			sparks.set_loc(get_turf(src))
-			SPAWN_DBG(20) if (sparks) pool(sparks)
-			qdel(src)
-		return
-
-	/*
-	Crossed(atom/movable/AM as mob|obj)
-		var/turf/T = locate(targetX, targetY, targetZ)
-		if(T)
-			AM.set_loc(T)
-		else
-			src.visible_message("<span style='color: red; font-weight: bold'>The portal collapses in on itself!</span>")
-			var/obj/sparks = unpool(/obj/effects/sparks)
-			sparks.set_loc(get_turf(src))
-			SPAWN_DBG(20) if (sparks) pool(sparks)
-			qdel(src)
-		return
-	*/
-
-/obj/hole
-	name = ""
-	mouse_opacity = 1
-	desc = ""
-	density = 0
-	opacity = 0
-	anchored = 1
-	var/targetZ = 2
-
-	onVarChanged(variable, oldval, newval)
-		. = 0
-		switch(variable)
-			if ("targetZ")
-				updateVis()
-	New()
-		updateVis()
-		for(var/obj/hole/H in range(1, src.loc))
-			H.updateVis()
-		..()
-
-	proc/updateVis()
-		src.overlays.Cut()
-		vis_contents = list()
-
-		vis_contents += locate(src.x, src.y, src.targetZ)
-		var/turf/T = locate(src.x, src.y+1, src.z)
-		if(T)
-			if(istype(T, /turf/simulated) && !(locate(/obj/hole) in T))
-				src.overlays += image('icons/effects/effects.dmi',icon_state = "dark", layer=11)
-				src.overlays += image('icons/effects/effects.dmi',icon_state = "wallfade", layer=12)
-			else
-				src.overlays += image('icons/effects/effects.dmi',icon_state = "dark", layer=11)
-		return
-
-	Crossed(atom/movable/AM as mob|obj)
-		if (isobserver(AM))
-			return
-		AM.set_loc(locate(src.x, src.y, src.targetZ))
-		if(ismob(AM))
-			boutput(AM, "You fall into the hole ...")
-		return
-
-/proc/fuckthestationuphorribly()
-	//var/startTime = world.timeofday
-
-	var/list/areas = list()
-
-	var/list/ignoreAreas = list(/area/station/solar,/area/station/catwalk,/area/wizard_station,/area/syndicate_station,/area/listeningpost,/area/station/hallway,/area/station/com_dish,/area/shuttle,/area/station/maintenance,/area/ghostdrone_factory,/area/abandonedship,/area/supply,/area/mining/magnet)
-
-	outer:
-		for(var/area/A as area in world) //Might want to do this manually instead.
-			if(A.type == /area)
-				continue
-
-			for(var/X in ignoreAreas)
-				if(istype(A, X))
-					continue outer
-
-			var/count = 0
-
-			for(var/turf/T in A)
-				if(T.z != 1)
-					continue outer
-				count++
-
-			if(count <= 5)
-				continue
-
-			if(A && A.z == 1) //Basically, if the area has a turf on z1 ... Doesn't work as described in byond documentation. So we have to do it the slow way ...
-				areas.Add(A)
-
-	while(areas.len >= 2)
-		var/area/one = pick(areas)
-		areas.Remove(one)
-		var/area/two = pick(areas)
-		areas.Remove(two)
-
-		if(one && two)
-			swapareaobjects(one, two)
-
-	//boutput(world, "Done ([round((world.timeofday - startTime) / 10)] secs)")
-
-	return
-
-/proc/swapareaobjects(var/area/one, var/area/two)
-	var/list/oneContents = one.contents.Copy()
-	var/list/twoContents = two.contents.Copy()
-	var/list/oneAccess = list()
-	var/list/twoAccess = list()
-
-	var/list/oneTurfs = list()
-	var/list/twoTurfs = list()
-
-	for(var/atom/T in oneContents)
-		if(istype(T, /obj/machinery/door))
-			var/obj/machinery/door/D = T
-			if(D.req_access && D.req_access.len)
-				oneAccess |= D.req_access
-
-		if(isturf(T))
-			if(!T.density)
-				oneTurfs.Add(T)
-
-	for(var/atom/T in twoContents)
-		if(istype(T, /obj/machinery/door))
-			var/obj/machinery/door/D = T
-			if(D.req_access && D.req_access.len)
-				twoAccess |= D.req_access
-
-		if(isturf(T))
-			if(!T.density)
-				twoTurfs.Add(T)
-
-	if(!twoTurfs.len || !oneTurfs.len)
-		return
-
-	var/list/oneTurfsExpend = oneTurfs.Copy()
-	var/list/twoTurfsExpend = twoTurfs.Copy()
-
-	var/list/ignoreTypes = list(/obj/machinery/disposal,/obj/cable,/obj/machinery/power,/obj/machinery/light,/obj/disposalpipe,/obj/grille,/obj/window,/obj/machinery/door,/obj/machinery/atmospherics,/obj/overlay/tile_effect)
-
-	var/oneName = ""
-	var/twoName = ""
-	if(one && two)
-		oneName = one.name
-		twoName = two.name
-		one.name = getInterpolatedName(oneName, twoName, (rand(3,7) / 10))
-		two.name = getInterpolatedName(twoName, oneName, (rand(3,7) / 10))
-		oneName = one.name
-		twoName = two.name
-
-	oneOuter:
-		for(var/obj/O in oneContents)
-			if(O.invisibility && !istype(O, /obj/landmark)) continue oneOuter
-
-			if(istype(O, /obj/machinery/door))
-				var/obj/machinery/door/D = O
-				//D.req_access = twoAccess.Copy()
-				D.req_access = list()
-				D.name = oneName
-
-			if(istype(O,/obj/machinery/power/apc))
-				O.name = "[oneName] APC"
-
-			for(var/T in ignoreTypes)
-				if(istype(O, T)) continue oneOuter
-
-			if(twoTurfsExpend.len > 0)
-				var/turf/T = pick(twoTurfsExpend)
-				twoTurfsExpend.Remove(T)
-				O.set_loc(T)
-			else
-				O.set_loc(pick(twoTurfs))
-
-	twoOuter:
-		for(var/obj/O in twoContents)
-			if(O.invisibility && !istype(O, /obj/landmark)) continue twoOuter
-
-			if(istype(O, /obj/machinery/door))
-				var/obj/machinery/door/D = O
-				//D.req_access = oneAccess.Copy()
-				D.req_access = list()
-				D.name = twoName
-
-			if(istype(O,/obj/machinery/power/apc))
-				O.name = "[twoName] APC"
-
-			for(var/T in ignoreTypes)
-				if(istype(O, T)) continue twoOuter
-
-			if(oneTurfsExpend.len > 0)
-				var/turf/T = pick(oneTurfsExpend)
-				oneTurfsExpend.Remove(T)
-				O.set_loc(T)
-			else
-				O.set_loc(pick(oneTurfs))
-
-	return
-
-/obj/decal/valterak
-	name = "skeleton"
-	desc = "You can see a skeleton down there. It seems to be holding some sort of key."
-	icon = 'icons/misc/exploration.dmi'
-	icon_state = "valterak"
-	anchored = 1
-	density = 0
-	opacity = 0
-
-/obj/decal/valterakWhip
-	name = "???"
-	desc = "Upon closer inspection these seem to be the burnt remnants of a whip. How they are still there or even recognizable is beyond you."
-	icon = 'icons/misc/exploration.dmi'
-	icon_state = "vwhip"
-	anchored = 1
-	density = 0
-	opacity = 0
-
-/datum/admins/proc/camtest()
-	set category = "Debug"
-	set name = "Test Cinematic camera"
-	set desc="Test Cinematic camera"
-
-	var/mob/M = usr
-	var/datum/targetable/cincam/R = new()
-	M.targeting_spell = R
-	M.update_cursor()
-
-/datum/targetable/cincam
-	target_anything = 1
-	targeted = 1
-	max_range = 3000
-
-	castcheck(var/mob/M)
-		if (M.client && M.client.holder)
-			return 1
-
-	handleCast(var/atom/selected)
-		var/mob/M = usr
-		var/dur = (get_dist(selected, M)*5)
-		cinLookAt(M, selected, dur, pick(LINEAR_EASING,SINE_EASING,CIRCULAR_EASING,QUAD_EASING,CUBIC_EASING,BOUNCE_EASING,ELASTIC_EASING,BACK_EASING), 1, 1, 1)
-		sleep(dur+3)
-		cinShake(M,20,0.5,0,32,pick(LINEAR_EASING,SINE_EASING,CIRCULAR_EASING,QUAD_EASING,CUBIC_EASING,BOUNCE_EASING,ELASTIC_EASING,BACK_EASING),1,1,1)
-		sleep(max(0.5*2,0) * 20)
-		return 1
-
-/proc/cinShake(var/mob/source, var/steps = 20, var/length = 2, var/delay = 0, var/strength = 32, var/anim_easing = LINEAR_EASING, var/remove_source = 0, var/freeze_source = 1, var/persist = 0)
-	if(!source || !source.client) return
-
-	var/mob/cinematicCamera/C
-
-	if(istype(source.loc, /mob/cinematicCamera))
-		source = source.loc
-
-	if(!istype(source, /mob/cinematicCamera))
-		C =	new/mob/cinematicCamera(get_turf(source))
-		C.start(source, remove_source, freeze_source)
-		sleep(3)
-	else
-		C = source
-
-	C.shake(steps, length, delay, strength, anim_easing)
-
-	if(!persist)
-		SPAWN_DBG(max(length*2,delay) * steps)
-			C.stop()
-
-	return
-
-/proc/cinLookAt(var/mob/source, var/atom/target, var/duration = 1, var/easing = LINEAR_EASING, var/remove_source = 0, var/freeze_source = 1, var/persist = 0)
-	if(!source || !source.client || !target) return
-
-	var/mob/cinematicCamera/C
-
-	if(istype(source.loc, /mob/cinematicCamera))
-		source = source.loc
-
-	if(!istype(source, /mob/cinematicCamera))
-		C =	new/mob/cinematicCamera(get_turf(source))
-		C.start(source, remove_source, freeze_source)
-		sleep(3)
-	else
-		C = source
-
-	C.lookAt(target, duration, easing)
-
-	if(!persist)
-		SPAWN_DBG(duration)
-			C.stop()
-
-	return
-
-/mob/cinematicCamera
-	var/mob/source
-	var/atom/source_loc
-	var/remove_source = 0 //Remove the source mob while camera is active?
-	var/freeze_source = 1 //Attempt to make source mob immovable and invincible during cam?
-	nodamage = 1
-	canmove = 0
-	invisibility = 101
-	density = 0
-	anchored = 1
-
-	proc/shake(var/steps = 20, var/length = 1, var/delay = 0, var/strength = 32, var/anim_easing = LINEAR_EASING)
-		SPAWN_DBG(0)
-			for(var/i=0, i<steps, i++)
-				var/off_x = (rand(0, strength) * (prob(50) ? -1:1))
-				var/off_y = (rand(0, strength) * (prob(50) ? -1:1))
-				animate(src.client, pixel_x = off_x, pixel_y = off_y, easing = anim_easing, time=length, flags = ANIMATION_RELATIVE)
-				animate(pixel_x = off_x*-1, pixel_y = off_y*-1, easing = anim_easing, time = length, flags = ANIMATION_RELATIVE) //Relative to itself?! might have to do off * -1 instead of 0
-				sleep(max(length*2,delay))
-		return
-
-	proc/lookAt(var/atom/target, var/duration = 10, var/anim_easing = LINEAR_EASING)
-		if(!source || !src.client || !target) return
-
-		var/offset_x = (target.x * 32) - ((src.x * 32) + src.client.pixel_x)
-		var/offset_y = (target.y * 32) - ((src.y * 32) + src.client.pixel_y)
-		animate(src.client, pixel_x = offset_x, pixel_y = offset_y, easing = anim_easing, time = duration, flags = ANIMATION_RELATIVE)
-		return
-
-	proc/start(var/mob/source_mob, var/remove, var/freeze)
-		if(source_mob == src) return
-		if(source_mob && source_mob.client)
-			source = source_mob
-			remove_source = remove
-			freeze_source = freeze
-			source_loc = source.loc
-			client = source.client
-			if(remove_source)
-				source.loc = src
-			if(freeze_source)
-				source.nodamage = 1
-				source.canmove = 0
-				source.anchored = 1
-		return
-
-	proc/stop()
-		source.loc = source_loc
-		source.client = client
-		source.client.pixel_x = 0
-		source.client.pixel_y = 0
-		if(freeze_source)
-			source.nodamage = 0
-			source.canmove = 1
-			source.anchored = 0
-
-		del(src)
-		return
-
-
-	New()
-		..()
-
 /*
-/atom/verb/keelinTest()
+/atom/verb/textureTest()
 	set src in view()
-	animate(src, pixel_y = 32, time = 10, loop=-1, flags = ANIMATION_PARALLEL)
-	animate(pixel_y = 0, time = 10)
-
-	animate(src, pixel_y = 32, time = 20, loop=-1, flags = ANIMATION_PARALLEL)
-	animate(pixel_y = 0, time = 20)
-	//src.setTexture("damaged", BLEND_MULTIPLY, "damaged")
-	//src.setTexture("shiny", BLEND_ADD, "shiny")
+	src.setTexture("damaged", BLEND_MULTIPLY, "damaged")
+	src.setTexture("shiny", BLEND_ADD, "shiny")
 */
 //
-/obj/wormhole
-	name = "nascent wormhole"
-	desc = "a small baby wormhole"
-	anchored = 1
-	density = 0
-	icon = 'icons/effects/64x64.dmi'
-	icon_state = "whole-nascent"
-	pixel_x = -16
-	pixel_y = -16
-	blend_mode = 2
-	New()
-		SPAWN_DBG(100)
-			name = "growing wormhole"
-			desc = "a slowly growing wormhole"
-			icon_state = "whole-growing"
-			blend_mode = 2
-		SPAWN_DBG(200)
-			name = "stable wormhole"
-			desc = "a wormhole leading who-knows-where"
-			icon_state = "whole"
-			blend_mode = 1
-		SPAWN_DBG(300)
-			name = "massive wormhole"
-			desc = "a huge wormhole leading to unknown space"
-			icon_state = "whole-massive"
-			blend_mode = 1
-		SPAWN_DBG(400)
-			name = "unstable wormhole"
-			desc = "an unstable wormhole, about to collapse"
-			icon_state = "whole-unstable"
-			blend_mode = 1
-		SPAWN_DBG(500)
-			qdel(src)
-		..()
-
-/obj/meleeeffect
-	name = ""
-	desc = ""
-	icon = 'icons/effects/meleeeffects.dmi'
-	icon_state = "sabre"
-	anchored = 1
-	layer = EFFECTS_LAYER_1
-
-	New()
-		SPAWN_DBG(20)
-			qdel(src)
-		..()
-
-	spear
-		icon_state = "spear"
-
-	dagger
-		icon_state = "dagger"
-		pixel_x = -32
-		pixel_y = -32
-
-	drill
-		icon = 'icons/effects/effects.dmi'
-		icon_state = "drill"
-
-	pick
-		icon = 'icons/effects/effects.dmi'
-		icon_state = "pick"
-
-	hammer
-		icon = 'icons/effects/effects.dmi'
-		icon_state = "hammer"
-
-	blaster
-		icon = 'icons/effects/effects.dmi'
-		icon_state = "blaster"
-
-	conc
-		icon = 'icons/effects/effects.dmi'
-		icon_state = "conc"
-
-	blasterline
-		icon = 'icons/effects/effects.dmi'
-		icon_state = "glowyline"
-
-/obj/meleeeffect/spearimage
-	name = ""
-	desc = ""
-	icon = null
-	icon_state = "sabre"
-	anchored = 1
-	New(var/obj/item/experimental/melee/spear/S,var/atom/location)
-		src.loc = location
-		var/image/I = image(S)
-		I.appearance_flags = 0
-		src.overlays += image(S)
-		SPAWN_DBG(5)
-			qdel(src)
-		..()
-
-/obj/item/experimental/ranged
-	name = "test"
-	desc = ""
-	icon = 'icons/obj/weapons.dmi'
-	icon_state = "sword1-W"
-	inhand_image_icon = 'icons/mob/inhand/hand_cswords.dmi'
-	item_state = "sword1-W"
-	flags = FPRINT | EXTRADELAY | TABLEPASS | CONDUCT
-	var/obj/beam_dummy/beam
-	var/turf/last = null
-
-	onMouseDrag(src_object,atom/over_object,src_location,over_location,src_control,over_control,params)
-		var/list/parameters = params2list(params)
-		if(ismob(over_object.loc) || istype(over_object, /obj/screen)) return
-		if(parameters["left"])
-			//animate_shake(over_object)
-			if(beam)
-				if(last != get_turf(over_object))
-					last = get_turf(over_object)
-					beam.loc = get_turf(src)
-					animate(beam, transform=beam.transform, time=1)//, flags=ANIMATION_LINEAR_TRANSFORM)
-					animate(transform=getLineMatrix(get_turf(src),get_turf(over_object)), time= max(7-get_dist(get_turf(src),get_turf(over_object)), 2))
-		return
-
-	onMouseDown(atom/target,location,control,params)
-		var/list/parameters = params2list(params)
-		if(ismob(target.loc) || istype(target, /obj/screen)) return
-		if(parameters["left"])
-			if(beam)
-				qdel(beam)
-				beam = null
-			beam = new (get_turf(src))
-			beam.icon_state = "beam"
-			beam.transform = getLineMatrix(get_turf(src),get_turf(target))
-		return
-
-	onMouseUp(atom/target,location,control,params)
-		var/list/parameters = params2list(params)
-		if(parameters["left"])
-			if(beam)
-				qdel(beam)
-				beam = null
-			return
-		return
-
-/obj/item/experimental/melee/hammertwotest
-	name = "crappy test hammer"
-	desc = "a shitty 2-handed hammer. attacks slowly but does great damage"
-	icon_state = "hammer"
-	item_state = "hammer"
-	inhand_image_icon = 'icons/mob/inhand/hand_weapons.dmi'
-	two_handed = 1
-	click_delay = 30
-	force = 50
-
-/obj/item/experimental/melee
-	name = "melee weapon"
-	desc = ""
-	icon = 'icons/obj/weapons.dmi'
-	icon_state = "sword1-W"
-	inhand_image_icon = 'icons/mob/inhand/hand_cswords.dmi'
-	item_state = "sword1-W"
-	flags = FPRINT | EXTRADELAY | TABLEPASS | CONDUCT
-
-	afterattack(atom/target as mob|obj|turf|area, mob/user as mob, var/reach)
-		return doAttack(user, target, reach ? target : null)
-
-	proc/doAttack(var/mob/user, var/atom/target, var/atom/exclude = null)
-		var/direction = getAttackDir(user, target)
-		var/list/attacked = list()
-		if(exclude) attacked.Add(exclude)
-
-		for(var/turf/T in getAffectedTiles(user,target,direction) )
-			for(var/atom/A in T)
-				if(A in attacked) continue
-				if((ismob(A) || A.density || istype(A, /obj/critter)) && !istype(A, /obj/table))
-					A.attackby(src, user)
-		showEffect(user,target,direction)
-		return
-
-	proc/getAffectedTiles(var/mob/user, var/atom/target, var/direction)
-		return list()
-
-	proc/showEffect(var/mob/user, var/atom/target, var/direction)
-		return
-
-	proc/getAttackDir(var/mob/user, var/atom/target)
-		var/attackDir = get_dir(user, target)
-		if(attackDir == NORTHEAST || attackDir == NORTHWEST || attackDir == SOUTHEAST || attackDir == SOUTHWEST)
-			attackDir = (prob(50) ? turn(attackDir, 45) : turn(attackDir, -45))
-		return attackDir
-
-/datum/action/bar/private/icon/daggerStab
-	id = "daggerStab"
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_STUNNED | INTERRUPT_ACTION
-	icon = 'icons/obj/weapons.dmi'
-	icon_state = "cdagger"
-	var/obj/item/experimental/melee/dagger/dagger
-	var/mob/user
-	var/atom/target
-	var/list/seen = list()
-	var/progress = 0.01
-	duration = -1
-	icon_y_off = 29
-
-	New(var/obj/item/experimental/melee/dagger/D, var/mob/U, var/atom/T)
-		if(!D || !U || !T)
-			interrupt(INTERRUPT_ALWAYS)
-		else
-			dagger = D
-			user = U
-			target = T
-
-	onStart()
-		..()
-		target.add_fingerprint(user)
-
-	onInterrupt(var/flag)
-		..()
-
-	onEnd()
-		..()
-		if(get_dist(user, target) > 1 || target == null || user == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-		if(dagger)
-			if(dagger == user.equipped())
-				dagger.stab(user, target, progress)
-				return
-
-	onUpdate()
-		if(get_dist(user, target) > 1 || target == null || user == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-		if(dagger)
-			if(dagger != user.equipped())
-				interrupt(INTERRUPT_ALWAYS)
-				return
-
-		progress = min(progress + 0.1, 1)
-
-		bar.color = "#0000FF"
-		bar.transform = matrix(progress, 1, MATRIX_SCALE)
-		bar.pixel_x = -nround( ((30 - (30 * progress)) / 2) )
-
-		if(progress == 1)
-			state = ACTIONSTATE_FINISH
-			return
-
-		for(var/mob/O in AIviewers(owner))
-			if(!seen.Find(O))
-				var/canSee = 0
-				switch(get_dist(O, user))
-					if(0 to 1)
-						if(O.dir == turn(user.dir, 180)) //Only visible if looking directly at them in close range.
-							canSee = 1
-					if(2)
-						if(get_dir(O, user) == O.dir) //If you're looking in their direction at 2 tiles away you'll see it.
-							canSee = 1
-					else continue
-				if(canSee)
-					seen.Add(O)
-					O.show_message("<span style=\"color:red\"><B>[user] raises \the [dagger] menacingly!!!</B></span>", 1)
-
-
-/obj/item/experimental/melee/dagger
-	name = "Dagger"
-	desc = "A dagger. Perfect for back-stabbing. Only good for back-stabbing, actually."
-	icon = 'icons/obj/weapons.dmi'
-	icon_state = "cdagger"
-	inhand_image_icon = 'icons/mob/inhand/hand_weapons.dmi'
-	item_state = "dagger"
-	hitsound = null
-	flags = FPRINT | EXTRADELAY | TABLEPASS | CONDUCT | SUPPRESSATTACK
-	force = 1
-	var/datum/action/bar/private/icon/daggerStab/stabAction
-
-	onMouseDown(atom/target,location,control,params)
-		var/mob/user = usr
-		var/list/parameters = params2list(params)
-		if(ismob(target.loc) || istype(target, /obj/screen)) return
-		if(parameters["left"])
-			var/attackDir =  getAttackDir(user, target)
-			user.dir = attackDir
-			stabAction = new(src, user, get_step(user, attackDir))
-			actions.start(stabAction, user)
-		return
-
-	onMouseUp(atom/target,location,control,params)
-		var/list/parameters = params2list(params)
-		if(parameters["left"])
-			if(stabAction)
-				//stabAction.target = get_step(usr, getAttackDir(usr, target))
-				stabAction.state = ACTIONSTATE_FINISH
-		return
-
-	afterattack(atom/target as mob|obj|turf|area, mob/user as mob, var/reach)
-		return 1
-
-	proc/stab(var/mob/attacker, var/atom/stabbed, var/stabStrength)
-		var/turf/T = get_turf(stabbed)
-		doAttack(attacker, T, null, stabStrength)
-
-	doAttack(var/mob/user, var/atom/target, var/atom/exclude = null, var/stabStrength = 0)
-		var/list/attacked = list()
-		if(exclude) attacked.Add(exclude)
-
-		var/stabbyness = (stabStrength == 1 ? 200 : round(90 * stabStrength))
-		var/bloody = (stabStrength == 1)
-		var/hitmob = 0
-
-		flags &= ~SUPPRESSATTACK
-		for(var/atom/A in get_turf(target))
-			if(A in attacked) continue
-			attacked.Add(A)
-			if((ismob(A) || A.density || istype(A, /obj/critter)) && !istype(A, /obj/table))
-				force = stabbyness
-
-				if(ismob(A) && get_dist(A, user) == 1 && (A.dir == user.dir || A:lying)) //It's a person and they are facing away from us. Bonus damage.
-					force = round(stabbyness * 2)
-					bloody = 1
-
-				if((isobj(A) && !istype(A, /obj/critter)) || isturf(A)) //Cant stab objects or turfs well.
-					force = round(stabbyness * 0.15)
-
-				if(ismob(A))//Shitty hack because attackby uses spawn on mobs. Meaning force etc will reset before the attack executes, thus doing 0 damage.
-					src.attack(A, user, user.zone_sel && user.zone_sel.selecting ? user.zone_sel.selecting : null)
-					if(bloody)
-						bleed(A, 5, 5, get_turf(target))
-						bleed(A, 5, 2, get_step(target,get_dir(user, target)))
-						bleed(A, 5, 1, get_step(get_step(target,get_dir(user, target)),get_dir(user, target)))
-						//blood_slash(A, 5, get_step(target,get_dir(user, target)), get_dir(user, target), 4)
-					hitmob = 1
-				else
-					A.attackby(src, user)
-
-		if(bloody && hitmob)
-			playsound(target, 'sound/impact_sounds/Blade_Small_Bloody.ogg', 100, 0)
-		else
-			playsound(target, 'sound/impact_sounds/Blade_Small.ogg', 100, 0)
-
-		flags |= SUPPRESSATTACK
-		force = initial(force)
-
-		showEffect(user,target,user.dir, stabStrength)
-
-		return
-
-	showEffect(var/mob/user, var/atom/target, var/direction, var/stabStrength = 0)
-		var/obj/meleeeffect/dagger/M
-		M = new/obj/meleeeffect/dagger(target)
-		M.dir = direction
-		M.color = (stabStrength < 1 ? "#FFFFFF" : "#FF4444")
-
-/obj/item/experimental/melee/spear
-	name = "Spear"
-	desc = "A primitive spear with a long reach."
-	force = 10
-	throwforce = 20
-	color = "#ffffff"
-	icon = 'icons/obj/weapons.dmi'
-	icon_state = "spear"
-	inhand_image_icon = 'icons/mob/inhand/hand_weapons.dmi'
-	item_state = "staff_crystal"
-	var/datum/material/shaft = null
-	var/datum/material/head = null
-	var/image/shaftImg = null
-	var/image/headImg = null
-	hitsound = 'sound/impact_sounds/Flesh_Cut_1.ogg'
-
-	New()
-		setShaftMaterial(getMaterial("bohrum"))
-		setHeadMaterial(getMaterial("telecrystal"))
-		buildOverlays()
-		setName()
-
-		..()
-
-		src.setItemSpecial(/datum/item_special/rangestab)
-
-	doAttack(var/mob/user, var/atom/target, var/atom/exclude = null)
-		return //nah
-
-		var/direction = getAttackDir(user, target)
-		var/list/attacked = list()
-		if(exclude) attacked.Add(exclude)
-
-		for(var/turf/T in getAffectedTiles(user,target,direction) )
-			for(var/atom/A in T)
-				if(A in attacked) continue
-				if((ismob(A) || A.density || istype(A, /obj/critter)) && !istype(A, /obj/table))
-					A.attackby(src, user)
-					if(istype(A, /obj/blob) && prob(10))
-						user.visible_message("<span style=\"color:red\"><B>[src] gets stuck in [A]!</B></span>")
-						user.drop_item()
-						src.set_loc(A.loc)
-						break
-		showEffect(user,target,direction)
-		return
-
-	attack_self(mob/user as mob)
-		if (istype(user.loc, /obj/vehicle/segway))
-			var/obj/vehicle/segway/S = user.loc
-			if (S.joustingTool == src) // already raised as a lance, lower it
-				user.visible_message("[user] lowers the lance.", "You lower the spear.")
-				S.joustingTool = null
-			else // Lances up!
-				user.visible_message("[user] raises a lance!", "You raise the lance into jousting position.")
-				S.joustingTool = src
-
-	proc/setShaftMaterial(var/datum/material/M)
-		shaft = M
-		if(shaft)
-			src.color = shaft.color
-			src.alpha = shaft.alpha
-		setName()
-		return
-
-	proc/setHeadMaterial(var/datum/material/M)
-		head = M
-		setMaterial(M)
-		if(shaft)
-			src.color = shaft.color
-			src.alpha = shaft.alpha
-		if(src.material && src.material.hasProperty("hard"))
-			src.force = round(src.material.getProperty("hard") / 5)
-			src.throwforce = round(src.material.getProperty("hard") / 3)
-		setName()
-		return
-
-	proc/buildOverlays()
-		overlays.Cut()
-		if(shaft)
-			var/image/imgShaft = image('icons/obj/weapons.dmi',icon_state = "spear")
-			imgShaft.color = shaft.color
-			imgShaft.alpha = shaft.alpha
-			imgShaft.appearance_flags = RESET_ALPHA | RESET_COLOR
-			overlays += imgShaft
-			shaftImg = imgShaft
-		if(head)
-			var/image/imgHead = image('icons/obj/weapons.dmi',icon_state = "spearhead")
-			imgHead.color = head.color
-			imgHead.alpha = head.alpha
-			imgHead.appearance_flags = RESET_ALPHA | RESET_COLOR
-			overlays += imgHead
-			headImg = imgHead
-		return
-
-	proc/setName()
-		if(shaft && head)
-			name = "[head.name]-tipped [shaft.name] Spear"
-		else if (shaft && !head)
-			name = "[shaft.name] Spear"
-		else if (!shaft && head)
-			name = "[head.name]-tipped Spear"
-		else
-			name = "Spear"
-		return
-
-	getAffectedTiles(var/mob/user, var/atom/target, var/direction)
-		var/list/affected = list()
-		switch(direction)
-			if(NORTH)
-				for(var/i=1, i<=3, i++)
-					var/turf/T = locate(user.x, user.y+i, user.z)
-					affected += T
-					var/stop = 0
-					for(var/atom/movable/M in T)
-						if(M.density)
-							stop = 1
-							break
-					if(T.density || stop)
-						break
-			if(EAST)
-				for(var/i=1, i<=3, i++)
-					var/turf/T = locate(user.x+i, user.y, user.z)
-					affected += T
-					var/stop = 0
-					for(var/atom/movable/M in T)
-						if(M.density)
-							stop = 1
-							break
-					if(T.density || stop)
-						break
-			if(SOUTH)
-				for(var/i=1, i<=3, i++)
-					var/turf/T = locate(user.x, user.y-i, user.z)
-					affected += T
-					var/stop = 0
-					for(var/atom/movable/M in T)
-						if(M.density)
-							stop = 1
-							break
-					if(T.density || stop)
-						break
-			if(WEST)
-				for(var/i=1, i<=3, i++)
-					var/turf/T = locate(user.x-i, user.y, user.z)
-					affected += T
-					var/stop = 0
-					for(var/atom/movable/M in T)
-						if(M.density)
-							stop = 1
-							break
-					if(T.density || stop)
-						break
-		return affected
-//
-	showEffect(var/mob/user, var/atom/target, var/direction)
-		var/partred   = GetRedPart(src.color) / 255
-		var/partgreen = GetGreenPart(src.color) / 255
-		var/partblue  = GetBluePart(src.color) / 255
-
-		var/color_new = list(partred*2.5,0.30,0.30, 0.30,partgreen*2.5,0.30, 0.30,0.30,partblue*2.5, 0,0,0)
-		var/atom/effectLoc = null
-		var/obj/meleeeffect/spear/M
-		//var/obj/meleeeffect/spearimage/I
-		switch(direction)
-			if(NORTH)
-				effectLoc = locate(user.x, user.y + 1, user.z)
-				/*
-				I = new(src, effectLoc)
-				I.dir = direction
-				animate(I, pixel_y = 96, time = 6, alpha= 0)
-				*/
-				M = new/obj/meleeeffect/spear(effectLoc)
-				M.pixel_x = -32
-				M.dir = direction
-				M.color = color_new
-				animate(M, pixel_y = 32, time = 10, alpha= 175)
-			if(EAST)
-				effectLoc = locate(user.x + 1, user.y, user.z)
-				/*
-				I = new(src, effectLoc)
-				I.dir = direction
-				animate(I, pixel_x = 96, time = 6, alpha= 0)
-				*/
-				M = new/obj/meleeeffect/spear(effectLoc)
-				M.pixel_y = -32
-				M.dir = direction
-				M.color = color_new
-				animate(M, pixel_x = 32, time = 10, alpha= 175)
-			if(SOUTH)
-				effectLoc = locate(user.x, user.y - 3, user.z)
-				/*
-				I = new(src, locate(user.x, user.y - 1, user.z))
-				I.dir = direction
-				animate(I, pixel_y = -96, time = 6, alpha= 0)
-				*/
-				M = new/obj/meleeeffect/spear(effectLoc)
-				M.pixel_x = -32
-				M.dir = direction
-				M.color = color_new
-				animate(M, pixel_y = -32, time = 10, alpha= 175)
-			if(WEST)
-				effectLoc = locate(user.x - 3, user.y, user.z)
-				/*
-				I = new(src, locate(user.x - 1, user.y, user.z))
-				I.dir = direction
-				animate(I, pixel_x = -96, time = 6, alpha= 0)
-				*/
-				M = new/obj/meleeeffect/spear(effectLoc)
-				M.pixel_y = -32
-				M.dir = direction
-				M.color = color_new
-				animate(M, pixel_x = -32, time = 10, alpha= 175)
-
-/obj/item/experimental/melee/sabre
-	name = "Energy sabre"
-	desc = ""
-	force = 20
-	color = "#3399ff"
-	hitsound = 'sound/impact_sounds/Energy_Hit_1.ogg'
-
-	getAffectedTiles(var/mob/user, var/atom/target, var/direction)
-		var/list/affected = list()
-		switch(direction)
-			if(NORTH)
-				affected += locate(user.x, user.y+1, user.z)
-				affected += locate(user.x-1, user.y+1, user.z)
-				affected += locate(user.x+1, user.y+1, user.z)
-			if(EAST)
-				affected += locate(user.x+1, user.y, user.z)
-				affected += locate(user.x+1, user.y+1, user.z)
-				affected += locate(user.x+1, user.y-1, user.z)
-			if(SOUTH)
-				affected += locate(user.x, user.y-1, user.z)
-				affected += locate(user.x+1, user.y-1, user.z)
-				affected += locate(user.x-1, user.y-1, user.z)
-			if(WEST)
-				affected += locate(user.x-1, user.y, user.z)
-				affected += locate(user.x-1, user.y+1, user.z)
-				affected += locate(user.x-1, user.y-1, user.z)
-		return affected
-
-	showEffect(var/mob/user, var/atom/target, var/direction)
-		var/partred   = GetRedPart(src.color) / 255
-		var/partgreen = GetGreenPart(src.color) / 255
-		var/partblue  = GetBluePart(src.color) / 255
-
-		var/color_new = list(partred*2.5,0.30,0.30, 0.30,partgreen*2.5,0.30, 0.30,0.30,partblue*2.5, 0,0,0)
-		var/atom/effectLoc = null
-		var/obj/meleeeffect/M
-		switch(direction)
-			if(NORTH)
-				effectLoc = locate(user.x, user.y + 1, user.z)
-				M = new/obj/meleeeffect(effectLoc)
-				M.pixel_x = -32
-				M.dir = direction
-				M.color = color_new
-			if(EAST)
-				effectLoc = locate(user.x + 1, user.y, user.z)
-				M = new/obj/meleeeffect(effectLoc)
-				M.pixel_y = -32
-				M.dir = direction
-				M.color = color_new
-			if(SOUTH)
-				effectLoc = locate(user.x, user.y - 3, user.z)
-				M = new/obj/meleeeffect(effectLoc)
-				M.pixel_x = -32
-				M.dir = direction
-				M.color = color_new
-			if(WEST)
-				effectLoc = locate(user.x - 3, user.y, user.z)
-				M = new/obj/meleeeffect(effectLoc)
-				M.pixel_y = -32
-				M.dir = direction
-				M.color = color_new
-
-/obj/floorpillstatue
-	name = "Statue of Dr.Floorpills"
-	desc = "A statue of the most radioactive man alive. Technically alive. Sort of."
-	var/broken = 0
-	icon ='icons/obj/objects.dmi'
-	icon_state = "statuefloorpills"
-	density = 1
-
-	New()
-		setMaterial(getMaterial("slag"))
-		name = "Statue of Dr.Floorpills"
-
-	attack_hand(mob/user as mob)
-		boutput(user, "[src] feels oddly warm ...")
-		user.changeStatus("radiation", 50)
-		return
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if(prob(8) && (!broken))
-			for(var/i=0, i<5, i++)
-				new/obj/item/material_piece/slag(src.loc)
-
-			src.visible_message("<span style=\"color:red\"><B>[src] breaks into pieces!</B></span>")
-			icon_state = "statuefloorpills0"
-
-			broken = 1
-
-		return ..()
-
-/proc/mass_proc_arg()
-	var/type = text2path(input(usr,"Type", "", "/obj"))
-	var/procpath = text2path(input(usr,"ProcPath", "", "/proc"))
-	var/argn = text2num(input(usr,"NumArgs", "", 1))
-
-	var/list/argslist = list()
-	for(var/i=0;i<argn;i++)
-		var/argname = input(usr,"ArgName", "", "")
-		var/argtype = input(usr, "ArgType") in list ("text", "num", "*this*")
-		var/argval = null
-		switch(argtype)
-			if("text")
-				argval = input(usr, "text", "", "")
-			if("num")
-				argval = text2num(input(usr, "num", "", 1))
-			if("*this*")
-				argval = "*this*"
-		argslist[argname] = argval
-
-	var/list/paths = list()
-	paths = typesof(type)
-
-	for(var/atom/X in world)
-		if(paths.Find(X.type))
-			var/list/argcopy = argslist.Copy()
-			for(var/r in argcopy)
-				if(argcopy[r] == "*this*")
-					argcopy[r] = X
-			call(procpath)(arglist(argcopy))
-
 /datum/admins/proc/pixelexplosion()
 	set category = "Debug"
 	set name = "Pixel animation mode"
@@ -1439,29 +37,29 @@ var/list/electiles = list()
 	M.update_cursor()
 
 /proc/dothepixelthing(var/atom/A)
-	var/list/pixels = list()
+	//var/list/pixels = list()
 	var/icon/I = icon(A.icon, A.icon_state, A.dir)
 	var/atom/movable/AT = A.loc
-	playsound(AT, 'sound/effects/ExplosionFirey.ogg', 75, 1)
-	for(var/y = 1, y <= I.Height(), y++)
-		for(var/x = 1, x <= I.Width(), x++)
+	playsound(AT, 'sound/effects/splat.ogg', 75, 1)
+	for(var/y = 1, y <= 32, y++)
+		for(var/x = 1, x <= 32, x++)
 			var/color = I.GetPixel(x, y)
 			if(color != null)
 				var/actX = A.pixel_x + x - 1
 				var/actY = A.pixel_y + y - 1
-				var/obj/apixel/P = unpool(/obj/apixel)
-				P.loc = A.loc
+				var/obj/apixel/P = new/obj/apixel(A.loc)
 				P.pixel_x = actX
 				P.pixel_y = actY
 				P.color = color
 				P.layer = 15
-				animate_explode_pixel(P)
-				pixels += P
-
+				//pixels.Add(P)
+				animate_melt_pixel(P)
 	qdel(A)
-	SPAWN_DBG(70)
-		for(var/datum/D in pixels)
-			pool(D)
+	//playsound(AT, 'sound/effects/pixelexplosion.ogg', 75, 1)
+	//for(var/obj/apixel/P in pixels)
+	//	spawn(rand(1,2))
+	//		animate_explode_pixel(P)
+	//	spawn(10) qdel(P)
 
 	return
 
@@ -1474,22 +72,10 @@ var/list/electiles = list()
 	density = 0
 	opacity = 0
 
-	unpooled()
-		color = "#ffffff"
-		pixel_x = 0
-		pixel_y = 0
-		alpha = 255
-		transform = matrix()
-		..()
-
 /obj/item/craftedmelee/spear
 	name = "spear"
 	desc = "it's an improvised spear."
 	icon = null
-
-	New()
-		..()
-		src.setItemSpecial(/datum/item_special/rangestab)
 
 	rebuild()
 		..()
@@ -1509,7 +95,7 @@ var/list/electiles = list()
 		src.overlays.Add(image(icon = core,loc = src, layer = HUD_LAYER+2)) //This will cause the item to draw above the ui even when its on the ground. That's crap
 		src.overlays.Add(image(icon = head,loc = src, layer = HUD_LAYER+2)) //But if i don't set it the item disappears under the inventory slots because it's purely overlays. :gonk:
 
-		src.setMaterial(head.material, appearance = 0, setname = 0)
+		src.material = head.material
 		return
 
 	attack(mob/M as mob, mob/user as mob) //TBI
@@ -1526,13 +112,9 @@ var/list/electiles = list()
 
 /obj/item/craftedcrap
 	name = "???"
-	real_name = "???"
 	desc = "this appears to be a taped-together mess of random crap."
 	var/obj/item/item1 = null
 	var/obj/item/item2 = null
-
-	UpdateName()
-		src.name = "[name_prefix(null, 1)][src.real_name][name_suffix(null, 1)]"
 
 	proc/rebuild() //will rebuild the icon and properties of the weapon based on its materials.
 		var/icon/crapicon = icon(item1.icon, item1.icon_state)
@@ -1542,66 +124,18 @@ var/list/electiles = list()
 		var/part1 = copytext(item1.name, 1, round(length(item1.name) / 2))
 		var/part2 = copytext(item2.name, round(length(item2.name) / 2), 0)
 		name = "[part1][part2]"
-		real_name = name
-		UpdateName()
 		desc = "Someone taped together \a [item1.name] and \a [item2.name]. Great."
 		return
 
-	attack(mob/M as mob, mob/user as mob, def_zone)
+	attack(mob/M as mob, mob/user as mob)
 		if(!item1 || !item2)
-			src.fall_apart()
+			del(src)
 			return
 
-		var/r = rand(0,100)
-
-		if (r <= 70)
-			if(r < 35)
-				return item1.attack(M, user, def_zone)
-			else
-				return item2.attack(M, user, def_zone)
+		if(prob(50))
+			return item1.attack(M, user)
 		else
-			if(r < 90)
-				SPAWN_DBG(0)
-					item1.attack(M, user, def_zone)
-					item2.attack(M, user, def_zone)
-				return
-			else
-				src.fall_apart(user)
-				return
-
-	attack_self(mob/user as mob)
-		if(!item1 || !item2)
-			src.fall_apart()
-			return
-
-		var/r = rand(0,100)
-
-		if (r <= 60)
-			if(r < 30)
-				return item1.attack_self(user)
-			else
-				return item2.attack_self(user)
-		else
-			if(r <= 80)
-				SPAWN_DBG(0)
-					item1.attack_self(user)
-					item2.attack_self(user)
-				return
-			else
-				src.fall_apart(user)
-				return
-
-	proc/fall_apart(var/mob/holder)
-		boutput(holder,"[src] bursts apart in your hand!")
-		if (prob(70) && item1)
-			holder.attackby(item1, holder)
-		if (prob(70) && item2)
-			holder.attackby(item2, holder)
-		if (item1)
-			item1.set_loc(get_turf(src))
-		if (item2)
-			item2.set_loc(get_turf(src))
-		qdel(src)
+			return item2.attack(M, user)
 
 
 /proc/makeshittyweapon()
@@ -1645,7 +179,7 @@ var/list/electiles = list()
 	var/use_delay = 30
 
 	Click(location,control,params)
-		if(isobserver(usr) || iswraith(usr))
+		if(istype(usr, /mob/dead) || istype(usr, /mob/wraith))
 
 			if(!users.Find(usr))
 				users[usr] = 0
@@ -1666,16 +200,11 @@ var/list/electiles = list()
 
 					users[usr] = world.time
 
-					SPAWN_DBG(0)
+					spawn(0)
 						if(src && selected)
 							animate_float(src, 1, 5, 1)
 							for (var/mob/O in observersviewers(7, src))
 								O.show_message("<B><span style=\"color:blue\">The board spells out a message ... \"[selected]\"</span></B>", 1)
-#ifdef HALLOWEEN
-							if (istype(usr.abilityHolder, /datum/abilityHolder/ghost_observer))
-								var/datum/abilityHolder/ghost_observer/GH = usr.abilityHolder
-								GH.change_points(50)
-#endif
 			else
 				usr.show_text("Please wait a moment before using the board again.", "red")
 		else
@@ -1736,17 +265,9 @@ var/list/electiles = list()
 
 		..()
 
-	disposing()
+	Del()
 		particleMaster.RemoveSystem(/datum/particleSystem/barrelSmoke, src)
 		..()
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		if(istype(W, /obj/item/clothing/mask/cigarette))
-			var/obj/item/clothing/mask/cigarette/C = W
-			if(!C.on)
-				C.light(user, "<span style=\"color:red\">[user] lights the [C] with [src]. That seems appropriate.</span>")
-
-/*
 
 /obj/hh_portal_exit
 	icon = 'icons/misc/exploration.dmi'
@@ -1845,14 +366,13 @@ var/list/electiles = list()
 	opacity = 0
 	invisibility = 100
 	var/image/oimage = null
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	New()
 		oimage = image('icons/misc/exploration.dmi',src,"sfrag")
 		orbicons.Add(oimage)
 		return ..()
 
-	disposing()
+	Del()
 		orbicons.Remove(oimage)
 		del(oimage)
 		..()
@@ -1879,17 +399,14 @@ var/list/electiles = list()
 	anchored = 1
 	density = 0
 	opacity = 0
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	HasEntered(atom/A)
-		if(!ismob(A) || !isliving(A)) return
+		if(!ismob(A) || !istype(A,/mob/living)) return
 		qdel(src)
 		var/mob/living/M = A
 		M.adventure_variables.hh_energy += 1
 		particleMaster.SpawnSystem(new /datum/particleSystem/energysp(M))
 		return
-
-*/
 
 /obj/decal/nothing
 	name = "nothing"
@@ -1898,7 +415,6 @@ var/list/electiles = list()
 	anchored = 1
 	density = 0
 	opacity = 0
-	plane = PLANE_LIGHTING - 1
 
 /obj/decal/nothingplug
 	name = "nothing"
@@ -1907,7 +423,6 @@ var/list/electiles = list()
 	anchored = 1
 	density = 0
 	opacity = 0
-	plane = PLANE_LIGHTING - 1
 
 /obj/decal/hfireplug
 	name = "fire"
@@ -1972,7 +487,7 @@ var/list/electiles = list()
 			for(var/turf/T in affected)
 				animate_flash_color_fill(T,"#aaddff",1,5)
 				for(var/mob/M in T)
-					M.changeStatus("weakened", 2 SECONDS)
+					M.weakened += 2
 					random_burn_damage(M, 10)
 
 				if(istype(T, /turf/simulated/floor))
@@ -1981,7 +496,7 @@ var/list/electiles = list()
 							T:break_tile()
 						else
 							T:burn_tile()
-			SPAWN_DBG(6) qdel(B)
+			spawn(6) qdel(B)
 			sleep(3)
 		sleep(1)
 
@@ -2031,7 +546,7 @@ var/list/electiles = list()
 	Crossed(atom/movable/O)
 		if(!canTrigger) return
 		canTrigger = 0
-		SPAWN_DBG(procCooldown) canTrigger = 1
+		spawn(procCooldown) canTrigger = 1
 
 		if(length(procName))
 			var/list/modList = list()
@@ -2131,7 +646,7 @@ var/list/electiles = list()
 			if(!(locate(spawn_type) in src.loc))
 				sleep(spawn_rate)
 				new spawn_type(src.loc)
-		SPAWN_DBG(spawn_check_rate)
+		spawn(spawn_check_rate)
 			runIt()
 		return
 
@@ -2148,7 +663,7 @@ var/list/electiles = list()
 		return
 
 	New()
-		SPAWN_DBG(0) runIt()
+		spawn(0) runIt()
 		return ..()
 
 	ex_act()
@@ -2205,7 +720,7 @@ var/list/electiles = list()
 		boutput(user, "<span style=\"color:red\">The fireworks go off as soon as you touch the box. This is some high quality stuff.</span>")
 		anchored = 1
 
-		SPAWN_DBG(0)
+		spawn(0)
 			for(var/i=0, i<rand(30,40), i++)
 				particleMaster.SpawnSystem(new /datum/particleSystem/fireworks(src.loc))
 				sleep(rand(2, 15))
@@ -2236,7 +751,7 @@ var/list/electiles = list()
 
 		var/spoopydegrees = rand(5, 20)
 
-		SPAWN_DBG(rand(1,10))
+		spawn(rand(1,10))
 			animate(src, pixel_y = 32, transform = matrix(spoopydegrees, MATRIX_ROTATE), time = 20, loop = -1, easing = SINE_EASING)
 			animate(pixel_y = 0, transform = matrix(-1 * spoopydegrees, MATRIX_ROTATE), time = 20, loop = -1, easing = SINE_EASING)
 
@@ -2262,7 +777,253 @@ var/list/electiles = list()
 		light.attach(src)
 		light.enable()
 
-//alchemy circle and related to biodome.dm
+/obj/item/alchemy/stone
+	desc = "A blood red stone. It pulses ever so slightly when you hold it."
+	name = "philosopher's stone"
+	icon = 'icons/effects/alch.dmi'
+	icon_state = "pstone"
+	item_state = "injector"
+	flags = FPRINT | EXTRADELAY | TABLEPASS | CONDUCT
+	w_class = 1.0
+	var/datum/light/light
+
+	afterattack(atom/target as mob|obj|turf|area, mob/user as mob)
+		if(get_dist(target,user) > 1)
+			return
+		return
+
+	attack()
+		return
+
+	New()
+		..()
+		src.visible_message("<span style=\"color:blue\"><b>[src] appears out of thin air!</b></span>")
+		new /obj/effects/shockwave {name = "mystical energy";} (src.loc)
+		light = new /datum/light/point
+		light.attach(src)
+		light.set_color(1,0.5,0.5)
+		light.set_height(0.2)
+		light.set_brightness(0.4)
+		light.enable()
+
+/obj/item/alchemy/powder
+	desc = "A little purple pouch filled with a white powder."
+	name = "purple pouch"
+	icon = 'icons/effects/alch.dmi'
+	icon_state = "powder"
+	item_state = "injector"
+	flags = FPRINT | EXTRADELAY | TABLEPASS | CONDUCT
+	w_class = 1.0
+
+	afterattack(atom/target as mob|obj|turf|area, mob/user as mob)
+		if(get_dist(target,user) > 1 && !istype(target, /obj/alchemy/circle))
+			return
+		if(target == loc) return
+		boutput(user, "<span style=\"color:blue\">Your sprinkle some powder on \the [target].</span>")
+		if(istype(target, /obj/alchemy/circle))
+			target:activate()
+		return
+
+	attack()
+		return
+
+/obj/item/paper/alchemy
+	name = "notebook page 1"
+	desc = "a page torn from a notebook"
+	info = "... blood is the catalyst ... the arcane powder the key..."
+
+/obj/item/paper/alchemy/north
+	name = "notebook page 2"
+	New()
+		spawn(100)
+			info = "... [alchemy_symbols["north"]] stands above all else ..."
+
+/obj/item/paper/alchemy/southeast
+	name = "notebook page 3"
+	New()
+		spawn(100)
+			info = "... in the place the sun rises, [alchemy_symbols["southeast"]] is required ..."
+
+/obj/item/paper/alchemy/southwest
+	name = "notebook page 4"
+	New()
+		spawn(100)
+			info = "... [alchemy_symbols["southwest"]] where light fades ..."
+
+/obj/item/alchemy/symbol
+	name = "Symbol"
+	desc = "Some sort of alchemical Symbol on a Scroll."
+	icon = 'icons/effects/alch.dmi'
+	var/info = ""
+
+/var/list/alchemy_symbols = new/list()
+
+/obj/item/alchemy/symbol/water
+	icon_state = "alch_water"
+	info = "Water"
+
+/obj/item/alchemy/symbol/fire
+	icon_state = "alch_fire"
+	info = "Fire"
+
+/obj/item/alchemy/symbol/air
+	icon_state = "alch_air"
+	info = "Air"
+
+/obj/item/alchemy/symbol/earth
+	icon_state = "alch_earth"
+	info = "Earth"
+
+/obj/item/alchemy/symbol/connect
+	icon_state = "alch_con"
+	info = "Connection"
+
+/obj/item/alchemy/symbol/distill
+	icon_state = "alch_distill"
+	info = "Distillation"
+
+/obj/item/alchemy/symbol/incin
+	icon_state = "alch_incin"
+	info = "Incineration"
+
+/obj/item/alchemy/symbol/life
+	icon_state = "alch_life"
+	info = "Life"
+
+/obj/item/alchemy/symbol/proj
+	icon_state = "alch_proj"
+	info = "Projection"
+
+/obj/item/alchemy/symbol/salt
+	icon_state = "alch_salt"
+	info = "Salt"
+
+/obj/alchemy/empty
+	name = "Empty Circle"
+	desc = "An Empty Circle, waiting to be filled"
+	anchored = 1
+	density = 0
+	opacity= 0
+	icon = 'icons/effects/alch.dmi'
+	icon_state = "alch_empty"
+	var/obj/item/alchemy/symbol = null
+	var/requiredType = null
+
+	attack_hand(mob/user as mob)
+		if(symbol != null)
+			symbol.loc = src.loc
+			symbol = null
+			overlays.Cut()
+			boutput(usr, "<span style=\"color:blue\">You remove the Symbol.</span>")
+		return
+
+	attackby(obj/item/W as obj, mob/user as mob)
+		if(istype(W,/obj/item/alchemy/symbol) && symbol == null)
+			user.drop_item()
+			symbol = W
+			symbol.loc = src
+			overlays += symbol
+			boutput(usr, "<span style=\"color:blue\">You put the Symbol in the Circle.</span>")
+		return
+
+/obj/alchemy/circle
+	name = "Alchemy Circle"
+	desc = "A bizzare looking mass of lines and circles is drawn onto the floor here."
+	anchored = 1
+	density = 0
+	opacity= 0
+	layer = FLOOR_EQUIP_LAYER1
+	icon = 'icons/effects/160x160.dmi'
+	icon_state = "alchcircle"
+	var/activated = 0
+
+	var/obj/alchemy/empty/north = null
+	var/obj/alchemy/empty/southwest = null
+	var/obj/alchemy/empty/southeast = null
+	var/target_id = "alchemy"
+
+	proc/activate()
+		if(activated) return
+		if((north.symbol && istype(north.symbol,north.requiredType)) && (southwest.symbol && istype(southwest.symbol,southwest.requiredType)) && (southeast.symbol && istype(southeast.symbol,southeast.requiredType)))
+			var/turf/middle = locate(src.x + 2, src.y + 2, src.z)
+			var/blood = 0
+			for(var/atom/A in range(2, middle))
+				if(istype(A, /obj/decal/cleanable/blood))
+					blood = 1
+					break
+			if(blood == 1)
+				activated = 1
+				boutput(usr, "<span style=\"color:green\">The Circle begins to vibrate and glow.</span>")
+				playsound(src.loc, "sound/effects/chanting.ogg", 50, 1)
+				sleep(10)
+				shake_camera(usr, 15, 1, 0.2)
+				sleep(10)
+				for(var/turf/T in range(2,middle))
+					new/obj/decal/cleanable/greenglow(T)
+				sleep(10)
+				world << sound('sound/effects/mag_pandroar.ogg', volume=60) // heh
+				shake_camera(usr, 15, 1, 0.5)
+				new/obj/item/alchemy/stone(middle)
+				sleep(2)
+				var/obj/graveyard/loose_rock/R = locate("loose_rock_[target_id]")
+				if(istype(R))
+					spawn(1)
+						R.crumble()
+				var/area/the_catacombs = get_area(src)
+				for (var/mob/living/M in the_catacombs)
+					if (M.stat == 2)
+						continue
+
+					M.unlock_medal("Illuminated", 1)
+
+			else
+				boutput(usr, "<span style=\"color:blue\">The Circle glows faintly before returning to normal. Maybe something is missing.</span>")
+			return
+		else
+			boutput(usr, "<span style=\"color:red\">The Circle remains silent ...</span>")
+
+	attackby(obj/item/W as obj, mob/user as mob)
+		if(activated) return
+
+
+	New(var/location)
+		var/list/types = new/list()
+		var/obj/item/alchemy/symbol/S = null
+
+		for(var/A in typesof(/obj/item/alchemy/symbol) - /obj/item/alchemy/symbol)
+			types += A
+
+		loc = location
+		north = new(locate(src.loc.x + 2, src.loc.y + 3, src.loc.z))
+		var/ntype = pick(types)
+
+		S = new ntype()
+		alchemy_symbols["north"] = S.info
+
+		types -= ntype
+		north.requiredType = ntype
+
+		southwest = new(locate(src.loc.x + 1, src.loc.y + 1, src.loc.z))
+		southwest.pixel_y = 16
+		var/swtype = pick(types)
+
+		S = new swtype()
+		alchemy_symbols["southwest"] = S.info
+
+		types -= swtype
+		southwest.requiredType = swtype
+
+		southeast = new(locate(src.loc.x + 3, src.loc.y + 1, src.loc.z))
+		southeast.pixel_y = 16
+		var/setype = pick(types)
+
+		S = new setype()
+		alchemy_symbols["southeast"] = S.info
+
+		types -= setype
+		southeast.requiredType = setype
+
+		return
 
 /obj/line_obj/elec
 	name = "electricity"
@@ -2315,7 +1076,7 @@ var/list/electiles = list()
 			qdel(src)
 			return
 		step_towards(src, src.current)
-		SPAWN_DBG( 1 )
+		spawn( 1 )
 			process()
 			return
 		return
@@ -2369,13 +1130,13 @@ var/list/electiles = list()
 			return
 		var/turf/fire_target_tile = get_step(get_step(get_step(get_step(src, src.dir), src.dir), direction), direction)
 
-		SPAWN_DBG(1)
+		spawn(1)
 			playsound(src, "sound/weapons/rocket.ogg", 50, 1)
 
 			var/obj/item/rpg_rocket/R = new
 
 			R.set_loc(get_step(src, src.dir))
-			R.set_density(1)
+			R.density = 1
 			R.state = 1
 			R.current = fire_target_tile
 			R.yo = fire_target_tile.y - src.y
@@ -2383,11 +1144,11 @@ var/list/electiles = list()
 
 			R.process()
 
-		SPAWN_DBG(25) ready = 1
+		spawn(25) ready = 1
 */
 
-/obj/movable_area_controller
-	name = "controller"
+/obj/movable_area_controler
+	name = "controler"
 	desc = "Don't move this thing or you're gonna have a bad time."
 	icon = 'icons/obj/objects.dmi'
 	icon_state = "stool"
@@ -2400,7 +1161,7 @@ var/list/electiles = list()
 	verb/setup_area()
 		set src in view(1)
 		set name = "Setup"
-		src.verbs -= /obj/movable_area_controller/verb/setup_area
+		src.verbs -= /obj/movable_area_controler/verb/setup_area
 
 		var/width = input(usr,"Width:","Setup",7) as num
 		var/height = input(usr,"Height:","Setup",5) as num
@@ -2526,7 +1287,7 @@ var/list/electiles = list()
 	active_spread += A
 	active_spread[A] = num_gens
 
-	SPAWN_DBG(0)
+	spawn(0)
 		while(num_spread > 0 || num_spread == -1)
 			for(var/atom/curr in active_spread)
 				var/can_spread = null
@@ -2545,7 +1306,6 @@ var/list/electiles = list()
 					active_spread[newspawn] = num_gens
 			sleep(10 * num_delay)
 			if(num_spread > 0) num_spread--
-			LAGCHECK(LAG_LOW)
 
 
 /proc/is_free(var/atom/A)
@@ -2595,7 +1355,7 @@ var/list/electiles = list()
 
 		var/obj/source = locate(/obj/dfissure_to)
 		if (!istype(source))
-			boutput(AM, "<span class='combat'>You try to squeeze into the hole in space-time, but it's really dense right now!  Weird!  Who knew holes in reality could be so strange?!</span>")
+			qdel(src)
 			return
 		var/turf/trg = source.loc
 
@@ -2604,13 +1364,129 @@ var/list/electiles = list()
 
 		AM.set_loc(trg)
 
-//void turfs to void.dm
+/turf/unsimulated/wall/void
+	name = "dense void"
+	icon = 'icons/turf/floors.dmi'
+	icon_state = "darkvoid"
+	desc = "It seems solid..."
+	opacity = 1
+	density = 1
+
+/turf/unsimulated/floor/void
+	name = "void"
+	icon = 'icons/turf/floors.dmi'
+	icon_state = "void"
+	desc = "A strange shifting void ..."
+
+/turf/simulated/wall/void
+	name = "dense void"
+	icon = 'icons/turf/floors.dmi'
+	icon_state = "darkvoid"
+	desc = "It seems solid..."
+	opacity = 1
+	density = 1
+
+	ex_act()
+		return
+
+	ex_act(severity)
+		return
+
+	blob_act(var/power)
+		return
+
+	attack_hand(mob/user as mob)
+		return
+
+	attackby(obj/item/W as obj, mob/user as mob)
+		return
+
+
+/turf/simulated/floor/void
+	name = "void"
+	icon = 'icons/turf/floors.dmi'
+	icon_state = "void"
+	desc = "A strange shifting void ..."
+
+	ex_act()
+		return
+
+	ex_act(severity)
+		return
+
+	blob_act(var/power)
+		return
+
+	attack_hand(mob/user as mob)
+		return
+
+	attackby(obj/item/W as obj, mob/user as mob)
+		return
+
+/area/otherdimesion
+	requires_power = 0
+	luminosity = 1
+	RL_Lighting = 0
+	name = "Somewhere"
+	icon_state = "shuttle2"
+
+/area/crunch
+	var/sound/mysound = null
+
+	New()
+		..()
+		var/sound/S = new/sound()
+		mysound = S
+		S.file = 'sound/ambience/voidambi.ogg'
+		S.repeat = 1
+		S.wait = 0
+		S.channel = 123
+		S.volume = 60
+		S.priority = 255
+		S.status = SOUND_UPDATE
+		spawn(10) process()
+
+	Entered(atom/movable/Obj,atom/OldLoc)
+		..()
+		if(ismob(Obj))
+			if(Obj:client)
+				mysound.status = SOUND_UPDATE
+				Obj << mysound
+		return
+
+	Exited(atom/movable/Obj)
+		..()
+		if(ismob(Obj))
+			if(Obj:client)
+				mysound.status = SOUND_PAUSED | SOUND_UPDATE
+				Obj << mysound
+
+	proc/process()
+		var/sound/S = null
+		var/sound_delay = 0
+		while(ticker && ticker.current_state < GAME_STATE_FINISHED)
+			sleep(60)
+			if (ticker.current_state == GAME_STATE_PLAYING)
+				if(prob(10))
+					S = sound(file=pick('sound/ambience/voidfx1.ogg','sound/ambience/voidfx2.ogg','sound/ambience/voidfx3.ogg','sound/ambience/voidfx4.ogg'), volume=100)
+					sound_delay = rand(0, 50)
+				else
+					S = null
+					continue
+
+				for(var/mob/living/carbon/human/H in src)
+					if(H.client)
+						mysound.status = SOUND_UPDATE
+						H << mysound
+						if(S)
+							spawn(sound_delay)
+								H << S
 
 /proc/zombies()
 	var/list/eligible = new/list()
 
 	for(var/mob/living/carbon/human/H in mobs)
-		if(H.z == 1 && !isdead(H) && H.client)
+		if(H.z == 1 && H.stat != 2 && H.client)
 			eligible.Add(H)
 
 	var/mob/living/carbon/human/picked1
@@ -2663,7 +1539,6 @@ var/list/electiles = list()
 	density = 0
 	opacity = 0
 	anchored = 1
-	contraband = 4
 
 	icon = 'icons/obj/weapons.dmi'
 	icon_state = "boomerang"
@@ -2687,11 +1562,10 @@ var/list/electiles = list()
 			if(prob(prob_clonk))
 				var/mob/living/carbon/human/user = usr
 				user.visible_message("<span style=\"color:red\"><B>[user] fumbles the catch and is clonked on the head!</B></span>")
-				playsound(user.loc, 'sound/impact_sounds/Flesh_Break_1.ogg', 50, 1)
-				user.changeStatus("stunned", 50)
-				user.changeStatus("weakened", 3 SECONDS)
-				user.changeStatus("paralysis", 2 SECONDS)
-				user.force_laydown_standup()
+				playsound(user.loc, 'sound/effects/fleshbr1.ogg', 50, 1)
+				user.stunned += 5
+				user.weakened += 3
+				user.paralysis += 2
 			else
 				src.attack_hand(usr)
 			return
@@ -2701,14 +1575,13 @@ var/list/electiles = list()
 				var/safari = (istype(user.w_uniform, /obj/item/clothing/under/gimmick/safari) && istype(user.head, /obj/item/clothing/head/safari))
 				if(safari)
 					var/mob/living/carbon/human/H = hit_atom
-					H.changeStatus("stunned", 4 SECONDS)
-					H.changeStatus("weakened", 2 SECONDS)
-					H.force_laydown_standup()
+					H.stunned+=4
+					H.weakened+=2
 					//H.paralysis++
 					playsound(H.loc, "swing_hit", 50, 1)
 
 				prob_clonk = min(prob_clonk + 5, 40)
-				SPAWN_DBG(20)
+				spawn(20)
 					prob_clonk = max(prob_clonk - 5, 0)
 
 		return ..(hit_atom)
@@ -2745,78 +1618,22 @@ var/list/electiles = list()
 			if (a)
 				A.alpha = a
 
-/datum/targetable/portalpickerOrigin
-	target_anything = 1
-	targeted = 1
-	max_range = 3000
-	var/obj/fancyportal/P = null
-	var/atom/target = null
-
-	castcheck(var/mob/M)
-		if (M.client && M.client.holder)
-			return 1
-
-	handleCast(var/atom/selected)
-		var/alert = alert("Is the target '[selected]' ok?",,"Yes","No","Exit")
-		if (alert == "Yes")
-			P = new/obj/fancyportal(get_turf(selected))
-			P.setTarget(target)
-			var/targetThing = isturf(target) ? "" : "[target] in "
-			targetThing += get_area(target)
-			logTheThing("admin", usr, null, "created a portal at [showCoords(selected.x, selected.y, selected.z)] ([get_area(selected)]) pointing to [showCoords(target.x, target.y, target.z)] ([targetThing])")
-			logTheThing("diary", usr, null, "created a portal at [selected.x], [selected.y], [selected.z] ([get_area(selected)]) pointing to [target.x], [target.y], [target.z] ([targetThing])", "admin")
-			message_admins("[key_name(usr)] created a portal at [showCoords(selected.x, selected.y, selected.z)] ([get_area(selected)]) pointing to [showCoords(target.x, target.y, target.z)] ([targetThing])")
-		else if (alert == "No")
-			var/mob/M = usr
-			if (istype(M))
-				var/datum/targetable/portalpickerOrigin/R = new()
-				M.targeting_spell = R
-				M.update_cursor()
-				R.target = selected
-				return
-		else
-			return
-
-/datum/targetable/portalpickerTarget
-	target_anything = 1
-	targeted = 1
-	max_range = 3000
-
-	castcheck(var/mob/M)
-		if (M.client && M.client.holder)
-			return 1
-
-	handleCast(var/atom/selected)
-		var/mob/M = usr
-		if (istype(M))
-			var/extra = isturf(selected) ? "" : "\n\nYou selected a non-turf and so people will teleport INSIDE the target. This may bug people out so be sure you want to do this."
-			var/alert = alert("Is the target '[selected]' ok?[extra]",,"Yes","No","Exit")
-			if (alert == "Yes")
-				var/datum/targetable/portalpickerOrigin/R = new()
-				alert("Click on where you want your portal to be placed",,"Ok")
-				M.targeting_spell = R
-				M.update_cursor()
-				R.target = selected
-				return
-			else if (alert == "No")
-				var/datum/targetable/portalpickerTarget/R = new()
-				M.targeting_spell = R
-				M.update_cursor()
-			else
-				return
-
-/client/proc/create_portal()
+/verb/create_portal(var/turf/T as turf in world)
 	set category = null
-	set name = "Create Portal"
-	admin_only
-
-	var/mob/M = src.mob
-	if (istype(M))
-		alert("Click on where you want your portal to end up at",,"Ok")
-		var/datum/targetable/portalpickerTarget/R = new()
-		M.targeting_spell = R
-		M.update_cursor()
-		return
+	set name = "Create Portal Here"
+	var/obj/perm_portal/P = null
+	switch(alert("Target selection type:",,"By reference","To turf"))
+		if("By reference")
+			var/input = input(usr,"Select Target:","Target") in world
+			if(!input) return
+			P = new/obj/perm_portal(T)
+			P.target = input
+		if("To turf")
+			alert("Please move to the target location and then press OK.")
+			var/atom/trg = get_turf(usr)
+			if(trg)
+				P = new/obj/perm_portal(T)
+				P.target = trg
 
 /obj/perm_portal
 	icon = 'icons/misc/old_or_unused.dmi'
@@ -2835,19 +1652,13 @@ var/list/electiles = list()
 		light.set_brightness(0.5)
 		light.attach(src)
 		light.enable()
-		SPAWN_DBG(6)
+		spawn(6)
 			if (target_tag)
 				target = locate(target_tag)
 
 	Bumped(atom/movable/AM)
 		if(target && istype(target))
-			AM.set_loc(target)
-		else
-			src.visible_message("<span style='color: red; font-weight: bold'>The portal collapses in on itself!</span>")
-			var/obj/sparks = unpool(/obj/effects/sparks)
-			sparks.set_loc(get_turf(src))
-			SPAWN_DBG(20) if (sparks) pool(sparks)
-			qdel(src)
+			AM.set_loc(get_turf(target))
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -2856,7 +1667,7 @@ var/list/electiles = list()
 /proc/for_no_raisin(var/mob/M, text)
 	if(findtext(text,"for no raisin"))
 		if(M.client)
-			if(!(M.client in raisinlist) && isliving(M))
+			if(!(M.client in raisinlist) && istype(M,/mob/living))
 				boutput(M, "<span style=\"color:red\">A raisin mysteriously materializes right next to your feet...</span>")
 				new/obj/item/reagent_containers/food/snacks/raisin(get_turf(M))
 				raisinlist += M.client
@@ -2870,7 +1681,7 @@ var/list/electiles = list()
 	heal_amt = 5
 
 	attack(mob/M as mob, mob/user as mob, def_zone)
-		if(ishuman(M))
+		if(istype(M, /mob/living/carbon/human))
 			if(M == user)
 				M.nutrition += src.heal_amt * 10
 				M.poo += 1
@@ -2913,7 +1724,7 @@ var/list/electiles = list()
 
 	unpooled(var/poolname)
 		..()
-		SPAWN_DBG(1)
+		spawn(1)
 			var/atom/myloc = loc
 			if(myloc && !istype(myloc,/turf/space))
 				my_dir = pick(alldirs)
@@ -2942,19 +1753,20 @@ var/list/electiles = list()
 			possible +=  current
 
 		if(!possible.len)
-			SPAWN_DBG(30) update()
+			spawn(30) update()
 			return
 
 		var/turf/picked = pick(possible)
 		if(src.loc.invisibility) src.loc.invisibility = 0
 		src.set_loc(picked)
-		SPAWN_DBG(5) picked.invisibility = 100
+		spawn(5) picked.invisibility = 100
 
-		SPAWN_DBG(rand(50,80)) update()
+		spawn(rand(50,80)) update()
 
 /obj/shifting_wall/sneaky
 
 	var/sightrange = 8
+	pixel_step_size = 7
 
 	proc/find_suitable_tiles()
 		var/list/possible = new/list()
@@ -2982,13 +1794,13 @@ var/list/electiles = list()
 
 	update()
 		if(someone_can_see_me()) //Award for the most readable code GOES TO THIS LINE.
-			SPAWN_DBG(rand(50,80)) update()
+			spawn(rand(50,80)) update()
 			return
 
 		var/list/possible = find_suitable_tiles()
 
 		if(!possible.len)
-			SPAWN_DBG(30) update()
+			spawn(30) update()
 			return
 
 		var/turf/picked = pick(possible)
@@ -2997,11 +1809,11 @@ var/list/electiles = list()
 
 		src.set_loc(picked)
 
-		SPAWN_DBG(5)
+		spawn(5)
 			picked.invisibility = 100
 			picked.opacity = 1
 
-		SPAWN_DBG(rand(50,80)) update()
+		spawn(rand(50,80)) update()
 
 
 /obj/pool
@@ -3009,22 +1821,6 @@ var/list/electiles = list()
 	density = 1
 	anchored = 1
 	icon = 'icons/obj/stationobjs.dmi'
-	icon_state = "pool"
-	flags = FPRINT | ALWAYS_SOLID_FLUID | IS_PERSPECTIVE_FLUID
-
-/obj/pool/ladder
-	name = "pool ladder"
-	anchored = 1
-	density = 0
-	dir = 8
-	icon = 'icons/obj/fluid.dmi'
-	icon_state = "ladder"
-
-/obj/pool/perspective
-	name = "pool"
-	density = 1
-	anchored = 1
-	icon = 'icons/obj/fluid.dmi'
 	icon_state = "pool"
 
 /obj/pool_springboard
@@ -3085,35 +1881,28 @@ var/list/electiles = list()
 			if(range == 1) boutput(user, "<span style=\"color:red\">You slip...</span>")
 			user.layer = MOB_LAYER
 			user.throw_at(target, 5, 1)
-			user:changeStatus("weakened", 2 SECONDS)
+			user:weakened += 2
 			if(suiciding || deadly)
 				src.visible_message("<span style=\"color:red\"><b>[user.name] dives headfirst at the [target.name]!</b></span>")
-				SPAWN_DBG(3) //give them time to land
-					if (user)
-						user.TakeDamage("head", 200, 0)
-						user.updatehealth()
-						playsound(src.loc, "sound/impact_sounds/Generic_Snap_1.ogg", 50, 1)
+				spawn(3) //give them time to land
+					user.TakeDamage("head", 200, 0)
+					user.updatehealth()
+					playsound(src.loc, "sound/effects/snap.ogg", 50, 1)
 			user.pixel_y = 0
 			user.pixel_x = 0
-			playsound(user, "sound/impact_sounds/Liquid_Hit_Big_1.ogg", 60, 1)
+			playsound(user, "sound/effects/splash.ogg", 60, 1)
 			in_use = 0
 			suiciding = 0
 			user.transforming = 0
 
-	custom_suicide = 1
 	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
-		if (in_use)
-			return 0
+		if(in_use) return 0
 		suiciding = 1 //reset in attack_hand() at the same time as in_use
 		attack_hand(user)
 
-		SPAWN_DBG(500)
+		spawn(100)
 			if (src)
 				src.suiciding = 0
-			if (user && !isdead(user))
-				user.suiciding = 0
 		return 1
 
 //1.5 would be 50% slower, 2.0 would be 100% slower etc.
@@ -3148,7 +1937,7 @@ var/list/lag_list = new/list()
 	var/before = world.timeofday
 	sleep(1)
 	add_and_average( (world.timeofday - before) )
-	SPAWN_DBG(5) lag_loop()
+	spawn(5) lag_loop()
 
 /proc/get_lag_average()
 	boutput(usr, "<span style=\"color:green\">[average_tenth] at [lag_list.len] samples.</span>")
@@ -3167,7 +1956,6 @@ var/list/lag_list = new/list()
 	var/list/spooky = new/list()
 	var/spooked = 0
 	var/spooking = 0
-	event_handler_flags = USE_HASENTERED
 
 	proc/hear_once(var/mob/M)
 		if(broken) return
@@ -3183,12 +1971,12 @@ var/list/lag_list = new/list()
 		if(spooking || broken) return
 		spooking = 1
 		break_it()
-		playsound(src, "sound/impact_sounds/Glass_Shatter_3.ogg", 75, 0)
+		playsound(src, "sound/effects/Glassbr3.ogg", 75, 0)
 		M:transforming = 1
 		sleep(30)
 		var/obj/screen/creepy = new /obj/screen()
 		creepy.name = "GARHLGHARLHGARHGL"
-		creepy.icon = 'icons/creepy.png'
+		creepy.icon = icon('icons/creepy.png')
 		creepy.screen_loc = "SOUTH,WEST"
 		creepy.mouse_opacity = 0
 		if(!M) return
@@ -3216,23 +2004,23 @@ var/list/lag_list = new/list()
 		..()
 
 		if(W.force <= 1 || broken)
-			playsound(src, "sound/impact_sounds/Generic_Stab_1.ogg", 25, 0)
+			playsound(src, "sound/weapons/Genhit.ogg", 25, 0)
 			return
 
 		health--
 		if(health <= 0)
 			break_it()
 			boutput(user, "<span style=\"color:red\">You break the mirror ...</span>")
-			playsound(src, "sound/impact_sounds/Glass_Shatter_3.ogg", 75, 0)
+			playsound(src, "sound/effects/Glassbr3.ogg", 75, 0)
 		else
-			playsound(src, "sound/impact_sounds/Glass_Hit_1.ogg", 75, 0)
+			playsound(src, "sound/effects/Glasshit.ogg", 75, 0)
 
 	ex_act()
-		playsound(src, "sound/impact_sounds/Glass_Shatter_3.ogg", 75, 0)
+		playsound(src, "sound/effects/Glassbr3.ogg", 75, 0)
 		break_it()
 
 	hitby(atom/movable/AM as mob|obj)
-		playsound(src, "sound/impact_sounds/Glass_Shatter_3.ogg", 75, 0)
+		playsound(src, "sound/effects/Glassbr3.ogg", 75, 0)
 		break_it()
 
 	proc
@@ -3308,7 +2096,7 @@ var/list/lag_list = new/list()
 
 		update()
 			rebuild_icon()
-			SPAWN_DBG(5) update()
+			spawn(5) update()
 
 /obj/spook
 	var/active = 0
@@ -3329,7 +2117,7 @@ var/list/lag_list = new/list()
 	proc/loop()
 
 		if(active)
-			SPAWN_DBG(30) loop()
+			spawn(30) loop()
 			return
 
 
@@ -3337,13 +2125,13 @@ var/list/lag_list = new/list()
 			if(prob(20)) spook(L)
 			break
 
-		SPAWN_DBG(20) loop()
+		spawn(20) loop()
 
 	proc/spook(var/mob/living/L)
 		if (narrator_mode)
-			playsound(L, 'sound/vox/ghost.ogg', 5, 0)
+			playsound(L, 'sound/vox/ghost.ogg', 75, 0)
 		else
-			playsound(L, 'sound/effects/ghost.ogg', 5, 0)
+			playsound(L, 'sound/effects/ghost.ogg', 75, 0)
 		sleep(3)
 		active = 1
 		walk_towards(src,L,3)
@@ -3353,7 +2141,7 @@ var/list/lag_list = new/list()
 		src.invisibility = 100
 		src.set_loc(startloc)
 		walk(src,0)
-		SPAWN_DBG(100) active = 0
+		spawn(100) active = 0
 
 
 /datum/engibox_mode
@@ -3538,8 +2326,8 @@ var/list/lag_list = new/list()
 	name = "Place Window"
 	desc = "Places a reinforced window."
 	used(atom/user, atom/target)
-		if (map_settings)
-			new map_settings.rwindows (get_turf(target))
+		if (map_setting && map_setting == "COG2")
+			new /obj/window/auto/reinforced(get_turf(target))
 		else
 			new /obj/window/reinforced(get_turf(target))
 		return
@@ -3548,7 +2336,7 @@ var/list/lag_list = new/list()
 	name = "Place Grille"
 	desc = "Places a Grille."
 	used(atom/user, atom/target)
-		var/obj/grille/L = new/obj/grille/steel(get_turf(target))
+		var/obj/grille/L = new/obj/grille(get_turf(target))
 		L.dir = user:dir
 		return
 
@@ -3564,10 +2352,12 @@ var/list/lag_list = new/list()
 	name = "Spawn paint can"
 	desc = "Spawn a paint can."
 	used(atom/user, atom/target)
-		var/col_new = input(user) as color
+		var/paint_color = null
+		var/col_new = F_Color_Selector.Get_Color(user, paint_color)
 		if(col_new)
 			var/obj/item/paint_can/P = new/obj/item/paint_can(get_turf(target))
 			P.paint_color = col_new
+			paint_color = col_new
 			P.generate_icon()
 			P.uses = 9999
 		return
@@ -3590,14 +2380,14 @@ var/list/lag_list = new/list()
 	desc = "Changes the material of the targeted object."
 	var/mat_id = "gold"
 	used(atom/user, atom/target)
-		target.setMaterial(getMaterial(mat_id))
+		target.setMaterial(getCachedMaterial(mat_id))
 		return
 
 /datum/engibox_mode/density
 	name = "Toggle density"
 	desc = "Toggles the density of an object."
 	used(atom/user, atom/target)
-		target.set_density(!target.density)
+		target.density = !target.density
 		boutput(usr, "<span style=\"color:blue\">Target density now: [target.density]</span>")
 		return
 
@@ -3642,7 +2432,7 @@ var/list/lag_list = new/list()
 		for(var/datum/engibox_mode/D in modes)
 			dat += "<A href='?src=\ref[src];set_mode=\ref[D]'>[D.name]</A> [active_mode == D ? "<<<" : ""]<BR>"
 			dat += "[D.desc]<BR><BR>"
-		user.Browse(dat, "window=engibox;can_minimize=0;can_resize=0;size=250x600")
+		user << browse(dat, "window=engibox;can_minimize=0;can_resize=0;size=250x600")
 		onclose(user, "window=engibox")
 		return
 
@@ -3651,14 +2441,14 @@ var/list/lag_list = new/list()
 		if(!in_range(src, usr)) return
 		usr.machine = src
 		if (href_list["set_mode"])
-			active_mode = locate(href_list["set_mode"]) in modes
+			active_mode = locate(href_list["set_mode"])
 
 			if(active_mode.requires_input)
 				active_mode.saved_var = input(usr,"Enter ID","ID","MyId") as text
 				if(!active_mode.saved_var || isnull(active_mode.saved_var)) active_mode = null
 
 			if(istype(active_mode,/datum/engibox_mode/transmute)) //You only have yourself to blame for this. This shitty code is the fault of whoever changed this!!!
-				active_mode:mat_id = input(usr,"Select material","material","gold") in list("gold", "steel", "mauxite", "pharosium","cobryl","bohrum","cerenkite","syreline","glass","molitz","claretine","erebite","plasmastone","plasmaglass","quartz","uqill","telecrystal","miraclium","starstone","flesh","char","koshmarite","viscerite","beeswax","latex","synthrubber","synthblubber","wendigohide","cotton","fibrilith")
+				active_mode:mat_id = input(usr,"Select material","material","gold") in list("gold", "steel", "mauxite", "pharosium","cobryl","bohrum","cerenkite","syreline","glass","molitz","claretine","erebite","plasmastone","plasmaglass","quartz","uqill","telecrystal","miraclium","starstone","flesh","char","koshmarite","viscerite","beeswax","latex","synthrubber","wendigohide","cotton","fibrilith")
 
 			if(istype(active_mode,/datum/engibox_mode/replicate))
 				active_mode:obj_path = null
@@ -3695,25 +2485,58 @@ var/list/lag_list = new/list()
 	name = "Keelin's private beach"
 	icon_state = "null"
 	luminosity = 1
-	force_fullbright = 1
+	RL_Lighting = 0
 	requires_power = 0
-	sound_loop = 'sound/ambience/loop/Shore.ogg'
-	sound_loop_vol = 100
+	var/sound/mysound = null
 
 	New()
 		..()
-		SPAWN_DBG(10)
-			process()
+		var/sound/S = new/sound()
+		mysound = S
+		S.file = 'sound/ambience/shore.ogg'
+		S.repeat = 1
+		S.wait = 0
+		S.channel = 123
+		S.volume = 100
+		S.priority = 255
+		S.status = SOUND_UPDATE
+		spawn(10) process()
+
+	Entered(atom/movable/Obj,atom/OldLoc)
+		..()
+		if(ismob(Obj))
+			if(Obj:client)
+				mysound.status = SOUND_UPDATE
+				Obj << mysound
+		return
+
+	Exited(atom/movable/Obj)
+		..()
+		if(ismob(Obj))
+			if(Obj:client)
+				mysound.status = SOUND_PAUSED | SOUND_UPDATE
+				Obj << mysound
 
 	proc/process()
-		while(current_state < GAME_STATE_FINISHED)
-			sleep(100)
-			if (current_state == GAME_STATE_PLAYING)
-				if(!played_fx_2)
-					sound_fx_2 = pick('sound/ambience/nature/Seagulls1.ogg','sound/ambience/nature/Seagulls2.ogg','sound/ambience/nature/Seagulls3.ogg')
-					for(var/mob/M in src)
-						if (M.client)
-							M.client.playAmbience(src, AMBIENCE_FX_2, 50)
+		var/sound/S = null
+		var/sound_delay = 0
+		while(ticker && ticker.current_state < GAME_STATE_FINISHED)
+			sleep(60)
+			if (ticker.current_state == GAME_STATE_PLAYING)
+				if(prob(10))
+					S = sound(file=pick('sound/ambience/seag1.ogg','sound/ambience/seag2.ogg','sound/ambience/seag3.ogg'), volume=100)
+					sound_delay = rand(0, 50)
+				else
+					S = null
+					continue
+
+				for(var/mob/living/carbon/human/H in src)
+					if(H.client)
+						mysound.status = SOUND_UPDATE
+						H << mysound
+						if(S)
+							spawn(sound_delay)
+								H << S
 
 /obj/item/beach_ball
 	icon = 'icons/misc/beach.dmi'
@@ -3731,155 +2554,3 @@ var/list/lag_list = new/list()
 	afterattack(atom/target as mob|obj|turf|area, mob/user as mob)
 		user.drop_item()
 		src.throw_at(target, throw_range, throw_speed)
-
-/* Camera test stuff
-
-/mob/living/intangible/aicamera
-	icon = 'icons/mob/ai.dmi'
-	icon_state = "a-eye"
-	layer = NOLIGHT_EFFECTS_LAYER_BASE
-	density = 0
-	canmove = 1
-	blinded = 0
-	anchored = 1
-	name = "camera view"
-	var/list/blockers
-	//debug stuff
-	var/high_range = 1
-
-	is_spacefaring()
-		return 1
-
-	movement_delay()
-		if (src.client && src.client.check_key(KEY_RUN))
-			return 0.4
-		else
-			return 0.75
-
-/mob/living/intangible/aicamera/New()
-	. = ..()
-	src.invisibility = 0
-	src.sight = SEE_THRU
-	src.see_invisible = 0
-
-/obj/ai_static
-	name = "static"
-	alpha = 0
-	anchored = 1
-	density = 0
-	opacity = 0
-	icon = 'icons/mob/hud_common.dmi'
-	icon_state = "static"
-	screen_loc = "NORTH,WEST to SOUTH,EAST"
-	layer = 50
-	plane = 100
-	mouse_opacity = 1
-	var/blocking = 0
-
-	MouseEntered(location,control,params)
-		if(usr && usr.client)
-			usr.client.show_popup_menus = 0
-		return ..()
-
-	MouseExited(location,control,params)
-		if(usr && usr.client)
-			usr.client.show_popup_menus = 1
-		return ..()
-
-	MouseDrop_T()
-		if(usr && usr.client && blocking)
-			usr.client.show_popup_menus = 0
-		return ..()
-
-
-/mob/living/intangible/aicamera/proc/updateLOS()
-	if(!src.client) return
-
-	var/low_left_x = (src.x - src.client.view)
-	low_left_x = max(low_left_x, 1)
-	low_left_x = min(low_left_x, world.maxx)
-
-	var/low_left_y = (src.y - src.client.view)
-	low_left_y = max(low_left_y, 1)
-	low_left_y = min(low_left_y, world.maxy)
-
-	var/up_right_x = (src.x + src.client.view)
-	up_right_x = max(up_right_x, 1)
-	up_right_x = min(up_right_x, world.maxx)
-
-	var/up_right_y = (src.y + src.client.view)
-	up_right_y = max(up_right_y, 1)
-	up_right_y = min(up_right_y, world.maxy)
-
-	var/list/visible = list()
-	var/list/view_turfs	= block(locate(low_left_x, low_left_y, src.z), locate(up_right_x, up_right_y, src.z))
-
-	if(high_range)
-	//Uses all cameras within viewrange + camera range, significantly slower
-		for(var/obj/machinery/camera/C in cameras)
-			if(C.z != src.z || get_dist(src, C) > (src.client.view + CAM_RANGE)) continue
-			visible = (visible | view(CAM_RANGE, C))
-	else
-	//Alternate version, uses only cameras on screen.
-		for(var/turf/T in view_turfs)
-			var/obj/machinery/camera/C = (locate(/obj/machinery/camera) in T)
-			if(C)
-				visible = (visible | view(CAM_RANGE, C))
-
-	for(var/turf/TC in view_turfs)
-		var/curr_x = (client.view + 1) - (src.x - TC.x)
-		var/curr_y = (client.view + 1) - (src.y - TC.y)
-
-		var/obj/ai_static/S = (blockers[curr_x][curr_y])
-		if(S)
-			if(!(TC in visible))
-				S.mouse_opacity = 2
-				S.blocking = 1
-				if(S.alpha != 255)
-					animate(S, alpha=255, time=2)
-				//S.alpha = 255
-			else
-				S.mouse_opacity = 0
-				S.blocking = 0
-				if(S.alpha != 0)
-					animate(S, alpha=0, time=2)
-				//S.alpha = 0
-
-/mob/living/intangible/aicamera/disposing()
-	..()
-	return
-
-/mob/living/intangible/aicamera/Login()
-	..()
-	if(!src.client)
-		return
-
-	var/sight_range = ((src.client.view * 2) + 1)
-	blockers = new/list(sight_range, sight_range)
-	for(var/x = 1, x <= sight_range, x++)
-		for(var/y = 1, y <= sight_range, y++)
-			var/obj/ai_static/S = new()
-			S.screen_loc = "[x],[y]"
-			S.alpha = 0
-			blockers[x][y] = S
-			src.client.screen += S
-
-	//client.show_popup_menus = 0
-	return
-
-/mob/living/intangible/aicamera/Logout()
-	..()
-	blockers = null
-	//client.show_popup_menus = 1
-	return
-
-/mob/living/intangible/aicamera/Life(datum/controller/process/mobs/parent)
-	..(parent)
-	updateLOS()
-	return
-
-/mob/living/intangible/aicamera/Move(var/turf/NewLoc, direct)
-	..(NewLoc, direct)
-	updateLOS()
-	return
-	*/

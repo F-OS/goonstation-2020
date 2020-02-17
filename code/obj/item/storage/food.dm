@@ -33,15 +33,6 @@
 	icon_state = "bacon"
 	spawn_contents = list(/obj/item/reagent_containers/food/snacks/ingredient/meat/bacon/raw = 7)
 
-/obj/item/storage/box/cookie_tin
-	name = "cookie tin"
-	desc = "Full of fresh cookies, picked ripe from the Danish cookie farms in Space Denmark."
-	icon_state = "cookie_tin"
-	spawn_contents = list(/obj/item/reagent_containers/food/snacks/cookie/butter = 7)
-
-/obj/item/storage/box/cookie_tin/sugar
-	spawn_contents = list(/obj/item/reagent_containers/food/snacks/cookie = 7)
-
 /obj/item/storage/box/beer
 	name = "beer in a box"
 	icon_state = "beer"
@@ -71,12 +62,6 @@
 	/obj/item/reagent_containers/food/snacks/plant/lime,\
 	/obj/item/kitchen/utensil/knife)
 
-/obj/item/storage/box/ic_cones
-	name = "ice cream cone box"
-	icon_state = "ic_cones"
-	desc = "Ice cream cones stored in a handy box."
-	spawn_contents = list(/obj/item/reagent_containers/food/snacks/ice_cream_cone = 7)
-
 /obj/item/storage/goodybag
 	name = "goodybag"
 	desc = "A bag designed to store Halloween candy."
@@ -90,9 +75,3 @@
 			var/obj/item/reagent_containers/food/snacks/candy/newcandy = new newcandy_path(src)
 			if (prob(5))
 				newcandy.razor_blade = 1
-
-/obj/item/storage/box/popsicles
-	name = "popsicles"
-	desc = "A box of generic unbranded popsicles."
-	icon_state = "popsiclebox"
-	spawn_contents = list(/obj/item/popsicle = 7)

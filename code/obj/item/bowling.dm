@@ -28,11 +28,9 @@
 
 	proc/damage(var/mob/hitMob, damMin, damMax, var/mob/living/carbon/human/user)
 		if(user.w_uniform && istype(user.w_uniform, /obj/item/clothing/under/gimmick/bowling))
+			hitMob.weakened = max(damMax-10, hitMob.weakened) // Reduced to 10 sec. Don't stun them for 30 sec from a single hit, Christ.
 			hitMob.stuttering = max(damMax-5, hitMob.stuttering)
-			if (damMax-10 > 0)
-				hitMob.changeStatus("stunned", 4 SECONDS)
-				hitMob.changeStatus("weakened", 4 SECONDS)
-				hitMob.force_laydown_standup()
+			hitMob.stunned = max(damMax-10, hitMob.stunned)
 			hitMob.TakeDamage("chest", rand(damMin, damMax), 0)
 		else
 			hitMob.stuttering = max(damMax-5, hitMob.stuttering)
@@ -57,7 +55,7 @@
 			if (ismob(hit_atom))
 				var/mob/hitMob = hit_atom
 				if (ishuman(hitMob))
-					SPAWN_DBG( 0 )
+					spawn( 0 )
 						if (istype(user))
 							if (user.w_uniform && istype(user.w_uniform, /obj/item/clothing/under/gimmick/bowling))
 								src.hitHard(hitMob, user)

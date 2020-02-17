@@ -20,9 +20,8 @@
 		if (did_fadein)
 			return
 		did_fadein = 1
-		var/atom/movable/A = owner
-		if (owner && islist(A.attached_objs))
-			A.attached_objs -= iicon
+		if (owner)
+			owner.attached_objs -= iicon
 		if (ability)
 			ability.fade_in()
 		else if (owner)
@@ -81,7 +80,7 @@
 			wait = fade_anim_length
 		else
 			animate(holder.owner, alpha=64, time=5)
-		SPAWN_DBG (wait)
+		spawn (wait)
 			holder.owner.invisibility = inv_level
 			holder.owner.alpha = 64
 			actions.start(I, holder.owner)
@@ -92,7 +91,7 @@
 			boutput(holder.owner, __red("You fade back into sight!"))
 			disabled = 0
 			doCooldown()
-			SPAWN_DBG(linger_time)
+			spawn(linger_time)
 				holder.owner.invisibility = 0
 				if (fade_in_icon_state)
 					flick(fade_in_icon_state, holder.owner)

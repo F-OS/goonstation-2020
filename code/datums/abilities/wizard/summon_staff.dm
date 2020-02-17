@@ -6,9 +6,6 @@
 	targeted = 0
 	cooldown = 600
 	requires_robes = 1
-	voice_grim = "sound/voice/wizard/StaffGrim.ogg"
-	voice_fem = "sound/voice/wizard/StaffFem.ogg"
-	//voice_other = "sound/voice/wizard/notdoneyet.ogg"
 
 	cast(mob/target)
 		if (!holder)
@@ -20,17 +17,16 @@
 			return 1
 
 		// Ability holder only checks for M.stat and wizard power, we need more than that here.
-		if (M.getStatusDuration("stunned") > 0 || M.getStatusDuration("weakened") || M.getStatusDuration("paralysis") > 0 || !isalive(M) || M.restrained())
+		if (M.stunned > 0 || M.weakened > 0 || M.paralysis > 0 || M.stat != 0 || M.restrained())
 			boutput(M, __red("Not when you're incapacitated or restrained."))
 			return 1
 
 		M.say("KOMH HEIRE")
-		..()
+		//playsound(M.loc, "sound/voice/wizard/[not_done_yet].ogg", 50, 0, -1)
 
 		var/list/staves = list()
 		var/we_hold_it = 0
 		for (var/obj/item/staff/cthulhu/S in world)
-			LAGCHECK(LAG_LOW)
 			if (M.mind && M.mind.key == S.wizard_key)
 				if (S == M.find_in_hand(S))
 					we_hold_it = 1
@@ -77,7 +73,7 @@
 					return 0
 				if (M.wizard_castcheck() == 0)
 					return 0 // Has own user feedback.
-				if (M.getStatusDuration("stunned") > 0 || M.getStatusDuration("weakened") || M.getStatusDuration("paralysis") > 0 || !isalive(M) || M.restrained())
+				if (M.stunned > 0 || M.weakened > 0 || M.paralysis > 0 || M.stat != 0 || M.restrained())
 					boutput(M, __red("Not when you're incapacitated or restrained."))
 					return 0
 				if (M.mind.key != S3.wizard_key)

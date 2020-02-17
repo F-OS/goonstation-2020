@@ -26,14 +26,6 @@
 	var/stat_msg2
 	desc = "A computer that allows one to call and recall the emergency shuttle, as well as recieve messages from Centcom."
 
-	lr = 0.6
-	lg = 1
-	lb = 0.1
-
-	disposing()
-		radio_controller.remove_object(src, status_display_freq)
-		..()
-
 /obj/machinery/computer/communications/process()
 	..()
 	if(state != STATE_STATUSDISPLAY)
@@ -44,7 +36,7 @@
 		return
 	usr.machine = src
 
-	if(!href_list["operation"] || (dd_hasprefix(href_list["operation"], "ai-") && !issilicon(usr) && !isAI(usr)))
+	if(!href_list["operation"] || (dd_hasprefix(href_list["operation"], "ai-") && !issilicon(usr)))
 		return
 	switch(href_list["operation"])
 		// main interface
@@ -169,26 +161,25 @@
 	boutput(world, "<span style=\"color:red\">Lockdown cancelled by [usr.name]!</span>")
 
 	for(var/obj/machinery/firealarm/FA in machines) //deactivate firealarms
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			if(FA.lockdownbyai == 1)
 				FA.lockdownbyai = 0
 				FA.reset()
-	for(var/obj/machinery/door/airlock/AL in doors) //open airlocks
-		SPAWN_DBG ( 0 )
+	for(var/obj/machinery/door/airlock/AL) //open airlocks
+		spawn ( 0 )
 			if(AL.canAIControl() && AL.lockdownbyai == 1)
 				AL.open()
 				AL.lockdownbyai = 0
 
-/obj/machinery/computer/communications/attackby(var/obj/item/I as obj, user as mob)
-	if (isscrewingtool(I))
+/obj/machinery/computer/communications/attackby(I as obj, user as mob)
+	if(istype(I, /obj/item/screwdriver))
 		playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		if(do_after(user, 20))
-			if (src.status & BROKEN)
+			if (src.stat & BROKEN)
 				boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 				var/obj/computerframe/A = new /obj/computerframe( src.loc )
 				if(src.material) A.setMaterial(src.material)
-				var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-				G.set_loc(src.loc)
+				new /obj/item/raw_material/shard/glass( src.loc )
 				var/obj/item/circuitboard/communications/M = new /obj/item/circuitboard/communications( A )
 				for (var/obj/C in src)
 					C.set_loc(src.loc)
@@ -225,15 +216,15 @@
 
 	user.machine = src
 	var/dat = "<head><title>Communications Console</title></head><body>"
-	if (emergency_shuttle.online && emergency_shuttle.location == SHUTTLE_LOC_CENTCOM)
+	if (emergency_shuttle.online && emergency_shuttle.location==0)
 		var/timeleft = emergency_shuttle.timeleft()
 		dat += "<B>Emergency shuttle</B><br><BR><br>ETA: [timeleft / 60 % 60]:[add_zero(num2text(timeleft % 60), 2)]<BR>"
 
-	if (issilicon(user) || isAI(usr))
+	if (istype(user, /mob/living/silicon))
 		var/dat2 = src.interact_ai(user) // give the AI a different interact proc to limit its access
 		if(dat2)
 			dat +=  dat2
-			user.Browse(dat, "window=communications;size=400x500")
+			user << browse(dat, "window=communications;size=400x500")
 			onclose(user, "communications")
 		return
 
@@ -243,7 +234,7 @@
 				dat += "<BR>\[ <A HREF='?src=\ref[src];operation=logout'>Log Out</A> \]"
 //				dat += "<BR>\[ <A HREF='?src=\ref[src];operation=call-prison'>Send Prison Shutle</A> \]"
 				dat += "<BR>\[ <A HREF='?src=\ref[src];operation=nolockdown'>Disable Lockdown</A> \]"
-				if(emergency_shuttle.location == SHUTTLE_LOC_CENTCOM)
+				if(emergency_shuttle.location==0)
 					if (emergency_shuttle.online)
 						dat += "<BR>\[ <A HREF='?src=\ref[src];operation=cancelshuttle'>Cancel Shuttle Call</A> \]"
 					else
@@ -291,14 +282,14 @@
 
 
 	dat += "<BR>\[ [(src.state != STATE_DEFAULT) ? "<A HREF='?src=\ref[src];operation=main'>Main Menu</A> | " : ""]<A HREF='?action=mach_close&window=communications'>Close</A> \]"
-	user.Browse(dat, "window=communications;size=400x500")
+	user << browse(dat, "window=communications;size=400x500")
 	onclose(user, "communications")
 
 /obj/machinery/computer/communications/proc/interact_ai(var/mob/living/silicon/ai/user as mob)
 	var/dat = ""
 	switch(src.aistate)
 		if(STATE_DEFAULT)
-			if(emergency_shuttle.location == SHUTTLE_LOC_CENTCOM && !emergency_shuttle.online)
+			if(emergency_shuttle.location==0 && !emergency_shuttle.online)
 				dat += "<BR>\[ <A HREF='?src=\ref[src];operation=ai-callshuttle'>Call Emergency Shuttle</A> \]"
 //			dat += "<BR>\[ <A HREF='?src=\ref[src];operation=call-prison'>Send Prison Shutle</A> \]"
 			dat += "<BR>\[ <A HREF='?src=\ref[src];operation=ai-messagelist'>Message List</A> \]"
@@ -346,30 +337,28 @@
 	set category = "AI Commands"
 	set name = "Call Emergency Shuttle"
 
-	if (usr == src || usr == src.eyecam)
+	if (usr == src)
 		if((alert(usr, "Are you sure?",,"Yes","No") != "Yes"))
 			return
 
-	var/call_reason = input("Please state the nature of your current emergency.", "Emergency Shuttle Call Reason", "") as text
-
-	if(isdead(src))
+	if(usr.stat == 2)
 		boutput(usr, "You can't call the shuttle because you are dead!")
 		return
-	logTheThing("admin", usr, null,  "called the Emergency Shuttle (reason: [call_reason])")
-	logTheThing("diary", usr, null, "called the Emergency Shuttle (reason: [call_reason])", "admin")
+	logTheThing("admin", usr, null, "called the Emergency Shuttle")
+	logTheThing("diary", usr, null, "called the Emergency Shuttle", "admin")
 	message_admins("<span style=\"color:blue\">[key_name(usr)] called the Emergency Shuttle to the station</span>")
-	call_shuttle_proc(src, call_reason)
+	call_shuttle_proc(src)
 
 	// hack to display shuttle timer
 	if(emergency_shuttle.online)
-		var/obj/machinery/computer/communications/C = locate() in machines//world
+		var/obj/machinery/computer/communications/C = locate() in world
 		if(C)
 			C.post_status("shuttle")
 
 	return
 
 /proc/call_prison_shuttle(var/mob/usr)
-	if ((!(ticker && ticker.mode) || emergency_shuttle.location == SHUTTLE_LOC_STATION))
+	if ((!(ticker && ticker.mode) || emergency_shuttle.location == 1))
 		return
 	/*if(istype(ticker.mode, /datum/game_mode/sandbox))
 		boutput(usr, "Under directive 7-10, [station_name()] is quarantined until further notice.")
@@ -382,7 +371,7 @@
 
 /proc/enable_prison_shuttle(var/mob/user)
 	return
-/proc/call_shuttle_proc(var/mob/user, var/call_reason)
+/proc/call_shuttle_proc(var/mob/user)
 	if ((!( ticker ) || emergency_shuttle.location))
 		return 1
 
@@ -395,38 +384,24 @@
 	if(emergency_shuttle.disabled)
 		boutput(user, "Centcom will not allow the shuttle to be called.")
 		return 1
-	if (signal_loss >= 75)
-		boutput(user, "<span style=\"color:red\">Severe signal interference is preventing contact with the Emergency Shuttle.</span>")
+	if (solar_flare)
+		boutput(user, "<span style=\"color:red\">Solar Flare activity is preventing contact with the Emergency Shuttle.</span>")
 		return 1
 
-	// sanitize the reason
-	if(call_reason)
-		call_reason = copytext(html_decode(trim(strip_html(html_decode(call_reason)))), 1, 140)
-	if(!call_reason || length(call_reason) < 1)
-		call_reason = "<span class='italic'>No reason given.</span>"
-
-
 	emergency_shuttle.incall()
-	boutput(world, "<span style=\"color:blue\"><B>Alert: The emergency shuttle has been called.</B></span>")
-	boutput(world, "<span style=\"color:blue\">- - - <b>Reason:</b> [call_reason]<B></span>")
-	boutput(world, "<span style=\"color:blue\"><B>It will arrive in [round(emergency_shuttle.timeleft()/60)] minutes.</B></span>")
+	boutput(world, "<span style=\"color:blue\"><B>Alert: The emergency shuttle has been called. It will arrive in [round(emergency_shuttle.timeleft()/60)] minutes.</B></span>")
 
 	return 0
 
 /proc/cancel_call_proc(var/mob/user)
-	if ((!( ticker ) || emergency_shuttle.location || emergency_shuttle.direction == 0 || emergency_shuttle.timeleft() < (SHUTTLEARRIVETIME / 3) ))
+	if ((!( ticker ) || emergency_shuttle.location || emergency_shuttle.direction == 0 || emergency_shuttle.timeleft() < 300))
 		return 1
 
-	if (!emergency_shuttle.can_recall)
-		boutput(user, "<span style='color:red'>Centcom will not allow the shuttle to be recalled.</span>")
+	if (solar_flare)
+		boutput(user, "<span style=\"color:red\">Solar Flare activity is preventing contact with the Emergency Shuttle.</span>")
 		return 1
 
-	if (signal_loss >= 75)
-		boutput(user, "<span style='color:red'>Severe signal interference is preventing contact with the Emergency Shuttle.</span>")
-		return 1
-
-	boutput(world, "<span style='color:blue'><B>Alert: The shuttle is going back!</B></span>") //marker4
-	world << csound("sound/misc/shuttle_recalled.ogg")
+	boutput(world, "<span style=\"color:blue\"><B>Alert: The shuttle is going back!</B></span>") //marker4
 
 	emergency_shuttle.recall()
 

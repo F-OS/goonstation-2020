@@ -5,10 +5,6 @@
 	icon_base = "pdoor"
 	cant_emag = 1
 	layer = 2.8
-
-	health = 1800
-	health_max = 1800
-
 	var/id = 1.0
 
 /obj/machinery/door/poddoor/blast/single
@@ -22,8 +18,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(50)
-			open()
+		open()
 
 	Bump()
 		return
@@ -52,7 +47,6 @@
 	icon = 'icons/obj/doors/SL_doors.dmi'
 	icon_state = "pdoor1"
 	icon_base = "pdoor"
-	flags = FPRINT | IS_PERSPECTIVE_FLUID | ALWAYS_SOLID_FLUID
 
 	// Please keep synchronizied with these lists for easy map changes:
 	// /obj/machinery/door_control (door_control.dm)
@@ -511,25 +505,17 @@
 
 /obj/machinery/door/poddoor/attackby(obj/item/C as obj, mob/user as mob)
 	src.add_fingerprint(user)
-	if (C && !ispryingtool(C))
-		if (src.density && !src.operating)
-			user.lastattacked = src
-			attack_particle(user,src)
-			playsound(src.loc, src.hitsound , 50, 1, pitch = 1.6)
-			src.take_damage(C.force)
-	if ((src.density && (status & NOPOWER) && !( src.operating )))
-		SPAWN_DBG( 0 )
+	if (!( istype(C, /obj/item/crowbar) ))
+		return
+	if ((src.density && (stat & NOPOWER) && !( src.operating )))
+		spawn( 0 )
 			src.operating = 1
 			flick("[icon_base]c0", src)
 			src.icon_state = "[icon_base]0"
 			sleep(15)
-			src.set_density(0)
-			if (ignore_light_or_cam_opacity)
-				src.opacity = 0
-			else
-				src.RL_SetOpacity(0)
+			src.density = 0
+			src.RL_SetOpacity(0)
 			src.operating = 0
-			update_nearby_tiles()
 			return
 	return
 
@@ -541,28 +527,20 @@
 		return
 	if (!density)
 		return 0
-	if (linked_forcefield) //mbc : oh gosh why is this not calling door parent
-		linked_forcefield.setactive(1)
-
 	if(!src.operating) //in case of emag
 		src.operating = 1
+	flick("[icon_base]c0", src)
+	src.icon_state = "[icon_base]0"
+	sleep(10)
+	src.density = 0
+	src.RL_SetOpacity(0)
+	update_nearby_tiles()
 
-	SPAWN_DBG(-1)
-		flick("[icon_base]c0", src)
-		src.icon_state = "[icon_base]0"
-		sleep(10)
-		src.set_density(0)
-		if (ignore_light_or_cam_opacity)
-			src.opacity = 0
-		else
-			src.RL_SetOpacity(0)
-		update_nearby_tiles()
-
-		if(operating == 1) //emag again
-			src.operating = 0
-		if(autoclose)
-			SPAWN_DBG(150)
-				autoclose()
+	if(operating == 1) //emag again
+		src.operating = 0
+	if(autoclose)
+		spawn(150)
+			autoclose()
 	return 1
 
 /obj/machinery/door/poddoor/close()
@@ -570,24 +548,16 @@
 		return
 	if (src.density)
 		return
-	if (linked_forcefield) //mbc : oh gosh why is this not calling door parent
-		linked_forcefield.setactive(0)
+	src.operating = 1
+	flick("[icon_base]1", src)
+	src.icon_state = "[icon_base]1"
+	src.density = 1
+	if (src.visible)
+		src.RL_SetOpacity(1)
+	update_nearby_tiles()
 
-	SPAWN_DBG(0)
-		src.operating = 1
-		flick("[icon_base]1", src)
-		src.icon_state = "[icon_base]1"
-		src.set_density(1)
-		if (src.visible)
-			if (ignore_light_or_cam_opacity)
-				src.opacity = 1
-			else
-				src.RL_SetOpacity(1)
-		update_nearby_tiles()
-
-		sleep(10)
-		src.operating = 0
-
+	sleep(10)
+	src.operating = 0
 	return
 
 /obj/machinery/door/poddoor/buff
@@ -624,21 +594,17 @@
 
 /obj/machinery/door/poddoor/blast/attackby(obj/item/C as obj, mob/user as mob)
 	src.add_fingerprint(user)
-	if (!ispryingtool(C))
+	if (!( istype(C, /obj/item/crowbar) ))
 		return
-	if ((src.density && (status & NOPOWER) && !( src.operating )))
-		SPAWN_DBG( 0 )
+	if ((src.density && (stat & NOPOWER) && !( src.operating )))
+		spawn( 0 )
 			src.operating = 1
 			flick("[icon_base][doordir]c0", src)
 			src.icon_state = "[icon_base][doordir]0"
 			sleep(15)
-			src.set_density(0)
-			if (ignore_light_or_cam_opacity)
-				src.opacity = 0
-			else
-				src.RL_SetOpacity(0)
+			src.density = 0
+			src.RL_SetOpacity(0)
 			src.operating = 0
-			update_nearby_tiles()
 			return
 	return
 
@@ -652,47 +618,33 @@
 		return 0
 	if(!src.operating) //in case of emag
 		src.operating = 1
-	if (linked_forcefield) //mbc : SAVE ME FROM THIS HELL WHERE PARENTS ARENT CALLED
-		linked_forcefield.setactive(1)
+	flick("[icon_base][doordir]c0", src)
+	src.icon_state = "[icon_base][doordir]0"
+	sleep(10)
+	src.density = 0
+	src.RL_SetOpacity(0)
+	update_nearby_tiles()
 
-	SPAWN_DBG(-1)
-		flick("[icon_base][doordir]c0", src)
-		src.icon_state = "[icon_base][doordir]0"
-		sleep(10)
-		src.set_density(0)
-		if (ignore_light_or_cam_opacity)
-			src.opacity = 0
-		else
-			src.RL_SetOpacity(0)
-		update_nearby_tiles()
-
-		if(operating == 1) //emag again
-			src.operating = 0
-		if(autoclose)
-			SPAWN_DBG(150)
-				autoclose()
+	if(operating == 1) //emag again
+		src.operating = 0
+	if(autoclose)
+		spawn(150)
+			autoclose()
 	return 1
 
 /obj/machinery/door/poddoor/blast/close()
 	if (src.operating || src.density)
 		return
-	if (linked_forcefield) //mbc : SAVE ME FROM THIS HELL WHERE PARENTS ARENT CALLED
-		linked_forcefield.setactive(0)
 	src.operating = 1
+	flick("[icon_base][doordir]c1", src)
+	src.icon_state = "[icon_base][doordir]1"
+	src.density = 1
+	if (src.visible)
+		src.RL_SetOpacity(1)
+	update_nearby_tiles()
 
-	SPAWN_DBG(0)
-		flick("[icon_base][doordir]c1", src)
-		src.icon_state = "[icon_base][doordir]1"
-		src.set_density(1)
-		if (src.visible)
-			if (ignore_light_or_cam_opacity)
-				src.opacity = 1
-			else
-				src.RL_SetOpacity(1)
-		update_nearby_tiles()
-
-		sleep(10)
-		src.operating = 0
+	sleep(10)
+	src.operating = 0
 	return
 
 /obj/machinery/door/poddoor/isblocked()

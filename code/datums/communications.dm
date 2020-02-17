@@ -17,8 +17,8 @@ On the map:
 1356 for medical headsets
 1352 for syndicate headsets
 */
-
-//moved transmission type defines to _setup.dm
+#define TRANSMISSION_WIRE	0
+#define TRANSMISSION_RADIO	1
 
 var/global/datum/controller/radio/radio_controller
 
@@ -80,14 +80,8 @@ datum/radio_frequency
 	var/frequency
 	var/list/obj/devices = list()
 
-	//MBC : check_for_jammer proc was being called thousands of times per second. Do its initial check in a define instead, because proc call overhead. Then call check_for_jammer_bare
-	#define can_check_jammer (!prob(signal_loss) && radio_controller.active_jammers.len)
-
-	disposing()
-		devices = null
-		..()
-
 	proc
+
 		post_signal(obj/source, datum/signal/signal, range)
 			var/turf/start_point
 			if(range)
@@ -108,10 +102,8 @@ datum/radio_frequency
 			for(var/obj/device in devices)
 				if(device != source)
 
-					//MBC : Do checks here and call check_for_jammer_bare instead. reduces proc calls.
-					if (can_check_jammer)
-						if (check_for_jammer_bare(device))
-							continue
+					if (check_for_jammer(device))
+						continue
 
 					if(range)
 						var/turf/end_point = get_turf(device)
@@ -123,33 +115,23 @@ datum/radio_frequency
 					else
 						device.receive_signal(signal, TRANSMISSION_RADIO, frequency)
 
-				LAGCHECK(LAG_REALTIME)
-
 			if (!reusable_signals || reusable_signals.len > 10)
 				signal.dispose()
 			else if (signal)
 				signal.wipe()
 				if (!(signal in reusable_signals))
 					reusable_signals += signal
-			LAGCHECK(LAG_MED)
 
 		check_for_jammer(obj/source)
-			.= 0
-			if (prob(signal_loss))
-				.= 1
-			else
-				if (radio_controller.active_jammers.len)
-					for (var/atom in radio_controller.active_jammers) // Can be a mob or obj.
-						var/atom/A = atom
-						if (A && get_dist(get_turf(source), get_turf(A)) <= 6)
-							.= 1
+			if (solar_flare)
+				return 1
 
-		check_for_jammer_bare(obj/source)
-			.= 0
-			for (var/atom in radio_controller.active_jammers) // Can be a mob or obj.
-				var/atom/A = atom
-				if (A && get_dist(get_turf(source), get_turf(A)) <= 6)
-					.= 1
+			if (radio_controller.active_jammers.len)
+				for (var/atom/A in radio_controller.active_jammers) // Can be a mob or obj.
+					if (A && get_dist(get_turf(source), get_turf(A)) <= 6)
+						return 1
+
+			return 0
 
 obj/proc
 	receive_signal(datum/signal/signal, receive_method, receive_param)

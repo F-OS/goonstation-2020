@@ -38,6 +38,6 @@
 			for (var/mob/living/M in T)
 				if (!M.is_heat_resistant())
 					M.TakeDamage("All", 0, 15, 0, DAMAGE_BURN)
-					M.changeStatus("stunned", 2 SECONDS)
+					M.stunned += 2
 					M.emote("scream")
 		return 0

@@ -249,7 +249,7 @@
 	returnData["cminutes"] = getWorldMins()
 	returnData["callback"] = "updateBans"
 
-	return json_encode(returnData)
+	return list2json(returnData)
 
 
 /proc/uploadLocalBans(F as file)

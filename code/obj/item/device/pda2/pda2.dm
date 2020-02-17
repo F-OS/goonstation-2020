@@ -28,9 +28,7 @@
 	var/image/ID_image = null
 
 	var/owner = null
-	var/ownerAssignment = null
 	var/obj/item/disk/data/cartridge/cartridge = null //current cartridge
-	var/ejectable_cartridge = 1
 	var/datum/computer/file/pda_program/active_program = null
 	var/datum/computer/file/pda_program/os/host_program = null
 	var/datum/computer/file/pda_program/scan/scan_program = null
@@ -59,11 +57,6 @@
 	var/mailgroup = "staff" //What special mail group the PDA is part of.
 	var/bombproof = 0 // can't be destroyed with detomatix
 	var/exploding = 0
-
-	registered_owner()
-		.= registered
-
-
 /*
  *	Types of pda, for the different jobs and stuff
  */
@@ -89,15 +82,13 @@
 	ai
 		icon_state = "pda-h"
 		setup_default_cartridge = /obj/item/disk/data/cartridge/ai
-		ejectable_cartridge = 0
 		setup_drive_size = 1024
 		bombproof = 1
-		mailgroup = "ai" //"special" mailgroup, just recieves everything
+		mailgroup = "silicon"
 
 	cyborg
 		icon_state = "pda-h"
 		setup_default_cartridge = /obj/item/disk/data/cartridge/cyborg
-		ejectable_cartridge = 0
 		setup_drive_size = 1024
 		bombproof = 1
 		mailgroup = "silicon"
@@ -151,13 +142,12 @@
 		icon_state = "pda-clown"
 		desc = "A portable microcomputer by Thinktronic Systems, LTD. The surface is coated with polytetrafluoroethylene and banana drippings."
 		setup_default_cartridge = /obj/item/disk/data/cartridge/clown
-		event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 		HasEntered(AM as mob|obj) //Clown PDA is slippery.
 			if (istype(src.loc, /turf/space))
 				return
 			if (iscarbon(AM))
-				var/mob/M = AM
+				var/mob/M =	AM
 				if (!M.can_slip())
 					return
 
@@ -165,11 +155,10 @@
 				boutput(M, "<span style=\"color:blue\">You slipped on the PDA!</span>")
 				playsound(src.loc, "sound/misc/slip.ogg", 50, 1, -3)
 				if (M.bioHolder.HasEffect("clumsy"))
-					M.changeStatus("stunned", 80)
-					M.changeStatus("weakened", 5 SECONDS)
+					M.stunned = 8
+					M.weakened = 5
 				else
-					M.changeStatus("weakened", 2 SECONDS)
-				M.force_laydown_standup()
+					M.weakened = 2
 
 	janitor
 		icon_state = "pda-j"
@@ -186,7 +175,6 @@
 
 	engine
 		icon_state = "pda-e"
-		setup_default_cartridge = /obj/item/disk/data/cartridge/engineer
 		mailgroup = "engineer"
 
 	mining
@@ -218,21 +206,19 @@
 		setup_system_os_path = /datum/computer/file/pda_program/os/main_os/mess_off
 
 /obj/item/device/pda2/pickup(mob/user)
-	..()
 	if (src.module)
 		src.module.relay_pickup(user)
 
 /obj/item/device/pda2/dropped(mob/user)
-	..()
-	if (src.module)
+	if(src.module)
 		src.module.relay_drop(user)
 
 /obj/item/device/pda2/New()
 	..()
-	// This should probably be okay before the spawn, this way the HUD ability actually immediately shows up
-	if(src.setup_default_module)
-		src.module = new src.setup_default_module(src)
-	SPAWN_DBG(5)
+	if (!src.ID_image)
+		src.ID_image = image(src.icon, "blank")
+
+	spawn(5)
 		src.hd = new /obj/item/disk/data/fixed_disk(src)
 		src.hd.file_amount = src.setup_drive_size
 		src.hd.name = "Minidrive"
@@ -264,6 +250,9 @@
 			if (scan && istype(scan))
 				src.scan_program = scan
 
+		if(src.setup_default_module)
+			src.module = new src.setup_default_module(src)
+
 /obj/item/device/pda2/disposing()
 	if (src.cartridge)
 		src.cartridge.dispose()
@@ -282,11 +271,8 @@
 		src.uplink = null
 
 	if (src.module)
-		src.module.remove_abilities_from_host()
 		src.module.dispose()
 		src.module = null
-
-	radio_controller.remove_object(src, "[frequency]")
 
 	if (radio_connection)
 		radio_connection.devices -= src
@@ -300,10 +286,6 @@
 	..()
 
 /obj/item/device/pda2/attack_self(mob/user as mob)
-	if(!user.literate)
-		boutput(user, "<span class='text-red'>You don't know how to read, the screen is meaningless to you.</span>")
-		return
-
 	user.machine = src
 
 	var/wincheck = winexists(user, "pda2_\ref[src]")
@@ -357,7 +339,7 @@
 		dat += "<a href='byond://?src=\ref[src];close=1'>Close</a>"
 
 		if (!src.owner)
-			if (src.cartridge && src.ejectable_cartridge)
+			if (src.cartridge)
 				dat += " | <a href='byond://?src=\ref[src];eject_cart=1'>Eject [src.cartridge]</a>"
 			if (src.ID_card)
 				dat += " | <a href='byond://?src=\ref[src];eject_id_card=1'>Eject [src.ID_card]</a>"
@@ -371,7 +353,7 @@
 					src.run_program(src.host_program)
 					dat += src.active_program.return_text()
 				else
-					if (src.cartridge && src.ejectable_cartridge)
+					if (src.cartridge)
 						dat += " | <a href='byond://?src=\ref[src];eject_cart=1'>Eject [src.cartridge]</a><br>"
 					if (src.ID_card)
 						dat += " | <a href='byond://?src=\ref[src];eject_id_card=1'>Eject [src.ID_card]</a>"
@@ -388,7 +370,8 @@
 
 /obj/item/device/pda2/Topic(href, href_list)
 	..()
-	if (usr.contents.Find(src) || usr.contents.Find(src.master) || ((istype(src.loc, /turf) || isAI(usr)) && ( get_dist(src, usr) <= 1 || isAI(usr) )))
+
+	if (usr.contents.Find(src) || usr.contents.Find(src.master) || (istype(src.loc, /turf) && get_dist(src, usr) <= 1))
 		if (usr.stat || usr.restrained())
 			return
 
@@ -401,7 +384,7 @@
 				src.host_program = null
 
 		else if (href_list["eject_cart"])
-			src.eject_cartridge(usr ? usr : null)
+			src.eject_cartridge()
 
 		else if (href_list["eject_id_card"])
 			src.eject_id_card(usr ? usr : null)
@@ -410,18 +393,13 @@
 			src.updateSelfDialog()
 
 		else if (href_list["close"])
-			usr.Browse(null, "window=pda2_\ref[src]")
+			usr << browse(null, "window=pda2_\ref[src]")
 			usr.machine = null
 
 		src.updateSelfDialog()
 		return
 
 /obj/item/device/pda2/attackby(obj/item/C as obj, mob/user as mob)
-	if (istype(uplink,/obj/item/uplink/integrated/pda/spy))
-		var/obj/item/uplink/integrated/pda/spy/U = uplink
-		if (U.try_deliver(C, user))
-			return
-
 	if (istype(C, /obj/item/disk/data/cartridge) && isnull(src.cartridge))
 		user.drop_item()
 		C.set_loc(src)
@@ -445,12 +423,12 @@
 		src.updateSelfDialog()
 		return
 
-	else if (isscrewingtool(C))
+	else if (istype(C, /obj/item/screwdriver))
 		playsound(user.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		src.closed = !src.closed
 		boutput(user, "You [src.closed ? "secure" : "unscrew"] the cover.")
 
-	else if (ispryingtool(C))
+	else if (istype(C, /obj/item/crowbar))
 		if(!module)
 			return
 
@@ -471,7 +449,6 @@
 			return
 		if (!src.owner)
 			src.owner = ID.registered
-			src.ownerAssignment = ID.assignment
 			src.name = "PDA-[src.owner]"
 			boutput(user, "<span style=\"color:blue\">Card scanned.</span>")
 			src.updateSelfDialog()
@@ -513,14 +490,13 @@
 			pingreply.data["address_1"] = signal.data["sender"]
 			pingreply.data["command"] = "ping_reply"
 			pingreply.data["data"] = src.owner
-			SPAWN_DBG(5)
+			spawn(5)
 				src.post_signal(pingreply)
 
 			return
 
 		else if(!src.mailgroup || (signal.data["group"] != src.mailgroup))
-			if (src.mailgroup != "ai" || !signal.data["group"])
-				return
+			return
 
 	if(src.host_program)
 		src.host_program.receive_signal(signal, rx_method, rx_freq)
@@ -537,13 +513,6 @@
 		..()
 
 /obj/item/device/pda2/afterattack(atom/A as mob|obj|turf|area, mob/user as mob)
-	if (istype(uplink,/obj/item/uplink/integrated/pda/spy))
-		var/obj/item/uplink/integrated/pda/spy/U = uplink
-		var/atom/b_item = U.bounty_is_claimable(A)
-		if (b_item)
-			actions.start(new/datum/action/bar/private/spy_steal(b_item,U), user)
-			return
-
 	var/scan_dat = null
 	if (src.scan_program && istype(src.scan_program))
 		scan_dat = src.scan_program.scan_atom(A)
@@ -555,15 +524,6 @@
 		user.show_message(scan_dat, 1)
 
 	return
-
-/obj/item/device/pda2/MouseDrop_T(atom/movable/O as mob|obj, mob/user as mob)
-	if (istype(uplink,/obj/item/uplink/integrated/pda/spy))
-		var/obj/item/uplink/integrated/pda/spy/U = uplink
-		var/atom/b_item = U.bounty_is_claimable(O)
-		if (b_item)
-			actions.start(new/datum/action/bar/private/spy_steal(b_item,U), user)
-			return
-	..()
 
 /obj/item/device/pda2/process()
 	if(src.active_program)
@@ -585,38 +545,21 @@
 /obj/item/device/pda2/verb/pdasay(var/target in pdasay_autocomplete, var/message as text)
 	set name = "PDAsay"
 	set desc = "Send a PDA message to somebody (You may need to scan for other PDAs first)."
-	set category = "Local"
 	set src in usr
 
 	if (!target || !message)
 		return
 
-	if (usr.getStatusDuration("paralysis") || usr.getStatusDuration("stunned") || usr.getStatusDuration("weakened") || usr.stat)
+	if (usr:paralysis || usr:stunned || usr:weakened || usr:stat)
 		return
 
 	if (istype(src.host_program))
 		src.host_program.pda_message(pdasay_autocomplete[target], target, message)
 
-
-/obj/item/device/pda2/verb/eject()
-	set name = "Eject ID"
-	set desc = "Eject the currently loaded ID card from this PDA."
-	set category = "Local"
-	set src in usr
-
-	if (usr.getStatusDuration("paralysis") || usr.getStatusDuration("stunned") || usr.getStatusDuration("weakened") || usr.stat)
-		return
-
-	eject_id_card(usr)
-	src.updateSelfDialog()
-
 /obj/item/device/pda2
-	proc/is_user_in_range(var/mob/user)
-		return in_range(src, user) || loc == user || isAI(user)
 
 	proc/post_signal(datum/signal/signal,var/newfreq)
-		SPAWN_DBG(0)
-			LAGCHECK(LAG_REALTIME)
+		spawn(0)
 			if(!signal)
 				return
 			var/freq = newfreq
@@ -634,8 +577,8 @@
 			//else
 				//qdel(signal)
 
-	proc/eject_cartridge(var/mob/user as mob)
-		if (src.cartridge && src.ejectable_cartridge)
+	proc/eject_cartridge()
+		if(src.cartridge)
 			var/turf/T = get_turf(src)
 
 			if(src.active_program && (src.active_program.holder == src.cartridge))
@@ -648,8 +591,6 @@
 				src.scan_program = null
 
 			src.cartridge.set_loc(T)
-			if (istype(user))
-				user.put_in_hand_or_eject(src.cartridge) // try to eject it into the users hand, if we can
 			src.cartridge = null
 
 		return
@@ -680,8 +621,6 @@
 		src.registered = ID.registered
 		src.assignment = ID.assignment
 		src.access = ID.access
-		if (!src.ID_image)
-			src.ID_image = image(src.icon, "blank")
 		src.ID_image = src.ID_card.icon_state
 		src.underlays += src.ID_image
 		src.updateSelfDialog()
@@ -703,24 +642,12 @@
 	proc/display_alert(var/alert_message) //Add alert overlay and beep
 		if (alert_message)
 			playsound(get_turf(src), "sound/machines/twobeep.ogg", 50, 1)
-
-			for (var/atom in mobs)
-				if (!atom) break
-				var/mob/O = atom
-				if (get_dist(get_turf(src),O) <= 3)
-					O.show_message(text("[bicon(src)] *[alert_message]*"))
-
-			//this one prob sloewr
-			//for (var/mob/O in hearers(3, src.loc))
+			for (var/mob/O in hearers(3, src.loc))
+				O.show_message(text("[bicon(src)] *[alert_message]*"))
 
 		src.overlays = null
 		src.overlays += image('icons/obj/pda.dmi', "pda-r")
 		return
-
-	proc/display_message(var/message)
-		if (ismob(loc))
-			var/mob/M = loc
-			M.show_message(message)
 
 	proc/run_program(datum/computer/file/pda_program/program)
 		if((!program) || (!program.holder))
@@ -789,13 +716,14 @@
 			return
 
 		if(src in bible_contents)
-			for(var/obj/item/storage/bible/B in the_very_holy_global_bible_list_amen)//world)
-				LAGCHECK(LAG_LOW)
+			for(var/obj/item/storage/bible/B in world)
 				var/turf/T = get_turf(B.loc)
 				if(T)
 					T.hotspot_expose(700,125)
 					explosion(src, T, -1, -1, 2, 3)
 			bible_contents.Remove(src)
+			//dispose()
+			//src.dispose()
 			qdel(src)
 			return
 
@@ -810,37 +738,11 @@
 
 			explosion(src, T, -1, -1, 2, 3)
 
-		if (src.ID_card) //let's not destroy IDs
-			ID_card.set_loc(T)
-
 		//dispose()
 		//src.dispose()
 		qdel(src)
 		return
 
-/obj/item/device/pda2/ai/display_message(var/message)
-	. = ..(message)
-	// The AI might be deployed to shell, in which case we'll relay the message
-	if (!isAI(loc))
-		return ..()
-	var/mob/living/silicon/ai/ai = loc
-	if (ai.deployed_to_eyecam)
-		ai.eyecam << sound('sound/machines/twobeep.ogg', volume=50)
-		ai.eyecam.show_message(message)
-	if (ismob(ai.deployed_shell))
-		var/mob/M = ai.deployed_shell
-		M.show_message(message)
-
-/obj/item/device/pda2/ai/is_user_in_range(var/mob/user)
-	if (issilicon(user))
-		var/mob/living/silicon/S = user
-		if (S.mainframe && S.mainframe == loc)
-			return 1
-	if (isAIeye(user))
-		var/mob/dead/aieye/E = user
-		if (E.mainframe)
-			return 1
-	return ..(user)
 
 /*
  *	PDA 2 ~help file~

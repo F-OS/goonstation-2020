@@ -9,7 +9,6 @@
 	var/speed = 1
 	var/image/img = null
 	var/list/cableimgs = new/list()
-	var/vision_radius = 3
 	var/mob/the_user = null
 	//Prolonged use causes damage.
 	New(mob/target, atom/location)
@@ -18,8 +17,7 @@
 		target.set_loc(src)
 		img = image('icons/effects/effects.dmi',src ,"energyorb")
 		target << img
-
-		//SPAWN_DBG(0) check() but why
+		spawn(0) check()
 
 	remove_air(amount as num)
 		var/datum/gas_mixture/Air = unpool(/datum/gas_mixture)
@@ -28,12 +26,12 @@
 		return Air
 
 	proc/spawn_sparks()
-		SPAWN_DBG(0)
+		spawn(0)
 			// Check spawn limits
 			if(limiter.canISpawn(/obj/effects/sparks))
 				var/obj/effects/sparks/O = unpool(/obj/effects/sparks)
 				O.set_loc(src.loc)
-				SPAWN_DBG(20) if (O) pool(O)
+				spawn(20) if (O) pool(O)
 
 	relaymove(mob/user, direction)
 
@@ -54,7 +52,7 @@
 
 				src.set_loc(new_loc)
 				can_move = 0
-				SPAWN_DBG(speed) can_move = 1
+				spawn(speed) can_move = 1
 		return
 
 	disposing()
@@ -63,7 +61,7 @@
 		return ..()
 
 	proc/check()
-		if(1) return
+
 		while (!disposed)
 
 			for(var/obj/item/I in src)
@@ -73,7 +71,7 @@
 
 			cableimgs.Cut()
 			for(var/obj/cable/C in range(3, src.loc))
-				cableimgs += C//.cableimg
+				cableimgs += C.cableimg
 
 			the_user.client.images += cableimgs
 
@@ -93,39 +91,23 @@
 	var/power = 100
 	var/power_icon = ""
 	module_research = list("devices" = 5, "energy" = 20, "miniaturization" = 20)
-	var/list/cableimgs = list()
-	var/vision_radius = 2
+
 	New()
 		handle_overlay()
-		SPAWN_DBG(0)
-			check()//ohly fucke pls rewrite me
-		cableimgs = new/list((vision_radius*2+1)**2)
-		var/obj/cable/ctype = /obj/cable
-		var/cicon = initial(ctype.icon)
-		for(var/i = 1, i <= cableimgs.len, i++)
-			var/image/cimg = image(cicon)
-			cimg.layer = 100
-			cimg.plane = 100
-			cableimgs[i] = cimg//@MBC this is how you'd do phasing
+		spawn(0)
+			check()
 		return ..()
 
 	pickup()
 		power_icon = ""
 		handle_overlay()
 		return ..()
-	Del()
-		if(prev_user)
-			prev_user.images -= cableimgs
-			prev_user = null
-		return ..()
+
 	dropped()
 		power_icon = ""
 		handle_overlay()
 		if(active)
 			src.set_loc(get_turf(target))
-			if(prev_user)
-				prev_user.images -= cableimgs
-				prev_user = null
 			deactivate()
 		return ..()
 
@@ -156,49 +138,14 @@
 		if(rebuild_overlay)
 			overlays.Cut()
 			overlays += image('icons/obj/device.dmi',src,power_icon)
-	var/overlay_state = 0//0: nothing visible; 1: there's some visible
-	var/client/prev_user
+
 	proc/check()
-
-
 		while (!disposed)
-			if(prev_user && (!active || (((!target || !target.client) || prev_user != target.client))))
-				prev_user.images -= cableimgs
-				prev_user = null
-			else if(target && (!prev_user || prev_user != target.client) && active)
-				prev_user = target.client
-				prev_user.images += cableimgs
 			if(!active)
 				if(power < 100) power += 0.35
 				handle_overlay()
-				if(overlay_state)
-					for(var/image/img in cableimgs)
-						img.loc = null
-						img.alpha = 0
-					overlay_state = 0
 				sleep(10)
 			else
-				overlay_state = 1
-				for(var/image/img in cableimgs)
-					img.loc = null
-					img.alpha = 0
-				var/turf/us = get_turf(D)
-				var/turf/start = locate(us.x - src.vision_radius, us.y - src.vision_radius, us.z)
-				var/turf/end = locate(us.x + src.vision_radius, us.y + src.vision_radius, us.z)
-
-				for(var/turf/t in block(start, end))
-					for(var/obj/cable/C in t.contents)//because why would you want to include invisible objects in range(), byond?
-						var/idx = ((C.y - us.y + src.vision_radius) * src.vision_radius*2) + (C.x - us.x + src.vision_radius*2) + 1
-						if(idx < 0 || idx > cableimgs.len)
-							boutput(world, "[idx], [cableimgs.len]")
-							continue
-						var/image/img = cableimgs[idx]
-						img.appearance = C.appearance
-						img.invisibility = 0
-						img.alpha = 255
-						img.layer = 100
-						img.plane = 100
-						img.loc = locate(C.x, C.y, C.z)
 				power = round(power)
 				power--
 				handle_overlay()
@@ -211,7 +158,7 @@
 					boutput(target, "<span style=\"color:red\">The [src] is out of energy.</span>")
 					var/mob/old_trg = target
 					deactivate()
-					old_trg.changeStatus("stunned", 200)
+					old_trg.stunned = 20
 				sleep(10)
 
 	proc/deactivate()
@@ -220,11 +167,10 @@
 		activating = 1
 
 		on_cooldown = 1
-		SPAWN_DBG(30) on_cooldown = 0
+		spawn(30) on_cooldown = 0
 
-		var/atom/dummy = D
-		if(D)
-			dummy.invisibility = 101
+		var/atom/dummy = target.loc
+		dummy.invisibility = 101
 
 		playsound(src, "sound/effects/shielddown2.ogg", 40, 1)
 		var/obj/overlay/O = new/obj/overlay(get_turf(target))
@@ -239,8 +185,7 @@
 		qdel(O)
 
 		target.set_loc(get_turf(target))
-		qdel(D)
-		D = null
+		qdel(dummy)
 		active = 0
 		target = null
 		activating = 0
@@ -268,7 +213,6 @@
 			qdel(O)
 
 			D = new/obj/dummy/voltron(usr, get_turf(src))
-
 			target = usr
 			active = 1
 			activating = 0

@@ -30,7 +30,6 @@
 	throw_range = 5
 	w_class = 4.0
 	flags = FPRINT | TABLEPASS | CONDUCT
-	tool_flags = TOOL_SAWING
 	mats = 12
 	var/sawnoise = 'sound/machines/chainsaw_green.ogg'
 	arm_icon = "chainsaw0"
@@ -46,14 +45,14 @@
 
 	New()
 		..()
-		SPAWN_DBG (5)
+		spawn (5)
 			if (src)
 				src.update_icon()
 		return
 
 	proc/check_health()
 		if (src.health <= 0 && src.takes_damage)
-			SPAWN_DBG (2)
+			spawn (2)
 				if (src)
 					usr.u_equip(src)
 					usr.update_inhands()
@@ -67,7 +66,7 @@
 		return
 
 	proc/update_icon()
-		set_icon_state("[src.base_state][src.active ? null : "_off"]")
+		icon_state = "[src.base_state][src.active ? null : "_off"]"
 		return
 
 	// Fixed a couple of bugs and cleaned code up a little bit (Convair880).
@@ -86,7 +85,7 @@
 					src.damage_health(2)
 					take_bleeding_damage(target, user, 2, DAMAGE_CUT)
 					return
-				else if (!isdead(target))
+				else if (target.stat != 2)
 					take_bleeding_damage(target, user, 5, DAMAGE_CUT)
 					if (prob(80))
 						target.emote("scream")
@@ -103,9 +102,9 @@
 				if (2) // Red chainsaw.
 					if (iscarbon(target))
 						var/mob/living/carbon/C = target
-						if (!isdead(C))
-							C.changeStatus("stunned", 3 SECONDS)
-							C.changeStatus("weakened", 3 SECONDS)
+						if (C.stat != 2)
+							C.stunned += 3
+							C.weakened += 3
 						else
 							logTheThing("combat", user, C, "butchers [C]'s corpse with the [src.name] at [log_loc(C)].")
 							var/sourcename = C.real_name
@@ -142,7 +141,7 @@
 							return //who knows
 
 						H.sever_limb(the_limb)
-						H.changeStatus("stunned", 3 SECONDS)
+						H.stunned += 3
 						bleed(H, 3, 5)
 		..()
 		return
@@ -163,11 +162,8 @@
 		src.add_fingerprint(user)
 		return
 
-	custom_suicide = 1
 	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
-		user.visible_message("<span style='color:red'><b>[user] shoves the chainsaw into [his_or_her(user)] chest!</b></span>")
+		user.visible_message("<span style=\"color:red\"><b>[user] shoves the chainsaw into \his chest!</b></span>")
 		user.u_equip(src)
 		src.set_loc(user.loc)
 		user.gib()
@@ -270,7 +266,7 @@
 
 	attack_self(var/mob/user as mob)
 /*		var/hacked = 0
-		if (isrobot(user))
+		if (istype(user,/mob/living/silicon/robot/))
 			var/mob/living/silicon/robot/R = user
 			if (R.emagged)
 				hacked = 1
@@ -422,15 +418,3 @@
 		reagents = R
 		R.my_atom = src
 		R.add_reagent("mutadone", 40)
-
-/obj/item/reagent_containers/glass/happyplant
-	name = "Happy Plant Mixture"
-	desc = "250 units of things that make plants grow happy!"
-	icon = 'icons/obj/hydroponics/hydromisc.dmi'
-	icon_state = "happyplant"
-	amount_per_transfer_from_this = 50
-	w_class = 3.0
-	incompatible_with_chem_dispensers = 1
-	rc_flags = RC_SCALE
-	initial_volume = 250
-	initial_reagents = list("saltpetre"=50, "ammonia"=50, "potash"=50, "poo"=50, "space_fungus"=50)

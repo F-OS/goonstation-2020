@@ -184,9 +184,9 @@
 
 	proc/pick_deployment_location()
 		var/turf/T = get_turf(src)
-		if (T.density || istype(T, /turf/space) || prob(50))
-			var/nx = T.x + round(rand(-2, 2) + ((150 - T.x) / 37.5))
-			var/ny = T.y + round(rand(-2, 2) + ((150 - T.y) / 37.5))
+		if (T.density || prob(50))
+			var/nx = T.x + round(rand(-2, 2) + (abs(150 - T.x) / 37.5))
+			var/ny = T.y + round(rand(-2, 2) + (abs(150 - T.y) / 37.5))
 			var/turf/Q = locate(nx, ny, T.z)
 			if (Q)
 				return Q
@@ -253,7 +253,7 @@
 				for (var/mob/living/carbon/human/H in range(33, src))
 					if (!isturf(H.loc))
 						continue
-					if (isdead(H))
+					if (H.stat == 2)
 						continue
 					if (H.decomp_stage >= 4)
 						continue
@@ -283,7 +283,7 @@
 						logTheThing("debug", src, null, "<b>Marquesas/AI Blob:</b> Invalid state for [src]: Cannot find deploy ability in state DEPLOYING.")
 						state = 0
 						return
-					color = random_color()
+					color = rgb(rand(0,255), rand(0,255), rand(0,255))
 					my_material.color = color
 					initial_material.color = color
 					if (istype(T, /turf/space))
@@ -488,15 +488,15 @@
 				var/mob/nearest = null
 				var/n_dist = 5000
 				if (attacker)
-					if (!isturf(attacker.loc) || !has_adjacent_blob(attacker.loc) || attacker.stat || isintangible(attacker))
+					if (!isturf(attacker.loc) || !has_adjacent_blob(attacker.loc) || attacker.stat || istype(attacker, /mob/living/intangible))
 						attacker = null
 				if (!attacker)
 					if (attackers.len)
 						for (var/mob/living/M in attackers)
-							if (isintangible(M))
+							if (istype(M, /mob/living/intangible))
 								attackers -= M
 								continue
-							if (isdead(M))
+							if (M.stat == 2)
 								attackers -= M
 								continue
 							if (isturf(M.loc))
@@ -513,9 +513,9 @@
 						attackers += nearest
 					if (!attacker)
 						for (var/mob/living/M in range(30, src))
-							if (isintangible(M))
+							if (istype(M, /mob/living/intangible))
 								continue
-							if (isdead(M))
+							if (M.stat == 2)
 								continue
 							if (isturf(M.loc))
 								if (has_adjacent_blob(M.loc))

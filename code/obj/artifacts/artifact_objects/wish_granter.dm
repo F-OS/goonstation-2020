@@ -22,7 +22,7 @@
 	effect_touch(var/obj/O,var/mob/living/user)
 		if (..())
 			return
-		if (!isliving(user))
+		if (!istype(user,/mob/living/))
 			return
 		if (user.key in wish_granted)
 			boutput(user, "<b>[O]</b> is silent.")
@@ -41,7 +41,7 @@
 		user.say(wish)
 		sleep(5)
 		boutput(user, "<b>[O]</b> resonates, \"<big>SO BE IT...</big>\"")
-		playsound(O, "sound/musical_instruments/Gong_Rumbling.ogg", 40, 1)
+		playsound(O, "sound/effects/gong_rumble.ogg", 40, 1)
 		O.visible_message("<span style=\"color:red\"><b>[O]</b> begins to charge up...</span>")
 		sleep(30)
 		if (prob(2))
@@ -64,7 +64,7 @@
 					playsound(user, "sound/effects/elec_bigzap.ogg", 40, 1)
 					var/list/affected = DrawLine(O,user,/obj/line_obj/elec,'icons/obj/projectiles.dmi',"WholeLghtn",1,1,"HalfStartLghtn","HalfEndLghtn",OBJ_LAYER,1,PreloadedIcon='icons/effects/LghtLine.dmi')
 					for(var/obj/OB in affected)
-						SPAWN_DBG(6)
+						spawn(6)
 							pool(OB)
 					user.elecgib()
 		else
@@ -74,8 +74,7 @@
 					for(var/turf/T in range(user,3))
 						if (T.density)
 							continue
-						var/obj/item/spacecash/million/S = unpool(/obj/item/spacecash/million)
-						S.setup(T)
+						new /obj/item/spacecash/million(T)
 
 				if("I wish for great power!")
 					O.visible_message("<span style=\"color:red\"><b>[O]</b> envelops [user] in a brilliant light!</span>")
@@ -85,7 +84,7 @@
 							H.bioHolder.RandomEffect("good")
 							H.bioHolder.RandomEffect("good")
 							H.bioHolder.RandomEffect("good")
-					else if (isrobot(user))
+					else if (istype(user,/mob/living/silicon/robot))
 						var/mob/living/silicon/robot/R = user
 						if (istype(R.cell))
 							R.cell.genrate = 100

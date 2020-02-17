@@ -2,13 +2,13 @@
 	desc = "A failsafe timer, wired in an incomprehensible way to a detonator assembly"
 	name = "Detonator Assembly"
 	icon_state = "multitool-igniter"
-	uses_multiple_icon_states = 1
 	var/obj/item/device/multitool/part_mt = null
 	var/obj/item/device/igniter/part_ig = null
 	var/obj/item/tank/plasma/part_t = null
 	var/obj/item/device/timer/part_fs = null
 	var/obj/item/device/trigger = null
 
+	var/obj/item/device/radio/radio = null
 	var/obj/machinery/portable_atmospherics/canister/attachedTo = null
 	var/list/WireColors = list()
 	var/list/obj/item/attachments = list()
@@ -94,7 +94,7 @@
 				src.part_t = W
 				src.add_fingerprint(user)
 				user.show_message("<span style=\"color:blue\">You insert the [W.name] into the slot.</span>")
-			else if (issnippingtool(W))
+			else if (istype(W, /obj/item/wirecutters))
 				src.part_ig.loc = user.loc
 				src.part_mt.loc = user.loc
 				src.part_ig.master = null
@@ -110,13 +110,13 @@
 		if (1)
 			if (istype(W, /obj/item/cable_coil))
 				user.show_message("<span style=\"color:red\">The plasma tank must be firmly secured to the assembly first.</span>")
-			else if (ispryingtool(W))
+			else if (istype(W, /obj/item/crowbar))
 				src.setDetState(0)
 				src.part_t.loc = user.loc
 				src.part_t.master = null
 				src.part_t = null
 				user.show_message("<span style=\"color:blue\">You pry the plasma tank out of the assembly.</span>")
-			else if (isscrewingtool(W))
+			else if (istype(W, /obj/item/screwdriver))
 				src.setDetState(2)
 				user.show_message("<span style=\"color:blue\">You secure the plasma tank to the assembly.</span>")
 
@@ -130,9 +130,9 @@
 					user.show_message("<span style=\"color:blue\">You add the wiring to the assembly.</span>")
 				else
 					user.show_message("<span style=\"color:red\">This cable coil isn't long enough!</span>")
-			else if (ispryingtool(W))
+			else if (istype(W, /obj/item/crowbar))
 				user.show_message("<span style=\"color:red\">The plasma tank is firmly secured to the assembly and won't budge.</span>")
-			else if (isscrewingtool(W))
+			else if (istype(W, /obj/item/screwdriver))
 				src.setDetState(1)
 				user.show_message("<span style=\"color:blue\">You unsecure the plasma tank from the assembly.</span>")
 
@@ -147,13 +147,13 @@
 				src.part_fs.time = 90 //Minimum det time
 				src.add_fingerprint(user)
 				user.show_message("<span style=\"color:blue\">You wire the timer failsafe to the assembly, disabling its external controls.</span>")
-			else if (issnippingtool(W))
+			else if (istype(W, /obj/item/wirecutters))
 				src.setDetState(2)
 				var/obj/item/cable_coil/C = new /obj/item/cable_coil(user, 6)
 				C.loc = user.loc
 				user.show_message("<span style=\"color:blue\">You cut the wiring on the assembly.</span>")
 		if (4)
-			if (issnippingtool(W))
+			if (istype(W, /obj/item/wirecutters))
 				src.setDetState(3)
 				src.part_fs.loc = user.loc
 				src.part_fs.master = null
@@ -171,7 +171,7 @@
 					user.show_message("<span style=\"color:red\">The [a] falls off the assembly.</span>")
 				src.attachments.Cut()
 				user.show_message("<span style=\"color:blue\">You disconnect the timer from the assembly, and reenable its external controls.</span>")
-			if (isscrewingtool(W))
+			if (istype(W, /obj/item/screwdriver))
 				if (!src.trigger && !src.attachments.len)
 					user.show_message("<span style=\"color:red\">You cannot remove any attachments, as there are none attached.</span>")
 					return
@@ -207,6 +207,16 @@
 					src.trigger = W
 					user.show_message("<span style=\"color:blue\">You attach the [W.name] to the trigger slot.</span>")
 					setDescription()
+			else if (istype(W, /obj/item/device/radio))
+				if (src.radio)
+					user.show_message("<span style=\"color:red\">There is a radio already screwed onto the assembly.</span>")
+				else
+					W.loc = src
+					W.master = src
+					W.layer = initial(W.layer)
+					user.u_equip(W)
+					src.radio = W
+					user.show_message("<span style=\"color:blue\">You attach the [W.name] to the radio slot.</span>")
 			else if (istype(W, /obj/item/paper))
 				src.note = W:info
 				W.loc = null
@@ -214,7 +224,7 @@
 				W.layer = null
 				user.u_equip(W)
 				user.show_message("<span style=\"color:blue\">You stick the note onto the detonator assembly.</span>")
-				pool(W)
+				del(W)
 			else if (W.is_detonator_attachment())
 				if (src.attachments.len < 3)
 					W.loc = src
@@ -297,6 +307,8 @@
 
 	if (src.trigger)
 		src.desc += "<br><span style=\"color:blue\">There is \an [src.trigger.name] as a detonation trigger.</span>"
+	if (src.radio) //WIRE TODO: roll this into the new attachment system
+		src.desc += "<br><span style=\"color:blue\">There is a radio attached to the timing wire, it will announce the bomb status when primed.</span>"
 	for (var/obj/item/a in src.attachments)
 		src.desc += "<br><span style=\"color:blue\">There is \an [a] wired onto the assembly as an attachment.</span>"
 
@@ -310,8 +322,8 @@
 	if (!(src.part_fs in processing_items))
 		processing_items.Add(src.part_fs)
 	src.dispatch_event("prime")
-
-	command_alert("A canister bomb is primed in [get_area(src)] at coordinates (<b>X</b>: [src.master.x], <b>Y</b>: [src.master.y], <b>Z</b>: [src.master.z])! It is set to go off in [src.part_fs.time] seconds.")
+	if (src.radio)
+		command_alert("A canister bomb is primed in [get_area(src)]! It is set to go off in [src.part_fs.time] seconds.")
 	logTheThing("bombing", usr, null, "primes a canister bomb at [get_area(src.master)] ([showCoords(src.master.x, src.master.y, src.master.z)])")
 	message_admins("[key_name(usr)] primes a canister bomb at [get_area(src.master)] ([showCoords(src.master.x, src.master.y, src.master.z)])")
 	src.attachedTo.visible_message("<B><font color=#FF0000>The detonator's priming process initiates. Its timer shows [src.part_fs.time] seconds.</font></B>")

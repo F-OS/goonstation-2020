@@ -12,6 +12,7 @@
 	network = "SS13"
 	pixel_y = 15
 	layer = MOB_LAYER
+	luminosity = 4
 	announcearrival = 0
 	classic_move = 0
 	a_intent = "disarm" //So we don't get brohugged right off a rail.
@@ -25,7 +26,7 @@
 		src.cell = new /obj/item/cell(src)
 		src.cell.maxcharge = setup_charge_maximum
 		src.cell.charge = src.cell.maxcharge
-		SPAWN_DBG(6)
+		spawn(6)
 			var/obj/overlay/U1 = new
 			U1.icon = src.icon
 			U1.icon_state = "aitrack"
@@ -37,7 +38,7 @@
 
 	Login()
 		..()
-		if (!isdead(src))
+		if (src.stat != 2)
 			src.set_face()
 		return
 
@@ -72,7 +73,7 @@
 			return
 
 		src.now_pushing = 0
-		SPAWN_DBG(0)
+		spawn(0)
 			..()
 			if (!istype(AM, /atom/movable))
 				return
@@ -90,7 +91,7 @@
 			return 1
 		var/turf/T = get_turf(src)
 
-		if (isdead(src))
+		if (src.stat == 2)
 			return
 
 		if (src.stat!=0)
@@ -113,7 +114,7 @@
 		//var/stage = 0
 		if (src.client)
 			//stage = 1
-			if (isAI(src))
+			if (istype(src, /mob/living/silicon/ai))
 				var/blind = 0
 				//stage = 2
 				var/area/loc = null
@@ -141,7 +142,7 @@
 						if (src:aiRestorePowerRoutine==0)
 							src:aiRestorePowerRoutine = 1
 							boutput(src, "You've lost power!")
-							SPAWN_DBG(50)
+							spawn(50)
 								while ((src:aiRestorePowerRoutine!=0) && stat!=2)
 									src.death_timer -= 1
 									sleep(50)
@@ -151,7 +152,7 @@
 	set_face(var/emotion)
 		src.overlays.len = 0
 		if(src.stat || src.malf)
-			if(isdead(src))
+			if(src.stat == 2)
 				src.icon_state = "ai-crash"
 			return
 
@@ -167,18 +168,18 @@
 				var/area/A = get_area(src)
 				if (A && A.powered(EQUIP) && !istype(src.loc, /turf/space))
 					src.cell.give(5)
-					setalive(src)
+					src.stat = 0
 					return
 				else
 					if (src.cell.charge <= 100)
-						setunconscious(src)
+						src.stat = 1
 						src.cell.use(1)
 					else
 						src.cell.use(10)
-						setalive(src)
+						src.stat = 0
 
 			else
-				setunconscious(src)
+				src.stat = 1
 			return
 
 //The AI's movement rails
@@ -229,7 +230,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(6)
+		spawn(6)
 			var/obj/overlay/U1 = new
 			U1.icon = src.icon
 			U1.icon_state = "railtrack"
@@ -279,7 +280,7 @@
 			return
 
 		src.now_pushing = 0
-		SPAWN_DBG(0)
+		spawn(0)
 			..()
 			if (!istype(AM, /atom/movable))
 				return
@@ -293,7 +294,25 @@
 		return
 /* deprecated, see _macros.dm - drsingh
 /proc/isdrone(var/mob/M)
-	if (isdrone(M))
+	if (istype(M, /mob/living/silicon/hivebot/drone))
 		return 1
 	return 0
 */
+/client/proc/DroneMove(n,direct,var/mob/living/silicon/hivebot/drone/user)
+	if(!user) return
+
+	if(!(direct in cardinal))
+		return
+
+	var/obj/rail/oldrail = locate() in user.loc
+	var/obj/rail/railcheck = locate() in n
+	if(!istype(railcheck) || (oldrail && !(oldrail.bitdir & direct)) )
+		return
+
+	var/flipdir = turn(direct, 180)
+	if(!(railcheck.bitdir & flipdir))
+		return
+
+	src.move_delay = world.time + 3.5
+	user.Move(n,direct)
+	return

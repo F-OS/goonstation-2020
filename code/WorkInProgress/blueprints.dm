@@ -181,7 +181,7 @@
 		building = 1
 		icon_state = "builder1"
 
-		SPAWN_DBG(0)
+		spawn(0)
 
 			for(var/datum/tileinfo/T in currentBp.roominfo)
 				var/turf/pos = locate(text2num(T.posx) + src.x,text2num(T.posy) + src.y, src.z)
@@ -191,7 +191,7 @@
 				V.icon_state = "buildeffect"
 				V.name = "energy"
 				V.anchored = 1
-				V.set_density(0)
+				V.density = 0
 				V.layer = EFFECTS_LAYER_BASE
 
 				sleep(15)
@@ -225,6 +225,20 @@
 			qdel(src) //Blah
 
 		return
+
+proc/splittext(txt as text, sep as text)
+    var
+        list/accum
+        start;end
+
+    accum = new/list()
+    start = 1
+    do
+        end = findtext(txt,sep,start)
+        accum += copytext(txt,start,end)
+        start = end + lentext(sep)
+    while(end)
+    return accum
 
 /datum/objectinfo
 	var/objecttype = null
@@ -296,7 +310,7 @@
 /obj/item/blueprint
 	name = "Blueprint"
 	desc = "A blueprint used to quickly construct rooms."
-	icon = 'icons/obj/writing.dmi'
+	icon = 'icons/obj/device.dmi'
 
 	icon_state = "blueprint"
 	item_state = "sheet"

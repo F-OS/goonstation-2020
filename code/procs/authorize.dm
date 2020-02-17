@@ -1,16 +1,37 @@
+/client/proc/authorize()
+	set name = "Authorize"
+
+	if (admins.Find(src.ckey))
+		boutput(src, "<span class='ooc adminooc'>Admin IRC - #ss13centcom #ss13admin on irc.synirc.net</span>")
+		if (!NT.Find(src.ckey))
+			NT.Add(src.ckey)
+			//src.mentor = 1
+			return
+		return
+
+	if (NT.Find(src.ckey) || mentors.Find(src.ckey))
+		src.mentor = 1
+		src.mentor_authed = 1
+		boutput(src, "<span class='ooc mentorooc'>You are a mentor!</span>")
+		if (!src.holder)
+			src.verbs += /client/proc/toggle_mentorhelps
+		return
+
 /client/proc/set_mentorhelp_visibility(var/set_as = null)
 	if (!isnull(set_as))
-		player.see_mentor_pms = set_as
+		src.mentor = set_as
+		src.see_mentor_pms = set_as
 	else
-		player.see_mentor_pms = !player.see_mentor_pms
-	boutput(src, "<span class='ooc mentorooc'>You will [player.see_mentor_pms ? "now" : "no longer"] see Mentorhelps [player.see_mentor_pms ? "and" : "or"] show up as a Mentor.</span>")
+		src.mentor = !(src.mentor)
+		src.see_mentor_pms = src.mentor
+	boutput(src, "<span class='ooc mentorooc'>You will [src.mentor ? "now" : "no longer"] see Mentorhelps [src.mentor ? "and" : "or"] show up as a Mentor.</span>")
 
 /client/proc/toggle_mentorhelps()
 	set name = "Toggle Mentorhelps"
-	set category = "Special Verbs"
+	set category = "Toggles"
 	set desc = "Show or hide mentorhelp messages. You will also no longer show up as a mentor in OOC and via the Who command if you disable mentorhelps."
 
-	if (!src.is_mentor() && !src.holder)
+	if (!src.mentor_authed && !src.holder)
 		boutput(src, "<span style='color:red'>Only mentors may use this command.</span>")
 		src.verbs -= /client/proc/toggle_mentorhelps // maybe?
 		return

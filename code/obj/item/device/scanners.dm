@@ -24,121 +24,55 @@ Contains:
 	module_research = list("analysis" = 2, "engineering" = 2, "devices" = 1)
 	module_research_type = /obj/item/device/t_scanner
 
-	attack_self(mob/user)
-		on = !on
-		set_icon_state("t-ray[on]")
-		boutput(user, "You switch [src] [on ? "on" : "off"].")
+/obj/item/device/t_scanner/attack_self(mob/user)
 
-		if(on && !(src in processing_items))
-			processing_items.Add(src)
+	on = !on
+	icon_state = "t-ray[on]"
 
-	afterattack(atom/A as mob|obj|turf|area, mob/user as mob)
-		if (istype(A, /turf))
-			if (get_dist(A,user) > 1) // Scanning for COOL LORE SECRETS over the camera network is fun, but so is drinking and driving.
-				return
-			if(A.interesting && src.on)
-				user.visible_message("<span style=\"color:red\"><b>[user]</b> has scanned the [A].</span>")
-				boutput(user, "<br><i>Historical analysis:</i><br><span style='color:blue'>[A.interesting]</span>") 
-				return
-		else if (istype(A, /obj) && A.interesting)
-			user.visible_message("<span style=\"color:red\"><b>[user]</b> has scanned the [A].</span>")
-			boutput(user, "<br><i>Analysis failed:</i><br><span style='color:blue'>Unable to determine signature</span>")
+	if(on && !(src in processing_items))
+		processing_items.Add(src)
 
-	process()
-		if(!on)
-			processing_items.Remove(src)
-			return null
 
-		var/loc_to_check = istype(src.loc, /obj/item/magtractor) ? src.loc.loc : src.loc
-		src = null
-		for(var/turf/T in range(1, loc_to_check))
+/obj/item/device/t_scanner/process()
+	if(!on)
+		processing_items.Remove(src)
+		return null
 
-			if(T.interesting)
-				playsound(T, "sound/machines/ping.ogg", 55, 1)
+	for(var/turf/T in range(1, src.loc) )
 
-			if(!T.intact)
+		if(!T.intact)
+			continue
+
+		for(var/obj/O in T.contents)
+
+			if(O.level != 1)
 				continue
 
-			for(var/obj/O in T.contents)
+			if(O.invisibility == 101)
+				O.invisibility = 0
+				spawn(10)
+					if(O && isturf(O.loc))
+						var/turf/U = O.loc
+						if(U.intact)
+							O.invisibility = 101
 
-				if(O.level != 1)
-					continue
-
-				if(O.invisibility == 101)
-					O.invisibility = 0
-					O.alpha = 128
-					SPAWN_DBG(10)
-						if(O && isturf(O.loc))
-							var/turf/U = O.loc
-							if(U.intact)
-								O.invisibility = 101
-								O.alpha = 255
-
-			var/mob/living/M = locate() in T
-			if(M && M.invisibility == 2)
-				M.invisibility = 0
-				SPAWN_DBG(6)
-					if(M)
-						M.invisibility = 2
-
-
-
-		for(var/obj/O in range(1, loc_to_check) )
-			if(O.interesting)
-				playsound(O.loc, "sound/machines/ping.ogg", 55, 1)
-
-/obj/item/device/t_scanner/abilities = list(/obj/ability_button/tscanner_toggle)
-
-/obj/item/device/t_scanner/adventure
-	name = "experimental scanner"
-	desc = "a bodged-together T-Ray scanner with a few coils cut, and a few extra coils tied-in."
-//	var/trange = 2 //depending how sluggish this is, could go up to 3 with a toggle perhaps?
-	
-	process()
-		if(!on)
-			processing_items.Remove(src)
-			return null
-
-		var/loc_to_check = istype(src.loc, /obj/item/magtractor) ? src.loc.loc : src.loc
-		src = null
-		for(var/turf/T in range(2, loc_to_check))
-
-			if(T.interesting)
-				playsound(T, "sound/machines/ping.ogg", 55, 1)
-
-			if(!T.intact)
-				continue
-
-			var/mob/living/M = locate() in T
-			if(M && M.invisibility == 2)
-				M.invisibility = 0
-				SPAWN_DBG(6)
-					if(M)
-						M.invisibility = 2
-
-		for(var/obj/O in range(2, loc_to_check) )
-			if(O.interesting)
-				playsound(O.loc, "sound/machines/ping.ogg", 55, 1)	
-				
-/*
-he`s got a craving
-for american haiku
-that cannot be itched
-*/
+		var/mob/living/M = locate() in T
+		if(M && M.invisibility == 2)
+			M.invisibility = 0
+			spawn(6)
+				if(M)
+					M.invisibility = 2
 
 //////////////////////////////////////// Forensic scanner ///////////////////////////////////
 
 /obj/item/device/detective_scanner
 	name = "forensic scanner"
 	desc = "Used to scan objects for DNA and fingerprints."
-	icon_state = "fs"
+	icon_state = "forensicscanner"
 	w_class = 2 // PDA fits in a pocket, so why not the dedicated scanner (Convair880)?
 	item_state = "electronic"
 	flags = FPRINT | TABLEPASS | ONBELT | CONDUCT | SUPPRESSATTACK
 	mats = 3
-	hide_attack = 2
-	var/active = 0
-	var/target = null
 
 	attack_self(mob/user as mob)
 
@@ -173,48 +107,11 @@ that cannot be itched
 		user.visible_message("<span style=\"color:red\"><b>[user]</b> has scanned [A].</span>")
 		boutput(user, scan_forensic(A)) // Moved to scanprocs.dm to cut down on code duplication (Convair880).
 		src.add_fingerprint(user)
-
-		if(!active && istype(A, /obj/decal/cleanable/blood))
-			var/obj/decal/cleanable/blood/B = A
-			if(B.dry > 0) //Fresh blood is -1
-				boutput(user, "<span style=\"color:red\">Targeted blood is too dry to be useful!</span>")
-				return
-			for(var/mob/living/carbon/human/H in mobs)
-				if(B.blood_DNA == H.bioHolder.Uid)
-					target = H
-					break
-			active = 1
-			work()
-
-	proc/work(var/turf/T)
-		if(!active) return
-		if(!T)
-			T = get_turf(src)
-		if(get_turf(src) != T)
-			icon_state = "fs"
-			active = 0
-			boutput(usr, "<span style=\"color:red\">[src] shuts down because you moved!</span>")
-			return
-		if(!target)
-			icon_state = "fs"
-			active = 0
-			return
-		src.dir = get_dir(src,target)
-		switch(get_dist(src,target))
-			if(0)
-				icon_state = "fs_pindirect"
-			if(1 to 8)
-				icon_state = "fs_pinclose"
-			if(9 to 16)
-				icon_state = "fs_pinmedium"
-			if(16 to INFINITY)
-				icon_state = "fs_pinfar"
-		SPAWN_DBG(5)
-			.(T)
+		return
 
 ///////////////////////////////////// Health analyzer ////////////////////////////////////////
 
-/obj/item/device/analyzer/healthanalyzer
+/obj/item/device/healthanalyzer
 	name = "health analyzer"
 	icon_state = "health-no_up"
 	inhand_image_icon = 'icons/mob/inhand/hand_medical.dmi'
@@ -230,47 +127,35 @@ that cannot be itched
 	var/disease_detection = 1
 	var/reagent_upgrade = 0
 	var/reagent_scan = 0
-	var/organ_upgrade = 0
-	var/organ_scan = 0
 	module_research = list("analysis" = 2, "medicine" = 2, "devices" = 1)
-	module_research_type = /obj/item/device/analyzer/healthanalyzer
-	hide_attack = 2
+	module_research_type = /obj/item/device/healthanalyzer
 
 	attack_self(mob/user as mob)
-		if (!src.reagent_upgrade && !src.organ_upgrade)
-			boutput(user, "<span style=\"color:red\">No upgrades detected!</span>")
-
-		else if (src.reagent_upgrade && src.organ_upgrade)
-			if (src.reagent_scan && src.organ_scan)				//if both active, make both off
-				src.reagent_scan = 0
-				src.organ_scan = 0
-				boutput(user, "<span style=\"color:red\">All upgrades disabled.</span>")
-
-			else if (!src.reagent_scan && !src.organ_scan)		//if both inactive, turn reagent on
-				src.reagent_scan = 1
-				src.organ_scan = 0
-				boutput(user, "<span style=\"color:red\">Reagent scanner enabled.</span>")
-
-			else if (src.reagent_scan)							//if reagent active, turn reagent off, turn organ on
-				src.reagent_scan = 0
-				src.organ_scan = 1
-				boutput(user, "<span style=\"color:red\">Reagent scanner disabled. Organ scanner enabled.</span>")
-
-			else if (src.organ_scan)							//if organ active, turn BOTH on
-				src.reagent_scan = 1
-				src.organ_scan = 1
-				boutput(user, "<span style=\"color:red\">All upgrades enabled.</span>")
-
-		else if (src.reagent_upgrade)
+		if (!src.reagent_upgrade)
+			boutput(user, "<span style=\"color:red\">No reagent scan upgrade detected!</span>")
+			return
+		else
 			src.reagent_scan = !(src.reagent_scan)
 			boutput(user, "<span style=\"color:blue\">Reagent scanner [src.reagent_scan ? "enabled" : "disabled"].</span>")
-		else if (src.organ_upgrade)
-			src.organ_scan = !(src.organ_scan)
-			boutput(user, "<span style=\"color:blue\">Organ scanner [src.organ_scan ? "enabled" : "disabled"].</span>")
+			return
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		addUpgrade(src, W, user, src.reagent_upgrade)
-		..()
+		if (istype(W, /obj/item/device/healthanalyzer_upgrade))
+			if (src.reagent_upgrade)
+				boutput(user, "<span style=\"color:red\">This analyzer already has a reagent scan upgrade!</span>")
+				return
+			else
+				src.reagent_upgrade = 1
+				src.reagent_scan = 1
+				src.icon_state = "health"
+				src.item_state = "healthanalyzer"
+				boutput(user, "<span style=\"color:blue\">Reagent scan upgrade installed.</span>")
+				playsound(src.loc ,"sound/items/Deconstruct.ogg", 80, 0)
+				user.u_equip(W)
+				qdel(W)
+				return
+		else
+			return ..()
 
 	attack(mob/M as mob, mob/user as mob)
 		if ((user.bioHolder.HasEffect("clumsy") || user.get_brain_damage() >= 60) && prob(50))
@@ -283,38 +168,25 @@ that cannot be itched
 
 		user.visible_message("<span style=\"color:red\"><b>[user]</b> has analyzed [M]'s vitals.</span>",\
 		"<span style=\"color:red\">You have analyzed [M]'s vitals.</span>")
-		boutput(user, scan_health(M, src.reagent_scan, src.disease_detection, src.organ_scan))
+		boutput(user, scan_health(M, src.reagent_scan, src.disease_detection))
 		update_medical_record(M)
 
 		if (M.stat > 1)
 			user.unlock_medal("He's dead, Jim", 1)
 		return
 
-/obj/item/device/analyzer/healthanalyzer/borg
+/obj/item/device/healthanalyzer/borg
 	icon_state = "health"
 	reagent_upgrade = 1
 	reagent_scan = 1
-	organ_upgrade = 1
-	organ_scan = 1
 
-/obj/item/device/analyzer/healthanalyzer/vr
+/obj/item/device/healthanalyzer/vr
 	icon = 'icons/effects/VR.dmi'
 
-/obj/item/device/analyzer/healthanalyzer_upgrade
+/obj/item/device/healthanalyzer_upgrade
 	name = "health analyzer upgrade"
 	desc = "A small upgrade card that allows standard health analyzers to detect reagents present in the patient, and ProDoc Healthgoggles to scan patients' health from a distance."
 	icon_state = "health_upgr"
-	flags = FPRINT | TABLEPASS | CONDUCT
-	throwforce = 0
-	w_class = 1.0
-	throw_speed = 5
-	throw_range = 10
-	mats = 2
-
-/obj/item/device/analyzer/healthanalyzer_organ_upgrade
-	name = "health analyzer organ scan upgrade"
-	desc = "A small upgrade card that allows standard health analyzers to detect the health of induvidual organs in the patient."
-	icon_state = "organ_health_upgr"
 	flags = FPRINT | TABLEPASS | CONDUCT
 	throwforce = 0
 	w_class = 1.0
@@ -340,7 +212,6 @@ that cannot be itched
 	var/scan_results = null
 	module_research = list("analysis" = 2, "science" = 2, "devices" = 1)
 	module_research_type = /obj/item/device/reagentscanner
-	hide_attack = 2
 
 	attack(mob/M as mob, mob/user as mob)
 		return
@@ -353,11 +224,11 @@ that cannot be itched
 
 		if (!isnull(A.reagents))
 			if (A.reagents.reagent_list.len > 0)
-				set_icon_state("reagentscan-results")
+				src.icon_state = "reagentscan-results"
 			else
-				set_icon_state("reagentscan-no")
+				src.icon_state = "reagentscan-no"
 		else
-			set_icon_state("reagentscan-no")
+			src.icon_state = "reagentscan-no"
 
 		if (isnull(src.scan_results))
 			boutput(user, "<span style=\"color:red\">\The [src] encounters an error and crashes!</span>")
@@ -377,10 +248,10 @@ that cannot be itched
 
 /////////////////////////////////////// Atmos analyzer /////////////////////////////////////
 
-/obj/item/device/analyzer/atmospheric
+/obj/item/device/analyzer
 	desc = "A hand-held environmental scanner which reports current gas levels."
 	name = "atmospheric analyzer"
-	icon_state = "atmos-no_up"
+	icon_state = "atmos"
 	item_state = "analyzer"
 	w_class = 2
 	flags = FPRINT | TABLEPASS | CONDUCT | ONBELT
@@ -390,17 +261,7 @@ that cannot be itched
 	throw_range = 20
 	mats = 3
 	module_research = list("analysis" = 2, "atmospherics" = 2, "devices" = 1)
-	module_research_type = /obj/item/device/analyzer/atmospheric
-	var/analyzer_upgrade = 0
-
-	// Distance upgrade action code
-	pixelaction(atom/target, params, mob/user, reach)
-		var/turf/T = get_turf(target)
-		if ((analyzer_upgrade == 1) && (get_dist(user, T)>1))
-			usr.visible_message("<span style=\"color:blue\"><b>[user]</b> takes a distant atmospheric reading of [T].</span>")
-			boutput(user, scan_atmospheric(T))
-			src.add_fingerprint(user)
-			return
+	module_research_type = /obj/item/device/analyzer
 
 	attack_self(mob/user as mob)
 		if (user.stat)
@@ -416,9 +277,6 @@ that cannot be itched
 		user.visible_message("<span style=\"color:blue\"><b>[user]</b> takes an atmospheric reading of [location].</span>")
 		boutput(user, scan_atmospheric(location)) // Moved to scanprocs.dm to cut down on code duplication (Convair880).
 		return
-
-	attackby(obj/item/W as obj, mob/user as mob)
-		addUpgrade(src, W, user, src.analyzer_upgrade)
 
 	afterattack(atom/A as mob|obj|turf|area, mob/user as mob)
 		if (get_dist(A, user) > 1)
@@ -442,63 +300,9 @@ that cannot be itched
 				det.attachments.Remove(src)
 			if ("leak")
 				det.attachedTo.visible_message("<style class='combat bold'>\The [src] picks up the rapid atmospheric change of the canister, and signals the detonator.</style>")
-				SPAWN_DBG(0)
+				spawn(0)
 					det.detonate()
 		return
-
-/obj/item/device/analyzer/atmosanalyzer_upgrade
-	name = "atmospherics analyzer upgrade"
-	desc = "A small upgrade card that allows standard atmospherics analyzers to detect environmental information at a distance."
-	icon_state = "atmos_upgr" // add this
-	flags = FPRINT | TABLEPASS | CONDUCT
-	throwforce = 0
-	w_class = 1.0
-	throw_speed = 5
-	throw_range = 10
-	mats = 2
-
-///////////////// method to upgrade an analyzer if the correct upgrade cartridge is used on it /////////////////
-/obj/item/device/analyzer/proc/addUpgrade(obj/item/device/src as obj, obj/item/device/W as obj, mob/user as mob, upgraded as num, active as num, iconState as text, itemState as text)
-	if (istype(W, /obj/item/device/analyzer/healthanalyzer_upgrade) || istype(W, /obj/item/device/analyzer/healthanalyzer_organ_upgrade) || istype(W, /obj/item/device/analyzer/atmosanalyzer_upgrade))
-		//Health Analyzers
-		if (istype(src, /obj/item/device/analyzer/healthanalyzer))
-			var/obj/item/device/analyzer/healthanalyzer/a = src
-			if (istype(W, /obj/item/device/analyzer/healthanalyzer_upgrade))
-				if (a.reagent_upgrade)
-					boutput(user, "<span style=\"color:red\">This analyzer already has a reagent scan upgrade!</span>")
-					return
-				a.reagent_scan = 1
-				a.reagent_upgrade = 1
-				a.icon_state = a.organ_upgrade ? "health" : "health-r-up"
-				a.item_state = "healthanalyzer"
-
-			else if (istype(W, /obj/item/device/analyzer/healthanalyzer_organ_upgrade))
-				if (a.organ_upgrade)
-					boutput(user, "<span style=\"color:red\">This analyzer already has an internal organ scan upgrade!</span>")
-					return
-				a.organ_upgrade = 1
-				a.organ_scan = 1
-				a.icon_state = a.reagent_upgrade ? "health" : "health-o-up"
-				a.item_state = "healthanalyzer"
-		else if(istype(src, /obj/item/device/analyzer/atmospheric) && istype(W, /obj/item/device/analyzer/atmosanalyzer_upgrade))
-			if (upgraded)
-				boutput(user, "<span style=\"color:red\">This analyzer already has a distance scan upgrade!</span>")
-				return
-			var/obj/item/device/analyzer/atmospheric/a = src
-			a.analyzer_upgrade = 1
-			a.icon_state = "atmos"
-			a.item_state = "atmosphericnalyzer"
-
-		else
-			boutput(user, "<span style=\"color:red\">That cartridge won't fit in there!</span>")
-			return
-		boutput(user, "<span style=\"color:blue\">Upgrade cartridge installed.</span>")
-		playsound(src.loc ,"sound/items/Deconstruct.ogg", 80, 0)
-		user.u_equip(W)
-		qdel(W)
-		return
-	return ..()
-
 
 ///////////////////////////////////////////////// Prisoner scanner ////////////////////////////////////
 
@@ -514,95 +318,88 @@ that cannot be itched
 	flags = FPRINT | TABLEPASS | ONBELT | CONDUCT | EXTRADELAY
 	mats = 3
 
-	attack(mob/living/carbon/human/M as mob, mob/user as mob)
-		////General Records
-		var/found = 0
-		//if( !istype(get_area(src), /area/security/prison) && !istype(get_area(src), /area/security/main))
-		//	boutput(user, "<span style=\"color:red\">Device only works in designated security areas!</span>")
-		//	return
-		boutput(user, "<span style=\"color:blue\">You scan in [M]</span>")
-		boutput(M, "<span style=\"color:red\">[user] scans you with the Securotron-5000</span>")
-		for(var/datum/data/record/R in data_core.general)
-			if (lowertext(R.fields["name"]) == lowertext(M.name))
-				//Update Information
-				R.fields["name"] = M.name
-				R.fields["sex"] = M.gender
-				R.fields["age"] = M.bioHolder.age
-				if (M.gloves)
-					R.fields["fingerprint"] = "Unknown"
-				else
-					R.fields["fingerprint"] = md5(M.bioHolder.Uid)
-				R.fields["p_stat"] = "Active"
-				R.fields["m_stat"] = "Stable"
-				src.active1 = R
-				found = 1
-
-		if(found == 0)
-			src.active1 = new /datum/data/record()
-			src.active1.fields["id"] = text("[]", add_zero(num2hex(rand(1, 1.6777215E7)), 6))
-			src.active1.fields["rank"] = "Unassigned"
+/obj/item/device/prisoner_scanner/attack(mob/living/carbon/human/M as mob, mob/user as mob)
+	////General Records
+	var/found = 0
+	//if( !istype(get_area(src), /area/security/prison) && !istype(get_area(src), /area/security/main))
+	//	boutput(user, "<span style=\"color:red\">Device only works in designated security areas!</span>")
+	//	return
+	boutput(user, "<span style=\"color:blue\">You scan in [M]</span>")
+	boutput(M, "<span style=\"color:red\">[user] scans you with the Securotron-5000</span>")
+	for(var/datum/data/record/R in data_core.general)
+		if (lowertext(R.fields["name"]) == lowertext(M.name))
 			//Update Information
-			src.active1.fields["name"] = M.name
-			src.active1.fields["sex"] = M.gender
-			src.active1.fields["age"] = M.bioHolder.age
-			/////Fingerprint record update
+			R.fields["name"] = M.name
+			R.fields["sex"] = M.gender
+			R.fields["age"] = M.bioHolder.age
 			if (M.gloves)
-				src.active1.fields["fingerprint"] = "Unknown"
+				R.fields["fingerprint"] = "Unknown"
 			else
-				src.active1.fields["fingerprint"] = md5(M.bioHolder.Uid)
-			src.active1.fields["p_stat"] = "Active"
-			src.active1.fields["m_stat"] = "Stable"
-			data_core.general += src.active1
-			found = 0
+				R.fields["fingerprint"] = md5(M.bioHolder.Uid)
+			R.fields["p_stat"] = "Active"
+			R.fields["m_stat"] = "Stable"
+			src.active1 = R
+			found = 1
 
-		////Security Records
-		for(var/datum/data/record/E in data_core.security)
-			if (E.fields["name"] == src.active1.fields["name"])
-				if(src.mode == 1)
-					E.fields["criminal"] = "Incarcerated"
-				else if(src.mode == 2)
-					E.fields["criminal"] = "Parolled"
-				else if(src.mode == 3)
-					E.fields["criminal"] = "Released"
-				else
-					E.fields["criminal"] = "None"
-				return
-
-		src.active2 = new /datum/data/record()
-		src.active2.fields["name"] = src.active1.fields["name"]
-		src.active2.fields["id"] = src.active1.fields["id"]
-		src.active2.name = text("Security Record #[]", src.active1.fields["id"])
-		if(src.mode == 1)
-			src.active2.fields["criminal"] = "Incarcerated"
-		else if(src.mode == 2)
-			src.active2.fields["criminal"] = "Parolled"
-		else if(src.mode == 3)
-			src.active2.fields["criminal"] = "Released"
+	if(found == 0)
+		src.active1 = new /datum/data/record()
+		src.active1.fields["id"] = text("[]", add_zero(num2hex(rand(1, 1.6777215E7)), 6))
+		src.active1.fields["rank"] = "Unassigned"
+		//Update Information
+		src.active1.fields["name"] = M.name
+		src.active1.fields["sex"] = M.gender
+		src.active1.fields["age"] = M.bioHolder.age
+		/////Fingerprint record update
+		if (M.gloves)
+			src.active1.fields["fingerprint"] = "Unknown"
 		else
-			src.active2.fields["criminal"] = "None"
-		src.active2.fields["mi_crim"] = "None"
-		src.active2.fields["mi_crim_d"] = "No minor crime convictions."
-		src.active2.fields["ma_crim"] = "None"
-		src.active2.fields["ma_crim_d"] = "No major crime convictions."
-		src.active2.fields["notes"] = "No notes."
-		data_core.security += src.active2
+			src.active1.fields["fingerprint"] = md5(M.bioHolder.Uid)
+		src.active1.fields["p_stat"] = "Active"
+		src.active1.fields["m_stat"] = "Stable"
+		data_core.general += src.active1
+		found = 0
 
-		return
+	////Security Records
+	for(var/datum/data/record/E in data_core.security)
+		if (E.fields["name"] == src.active1.fields["name"])
+			if(src.mode == 1)
+				E.fields["criminal"] = "Incarcerated"
+			else if(src.mode == 2)
+				E.fields["criminal"] = "Parolled"
+			else
+				E.fields["criminal"] = "Released"
+			return
 
-	attack_self(mob/user as mob)
+	src.active2 = new /datum/data/record()
+	src.active2.fields["name"] = src.active1.fields["name"]
+	src.active2.fields["id"] = src.active1.fields["id"]
+	src.active2.name = text("Security Record #[]", src.active1.fields["id"])
+	if(src.mode == 1)
+		src.active2.fields["criminal"] = "Incarcerated"
+	else if(src.mode == 2)
+		src.active2.fields["criminal"] = "Parolled"
+	else
+		src.active2.fields["criminal"] = "Released"
+	src.active2.fields["mi_crim"] = "None"
+	src.active2.fields["mi_crim_d"] = "No minor crime convictions."
+	src.active2.fields["ma_crim"] = "None"
+	src.active2.fields["ma_crim_d"] = "No major crime convictions."
+	src.active2.fields["notes"] = "No notes."
+	data_core.security += src.active2
 
-		if (src.mode == 1)
-			src.mode = 2
-			boutput(user, "<span style=\"color:blue\">you switch the record mode to Parolled</span>")
-		else if (src.mode == 2)
-			src.mode = 3
-			boutput(user, "<span style=\"color:blue\">you switch the record mode to Released</span>")
-		else if (src.mode == 3)
-			src.mode = 4
-			boutput(user, "<span style=\"color:blue\">you switch the record mode to None</span>")
-		else
-			src.mode = 1
-			boutput(user, "<span style=\"color:blue\">you switch the record mode to Incarcerated</span>")
+	return
 
-		add_fingerprint(user)
-		return
+/obj/item/device/prisoner_scanner/attack_self(mob/user as mob)
+
+	if (src.mode == 1)
+		src.mode = 2
+		boutput(user, "<span style=\"color:blue\">you switch the record mode to Parolled</span>")
+	else if (src.mode == 2)
+		src.mode = 3
+		boutput(user, "<span style=\"color:blue\">you switch the record mode to Released</span>")
+	else
+		src.mode = 1
+		boutput(user, "<span style=\"color:blue\">you switch the record mode to Incarcerated</span>")
+
+	add_fingerprint(user)
+	return

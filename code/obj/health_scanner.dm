@@ -11,18 +11,18 @@
 
 	New()
 		..()
-		SPAWN_DBG(5)
+		spawn(5)
 			src.find_partners(src.find_in_range)
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (ispulsingtool(W))
+		if (istype(W, /obj/item/device/multitool))
 			var/new_id = input(user, "Please enter new ID", src.name, src.id) as null|text
 			if (!new_id || new_id == src.id)
 				return
 			src.id = new_id
 			boutput(user, "You change [src]'s ID to [new_id].")
 			src.find_partners()
-		else if (istype(W, /obj/item/device/analyzer/healthanalyzer_upgrade))
+		else if (istype(W, /obj/item/device/healthanalyzer_upgrade))
 			src.update_reagent_scan()
 			if (src.reagent_upgrade)
 				boutput(user, "<span style=\"color:red\">This system already has a reagent scan upgrade!</span>")
@@ -74,14 +74,12 @@
 					continue
 				src.partners += possible_partner
 				possible_partner.accept_partner(src)
-		else
-			for (var/obj/health_scanner/floor/possible_partner in world)
-				LAGCHECK(LAG_LOW)
-				if (locate(possible_partner) in src.partners)
-					continue
-				if (possible_partner.id == src.id)
-					src.partners += possible_partner
-					possible_partner.accept_partner(src)
+		for (var/obj/health_scanner/floor/possible_partner in world)
+			if (locate(possible_partner) in src.partners)
+				continue
+			if (possible_partner.id == src.id)
+				src.partners += possible_partner
+				possible_partner.accept_partner(src)
 
 	proc/scan()
 		if (!src.partners || !src.partners.len)
@@ -89,8 +87,7 @@
 		var/data = null
 		for (var/obj/health_scanner/floor/myPartner in src.partners)
 			for (var/mob/M in get_turf(myPartner))
-				if (!isobserver(M))
-					data += "<br>[scan_health(M, src.reagent_scan, 1, 1)]"
+				data += "<br>[scan_health(M, src.reagent_scan)]"
 		return data
 
 	get_desc(dist)
@@ -122,11 +119,9 @@
 					continue
 				src.partners += possible_partner
 				possible_partner.accept_partner(src)
-		else
-			for (var/obj/health_scanner/wall/possible_partner in world)
-				LAGCHECK(LAG_LOW)
-				if (locate(possible_partner) in src.partners)
-					continue
-				if (possible_partner.id == src.id)
-					src.partners += possible_partner
-					possible_partner.accept_partner(src)
+		for (var/obj/health_scanner/wall/possible_partner in world)
+			if (locate(possible_partner) in src.partners)
+				continue
+			if (possible_partner.id == src.id)
+				src.partners += possible_partner
+				possible_partner.accept_partner(src)

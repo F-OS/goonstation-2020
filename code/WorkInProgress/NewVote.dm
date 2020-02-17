@@ -160,7 +160,7 @@ var/const/recently_time = 6000 // 10 mins
 			end_vote()
 			return
 		curr_win = get_winner()
-		SPAWN_DBG(20) process()
+		spawn(20) process()
 
 	proc/show_to(var/client/C)
 		if(C in open_votes) return

@@ -1,7 +1,6 @@
 /datum/targetable/wrestler/throw
 	name = "Throw (grab)"
 	desc = "Spin a grabbed opponent around and throw them."
-	icon_state = "Throw"
 	targeted = 0
 	target_anything = 0
 	target_nodamage_check = 0
@@ -26,16 +25,11 @@
 		if (!G || !istype(G))
 			return 1
 
-
-
 		var/mob/living/HH = G.affecting
-		if(check_target_immunity( HH ))
-			M.visible_message("<span style='color:red'>You seem to attack [HH]!</span>")
-			return 1
 		HH.set_loc(M.loc)
 		HH.dir = get_dir(HH, M)
 
-		HH.changeStatus("stunned", 4 SECONDS)
+		HH.stunned = 4
 		M.visible_message("<span style=\"color:red\"><B>[M] starts spinning around with [HH]!</B></span>")
 		M.emote("scream")
 
@@ -112,12 +106,11 @@
 
 			var/turf/T = get_edge_target_turf(M, M.dir)
 			if (T && isturf(T))
-				SPAWN_DBG(0)
-					if (!isdead(HH))
+				spawn(0)
+					if (HH.stat != 2)
 						HH.emote("scream")
 					HH.throw_at(T, 10, 4)
-					HH.changeStatus("weakened", 2 SECONDS)
-					HH.force_laydown_standup()
+					HH.weakened += 2
 					HH.change_misstep_chance(33)
 
 			logTheThing("combat", M, HH, "uses the throw wrestling move on %target% at [log_loc(M)].")

@@ -16,35 +16,14 @@
 	var/obj/item/seed/splicing2 = null
 	var/list/extractables = list()
 	var/obj/item/reagent_containers/glass/inserted = null
-	var/const/genes_header = {"
-							<th><abbr title="Plant species">Type</abbr></th>
-							<th class="genes"><abbr title="Generation">Gen</abbr></th>
-							<th class="genes"><abbr title="Maturity Rate (time it takes to grow; lower is better)">MR<sup>?</sup></abbr></th>
-							<th class="genes"><abbr title="Production Rate (time it takes to become harvestable; lower is better)">PR<sup>?</sup></abbr></th>
-							<th class="genes"><abbr title="Lifespan (how many harvests it gives; higher is better)">LS<sup>?</sup></abbr></th>
-							<th class="genes"><abbr title="Yield (how many crops are produced per harvest; higher is better)">Y<sup>?</sup></abbr></th>
-							<th class="genes"><abbr title="Potency (how potent crops are; higher is better)">P<sup>?</sup></abbr></th>
-							<th class="genes"><abbr title="Endurance (how resilient to damage the plant is; higher is better)">E<sup>?</sup></abbr></th>
-							"}
+
 	attack_ai(var/mob/user as mob)
 		return attack_hand(user)
 
 	attack_hand(var/mob/user as mob)
 		user.machine = src
 
-		var/header_thing_chui_toggle = (user.client && !user.client.use_chui) ? "<html><head><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge,chrome=1\"><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><meta http-equiv=\"pragma\" content=\"no-cache\"><style type='text/css'>body { font-family: Tahoma, sans-serif; font-size: 10pt; }</style></head><body>" : ""
-
-		var/dat = {"[header_thing_chui_toggle]
-			<style type="text/css">.l { text-align: left; } .r { text-align: right; } .c { text-align: center; } .hyp-dominant { font-weight: bold; background-color: rgba(160, 160, 160, 0.33);} .buttonlink { background: #66c; width: 1.1em; height: 1.2em; padding: 0.2em 0.2em; margin-bottom: 2px; border-radius: 4px; font-size: 90%; color: white; text-decoration: none; display: inline-block; vertical-align: middle; } .genes { min-width: 2em; } table { width: 100%; } td, th { border-bottom: 1px solid rgb(160, 160, 160); padding: 0.1em 0.2em; } .splicing { background-color: rgba(0, 255, 0, 0.5); } thead { background: rgba(160, 160, 160, 0.6); } abbr { text-decoration: underline; } .buttonlinks { white-space: nowrap; padding: 0; text-align: center; } </style>
-			<h3 style='margin: 0;'>[src.name]</h3>
-			<div style="float: right;">
-				[src.inserted ? "<a href='?src=\ref[src];ejectbeaker=1' class='buttonlink'>&#9167;</a> [src.inserted] ([src.inserted.reagents.total_volume]/[src.inserted.reagents.maximum_volume]) &bull; " : "" ]
-				[src.extractables.len > 0 ? "<a href='?src=\ref[src];ejectextractables=1' class='buttonlink'>&#9167;</a> " : "" ][src.extractables.len] extractable\s &bull;
-				[src.seeds.len > 0 ? "<a href='?src=\ref[src];ejectseeds=1' class='buttonlink'>&#9167;</a> " : "" ][src.seeds.len] seed\s
-			</div>
-			<strong><a href='?src=\ref[src];page=1'>Overview</a> &bull; <a href='?src=\ref[src];page=2'>Seed Extraction</a> &bull; <a href='?src=\ref[src];page=3'>Seed List</a></strong>
-			<hr>
-		"}
+		var/dat = "<B>[src.name]</B><BR><HR>"
 		if (src.mode == "overview")
 			dat += "<b><u>Overview</u></b><br><br>"
 
@@ -80,43 +59,18 @@
 				dat += "<A href='?src=\ref[src];outputmode=1'>Extracted seeds will be ejected from the machine.</A>"
 			else
 				dat += "<A href='?src=\ref[src];outputmode=1'>Extracted seeds will be retained within the machine.</A>"
-			dat += {"<br><br>
-				<table>
-					<thead>
-					<tr>
-						<th colspan="2">Name</th>
-						<th colspan='1'>Controls</th>
-						[genes_header]
-					</tr>
-					</thead>
-					<tbody>
-
-			"}
+			dat += "<br><br>"
 
 			if(src.extractables.len)
 				for (var/obj/item/I in src.extractables)
-					var/geneout = ""
-					if (istype(I, /obj/item/seed))
-						var/obj/item/seed/S = I
-						geneout = QuickAnalysisRow(S, S.planttype, S.plantgenes)
-					else if (istype(I, /obj/item/reagent_containers/food/snacks/plant))
-						var/obj/item/reagent_containers/food/snacks/plant/S = I
-						geneout = QuickAnalysisRow(S, S.planttype, S.plantgenes)
-
-					dat += {"
-					<tr>
-						<td class='buttonlinks'><a href='?src=\ref[src];label=\ref[I]' title='Rename' class='buttonlink'>&#9998;</a>
-						<a href='?src=\ref[src];analyze=\ref[I]' title='Analyze' class='buttonlink'>&#128269;</a>
-						<a href='?src=\ref[src];eject=\ref[I]' title='Eject' class='buttonlink'>&#9167;</a></td>
-						<th class='l'>[I.name]</th>
-						<td><a href='?src=\ref[src];extract=\ref[I]'>Extract</a></td>
-						[geneout]
-					</tr>
-
-					"}
+					dat += "* <b>[I.name]</b><br>"
+					dat += "> <A href='?src=\ref[src];label=\ref[I]'>(Label)</A> "
+					dat += "<A href='?src=\ref[src];analyze=\ref[I]'>(Analyze)</A> "
+					dat += "<A href='?src=\ref[src];extract=\ref[I]'>(Extract)</A> "
+					dat += "<A href='?src=\ref[src];eject=\ref[I]'>(Eject)</A>"
+					dat += "<br>"
 			else
-				dat += "<tr><th colspan='11'>No Extractable Produce inserted!</th></tr>"
-			dat += "</table>"
+				dat += "<B>No Extractable Produce inserted!</B>"
 
 		else if (src.mode == "seedlist")
 			dat += "<b><u>Seed List</u></b><br>"
@@ -131,60 +85,41 @@
 				if (src.inserted.reagents.total_volume) allow_infusion = 1
 
 			if(src.seeds.len)
-				dat += {"
-					<table>
-						<thead>
-						<tr>
-							<th colspan="2">Name</th>
-							<th>Damage</th>
-							<th colspan='2'>Controls</th>
-							[genes_header]
-						</tr>
-						</thead>
-						<tbody>
-						"}
-				for (var/obj/item/seed/S in src.seeds)
-					if (!src.seedfilter || findtext(src.seedfilter, S.name, 1, null))
-						dat += {"
-							<tr [S == src.splicing1 ? "class='splicing'" : ""]>
-								<td class='buttonlinks'><a href='?src=\ref[src];label=\ref[S]' title='Rename' class='buttonlink'>&#9998;</a>
-								<a href='?src=\ref[src];analyze=\ref[S]' title='Analyze' class='buttonlink'>&#128269;</a>
-								<a href='?src=\ref[src];eject=\ref[S]' title='Eject' class='buttonlink'>&#9167;</a></td>
-								<th class='l'>[S.name]</th>
-								<td class='r'>[S.seeddamage]%</td>
-								<td class='c'>[S == src.splicing1 ? "<a href='?src=\ref[src];splice_cancel=1'>Cancel</a>" : "<a href='?src=\ref[src];splice_select=\ref[S]'>Splice</a>"]</td>
-								<td class='c'>[allow_infusion ? "<a href='?src=\ref[src];infuse=\ref[S]'>Infuse</a>" : "Infuse"]</td>
-								[QuickAnalysisRow(S, S.planttype, S.plantgenes)]
-							</tr>
-						"}
-					else
-						continue
-				dat += "</tbody></table>"
+				if (src.seedfilter)
+					for (var/obj/item/seed/S in src.seeds)
+						if (findtext(src.seedfilter, S.name, 1, null))
+							dat += "<b>* [S.name]</b> <i>(Damage: [S.seeddamage]%)</i><br>"
+							dat += "> <A href='?src=\ref[src];label=\ref[S]'>(Label)</A> "
+							dat += "<A href='?src=\ref[src];analyze=\ref[S]'>(Analyze)</A> "
+							dat += "<A href='?src=\ref[src];eject=\ref[S]'>(Eject)</A> "
+							if (S == src.splicing1)
+								dat += " <A href='?src=\ref[src];splice_cancel=1'>(Cancel Splice)</A>"
+							else
+								dat += " <A href='?src=\ref[src];splice_select=\ref[S]'>(Splice)</A>"
+							if (allow_infusion)
+								dat += " <A href='?src=\ref[src];infuse=\ref[S]'>(Infuse)</A>"
+							dat += "<br>"
+						else continue
+				else
+					for (var/obj/item/seed/S in src.seeds)
+						dat += "<b>* [S.name]</b> <i>(Damage: [S.seeddamage]%)</i><br>"
+						dat += "> <A href='?src=\ref[src];label=\ref[S]'>(Label)</A> "
+						dat += "<A href='?src=\ref[src];analyze=\ref[S]'>(Analyze)</A> "
+						dat += "<A href='?src=\ref[src];eject=\ref[S]'>(Eject)</A>"
+						if (S == src.splicing1)
+							dat += " <A href='?src=\ref[src];splice_cancel=1'>(Cancel Splice)</A>"
+						else
+							dat += " <A href='?src=\ref[src];splice_select=\ref[S]'>(Splice)</A>"
+						if (allow_infusion)
+							dat += " <A href='?src=\ref[src];infuse=\ref[S]'>(Infuse)</A>"
+						dat += "<br>"
 			else
 				dat += "<B>No Seeds inserted!</B>"
 
 		else if (src.mode == "splicing")
 			if (src.splicing1 && src.splicing2)
-				dat += {"<b><u>Seed Splicing</u></b><br>
-				<table>
-					<thead>
-					<tr>
-						<th>Seed</th>
-						[genes_header]
-					</tr>
-					</thead>
-					<tbody>
-					<tr>
-						<th class='l'><a href='?src=\ref[src];analyze=\ref[src.splicing1]'>[src.splicing1]</a></th>
-						[QuickAnalysisRow(src.splicing1, src.splicing1.planttype, src.splicing1.plantgenes)]
-					</tr>
-					<tr>
-						<th class='l'><a href='?src=\ref[src];analyze=\ref[src.splicing2]'>[src.splicing2]</a></th>
-						[QuickAnalysisRow(src.splicing2, src.splicing2.planttype, src.splicing2.plantgenes)]
-					</tr>
-					</tbody>
-				</table>
-				"}
+				dat += "<b><u>Seed Splicing</u></b><br>"
+				dat += "Splicing <A href='?src=\ref[src];analyze=\ref[src.splicing1]'>[src.splicing1]</A> + <A href='?src=\ref[src];analyze=\ref[src.splicing2]'>[src.splicing2]</A><br><br>"
 
 				var/splice_chance = 100
 				var/datum/plant/P1 = src.splicing1.planttype
@@ -200,19 +135,17 @@
 				splice_chance -= src.splicing1.seeddamage
 				splice_chance -= src.splicing2.seeddamage
 
-				if (src.splicing1.plantgenes.commuts)
-					for (var/datum/plant_gene_strain/splicing/S in src.splicing1.plantgenes.commuts)
-						if (S.negative)
-							splice_chance -= S.splice_mod
-						else
-							splice_chance += S.splice_mod
+				for (var/datum/plant_gene_strain/splicing/S in src.splicing1.plantgenes.commuts)
+					if (S.negative)
+						splice_chance -= S.splice_mod
+					else
+						splice_chance += S.splice_mod
 
-				if (src.splicing2.plantgenes.commuts)
-					for (var/datum/plant_gene_strain/splicing/S in src.splicing2.plantgenes.commuts)
-						if (S.negative)
-							splice_chance -= S.splice_mod
-						else
-							splice_chance += S.splice_mod
+				for (var/datum/plant_gene_strain/splicing/S in src.splicing2.plantgenes.commuts)
+					if (S.negative)
+						splice_chance -= S.splice_mod
+					else
+						splice_chance += S.splice_mod
 
 				splice_chance = max(0,min(splice_chance,100))
 
@@ -230,15 +163,14 @@
 			dat += {"<b>Software Error.</b><br>
 			<A href='?src=\ref[src];page=1'>Please click here to return to the Overview.</A>"}
 
-		dat += {"<hr>
-		Genetic display key: <span class='hyp-dominant'>Dominant</span> / Recessive
-		"}
+		dat += "<HR>"
+		dat += "<b><u>Mode:</u></b> <A href='?src=\ref[src];page=1'>(Overview)</A> <A href='?src=\ref[src];page=2'>(Extraction)</A> <A href='?src=\ref[src];page=3'>(Seed List)</A>"
 
-		user.Browse(dat, "window=plantmaster;size=800x400")
+		user << browse(dat, "window=plantmaster;size=370x500")
 		onclose(user, "rextractor")
 
 	Topic(href, href_list)
-		if((get_dist(usr,src) > 1) && !issilicon(usr) && !isAI(usr))
+		if((get_dist(usr,src) > 1) && !issilicon(usr))
 			boutput(usr, "<span style=\"color:red\">You need to be closer to the machine to do that!</span>")
 			return
 		if(href_list["page"])
@@ -253,24 +185,7 @@
 			if (!src.inserted) boutput(usr, "<span style=\"color:red\">No receptacle found to eject.</span>")
 			else
 				src.inserted.set_loc(src.loc)
-				usr.put_in_hand_or_eject(src.inserted) // try to eject it into the users hand, if we can
 				src.inserted = null
-			src.updateUsrDialog()
-
-		else if(href_list["ejectseeds"])
-			for (var/obj/item/seed/S in src.seeds)
-				src.seeds.Remove(S)
-				S.set_loc(src.loc)
-				usr.put_in_hand_or_eject(S) // try to eject it into the users hand, if we can
-
-			src.updateUsrDialog()
-
-		else if(href_list["ejectextractables"])
-			for (var/obj/item/I in src.extractables)
-				src.extractables.Remove(I)
-				I.set_loc(src.loc)
-				usr.put_in_hand_or_eject(I) // try to eject it into the users hand, if we can
-
 			src.updateUsrDialog()
 
 		else if(href_list["eject"])
@@ -280,7 +195,6 @@
 			if (istype(I,/obj/item/seed)) src.seeds.Remove(I)
 			else src.extractables.Remove(I)
 			I.set_loc(src.loc)
-			usr.put_in_hand_or_eject(I) // try to eject it into the users hand, if we can
 			src.updateUsrDialog()
 
 		else if(href_list["label"])
@@ -345,26 +259,13 @@
 							S.generic_seed_setup(stored)
 						HYPpassplantgenes(DNA,SDNA)
 
-						S.name = stored.name
 						if (stored.hybrid)
 							var/datum/plant/hybrid = new /datum/plant(S)
 							for(var/V in stored.vars)
 								if (issaved(stored.vars[V]) && V != "holder")
 									hybrid.vars[V] = stored.vars[V]
 							S.planttype = hybrid
-							S.name = hybrid.name
-
-						var/seedname = S.name
-						if (DNA.mutation && istype(DNA.mutation,/datum/plantmutation/))
-							var/datum/plantmutation/MUT = DNA.mutation
-							if (!MUT.name_prefix && !MUT.name_prefix && MUT.name)
-								seedname = "[MUT.name]"
-							else if (MUT.name_prefix || MUT.name_suffix)
-								seedname = "[MUT.name_prefix][seedname][MUT.name_suffix]"
-
-						S.name = "[seedname] seed"
-
-						S.generation = P.generation
+							S.name = "[hybrid.name] seed"
 						if (!src.seedoutput) src.seeds.Add(S)
 						else S.set_loc(src.loc)
 						give -= 1
@@ -455,81 +356,62 @@
 				splice_chance -= seed1.seeddamage
 				splice_chance -= seed2.seeddamage
 
-				if (seed1.plantgenes.commuts)
-					for (var/datum/plant_gene_strain/splicing/S in seed1.plantgenes.commuts)
-						if (S.negative)
-							splice_chance -= S.splice_mod
-						else
-							splice_chance += S.splice_mod
+				for (var/datum/plant_gene_strain/splicing/S in seed1.plantgenes.commuts)
+					if (S.negative)
+						splice_chance -= S.splice_mod
+					else
+						splice_chance += S.splice_mod
 
-				if (seed2.plantgenes.commuts)
-					for (var/datum/plant_gene_strain/splicing/S in seed2.plantgenes.commuts)
-						if (S.negative)
-							splice_chance -= S.splice_mod
-						else
-							splice_chance += S.splice_mod
+				for (var/datum/plant_gene_strain/splicing/S in seed2.plantgenes.commuts)
+					if (S.negative)
+						splice_chance -= S.splice_mod
+					else
+						splice_chance += S.splice_mod
 
 			// Cap probability between 0 and 100
 			splice_chance = max(0,min(splice_chance,100))
 			if (prob(splice_chance)) // We're good, so start splicing!
 				// Create the new seed
-				var/obj/item/seed/S = unpool(/obj/item/seed)
-				S.set_loc(src)
+				var/obj/item/seed/S = new /obj/item/seed(src)
 				var/datum/plant/P = new /datum/plant(S)
 				var/datum/plantgenes/DNA = new /datum/plantgenes(S)
 				S.planttype = P
 				S.plantgenes = DNA
 				P.hybrid = 1
-				S.generation = max(seed1.generation, seed2.generation) + 1
+				if (seed1.generation > seed2.generation)
+					S.generation = seed1.generation + 1
+				else
+					S.generation = seed2.generation + 2
 
 				var/datum/plantgenes/P1DNA = seed1.plantgenes
 				var/datum/plantgenes/P2DNA = seed2.plantgenes
 
 				var/dominance = P1DNA.alleles[1] - P2DNA.alleles[1]
 				var/datum/plant/dominantspecies = null
-				var/datum/plant/submissivespecies = null
 				var/datum/plantgenes/dominantDNA = null
-				var/datum/plantgenes/submissiveDNA = null
 
 				// Establish which species allele is dominant
 				if (dominance > 0)
 					dominantspecies = P1
-					submissivespecies = P2
 					dominantDNA = P1DNA
-					submissiveDNA = P2DNA
 				else if (dominance < 0)
 					dominantspecies = P2
-					submissivespecies = P1
 					dominantDNA = P2DNA
-					submissiveDNA = P1DNA
 				else
 					// If neither, we pick randomly unlike the rest of the allele resolutions
 					if (prob(50))
 						dominantspecies = P1
-						submissivespecies = P2
 						dominantDNA = P1DNA
-						submissiveDNA = P2DNA
 					else
 						dominantspecies = P2
-						submissivespecies = P1
 						dominantDNA = P2DNA
-						submissiveDNA = P1DNA
 
 				// Set up the base variables first
-				/*
 				if (!dominantspecies.hybrid)
 					P.name = "Hybrid [dominantspecies.name]"
 				else
 					// Just making sure we dont get hybrid hybrid hybrid tomato seed or w/e
 					P.name = "[dominantspecies.name]"
-					*/
-				if (dominantspecies.name != submissivespecies.name)
-					var/part1 = copytext(dominantspecies.name, 1, round(length(dominantspecies.name) * 0.65 + 1.5))
-					var/part2 = copytext(submissivespecies.name, round(length(submissivespecies.name) * 0.45 + 1), 0)
-					P.name = "[part1][part2]"
-				else
-					P.name = dominantspecies.name
-
 				if (dominantspecies.sprite)
 					P.sprite = dominantspecies.sprite
 				else
@@ -559,10 +441,7 @@
 
 				P.commuts = P1.commuts | P2.commuts // We merge these and share them
 				DNA.commuts = P1DNA.commuts | P2DNA.commuts
-				if(submissiveDNA.mutation)
-					P.assoc_reagents = P1.assoc_reagents | P2.assoc_reagents | submissiveDNA.mutation.assoc_reagents // URS EDIT -- BOTANY UNLEASHED?
-				else
-					P.assoc_reagents = P1.assoc_reagents | P2.assoc_reagents
+				P.assoc_reagents = P1.assoc_reagents | P2.assoc_reagents
 
 				// Now we start combining genetic traits based on allele dominance
 				// If one is dominant and the other recessive, use the dominant value
@@ -653,7 +532,7 @@
 	MouseDrop_T(atom/movable/O as mob|obj, mob/user as mob)
 		if (!O || !user)
 			return
-		if (!isitem(O))
+		if (!istype(O,/obj/item/))
 			return
 		if (istype(O, /obj/item/reagent_containers/glass/) || istype(O, /obj/item/reagent_containers/food/drinks/) || istype(O,/obj/item/satchel/hydro))
 			return src.attackby(O, user)
@@ -683,36 +562,6 @@
 			if (average != 0) average /= 2
 			return round(average)
 
-
-
-
-	proc/QuickAnalysisRow(var/obj/scanned, var/datum/plant/P, var/datum/plantgenes/DNA)
-		// Largely copied from plantpot.dm
-		if (!DNA) return
-
-		var/generation = 0
-
-		if (P.cantscan)
-			return "<td colspan='8' class='c'>Can't scan!</td>"
-
-		if (istype(scanned, /obj/item/seed/))
-			var/obj/item/seed/S = scanned
-			generation = S.generation
-		if (istype(scanned, /obj/item/reagent_containers/food/snacks/plant/))
-			var/obj/item/reagent_containers/food/snacks/plant/F = scanned
-			generation = F.generation
-
-		return {"
-		<td class='l [DNA.alleles[1] ? "hyp-dominant" : ""]'>[P.name]</td>
-		<td class='r'>[generation]</td>
-		<td class='r [DNA.alleles[2] ? "hyp-dominant" : ""]'>[DNA.growtime]</td>
-		<td class='r [DNA.alleles[3] ? "hyp-dominant" : ""]'>[DNA.harvtime]</td>
-		<td class='r [DNA.alleles[4] ? "hyp-dominant" : ""]'>[DNA.harvests]</td>
-		<td class='r [DNA.alleles[5] ? "hyp-dominant" : ""]'>[DNA.cropsize]</td>
-		<td class='r [DNA.alleles[6] ? "hyp-dominant" : ""]'>[DNA.potency]</td>
-		<td class='r [DNA.alleles[7] ? "hyp-dominant" : ""]'>[DNA.endurance]</td>
-		"}
-
 ////// Reagent Extractor
 
 /obj/submachine/chem_extractor/
@@ -731,8 +580,7 @@
 	var/obj/item/reagent_containers/glass/storage_tank_1 = null
 	var/obj/item/reagent_containers/glass/storage_tank_2 = null
 	var/list/ingredients = list()
-	var/list/allowed = list(/obj/item/reagent_containers/food/snacks/,/obj/item/plant/,/obj/item/seashell)
-	var/output_target = null
+	var/list/allowed = list(/obj/item/reagent_containers/food/snacks/,/obj/item/plant/)
 
 	New()
 		..()
@@ -742,7 +590,6 @@
 		for (var/obj/item/reagent_containers/glass/beaker/extractor_tank/ST in src.contents)
 			ST.name = "Storage Tank [count]"
 			count++
-		output_target = src.loc
 
 	attack_ai(var/mob/user as mob)
 		return attack_hand(user)
@@ -812,29 +659,29 @@
 			dat += "<b><u>Transfer Management</u></b><br><br>"
 
 			if (src.inserted)
-				dat += "<A href='?src=\ref[src];chemtransfer=\ref[src.inserted]'><b>[src.inserted]:</b></A> ([src.inserted.reagents.total_volume]/[src.inserted.reagents.maximum_volume]) <A href='?src=\ref[src];flush=\ref[src.inserted]'>(Flush All)</A> <A href='?src=\ref[src];ejectbeaker=1'>(Eject)</A><br>"
+				dat += "<A href='?src=\ref[src];chemtransfer=\ref[src.inserted]'><b>[src.inserted]:</b></A> ([src.inserted.reagents.total_volume]/[src.inserted.reagents.maximum_volume]) <A href='?src=\ref[src];flush=\ref[src.inserted]'>(Flush)</A> <A href='?src=\ref[src];ejectbeaker=1'>(Eject)</A><br>"
 				if(src.inserted.reagents.reagent_list.len)
 					for(var/current_id in inserted.reagents.reagent_list)
 						var/datum/reagent/current_reagent = inserted.reagents.reagent_list[current_id]
-						dat += "* <i>[current_reagent.volume] units of [current_reagent.name]</i> <A href='?src=\ref[src];flush=\ref[src.inserted];flush_reagent=[current_id]'>(X)</A><br>"
+						dat += "* <i>[current_reagent.volume] units of [current_reagent.name]</i><br>"
 				else dat += "Empty<BR>"
 			else dat += "<b>No receptacle inserted!</b><br>"
 
 			dat += "<br>"
 
-			dat += "<A href='?src=\ref[src];chemtransfer=\ref[src.storage_tank_1]'><b>Storage Tank 1:</b></A> ([src.storage_tank_1.reagents.total_volume]/[src.storage_tank_1.reagents.maximum_volume]) <A href='?src=\ref[src];flush=\ref[src.storage_tank_1]'>(Flush All)</A><br>"
+			dat += "<A href='?src=\ref[src];chemtransfer=\ref[src.storage_tank_1]'><b>Storage Tank 1:</b></A> ([src.storage_tank_1.reagents.total_volume]/[src.storage_tank_1.reagents.maximum_volume]) <A href='?src=\ref[src];flush=\ref[src.storage_tank_1]'>(Flush)</A><br>"
 			if(src.storage_tank_1.reagents.reagent_list.len)
 				for(var/current_id in storage_tank_1.reagents.reagent_list)
 					var/datum/reagent/current_reagent = storage_tank_1.reagents.reagent_list[current_id]
-					dat += "* <i>[current_reagent.volume] units of [current_reagent.name]</i> <A href='?src=\ref[src];flush=\ref[src.storage_tank_1];flush_reagent=[current_id]'>(X)</A><br>"
+					dat += "* <i>[current_reagent.volume] units of [current_reagent.name]</i><br>"
 			else dat += "Empty<BR>"
 
 			dat += "<br>"
-			dat += "<A href='?src=\ref[src];chemtransfer=\ref[src.storage_tank_2]'><b>Storage Tank 2:</b></A> ([src.storage_tank_2.reagents.total_volume]/[src.storage_tank_2.reagents.maximum_volume]) <A href='?src=\ref[src];flush=\ref[src.storage_tank_2]'>(Flush All)</A><br>"
+			dat += "<A href='?src=\ref[src];chemtransfer=\ref[src.storage_tank_2]'><b>Storage Tank 2:</b></A> ([src.storage_tank_2.reagents.total_volume]/[src.storage_tank_2.reagents.maximum_volume]) <A href='?src=\ref[src];flush=\ref[src.storage_tank_2]'>(Flush)</A><br>"
 			if(src.storage_tank_2.reagents.reagent_list.len)
 				for(var/current_id in storage_tank_2.reagents.reagent_list)
 					var/datum/reagent/current_reagent = storage_tank_2.reagents.reagent_list[current_id]
-					dat += "* <i>[current_reagent.volume] units of [current_reagent.name]</i> <A href='?src=\ref[src];flush=\ref[src.storage_tank_2];flush_reagent=[current_id]'>(X)</A><br>"
+					dat += "* <i>[current_reagent.volume] units of [current_reagent.name]</i><br>"
 			else dat += "Empty<BR>"
 
 		else
@@ -844,15 +691,15 @@
 		dat += "<HR>"
 		dat += "<b><u>Mode:</u></b> <A href='?src=\ref[src];page=1'>(Overview)</A> <A href='?src=\ref[src];page=2'>(Extraction)</A> <A href='?src=\ref[src];page=3'>(Transference)</A>"
 
-		user.Browse(dat, "window=rextractor;size=370x500")
+		user << browse(dat, "window=rextractor;size=370x500")
 		onclose(user, "rextractor")
 
-	handle_event(var/event, var/sender)
+	handle_event(var/event)
 		if (event == "reagent_holder_update")
 			src.updateUsrDialog()
 
 	Topic(href, href_list)
-		if(get_dist(usr,src) > 1 && !issilicon(usr) && !isAI(usr) )
+		if(get_dist(usr,src) > 1)
 			boutput(usr, "<span style=\"color:red\">You need to be closer to the extractor to do that!</span>")
 			return
 		if(href_list["page"])
@@ -868,7 +715,7 @@
 			if (!src.inserted) boutput(usr, "<span style=\"color:red\">No receptacle found to eject.</span>")
 			else
 				if (src.inserted == src.extract_to) src.extract_to = null
-				src.inserted.set_loc(src.output_target)
+				src.inserted.set_loc(src.loc)
 				src.inserted = null
 			src.updateUsrDialog()
 
@@ -876,7 +723,7 @@
 			var/obj/item/I = locate(href_list["ejectingred"]) in src
 			if (istype(I))
 				src.ingredients.Remove(I)
-				I.set_loc(src.output_target)
+				I.set_loc(src.loc)
 				boutput(usr, "<span style=\"color:blue\">You eject [I] from the machine!</span>")
 				src.update_icon()
 			src.updateUsrDialog()
@@ -884,13 +731,6 @@
 		else if (href_list["autoextract"])
 			src.autoextract = !src.autoextract
 			src.update_icon()
-			src.updateUsrDialog()
-
-		else if (href_list["flush_reagent"])
-			var/id = href_list["flush_reagent"]
-			var/obj/item/reagent_containers/glass/T = locate(href_list["flush"]) in src
-			if (istype(T) && T.reagents)
-				T.reagents.remove_reagent(id, 500)
 			src.updateUsrDialog()
 
 		else if (href_list["flush"])
@@ -1038,27 +878,6 @@
 			boutput(user, "<span style=\"color:blue\">You finish stuffing items into [src]!</span>")
 		src.update_icon()
 
-	MouseDrop(over_object, src_location, over_location)
-		if(!isliving(usr))
-			boutput(usr, "<span style=\"color:red\">Only living mobs are able to set the extractor's output target.</span>")
-			return
-
-		if(get_dist(over_object,src) > 1)
-			boutput(usr, "<span style=\"color:red\">The extractor is too far away from the target!</span>")
-			return
-
-		if(get_dist(over_object,usr) > 1)
-			boutput(usr, "<span style=\"color:red\">You are too far away from the target!</span>")
-			return
-
-		else if (istype(over_object,/turf/simulated/floor/))
-			src.output_target = over_object
-			boutput(usr, "<span style=\"color:blue\">You set the extractor to output to [over_object]!</span>")
-
-		else
-			boutput(usr, "<span style=\"color:red\">You can't use that as an output target.</span>")
-		return
-
 /obj/submachine/chem_extractor/proc/update_icon()
 	if (src.ingredients.len)
 		src.icon_state = "reex-on"
@@ -1136,10 +955,10 @@
 				if (!src.category || (src.category == A.category))
 					dat += "<b>[A.name]</b>: <A href='?src=\ref[src];disp=\ref[A]'>(VEND)</A><br>"
 
-		user.Browse(dat, "window=seedfab;size=400x500")
+		user << browse(dat, "window=seedfab;size=400x500")
 		onclose(user, "seedfab")
 
-		if (src.panelopen || isAI(user))
+		if (src.panelopen)
 			var/list/fabwires = list(
 			"Puce" = 1,
 			"Mauve" = 2,
@@ -1162,11 +981,11 @@
 			pdat += "The blue light is [src.malfunction ? "flashing" : "on"].<BR>"
 			pdat += "The white light is [src.hacked ? "on" : "off"].<BR>"
 
-			user.Browse(pdat, "window=fabpanel")
+			user << browse(pdat, "window=fabpanel")
 			onclose(user, "fabpanel")
 
 	Topic(href, href_list)
-		if(get_dist(usr,src) > 1 && !issilicon(usr) && !isAI(usr))
+		if(get_dist(usr,src) > 1)
 			boutput(usr, "<span style=\"color:red\">You need to be closer to the vendor to do that!</span>")
 			return
 		if(href_list["amount"])
@@ -1180,7 +999,7 @@
 		if(href_list["category"])
 			if (src.category) src.category = null
 			else
-				var/filter = input(usr, "Filter by which category?", "[src.name]", 0) in list("Fruit","Vegetable","Herb","Flower","Miscellaneous")
+				var/filter = input(usr, "Filter by which category?", "[src.name]", 0) in list("Fruit","Vegetable","Herb","Miscellaneous")
 				if(!filter) return
 				src.category = filter
 			src.updateUsrDialog()
@@ -1195,47 +1014,39 @@
 			if (!src.working || !istype(I))
 				boutput(usr, "<span style=\"color:red\">[src.name] fails to dispense anything.</span>")
 				return
-
-			if(!I.vending)
-				trigger_anti_cheat(usr, "tried to href exploit vend forbidden seed [I] on [src]")
-				return
-
 			var/vend = src.vendamt
 			while(vend > 0)
 				//new getseed(src.loc)
 				var/obj/item/seed/S
 				if (I.unique_seed)
-					S = unpool(I.unique_seed)
-					S.set_loc(src.loc)
+					S = new I.unique_seed(src.loc)
 				else
-					S = unpool(/obj/item/seed)
-					S.set_loc(src.loc)
-					S.removecolor()
+					S = new /obj/item/seed(src.loc,0)
 				S.generic_seed_setup(I)
 				vend--
 				src.seedcount++
-			SPAWN_DBG(0)
+			spawn(0)
 				for(var/obj/item/seed/S in src.contents) S.set_loc(src.loc)
 			if(src.seedcount >= src.maxseed)
 				src.can_vend = 0
-				SPAWN_DBG(100)
+				spawn(100)
 					src.can_vend = 1
 					src.seedcount = 0
 			src.updateUsrDialog()
 
-		if ((href_list["cutwire"]) && (src.panelopen || isAI(usr)))
+		if ((href_list["cutwire"]) && (src.panelopen))
 			var/twire = text2num(href_list["cutwire"])
-			if (!usr.find_tool_in_hand(TOOL_SNIPPING))
-				boutput(usr, "You need a snipping tool!")
+			if (!( istype(usr.equipped(), /obj/item/wirecutters) ))
+				boutput(usr, "You need wirecutters!")
 				return
 			else if (src.isWireColorCut(twire)) src.mend(twire)
 			else src.cut(twire)
 			src.updateUsrDialog()
 
-		if ((href_list["pulsewire"]) && (src.panelopen || isAI(usr)))
+		if ((href_list["pulsewire"]) && (src.panelopen))
 			var/twire = text2num(href_list["pulsewire"])
-			if (!usr.find_tool_in_hand(TOOL_PULSING) && !isAI(usr))
-				boutput(usr, "You need a multitool or similar!")
+			if (!istype(usr.equipped(), /obj/item/device/multitool))
+				boutput(usr, "You need a multitool!")
 				return
 			else if (src.isWireColorCut(twire))
 				boutput(usr, "You can't pulse a cut wire.")
@@ -1257,7 +1068,7 @@
 			return 0
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (isscrewingtool(W))
+		if(istype(W, /obj/item/screwdriver))
 			if (!src.panelopen)
 				src.overlays += image('icons/obj/vending.dmi', "grife-panel")
 				src.panelopen = 1

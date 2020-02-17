@@ -6,19 +6,15 @@
 	cooldown = 600
 	requires_robes = 1
 	cooldown_staff = 1
-	voice_grim = "sound/voice/wizard/ClairvoyanceGrim.ogg"
-	voice_fem = "sound/voice/wizard/ClairvoyanceFem.ogg"
-	voice_other = "sound/voice/wizard/ClairvoyanceLoud.ogg"
 
 	cast()
 		if(!holder)
 			return
 		holder.owner.say("HAIDAN SEEHQ")
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/ClairvoyanceLoud.ogg", 50, 0, -1)
 
 		var/list/mob/targets = list()
-		for (var/mob/living/carbon/human/H in mobs)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/mob/living/carbon/human/H in world)
 			targets += H
 
 		if (targets.len > 1)
@@ -33,19 +29,16 @@
 			return 1
 
 		var/atom/target_loc = M.loc
-		if (isrestrictedz(holder.owner.z))
-			if (!isrestrictedz(M.z))
+		if (holder.owner.z == 2)
+			if (M.z == 2)
 				boutput(holder.owner, "<span style=\"color:blue\"><B>[M.real_name]</B> is in [target_loc.loc].</span>")
 				return
 			else
-				boutput(holder.owner, "<span style=\"color:red\"><B>[M.real_name]</B> is in some strange place!</span>")
+				boutput(holder.owner, "<span style=\"color:red\"><B>[M.real_name]</B> isn't in VR!</span>")
 				return
-		if (M.traitHolder.hasTrait("training_chaplain"))
+		if (M.bioHolder.HasEffect("training_chaplain"))
 			boutput(holder.owner, "<span style=\"color:red\">[M] has divine protection. Your scrying spell fails!</span>")
 			boutput(M, "<span style=\"color:red\">You sense a Wizard's scrying spell!</span>")
-		else if(check_target_immunity( M ))
-			boutput( holder.owner, "<span style='color:red'>[M] seems to be warded from the effects!</span>" )
-			return 1
 		else
 			var/spellstring = "<B>[M.real_name]</B> is "
 			if (!istype(target_loc, /turf))
@@ -53,13 +46,13 @@
 					spellstring = "<span style=\"color:red\">Your scrying spell fails! It just can't seem to find [M.real_name].</span>"
 					boutput(M, "<span style=\"color:red\">You sense a Wizard's scrying spell!</span>")
 					return
-				if(ismob(target_loc))
+				if(istype(target_loc, /mob))
 					spellstring += "somehow inside <b>[target_loc.name]</b> in <b>[target_loc.loc.loc]</b>."
 				else if(istype(target_loc, /obj))
 					spellstring += "inside \a <b>[target_loc.name]</b> in <b>[target_loc.loc.loc]</b>."
 			else
 				spellstring += "in [target_loc.loc]."
-			if (isdead(M))
+			if (M.stat == 2)
 				spellstring += " They also seem to be dead."
 
 			boutput(holder.owner, "<span style=\"color:blue\">[spellstring]</span>")

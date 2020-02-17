@@ -45,7 +45,7 @@
 			if(get_dist(O,T) == field_radius)
 				var/obj/forcefield/wand/FF = new /obj/forcefield/wand(T,0,src.icon_state)
 				forcefields += FF
-		SPAWN_DBG(field_time)
+		spawn(field_time)
 			for (var/obj/forcefield/F in forcefields)
 				forcefields -= F
 				qdel(F)

@@ -125,7 +125,7 @@ atom/movable/proc/set_pos_px(px, py)
 		//that's it
 
 		//begin!
-		SPAWN_DBG(0) src.update()
+		spawn src.update()
 
 	Cross(atom/movable/a)
 		//if something happens to cross this tile while we're sitting in it before moving to next tile
@@ -136,7 +136,7 @@ atom/movable/proc/set_pos_px(px, py)
 	proc/die()
 		var/self = src
 		src = null
-		SPAWN_DBG(0)
+		spawn(0)
 			if (self) pool(self)
 
 	proc/update()
@@ -181,7 +181,7 @@ atom/movable/proc/set_pos_px(px, py)
 			if(istype(a,/turf))
 				for(var/obj/O in a)
 					O.bullet_act(projectile)
-		SPAWN_DBG(get_speed_delay(velocity) - 1)
+		spawn(get_speed_delay(velocity) - 1)
 			die()
 
 	proc/can_collide(atom/a)
@@ -199,7 +199,7 @@ atom/disposing()
 
 turf/New()
 	..()
-	SPAWN_DBG(1)
+	spawn(1)
 		for(var/A in contents)
 			collidable_change(A, 1)
 
@@ -267,7 +267,7 @@ turf/proc/collide_here(var/obj/pixel_projectile/p)
 	M.lastattacker = user
 	M.lastattackertime = world.time
 
-	if(user.a_intent != "help" && isliving(M))
+	if(user.a_intent != "help" && istype(M,/mob/living))
 		if(!canshoot())
 			M.visible_message("<span style=\"color:red\"><B>[user] tries to fire [src] at [M] pointblank, but it was empty!</B></span>")
 			return
@@ -279,11 +279,11 @@ turf/proc/collide_here(var/obj/pixel_projectile/p)
 		var/mob/living/silicon/S = 0
 		if (iscarbon(M))
 			C = M
-		if (issilicon(M))
+		if (istype(M, /mob/living/silicon))
 			S = M
-		if (C && isalive(C)) C.lastgasp()
-		if (S && isalive(S)) S.lastgasp()
-		if(!isdead(M))	setunconcious(M)
+		if (C && C.stat == 0) C.lastgasp()
+		if (S && S.stat == 0) S.lastgasp()
+		if(M.stat != 2)	M.stat = 1
 		if(M.stuttering < 5) M.stuttering = 5
 		M.set_clothing_icon_dirty()
 	else
@@ -411,7 +411,7 @@ turf/proc/collide_here(var/obj/pixel_projectile/p)
 		return 0
 
 	process_ammo(var/mob/user)
-		if(isrobot(user))
+		if(istype(user,/mob/living/silicon/robot))
 			var/mob/living/silicon/robot/R = user
 			if(R.cell)
 				if(R.cell.charge >= src.robocharge)

@@ -119,7 +119,7 @@
 				else
 					if (prob(5))
 						var/obj/artifact/lamp/L = new /obj/artifact/lamp(T)
-						SPAWN_DBG(10)
+						spawn(10)
 							L.ArtifactActivated()
 					if (prob(100 / (picks + 1)))
 						new /obj/item/mining_tool(T)
@@ -250,9 +250,6 @@
 			ore_overlay.pixel_x += rand(-6,6)
 			ore_overlay.pixel_y += rand(-6,6)
 			AST.overlays += ore_overlay
-			ORE.onGenerate(AST)
-			AST.mining_health = ORE.mining_health
-			AST.mining_max_health = ORE.mining_health
 			if (gems && prob(25))
 				gems--
 				var/datum/ore/event/gem/gem_event = new()
@@ -373,16 +370,16 @@
 	wagesystem.research_budget = 0
 	random_events.events_enabled = 0
 	random_events.minor_events_enabled = 0
-	for (var/tp in childrentypesof(/datum/supply_control))
+	for (var/tp in typesof(/datum/supply_control) - /datum/supply_control)
 		var/datum/supply_control/S = new tp()
 		if (S.current_stock < S.maximum_stock && S.replenishment_time)
 			S.next_resupply_at = S.replenishment_time + ticker.round_elapsed_ticks
 		special_supply_control += S
-	for (var/tp in childrentypesof(/datum/demand_control))
+	for (var/tp in typesof(/datum/demand_control) - /datum/demand_control)
 		var/datum/demand_control/D = new tp()
 		D.last_demand_change = ticker.round_elapsed_ticks
 		special_demand_control += D
-	for (var/pt in childrentypesof(/datum/progress))
+	for (var/pt in typesof(/datum/progress) - /datum/progress)
 		var/datum/progress/P = new pt()
 		if (P.is_abstract)
 			qdel(P)

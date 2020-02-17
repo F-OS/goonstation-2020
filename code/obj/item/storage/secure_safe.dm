@@ -55,16 +55,16 @@
 		return
 	//Waluigi hates this
 	if (hackable)
-		if (isscrewingtool(W) && (src.locked == 1))
+		if ((istype(W, /obj/item/screwdriver)) && (src.locked == 1))
 			sleep(6)
 			src.open =! src.open
 			user.show_message("<span style=\"color:blue\">You [src.open ? "open" : "close"] the service panel.</span>")
 			return
 
-		if (ispulsingtool(W) && (src.open == 1) && (!src.locked) && (!src.l_hacking))
+		if ((istype(W, /obj/item/device/multitool)) && (src.open == 1) && (!src.locked) && (!src.l_hacking))
 			user.show_message(text("<span style=\"color:red\">Now attempting to reset internal memory, please hold.</span>"), 1)
 			src.l_hacking = 1
-			SPAWN_DBG(100)
+			spawn(100)
 				if (prob(40))
 					src.l_setshort = 1
 					configure_mode = 1
@@ -221,7 +221,7 @@
 	if (!src.locked)
 		message = "*****"
 	dat += "<HR><br>>[message]<BR><br><table border='1'><tr><td><A href='?src=\ref[src];type=1'>1</A></td><td><A href='?src=\ref[src];type=2'>2</A></td><td><A href='?src=\ref[src];type=3'>3</A></td></tr><tr><td><A href='?src=\ref[src];type=4'>4</A></td><td><A href='?src=\ref[src];type=5'>5</A></td><td><A href='?src=\ref[src];type=6'>6</A></td></tr><tr><td><A href='?src=\ref[src];type=7'>7</A></td><td><A href='?src=\ref[src];type=8'>8</A></td><td><A href='?src=\ref[src];type=9'>9</A></td></tr><tr><td><A href='?src=\ref[src];type=R'>R</A></td><td><A href='?src=\ref[src];type=0'>0</A></td><td><A href='?src=\ref[src];type=E'>E</A></td></tr></table></tt>"
-	user.Browse(dat, "window=caselock;size=300x280")
+	user << browse(dat, "window=caselock;size=300x280")
 */
 /obj/item/storage/secure/Topic(href, href_list)
 	..()
@@ -231,7 +231,7 @@
 	if ("enter" in href_list)
 		if (configure_mode)
 			var/new_code = uppertext(ckey(href_list["enter"]))
-			if (!new_code || length(new_code) != 4 || !is_hex(new_code))
+			if (!new_code || length(new_code) != 4 || !ishex(new_code))
 				usr << output("ERR!&0", "caselock.browser:updateReadout")
 			else
 				code = new_code
@@ -393,24 +393,24 @@
 			// ******* Check
 			var/mob/living/carbon/human/H = 0
 			var/mob/living/silicon/S = 0
-			if (ishuman(M))
+			if (istype(M, /mob/living/carbon/human))
 				H = M
-			else if (issilicon(M))
+			else if (istype(M, /mob/living/silicon))
 				S = M
 			if (H && (istype(H.head, /obj/item/clothing/head/helmet/) && H.head.body_parts_covered & HEAD) && prob(80))
 				boutput(M, "<span style=\"color:red\">The helmet protects you from being hit hard in the head!</span>")
 				return
 			var/time = rand(2, 6)
 			if (prob(75))
-				if (M.paralysis < time && !M.is_hulk())
+				if (M.paralysis < time && !M.bioHolder.HasEffect("hulk"))
 					M.paralysis = time
 			else
-				if (M.stunned < time && !M.is_hulk())
+				if (M.stunned < time && !M.bioHolder.HasEffect("hulk"))
 					M.stunned = time
 			M.lying = 1
-			if (H && isalive(H)) H.lastgasp()
-			if (S && isalive(S)) S.lastgasp()
-			if(!isdead(M))	setunconcious(M)
+			if (H && H.stat == 0) H.lastgasp()
+			if (S && S.stat == 0) S.lastgasp()
+			if(M.stat != 2)	M.stat = 1
 			M.set_clothing_icon_dirty()
 			M.visible_message("<span style=\"color:red\"><B>[M] has been knocked unconscious!</B></span>")
 		else
@@ -450,42 +450,35 @@
 			if (1)
 				new /obj/item/material_piece/gold(src)
 				for (var/i=6, i>0, i--)
-					var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-					S.setup(src)
+					new /obj/item/spacecash/thousand(src)
 			if (2)
 				for (var/i=2, i>0, i--)
 					new /obj/item/material_piece/gold(src)
 				for (var/i=4, i>0, i--)
-					var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-					S.setup(src)
+					new /obj/item/spacecash/thousand(src)
 			if (3)
 				for (var/i=5, i>0, i--)
-					var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-					S.setup(src)
+					new /obj/item/spacecash/thousand(src)
 			if (4)
 				for (var/i=4, i>0, i--)
 					new /obj/item/skull(src)
 				for (var/i=2, i>0, i--)
-					var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-					S.setup(src)
+					new /obj/item/spacecash/thousand(src)
 			if (5)
 				for (var/i=2, i>0, i--)
 					new /obj/item/skull(src)
 				for (var/i=2, i>0, i--)
-					var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-					S.setup(src)
+					new /obj/item/spacecash/thousand(src)
 			if (6)
 				for (var/i=2, i>0, i--)
 					new /obj/item/gun/energy/laser_gun(src)
 				for (var/i=3, i>0, i--)
-					var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-					S.setup(src)
+					new /obj/item/spacecash/thousand(src)
 			if (7)
 				new /obj/item/gun/kinetic/riotgun(src)
 				new /obj/item/ammo/bullets/abg(src)
 				for (var/i=3, i>0, i--)
-					var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-					S.setup(src)
+					new /obj/item/spacecash/thousand(src)
 			if (8)
 				for (var/i=7, i>0, i--)
 					new /obj/item/raw_material/telecrystal(src)
@@ -549,38 +542,6 @@
 		- <i>[iou_name]</i>"}
 		return
 
-/obj/item/storage/secure/ssafe/theblindpig
-	configure_mode = 0
-	random_code = 1
-
-	New()
-		..()
-		var/loot = rand(1,4)
-		switch (loot)
-			if (1)
-				new /obj/item/reagent_containers/food/drinks/moonshine(src)
-				new /obj/item/skull(src)
-			if (2)
-				new /obj/item/material_piece/gold(src)
-				var/obj/item/spacecash/random/tourist/S = unpool(/obj/item/spacecash/random/tourist)
-				S.setup(src)
-			if (3)
-				new /obj/item/gun/kinetic/riotgun(src)
-				new /obj/item/ammo/bullets/abg(src)
-			if (4)
-				new /obj/item/paper/freeze(src)
-
-/obj/item/paper/freeze
-	name = "paper-'Recipe for Freeze'"
-
-	New()
-		..()
-		src.desc = "This piece of paper looks pretty worn and has a bunch of stains on it."
-		src.info = {"<li>Gin</li><br>
-		<li>Menthol</li><br>
-		<br><i>The rest of the text is obscured by several stains.</i>
-		"}
-
 /obj/item/storage/secure/ssafe/martian
 	configure_mode = 0
 	random_code = 1
@@ -615,28 +576,22 @@
 				new /obj/item/skull(src)
 				new /obj/item/parts/human_parts/arm/left(src)
 				new /obj/item/parts/human_parts/leg/right(src)
-				var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
-				S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
+				new /obj/item/spacecash/thousand(src)
+				new /obj/item/spacecash/thousand(src)
 
 			if (3)
 				new /obj/item/material_piece/gold(src)
 				new /obj/item/material_piece/gold(src)
 				new /obj/item/football(src)
-				var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
-				S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
+				new /obj/item/spacecash/thousand(src)
+				new /obj/item/spacecash/thousand(src)
 
 			if (4)
 				new /obj/item/material_piece/gold(src)
 				new /obj/item/material_piece/gold(src)
-				new	/obj/item/instrument/saxophone(src)
-				var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
-				S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
+				new	/obj/item/saxophone(src)
+				new /obj/item/spacecash/thousand(src)
+				new /obj/item/spacecash/thousand(src)
 
 			if (5)
 				new /obj/item/material_piece/gold(src)
@@ -644,10 +599,8 @@
 				new /obj/item/skull(src)
 				new /obj/item/skull(src)
 				new /obj/item/skull(src)
-				var/obj/item/spacecash/thousand/S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
-				S = unpool(/obj/item/spacecash/thousand)
-				S.setup(src)
+				new /obj/item/spacecash/thousand(src)
+				new /obj/item/spacecash/thousand(src)
 
 	show_lock_panel(mob/user as mob)
 		var/dat = ""
@@ -655,6 +608,8 @@
 			dat = "Access Denied"
 		else
 			dat = {"
+			<!DOCTYPE html>
+			<head>
 			<title>[src.name]</title>
 			<style type="text/css">
 				table.keypad, td.key
@@ -666,6 +621,17 @@
 					padding:10px;
 					font-size:24px;
 					font-weight:bold;
+				}
+				a
+				{
+					text-align:center;
+					color:#1F1F1F;
+					background-color:#7F7F7F;
+					font-size:24px;
+					font-weight:bold;
+					border:2px solid #1F1F1F;
+					text-decoration:none;
+					display:block;
 				}
 			</style>
 

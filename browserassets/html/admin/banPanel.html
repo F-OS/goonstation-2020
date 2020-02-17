@@ -10,7 +10,6 @@
         a {color: green; text-decoration: none;}
         a:hover, a:visited {color: #076307;}
 		.header {height: 30px; padding: 0 10px; position: fixed; top: 0; left: 0; right: 0; background: #ddd; font-size: 1.1em; border-bottom: 1px solid #ccc;}
-		.header .icon {font-size: 1.4em;}
 		.header strong {float: left; line-height: 30px;}
 		.header form {float: right;}
 		.header .text {float: left; border: 0; width: 150px; height: 20px; line-height: 20px; margin: 5px 0 0 0; padding: 0 5px; font-size: 0.9em; border-bottom: 1px solid #ccc; border-right: 1px solid #aaa;}
@@ -35,14 +34,16 @@
         td.actions a:hover {background: #ccc;}
         td.ckey {width: 90px; word-break: break-all;}
         td.time {width: 60px;}
-        td.server {width: 1px;}
         td.akey {width: 80px; word-break: break-all;}
         td.reason {line-height: 1.4;}
         td.compID {width: 60px;}
         td.ip {width: 70px;}
 
-        .pagination-wrap {float: left; margin: 0 20px 0 50px;}
-		.pagination {width: 100px; padding: 0; text-align: center; margin: 5px 0 0 10px; height: 20px; border: 0;}
+		.pagination {float: left; padding: 0 0 0 30px; list-style-type: none; text-align: center; margin: 0; height: 30px;}
+		.pagination li {float: left; line-height: 30px;}
+		.pagination a {text-decoration: none; display: inline-block; padding: 5px 7px; line-height: 20px;}
+		.pagination a:hover {background: #ccc;}
+		.pagination .current {background: #ccc;}
 
 		.switchRemoved {display: block; position: fixed; bottom: 0; right: 170px; padding: 8px; background: #ddd; border-top: 1px solid #bbb; border-left: 1px solid #ccc; border-right: 1px solid #ccc;}
 		.switchRemoved:hover {background: #ccc;}
@@ -50,13 +51,10 @@
 </head>
 <body>
 	<div class="header">
-		<a href="" data-start="0" class="refresh" title="Refresh"><i class="icon icon-refresh"></i></a>
+		<a href="" data-start="0" class="refresh" title="Refresh"><i class="icon-refresh icon-large"></i></a>
 		<strong><span class="results">0 total bans</span> | <span class="sortedBy">By id desc</span></strong>
-		<div class="pagination-wrap">
-			<strong>Page:</strong>
-			<select class="pagination"></select>
-		</div>
-		<a href="" class="addNew" title="Add New Ban"><i class="icon icon-plus"></i></a>
+		<ul class="pagination"></ul>
+		<a href="" class="addNew" title="Add New Ban"><i class="icon-plus icon-large"></i></a>
 		<form method="GET" action="">
 			<span class="searchInfo"></span>
 			<input type="text" class="text" />
@@ -78,7 +76,6 @@
 				<th class="blank">Actions</th>
 				<th><a href="" class="sortBy" data-value="ckey">Key</a></th>
 				<th>Time</th>
-				<th>Server</th>
 				<th><a href="" class="sortBy" data-value="akey">Admin</a></th>
 				<th><a href="" class="sortBy" data-value="reason">Reason</a></th>
 				<th><a href="" class="sortBy" data-value="compID">Comp ID</a></th>
@@ -87,7 +84,7 @@
 		</thead>
 		<tbody>
 			<tr>
-				<td colspan="8" class="full">Loading bans...</td>
+				<td colspan="7" class="full">Loading bans...</td>
 			</tr>
 		</tbody>
 	</table>
@@ -95,10 +92,7 @@
 	<a href="" class="switchRemoved" title="Switch the view to show removed bans">Removed Bans View</a>
 
 	<script type="text/javascript" src="{{resource("js/jquery.min.js")}}"></script>
-	<script type="text/javascript" src="{{resource("js/errorHandler.js")}}"></script>
 	<script type="text/javascript" language="JavaScript">
-		var triggerError = attachErrorHandler('banPanel', true);
-		
 		var ref_src = null /* ref_src */;
 		var CMinutes = null /* cminutes */;
 		var windowName = null /* window_name */;
@@ -180,7 +174,6 @@
 					'<a href="'+row.ckey+'" class="searchFor">'+row.ckey+'</a>'+
 				'</td>'+
 				'<td class="time">'+getExpiry(row.timestamp)+'</td>'+
-				'<td class="server">'+(row.server ? row.server : 'all')+'</td>'+
 				'<td class="akey">'+
 					(row.oakey == 'N/A' || row.akey == 'Auto Banner' ? '<a href="'+row.akey+'" class="searchFor">'+row.akey+'</a>' : '<a href="'+row.oakey+'" class="searchFor">'+row.oakey+'</a>')+
 					(row.oakey != row.akey && row.oakey != 'N/A' ? (row.akey == 'Auto Banner' ? '<br /><small>Original: <a href="'+row.oakey+'" class="searchFor">'+row.oakey+'</a></small>': '<br /><small>Edited by: <a href="'+row.akey+'" class="searchFor">'+row.akey+'</a></small>') : '')+
@@ -202,7 +195,8 @@
 				if (elStart == parseInt(start)) {
 					className += 'current';
 				}
-				pagination += '<option data-start="'+elStart+'" '+(elStart == parseInt(start) ? 'selected' : '')+'>'+i+'</option>';
+				var html = '<li><a href="" data-start="'+elStart+'" class="'+className+'">'+i+'</a></li>';
+				pagination += html;
 			}
 			return pagination;
 		}
@@ -225,11 +219,15 @@
 					'order': order
 				};
 
-				$('#bansTable tbody').html('<tr><td colspan="8" class="full">Loading bans...</td></tr>');
+				$('#bansTable tbody').html('<tr><td colspan="7" class="full">Loading bans...</td></tr>');
 				window.scrollTo(0, 0);
 
 				if (apiKey) {
-					xmlHttp = new XMLHttpRequest();
+					if (window.XMLHtpRequest) {
+						xmlHttp = new XMLHttpRequest();
+					} else {
+						xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+					}
 
 					xmlHttp.open('GET', 'http://goonhub.com/ss13/bans/get?search['+column+']='+term+'&sort='+sort+'&order='+order+'&offset='+offset+'&limit='+pageLimit+'&removed='+viewRemoved+'&bypass=1&forcejson=1&auth='+apiKey+'&t='+Math.random(), false);
 					xmlHttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
@@ -288,7 +286,11 @@
 			$('#bansTable tbody').html('<tr><td colspan="7" class="full">Loading bans...</td></tr>');
 			window.scrollTo(0, 0);
 
-			xmlHttp = new XMLHttpRequest();
+			if (window.XMLHtpRequest) {
+				xmlHttp = new XMLHttpRequest();
+			} else {
+				xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+			}
 
 			xmlHttp.open('GET', 'http://goonhub.com/ss13/bans/getPrevious?id='+id+'&forcejson=1&bypass=1&auth='+apiKey+'&t='+Math.random(), false);
 			xmlHttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
@@ -336,15 +338,9 @@
 			updateBans(1); //Initial load
 
 			//Events!
-			$('body').on('click', '.header a.refresh', function(e) {
+			$('body').on('click', '.pagination a, .header a.refresh', function(e) {
 				e.preventDefault();
 				searchValues.offset = $(this).attr('data-start');
-				updateBans(1, searchValues);
-			});
-
-			$('body').on('change', '.pagination', function() {
-				var $option = $('.pagination option:selected');
-				searchValues.offset = $option.attr('data-start');
 				updateBans(1, searchValues);
 			});
 

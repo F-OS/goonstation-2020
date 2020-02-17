@@ -29,7 +29,7 @@
 	for(var/image/I in orbicons)
 		boutput(src, I)
 
-	SPAWN_DBG(50)
+	spawn(50)
 		updateOrbs()
 	return
 
@@ -39,7 +39,7 @@
 		src.client.images.Cut()
 		for(var/image/I in orbicons)
 			boutput(src, I)
-	SPAWN_DBG(50)
+	spawn(50)
 		updateOrbs()
 	return
 

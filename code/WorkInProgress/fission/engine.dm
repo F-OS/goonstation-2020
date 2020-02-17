@@ -28,7 +28,7 @@ ENGINE
 
 	New()
 		..()
-		SPAWN_DBG(1)
+		spawn(1)
 			setupLinks()
 
 
@@ -42,11 +42,11 @@ ENGINE
 				F.theEngine = src
 
 	proc/updateicon()
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			icon_state = "enginebrok"
 			active = 0
 			return
-		if(status & NOPOWER)
+		if(stat & NOPOWER)
 			icon_state = "enginenopow"
 			active = 0
 			return
@@ -81,7 +81,7 @@ ENGINE
 		..()
 
 	attack_hand(mob/user as mob)
-		if(status & (BROKEN | NOPOWER))
+		if(stat & (BROKEN | NOPOWER))
 			boutput(user, "The engine won't turn on.")
 			return
 		else
@@ -92,7 +92,7 @@ ENGINE
 			return
 
 	attackby(obj/item/W, mob/user)
-		if(istype(W, /obj/item/device/analyzer/atmospheric))
+		if(istype(W, /obj/item/device/analyzer))
 			boutput(user, "<span style=\"color:blue\">The analyzer detects that [lastpower]W are being produced.</span>")
 
 		else
@@ -169,7 +169,7 @@ REACTOR
 	process()
 		updateicon()
 
-		if (status & BROKEN)
+		if (stat & BROKEN)
 			return
 
 		if(meltdown)
@@ -259,7 +259,7 @@ REACTOR
 		..()
 
 	proc/setupCherenkovRad()
-		SPAWN_DBG(1)
+		spawn(1)
 			// color = r, g, b
 			src.sd_SetColor(0.05,0.05,0.9)
 			src.sd_SetLuminosity(3)
@@ -268,7 +268,7 @@ REACTOR
 
 	proc/updateicon()
 
-		if (status & BROKEN)
+		if (stat & BROKEN)
 			src.sd_SetLuminosity(0)
 			daughter.sd_SetLuminosity(0)
 			icon_state = "reactoroff"
@@ -315,7 +315,7 @@ REACTOR
 					T:air:trace_gases = list()
 				T:air:trace_gases += rad
 
-		SPAWN_DBG(8)
+		spawn(8)
 			meltdown = 2.0
 
 
@@ -380,15 +380,15 @@ REACTOR
 		// Higher "severity" means the object was further from the centre of the explosion
 		switch(severity)
 			if(1.0)
-				status |= BROKEN
+				stat |= BROKEN
 				return
 			if(2.0)
 				if (prob(50))
-					status |= BROKEN
+					stat |= BROKEN
 					return
 			if(3.0)
 				if (prob(25))
-					status |= BROKEN
+					stat |= BROKEN
 					return
 			else
 		return

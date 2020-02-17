@@ -1,15 +1,13 @@
 
 /mob/living/carbon/human/monkey //Please ignore how silly this path is.
 	name = "monkey"
-	static_type_override = /datum/mutantrace/monkey
 
 	New()
 		..()
-		SPAWN_DBG(5)
+		spawn(5)
 			if (!src.disposed)
 				cust_one_state = "None"
 				src.bioHolder.AddEffect("monkey")
-				src.get_static_image()
 				if (src.name == "monkey" || !src.name)
 					src.name = pick(monkey_names)
 				src.real_name = src.name
@@ -21,8 +19,8 @@
 	gender = "male"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/under/color/blue(src), slot_w_uniform)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/under/monkey/blue(src), slot_w_uniform)
 
 /mob/living/carbon/human/npc/monkey/mrs_muggles
 	name = "Mrs. Muggles"
@@ -30,8 +28,8 @@
 	gender = "female"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/under/color/magenta(src), slot_w_uniform)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/under/monkey/pink(src), slot_w_uniform)
 
 /mob/living/carbon/human/npc/monkey/mr_rathen
 	name = "Mr. Rathen"
@@ -39,8 +37,8 @@
 	gender = "male"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/under/rank/engineer(src), slot_w_uniform)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/under/monkey/yellow(src), slot_w_uniform)
 
 /mob/living/carbon/human/npc/monkey/albert
 	name = "Albert"
@@ -48,9 +46,8 @@
 	gender = "male"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/suit/space(src), slot_wear_suit)
-			src.equip_if_possible(new /obj/item/clothing/head/helmet/space(src), slot_head)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/suit/space/monkey(src), slot_wear_suit)
 
 /mob/living/carbon/human/npc/monkey/von_braun
 	name = "Von Braun"
@@ -58,9 +55,8 @@
 	gender = "male"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/suit/space/syndicate(src), slot_wear_suit)
-			src.equip_if_possible(new /obj/item/clothing/head/helmet/space(src), slot_head)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/suit/space/monkey/syndicate(src), slot_wear_suit)
 
 /mob/living/carbon/human/npc/monkey/horse
 	name = "????"
@@ -68,8 +64,8 @@
 	gender = "male"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/mask/horse_mask/cursed/monkey(src), slot_wear_mask)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/mask/monkey/horse_mask(src), slot_wear_mask)
 
 /mob/living/carbon/human/npc/monkey/tanhony
 	name = "Tanhony"
@@ -77,8 +73,8 @@
 	gender = "female"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/head/paper_hat(src), slot_head)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/head/monkey/paper_hat(src), slot_head)
 
 /mob/living/carbon/human/npc/monkey/krimpus
 	name = "Krimpus"
@@ -86,22 +82,11 @@
 	gender = "female"
 	New()
 		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/under/rank/hydroponics(src), slot_w_uniform)
-
-/mob/living/carbon/human/npc/monkey/stirstir
-	name = "Monsieur Stirstir"
-	real_name = "Monsieur Stirstir"
-	gender = "male"
-	New()
-		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/under/color/orange(src), slot_w_uniform)
-			src.equip_if_possible(new /obj/item/clothing/head/beret/prisoner(src), slot_head)
+		spawn(10)
+			src.equip_if_possible(new /obj/item/clothing/under/monkey/green(src), slot_w_uniform)
 
 /mob/living/carbon/human/npc/monkey // :getin:
 	name = "monkey"
-	static_type_override = /datum/mutantrace/monkey
 	ai_aggressive = 0
 	ai_calm_down = 1
 	ai_default_intent = INTENT_HELP
@@ -110,8 +95,7 @@
 
 	New()
 		..()
-		npcmonkeypals += src
-		SPAWN_DBG(5)
+		spawn(5)
 			if (!src.disposed)
 				src.bioHolder.mobAppearance.customization_first = "None"
 				src.cust_one_state = "None"
@@ -119,10 +103,6 @@
 				if (src.name == "monkey" || !src.name)
 					src.name = pick(monkey_names)
 				src.real_name = src.name
-
-	disposing()
-		npcmonkeypals -= src
-		..()
 
 	ai_action()
 		if(ai_aggressive)
@@ -141,69 +121,55 @@
 		if (ai_aggressive || ai_aggression_timeout == 0 || (world.timeofday - ai_threatened) < ai_aggression_timeout)
 			..()
 
-	was_harmed(var/atom/T as mob|obj, var/obj/item/weapon = 0, var/special = 0)
+	was_harmed(var/mob/M as mob, var/obj/item/weapon as obj)
 		//src.ai_aggressive = 1
-		src.target = T
+		src.target = M
 		src.ai_state = 2
 		src.ai_threatened = world.timeofday
-		src.ai_target = T
-		src.shitlist[T] ++
+		src.ai_target = M
+		src.shitlist[M] ++
 		if (prob(40))
 			src.emote("scream")
 		var/pals = 0
-		for (var/mob/living/carbon/human/npc/monkey/pal in npcmonkeypals)
-			if (get_dist(src, pal) > 7)
-				continue
+		for (var/mob/living/carbon/human/npc/monkey/pal in all_viewers(7, src))
 			if (pals >= 5)
 				return
 			if (prob(10))
 				continue
 			//pal.ai_aggressive = 1
-			pal.target = T
+			pal.target = M
 			pal.ai_state = 2
 			pal.ai_threatened = world.timeofday
-			pal.ai_target = T
-			pal.shitlist[T] ++
+			pal.ai_target = M
+			pal.shitlist[M] ++
 			pals ++
 			if (prob(40))
 				src.emote("scream")
 
-	proc/shot_by(var/atom/A as mob|obj)
-		if (src.ai_state == 2)
-			return
-		if (ishuman(A))
-			src.was_harmed(A)
-		else
-			walk_away(src, A, 10, 1)
-			SPAWN_DBG(10)
-				walk(src, 0)
-
-	proc/done_with_you(var/atom/T as mob|obj)
-		if (!T)
+	proc/done_with_you(var/mob/M as mob)
+		if (!M)
 			return 0
-		if (src.health <= 0 || (get_dist(src, T) >= 7))
+		if (src.health <= 0)
 			src.target = null
 			src.ai_state = 0
 			src.ai_target = null
 			src.ai_frustration = 0
 			walk_towards(src,null)
 			return 1
-		if (src.shitlist[T] && src.shitlist[T] > 10)
+		if (src.shitlist[M] && src.shitlist[M] > 10)
 			return 0
-		if (ismob(T))
-			var/mob/M = T
-			if (M.health <= 0)
-				src.target = null
-				src.ai_state = 0
-				src.ai_target = null
-				src.ai_frustration = 0
-				walk_towards(src,null)
-				return 1
+		if ((M.health <= 0) || (get_dist(src, M) >= 7))
+			src.target = null
+			src.ai_state = 0
+			src.ai_target = null
+			src.ai_frustration = 0
+			walk_towards(src,null)
+			return 1
 		else
 			return 0
 
 	proc/ai_pickpocket()
-		if (src.getStatusDuration("weakened") || src.getStatusDuration("stunned") || src.getStatusDuration("paralysis") || src.stat || src.ai_picking_pocket)
+		if (src.weakened || src.stunned || src.paralysis || src.stat || src.ai_picking_pocket)
 			return
 		var/list/possible_targets = list()
 		for (var/mob/living/carbon/human/H in view(1, src))
@@ -229,11 +195,10 @@
 		else // ???
 			return
 		walk_towards(src, null)
-		src.say("[pick("Gimme", "Want", "Need")] [thingy.name].") // Monkeys don't know grammar!
 		actions.start(new/datum/action/bar/icon/filthyPickpocket(src, theft_target, slot), src)
 
 	proc/ai_knock_from_hand()
-		if (src.getStatusDuration("weakened") || src.getStatusDuration("stunned") || src.getStatusDuration("paralysis") || src.stat || src.ai_picking_pocket || src.r_hand)
+		if (src.weakened || src.stunned || src.paralysis || src.stat || src.ai_picking_pocket || src.r_hand)
 			return
 		var/list/possible_targets = list()
 		for (var/mob/living/carbon/human/H in view(1, src))
@@ -331,94 +296,3 @@
 	onInterrupt()
 		..()
 		source.ai_picking_pocket = 0
-
-/mob/living/carbon/human/npc/monkey/angry
-	ai_aggressive = 1
-	ai_calm_down = 0
-	ai_default_intent = INTENT_HARM
-	ai_aggression_timeout = null
-	max_health = 150
-
-	New()
-		..()
-		SPAWN_DBG(10)
-			var/head = pick(/obj/item/clothing/head/bandana/red, /obj/item/clothing/head/bandana/random_color)
-			src.equip_if_possible(new head(src), slot_head)
-
-// sea monkeys
-/mob/living/carbon/human/npc/monkey/sea
-	name = "sea monkey"
-	max_health = 150
-	static_type_override = /datum/mutantrace/monkey/seamonkey
-
-	New()
-		..()
-		SPAWN_DBG(5)
-			if (!src.disposed)
-				cust_one_state = "None"
-				src.bioHolder.AddEffect("seamonkey")
-				src.get_static_image()
-				if (src.name == "sea monkey" || !src.name)
-					src.name = pick(monkey_names)
-				src.real_name = src.name
-
-
-/mob/living/carbon/human/npc/monkey/sea/gang
-	//name = "sea monkey"
-	//real_name = "sea monkey"
-	gender = "male"
-	ai_aggressive = 1
-	ai_calm_down = 0
-	ai_aggression_timeout = null
-	New()
-		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/glasses/sunglasses(src), slot_glasses)
-			src.equip_if_possible(new /obj/item/clothing/under(src), slot_w_uniform)
-
-/mob/living/carbon/human/npc/monkey/sea/gang_gun
-	//name = "sea monkey"
-	//real_name = "sea monkey"
-	gender = "female"
-	ai_aggressive = 1
-	ai_calm_down = 0
-	ai_aggression_timeout = null
-	New()
-		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/glasses/sunglasses(src), slot_glasses)
-			src.equip_if_possible(new /obj/item/gun/kinetic/detectiverevolver(src), slot_l_hand)
-			src.equip_if_possible(new /obj/item/clothing/under(src), slot_w_uniform)
-
-/mob/living/carbon/human/npc/monkey/sea/rich
-	//name = "sea monkey"
-	//real_name = "sea monkey"
-	gender = "female"
-	ai_aggressive = 1
-	ai_calm_down = 0
-	ai_aggression_timeout = null
-	New()
-		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/head/crown(src), slot_head)
-
-/mob/living/carbon/human/npc/monkey/sea/lab
-	name = "Kimmy"
-	real_name = "Kimmy"
-	gender = "female"
-	New()
-		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/glasses/regular(src), slot_glasses)
-			src.equip_if_possible(new /obj/item/clothing/under/rank/scientist(src), slot_w_uniform)
-
-// non-AI monkeys
-/mob/living/carbon/human/monkey/mr_wigglesby
-	name = "Mr. Wigglesby"
-	real_name = "Mr. Wigglesby"
-	gender = "male"
-	New()
-		..()
-		SPAWN_DBG(10)
-			src.equip_if_possible(new /obj/item/clothing/under/suit(src), src.slot_w_uniform)
-			src.equip_if_possible(new /obj/item/clothing/shoes/black(src), src.slot_shoes)

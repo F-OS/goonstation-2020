@@ -15,7 +15,6 @@
 	// /obj/machinery/floorflusher (floorflusher.dm)
 	// /obj/machinery/door/window/brigdoor (window.dm)
 	// /obj/machinery/flasher (flasher.dm)
-
 	solitary
 		name = "Cell #1"
 		id = "solitary"
@@ -193,7 +192,7 @@
 /obj/machinery/door_timer/proc/alarm()
 	if (!src)
 		return
-	if (status & (NOPOWER|BROKEN))
+	if (stat & (NOPOWER|BROKEN))
 		return
 /*
 	for(var/obj/machinery/sim/chair/C in range(30, src))
@@ -204,43 +203,33 @@
 				C.con_user.network_device = null
 				C.active = 0
 */
+	for (var/obj/machinery/door/window/brigdoor/M in range(30, src))
+		if (M.id == src.id)
+			/*
+			if (M.density)
+				if (M.id == "genpop")	// opens the inner gen pop door and not the outer so that the perp (and anyone who manages to stow away with him) can be processed for release
+					spawn( 50 )
+						M.open()
+						spawn( 250 )
+							M.close()
+			*/
+			spawn (0)
+				if (M) M.close()
 
-	//	MBC : wow this proc is suuuuper fucking costly
-	//loop through range(30) three times. sure. whatever.
-	//FIX LATER, putting it in a spawn and lagchecking for now.
+	for (var/obj/machinery/floorflusher/FF in range(30, src))
+		if (FF.id == src.id)
+			if (FF.open != 1)
+				FF.openup()
+				spawn (300)
+					if (FF && FF.open == 1)
+						FF.closeup()
 
-	SPAWN_DBG(0)
-		for (var/obj/machinery/door/window/brigdoor/M in range(30, src))
-			if (M.id == src.id)
-				/*
-				if (M.density)
-					if (M.id == "genpop")	// opens the inner gen pop door and not the outer so that the perp (and anyone who manages to stow away with him) can be processed for release
-						SPAWN_DBG( 50 )
-							M.open()
-							SPAWN_DBG( 250 )
-								M.close()
-				*/
-				SPAWN_DBG (0)
-					if (M) M.close()
-			LAGCHECK(LAG_HIGH)
-
-		LAGCHECK(LAG_LOW)
-
-		for (var/obj/machinery/floorflusher/FF in range(30, src))
-			if (FF.id == src.id)
-				if (FF.open != 1)
-					FF.openup()
-			LAGCHECK(LAG_HIGH)
-
-		LAGCHECK(LAG_LOW)
-
-		for (var/obj/storage/secure/closet/brig/automatic/B in range(30, src))
-			if (B.id == src.id && B.our_timer == src)
-				if (B.locked)
-					B.locked = 0
-					B.update_icon()
-					B.visible_message("<span style=\"color:blue\">[B.name] unlocks automatically.</span>")
-			LAGCHECK(LAG_HIGH)
+	for (var/obj/storage/secure/closet/brig/automatic/B in range(30, src))
+		if (B.id == src.id && B.our_timer == src)
+			if (B.locked)
+				B.locked = 0
+				B.update_icon()
+				B.visible_message("<span style=\"color:blue\">[B.name] unlocks automatically.</span>")
 
 	src.updateUsrDialog()
 	src.update_icon()
@@ -268,17 +257,17 @@
 			else
 				dat += "<BR><BR><A href='?src=\ref[src];fc=1'>Flash Cell</A>"
 	dat += "<BR><BR><A href='?action=mach_close&window=computer'>Close</A></TT></BODY></HTML>"
-	user.Browse(dat, "window=computer;size=400x500")
+	user << browse(dat, "window=computer;size=400x500")
 	onclose(user, "computer")
 	return
 
 /obj/machinery/door_timer/Topic(href, href_list)
 	if (..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 		if (href_list["time"])
-			if (src.allowed(usr))
+			if (src.allowed(usr, req_only_one_required))
 				if (src.timing == 0)
 					for (var/obj/machinery/door/window/brigdoor/M in range(10, src))
 						if (M.id == src.id)
@@ -293,13 +282,13 @@
 
 		else
 			if (href_list["tp"])
-				if(src.allowed(usr))
+				if(src.allowed(usr, req_only_one_required))
 					var/tp = text2num(href_list["tp"])
 					src.time += tp
 					src.time = min(max(round(src.time), 0), 300)
-					logTheThing("station", usr, null, "[tp > 0 ? "added" : "removed"] [tp]sec (total: [src.time]sec) to a door timer: [src] [log_loc(src)].")
+					logTheThing("station", usr, null, "[tp > 0 ? "added" : "removed"] [tp % 60]sec (total: [src.time % 60]sec) to a door timer: [src] [log_loc(src)].")
 			if (href_list["fc"])
-				if (src.allowed(usr))
+				if (src.allowed(usr, req_only_one_required))
 					logTheThing("station", usr, null, "sets off flashers from a door timer: [src] [log_loc(src)].")
 					for (var/obj/machinery/flasher/F in range(10, src))
 						if (F.id == src.id)
@@ -310,10 +299,10 @@
 	return
 
 /obj/machinery/door_timer/proc/update_icon()
-	if (status & (NOPOWER))
+	if (stat & (NOPOWER))
 		icon_state = "doortimer-p"
 		return
-	else if (status & (BROKEN))
+	else if (stat & (BROKEN))
 		icon_state = "doortimer-b"
 		return
 	else
@@ -322,6 +311,6 @@
 		else if (src.time > 0)
 			icon_state = "doortimer0"
 		else
-			SPAWN_DBG(50)
+			spawn(50)
 				icon_state = "doortimer0"
 			icon_state = "doortimer2"

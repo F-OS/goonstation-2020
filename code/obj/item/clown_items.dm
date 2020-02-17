@@ -20,8 +20,6 @@ VUVUZELA
 	stamina_damage = 5
 	stamina_cost = 5
 	stamina_crit_chance = 5
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
-
 	var/mob/living/carbon/human/last_touched
 
 /obj/item/bananapeel/attack_hand(var/mob/user)
@@ -48,12 +46,11 @@ VUVUZELA
 				last_touched.sims.affectMotive("fun", 10)
 		playsound(src.loc, "sound/misc/slip.ogg", 50, 1, -3)
 		if(M.bioHolder.HasEffect("clumsy"))
-			M.changeStatus("stunned", 80)
-			M.changeStatus("weakened", 5 SECONDS)
+			M.stunned = 8
+			M.weakened = 5
 		else
-			M.changeStatus("weakened", 2 SECONDS)
-		M.force_laydown_standup()
-/*
+			M.weakened = 2
+
 /obj/item/bikehorn
 	name = "Bike Horn"
 	desc = "A horn off of a bicycle."
@@ -65,7 +62,7 @@ VUVUZELA
 	throw_speed = 3
 	throw_range = 15
 	var/spam_flag = 0
-	var/sound_horn = 'sound/musical_instruments/Bikehorn_1.ogg'
+	var/sound_horn = 'sound/items/bikehorn.ogg'
 	stamina_damage = 5
 	stamina_cost = 5
 	var/volume = 50
@@ -119,7 +116,7 @@ VUVUZELA
 			src.sound_horn = 'sound/vox/honk.ogg'
 		playsound(get_turf(src), sound_horn, volume, randomized_pitch)
 		src.add_fingerprint(user)
-		SPAWN_DBG(spam_timer)
+		spawn(spam_timer)
 			spam_flag = 0
 	return
 
@@ -129,19 +126,19 @@ VUVUZELA
 /obj/item/bikehorn/detonator_act(event, var/obj/item/assembly/detonator/det)
 	switch (event)
 		if ("pulse")
-			playsound(det.attachedTo.loc, 'sound/musical_instruments/Bikehorn_1.ogg', 50, 1)
+			playsound(det.attachedTo.loc, 'sound/items/bikehorn.ogg', 50, 1)
 		if ("cut")
 			det.attachedTo.visible_message("<span class='bold' style='color: #B7410E;'>The honking stops.</span>")
 			det.attachments.Remove(src)
 		if ("process")
 			var/times = rand(1,5)
 			for (var/i = 1, i <= times, i++)
-				SPAWN_DBG(4*i)
-					playsound(det.attachedTo.loc, 'sound/musical_instruments/Bikehorn_1.ogg', 50, 1)
+				spawn(4*i)
+					playsound(det.attachedTo.loc, 'sound/items/bikehorn.ogg', 50, 1)
 		if ("prime")
 			for (var/i = 1, i < 15, i++)
-				SPAWN_DBG(3*i)
-					playsound(det.attachedTo.loc, 'sound/musical_instruments/Bikehorn_1.ogg', 500, 1)
+				spawn(3*i)
+					playsound(det.attachedTo.loc, 'sound/items/bikehorn.ogg', 500, 1)
 
 
 /obj/item/harmonica
@@ -155,7 +152,7 @@ VUVUZELA
 	throw_speed = 3
 	throw_range = 15
 	var/spam_flag = 0
-	var/list/sounds_harmonica = list('sound/musical_instruments/Harmonica_1.ogg', 'sound/musical_instruments/Harmonica_2.ogg', 'sound/musical_instruments/Harmonica_3.ogg')
+	var/list/sounds_harmonica = list('sound/items/harmonica1.ogg', 'sound/items/harmonica2.ogg', 'sound/items/harmonica3.ogg')
 	stamina_damage = 2
 	stamina_cost = 2
 	module_research = list("audio" = 7)
@@ -173,7 +170,7 @@ VUVUZELA
 			if(prob(60))
 				G.howl()
 		src.add_fingerprint(user)
-		SPAWN_DBG(20)
+		spawn(20)
 			spam_flag = 0
 	return
 
@@ -188,7 +185,7 @@ VUVUZELA
 	throw_speed = 3
 	throw_range = 15
 	var/spam_flag = 0
-	var/sound_whistle = list('sound/musical_instruments/Whistle_Police.ogg')
+	var/sound_whistle = list('sound/items/whistle.ogg')
 	stamina_damage = 2
 	stamina_cost = 2
 	module_research = list("audio" = 3)
@@ -206,7 +203,7 @@ VUVUZELA
 			if(prob(60))
 				G.howl()
 		src.add_fingerprint(user)
-		SPAWN_DBG(20)
+		spawn(20)
 			spam_flag = 0
 	return
 
@@ -218,19 +215,19 @@ VUVUZELA
 	//fuck it that'll do
 	var/whistlesound = src.sound_whistle //so we can still use it when the whistle is deleted
 	playsound(user.loc, whistlesound, 35, 1)
-	SPAWN_DBG(20)
+	spawn(20)
 		if(prob(50))
 			playsound(user.loc, whistlesound, 35, 1)
-	SPAWN_DBG(40)
+	spawn(40)
 		if(prob(50))
 			playsound(user.loc, whistlesound, 35, 1)
-	SPAWN_DBG(60)
+	spawn(60)
 		if(prob(50))
 			playsound(user.loc, whistlesound, 35, 1)
-	SPAWN_DBG(80)
+	spawn(80)
 		if(prob(50))
 			playsound(user.loc, whistlesound, 35, 1)
-	SPAWN_DBG(100)
+	spawn(100)
 		if(prob(50))
 			playsound(user.loc, whistlesound, 35, 1)
 		if (user)
@@ -246,7 +243,7 @@ VUVUZELA
 	item_state = "bike_horn"
 	throwforce = 3
 	var/spam_flag = 0
-	var/sound_vuvuzela = 'sound/musical_instruments/Vuvuzela_1.ogg'
+	var/sound_vuvuzela = 'sound/items/vuvuzela.ogg'
 	stamina_damage = 6
 	stamina_cost = 6
 	stamina_crit_chance = 1
@@ -268,7 +265,7 @@ VUVUZELA
 			if(prob(60))
 				G.howl()
 		src.add_fingerprint(user)
-		SPAWN_DBG(35)
+		spawn(35)
 			spam_flag = 0
 	return
 
@@ -278,7 +275,7 @@ VUVUZELA
 /obj/item/vuvuzela/detonator_act(event, var/obj/item/assembly/detonator/det)
 	switch (event)
 		if ("pulse")
-			playsound(det.attachedTo.loc, "sound/musical_instruments/Vuvuzela_1.ogg", 50, 1)
+			playsound(det.attachedTo.loc, "sound/items/vuvuzela.ogg", 50, 1)
 		if ("cut")
 			det.attachedTo.visible_message("<span class='bold' style='color: #B7410E;'>The buzzing stops.</span>")
 			det.attachments.Remove(src)
@@ -286,10 +283,9 @@ VUVUZELA
 			if (prob(45))
 				var/times = rand(1,5)
 				for (var/i = 1, i <= times, i++)
-					SPAWN_DBG(4*i)
-						playsound(det.attachedTo.loc, "sound/musical_instruments/Vuvuzela_1.ogg", 50, 1)
+					spawn(4*i)
+						playsound(det.attachedTo.loc, "sound/items/vuvuzela.ogg", 50, 1)
 		if ("prime")
 			for (var/i = 1, i < 15, i++)
-				SPAWN_DBG(4*i)
-					playsound(det.attachedTo.loc, "sound/musical_instruments/Vuvuzela_1.ogg", 500, 1)
-*/
+				spawn(4*i)
+					playsound(det.attachedTo.loc, "sound/items/vuvuzela.ogg", 500, 1)

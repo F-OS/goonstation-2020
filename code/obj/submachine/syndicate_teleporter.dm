@@ -10,7 +10,7 @@
 	var/recharge = 20 //A short recharge time between teleports
 
 	proc/teleport(mob/user)
-		for(var/obj/submachine/syndicate_teleporter/S) // in world AUGHHH
+		for(var/obj/submachine/syndicate_teleporter/S)
 			if(S.id == src.id && S != src)
 				if(recharging == 1)
 					return 1
@@ -19,7 +19,7 @@
 					src.recharging = 1
 					user.set_loc(S.loc)
 					showswirl(user.loc)
-					SPAWN_DBG(recharge)
+					spawn(recharge)
 						S.recharging = 0
 						src.recharging = 0
 				return

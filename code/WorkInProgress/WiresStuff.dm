@@ -4,98 +4,47 @@
 	set hidden = 1
 	admin_only
 
-	//mapWorldNew(src)
+	//src.chui.reload()
+	src.Browse(grabResource("html/wireTest.html"), "window=wireTest;size=500x650;title=Wire Test;")
+	//src.mob.deathConfetti()
 
 
-/proc/mapWorldNew(client/C)
-	// future proofing against varied world icon sizes
-	var/iconWidth
-	var/iconHeight
-	var/iconSize = getIconSize()
-	if (islist(iconSize))
-		iconWidth = iconSize["width"]
-		iconHeight = iconSize["height"]
-	else
-		iconWidth = iconHeight = iconSize
+//Proc for parsing data returned by the bans API (as well as whatever else in the future)
+//Expects a base64 encoded url parameter query string. Yes I know how weird that sounds.
+/proc/parseCallbackData(data)
+	if (copytext(data, 1, 2) == "{") //we got fed json instead (probably) whoops
+		var/error[] = new()
+		error["error"] = "Parsing error (JSON provided)"
+		return error
 
-	// user input
-	// TODO: sensible maximum values?
-	var/areaW = input(C, "How many tiles wide?", "Width", 10) as num
-	if (!areaW || areaW < 1)
-		return alert("Invalid width given")
+	data = base64str(data)
+	var/list/ldata = params2list(url_decode(data))
+	var/parsedList[] = new()
+	var/regex/R = new("/(^\\d{1,2})/i")
 
-	var/areaH = input(C, "How many tiles high?", "Height", 10) as num
-	if (!areaH || areaH < 1)
-		return alert("Invalid height given")
+	for (var/e = 1, e <= ldata.len, e++) //each field in the format index[fieldkey]=field
+		var/index = ldata[e]
+		var/num
 
-	// create a blank icon at the appropriate size
-	var/icon/canvas = icon('icons/misc/flatBlank.dmi')
-	canvas.Crop(1, 1, areaW * iconWidth, areaH * iconHeight)
-	
-	var/turf/startT = C.mob.loc
-	var/startX = startT.x
-	var/startY = startT.y
-	var/startZ = startT.z
+		if (R.Find(index))
+			do
+				num = R.GroupText(1) //grab the index number e.g. the 1 from 1[ckey]=blah
+			while(R.FindNext(index))
 
-	out(C, "===========================<br>Starting")
+		if (!num) //no num found, we're assuming this was an error message response (or any kind of message really)
+			ldata[index] = base64str(ldata[index])
+			return ldata
 
-	// loop through all tiles in area
-	for (var/thisX = startX, thisX < (startX + areaW), thisX++)
-		var/currentX = (thisX - startX) + 1
-		for (var/thisY = startY, thisY < (startY + areaH), thisY++)
-			var/currentY = (thisY - startY) + 1
-			out(C, "Processing tile: [thisX], [thisY]. CurrentX: [currentX]. CurrentY: [currentY]")
+		var/field = copytext(index, lentext(num)+1, 0) //grab the field name e.g. [ckey]
+		field = copytext(field, 2, -1) //convert [ckey] to ckey
+		var/val = base64str(ldata[index]) //the actual value e.g. blah
 
-			// get the turf on the loc
-			var/turf/T = locate(thisX, thisY, startZ)
+		if (!parsedList[num]) //if a list of this num doesnt exist, create it e.g. parsedList(1 => list())
+			parsedList[num] = new/list()
+		parsedList[num][field] = val //shove data in appropriate list e.g. parsedList(1 => list("ckey" => "blah"))
+		//boutput(world, "Index: [index]. Num: [num]. Field: [field]. Val: [val]") //DEBUG
 
-			// usually (only?) means we're at a map edge
-			if (!T)
-				continue
-
-			var/icon/turfIcon = getFlatIcon(T)
-
-			// create a copy of the turf contents sorted by layer (lowest first)
-			var/list/contentsCopy = T.contents.Copy()
-			for (var/r = 1, r <= contentsCopy.len, r++)
-				for (var/i = 1, i < contentsCopy.len, i++)
-					var/atom/first = contentsCopy[i]
-					var/atom/second = contentsCopy[i + 1]
-					if (first.layer > second.layer)
-						contentsCopy.Swap(i, i + 1)
-
-			// loop through all things on that loc
-			for (var/atom/thing in contentsCopy)
-				// ignore things we don't want in the final image. lighting etc
-				if (thing.invisibility || istype(thing, /obj/overlay/tile_effect))
-					continue
-				
-				// TODO: handle large items (multi-tile things)
-				// TODO: handle pixel offsets somehow
-
-				// blend each thing onto the initial turf
-				var/icon/thingIcon = getFlatIcon(thing)
-				turfIcon.Blend(thingIcon, ICON_OVERLAY, 1, 1)
-
-			// blend the composite turf icon into the canvas
-			var/offsetX = ((currentX * iconWidth) - iconWidth) + 1
-			var/offsetY = ((currentY * iconHeight) - iconHeight) + 1
-			//out(C, "-- Blending into canvas at [offsetX], [offsetY]")
-			canvas.Blend(turfIcon, ICON_OVERLAY, offsetX, offsetY)
-
-	// create a new icon and insert the generated canvas, so that BYOND doesn't generate different directions
-	// Wire note: thank you /tg/ for this code snippet
-	var/icon/finalCanvas = new /icon()
-	finalCanvas.Insert(canvas, "", SOUTH, 1, 0)
-
-	// save constructed image to local disk
-	var/dest = "data/test.png"
-	if (fcopy(finalCanvas, dest))
-		out(C, "Done. Canvas saved to [dest]")
-	else
-		out(C, "ERROR saving canvas to [dest]")
-
-	out(C, "===========================")
+	return parsedList
 
 
 //Silly little thing that the bans panel calls on refresh
@@ -104,9 +53,96 @@
 	if (centralConn)
 		var/list/returnData = new()
 		returnData["cminutes"] = CMinutes
-		return json_encode(returnData)
+		return list2json(returnData)
 	else
 		return CMinutes
+
+
+/**
+ * Constructs a query to send to the goonhub web API
+ *
+ * @route (string) requested route e.g. bans/check
+ * @query (list) query arguments to be passed along to route
+ * @forceResponse (boolean) will force the API server to return the requested data from the route rather than hitting hubCallback later on
+ * @return (list|boolean) list containing parsed data response from api, 1 if forceResponse is false, 0 if error
+ *
+ */
+/proc/queryAPI(route, query, forceResponse = 0)
+	set background = 1
+	if (!route) return 0
+
+	var/list/data = new()
+
+	if (centralConn)
+
+		var/uri = "http://goonhub.com/ss13" //TODO: Config option
+		var/req = "[uri]/[route]/?[query ? "[list2params(query)]&" : ""]" //Necessary
+		req += "[forceResponse ? "bypass=1&" : ""]" //Force a response RIGHT NOW y/n
+		req += "data_server=[(world.port % 1000) / 100]&" //Append server number
+		req += "auth=[md5(config.extserver_token)]" //Append auth code
+
+		var/response[] = world.Export(req)
+		if(!response)
+			logTheThing("debug", null, null, "<b>API Error</b>: No response from server during query to <b>[req]</b>. Try count is: <b>[centralConnTries]</b>")
+			logTheThing("diary", null, null, "API Error: No response from server during query to [req]. Try count is [centralConnTries]", "debug")
+			//if (centralConnTries >= 5)
+			//	centralConn = 0
+			//	logTheThing("debug", null, null, "<b>Critical API Error</b>: <b>Max remote API tries exceeded, switching to local fallback system.</b>")
+			//	logTheThing("diary", null, null, "Critical API Error: Max remote API tries exceeded, switching to local fallback system.", "debug")
+			//else
+			//	centralConnTries++
+			return 0
+
+		if (forceResponse)
+			var/key
+			var/contentExists = 0
+			for (key in response)
+				if (key == "CONTENT")
+					contentExists = 1
+
+			if (!contentExists)
+				logTheThing("debug", null, null, "<b>API Error</b>: Malformed response from server during <b>[req]</b>")
+				logTheThing("diary", null, null, "API Error: Malformed response from server during [req]", "debug")
+				return 0
+
+			//Parse the response
+			data = parseCallbackData(file2text(response["CONTENT"]))
+
+
+	var/theProc = null
+	if (findtext(route, "bans/"))
+		route = copytext(route, 6)
+		//Ban routes we don't run locally if centralConn is UP
+		if (centralConn)
+			if (route == "check")
+				return data
+		//Ban routes we don't run locally regardless of anything
+		if (route == "parity" || route == "updateLocal" || route == "updateRemote")
+			return (centralConn ? data : 0)
+		theProc = "/proc/" + route + "BanApiFallback"
+
+	if (!theProc)
+		/* Wire note: This gets a little spammy with procs we don't care about local fallbacks for e.g. numbers station
+		logTheThing("debug", null, null, "<b>Local API Error</b> - No proc specified for route: <b>[route]</b>")
+		logTheThing("diary", null, null, "<b>Local API Error</b> - No proc specified for route: [route]", "debug")
+		*/
+		return (centralConn ? data : 0)
+
+	var/localData = call(theProc)(query)
+	if (!localData)
+		logTheThing("debug", null, null, "<b>Local API Error</b> - Nothing returned from <b>[theProc]</b>")
+		logTheThing("diary", null, null, "<b>Local API Error</b> - Nothing returned from [theProc]", "debug")
+		return (centralConn ? data : 0)
+
+	if (istype(localData, /list))
+		var/list/ldata = localData
+		if (ldata["error"])
+			logTheThing("debug", null, null, "<b>Local API Error</b> - Callback failed in <b>[theProc]</b> with message: <b>[ldata["error"]]</b>")
+			logTheThing("diary", null, null, "<b>Local API Error</b> - Callback failed in [theProc] with message: [ldata["error"]]", "debug")
+			if (ldata["showAdmins"])
+				message_admins("<span style=\"color:blue\"><b>Failed for route [route]BanApiFallback</b>: [ldata["error"]]</span>")
+
+	return (centralConn ? data : localData)
 
 
 /* Death confetti yayyyyyyy */
@@ -118,8 +154,8 @@ var/global/deathConfettiActive = 0
 
 /mob/proc/deathConfetti()
 	particleMaster.SpawnSystem(new /datum/particleSystem/confetti(src.loc))
-	SPAWN_DBG(10)
-		playsound(src.loc, "sound/voice/yayyy.ogg", 50, 1)
+	spawn(10)
+		playsound(src.loc, "sound/effects/yayyy.ogg", 50, 1)
 
 /client/proc/toggle_death_confetti()
 	set popup_menu = 0
@@ -133,110 +169,3 @@ var/global/deathConfettiActive = 0
 	logTheThing("admin", src, null, "toggled Death Confetti [deathConfettiActive ? "on" : "off"]")
 	logTheThing("diary", src, null, "toggled Death Confetti [deathConfettiActive ? "on" : "off"]", "admin")
 	message_admins("[key_name(src)] toggled Death Confetti [deathConfettiActive ? "on" : "off"]")
-
-
-/datum/limb/sun
-
-/mob/living/critter/sun
-	name = "sun"
-	real_name = "sun"
-	desc = "A sentient, very small, star. Why not."
-	density = 1
-	icon_state = "sun"
-	icon_state_dead = "sun-dead"
-	custom_gib_handler = /proc/gibs
-	hand_count = 1
-	can_throw = 1
-	can_grab = 1
-	can_disarm = 1
-	speechverb_say = "booms"
-	speechverb_exclaim = "flares"
-	speechverb_ask = "spots"
-	blood_id = "phlogiston"
-	metabolizes = 0
-	var/datum/light/glow
-
-	New()
-		..()
-		src.glow = new /datum/light/point
-		src.glow.set_brightness(0.8)
-		src.glow.set_color(0.94, 0.69, 0.27)
-		src.glow.attach(src)
-		src.glow.enable()
-
-	death(gibbed)
-		src.glow.disable()
-		..(gibbed)
-
-	setup_hands()
-		..()
-		var/datum/handHolder/HH = hands[1]
-		HH.limb = new /datum/limb/sun
-		HH.icon = 'icons/mob/critter_ui.dmi'
-		HH.icon_state = "handzap"
-		HH.name = "solar wind"
-		HH.limb_name = "solar wind"
-
-	specific_emotes(var/act, var/param = null, var/voluntary = 0)
-		switch (act)
-			if ("flare", "pulsar")
-				if (src.emote_check(voluntary, 50))
-					return "<b>[src]</b> [act]s!"
-		return null
-
-	specific_emote_type(var/act)
-		switch (act)
-			if ("flare", "pulsar")
-				return 2
-		return ..()
-
-	setup_healths()
-		add_hh_robot(-150, 150, 1.15)
-
-
-/client/proc/ghostdroneAll()
-	set name = "Ghostdrone All"
-	set desc = "Makes every single person a ghostdrone. Why are you doing this."
-	set popup_menu = 0
-	set hidden = 1
-	admin_only
-
-	for (var/mob/living/L in mobs)
-		if (L.client && !isghostdrone(L))
-			droneize(L, 0)
-
-	logTheThing("admin", src, null, "made everyone a ghostdrone!")
-	logTheThing("diary", src, null, "made everyone a ghostdrone!", "admin")
-	message_admins("[key_name(src)] made everyone a ghostdrone!")
-
-
-/client/proc/toggle_hard_reboot()
-	set category = "Debug" // Not in toggles because it's not enabling/disabling game features
-	set name = "Toggle Hard Reboot"
-	set desc = "A hard reboot is when the game instance outright ends, and the backend server reinitialises it"
-
-	admin_only
-
-	var/hardRebootFilePath = "data/hard-reboot"
-	var/hardRebootFileExists = fexists(hardRebootFilePath)
-	var/logMessage = ""
-	
-	if (hardRebootFileExists && alert("A hard reboot is already queued, would you like to remove it?",, "Yes", "No") == "Yes")
-		fdel(hardRebootFilePath)
-		logMessage = "removed a server hard reboot"
-
-	else if (!hardRebootFileExists && alert("No hard reboot is queued, would you like to queue one?",, "Yes", "No") == "Yes")
-		file(hardRebootFilePath) << ""
-		logMessage = "queued a server hard reboot"
-
-	else
-		return
-
-	logTheThing("debug", src, null, logMessage)
-	logTheThing("diary", src, null, logMessage, "admin")
-	message_admins("[key_name(src)] [logMessage]")
-
-	var/ircmsg[] = new()
-	ircmsg["key"] = src.key
-	ircmsg["msg"] = logMessage
-	ircbot.export("admin", ircmsg)

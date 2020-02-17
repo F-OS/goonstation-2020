@@ -6,16 +6,14 @@
 	cooldown = 100
 	requires_robes = 1
 	restricted_area_check = 1
-	voice_grim = "sound/voice/wizard/BlinkGrim.ogg"
-	voice_fem = "sound/voice/wizard/BlinkFem.ogg"
-	voice_other = "sound/voice/wizard/BlinkLoud.ogg"
 
 	cast()
 		if(!holder)
 			return
+		var/mob/living/carbon/human/H = holder.owner
 
 		holder.owner.say("SYCAR TYN")
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/BlinkLoud.ogg", 50, 0, -1)
 
 		var/accuracy = 3
 		if(holder.owner.wizard_spellpower())
@@ -23,9 +21,9 @@
 		else
 			boutput(holder.owner, "<span style=\"color:red\">Your spell is weak without a staff to focus it!</span>")
 
-		if(holder.owner.getStatusDuration("burning"))
+		if(H.burning)
 			boutput(holder.owner, "<span style=\"color:blue\">The flames sputter out as you blink away.</span>")
-			holder.owner.delStatus("burning")
+			H.set_burning(0)
 
 		var/targetx = holder.owner.x
 		var/targety = holder.owner.y
@@ -62,5 +60,8 @@
 		if(!isturf(picked))
 			boutput(holder.owner, "<span style=\"color:red\">It's too dangerous to blink there!</span>")
 			return
-		animate_blink(holder.owner)
-		holder.owner.set_loc(picked)
+		if(picked.loc.name == "Chapel" && get_corruption_percent() < 40)
+			boutput(holder.owner, "<span style=\"color:red\">Your spell fails due to divine intervention! You should move away from the Chapel.</span>")
+		else
+			animate_blink(holder.owner)
+			holder.owner.set_loc(picked)

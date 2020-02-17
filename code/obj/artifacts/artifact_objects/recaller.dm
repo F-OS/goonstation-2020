@@ -23,10 +23,9 @@
 		if (!user)
 			return
 
-		SPAWN_DBG(src.recall_delay)
-			if (user) //Wire note: Fix for Cannot execute null.visible message()
-				user.visible_message("<span style=\"color:red\"><b>[user]</b> is suddenly pulled through space!</span>")
-				playsound(user.loc, "sound/effects/mag_warp.ogg", 50, 1, -1)
-				var/turf/T = get_turf(O)
-				if (T)
-					user.set_loc(T)
+		spawn(src.recall_delay)
+			user.visible_message("<span style=\"color:red\"><b>[user]</b> is suddenly pulled through space!</span>")
+			playsound(user.loc, "sound/effects/mag_warp.ogg", 50, 1, -1)
+			var/turf/T = get_turf(O)
+			if (T)
+				user.set_loc(T)

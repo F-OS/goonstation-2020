@@ -48,10 +48,10 @@ var/list/status_display_text_images = list()
 	// register for radio system
 	New()
 		..()
-		SPAWN_DBG(5)	// must wait for map loading to finish
-			//if(radio_controller)
-			//	radio_controller.add_object(src, "[frequency]")
-			del(src) //lol
+		spawn(5)	// must wait for map loading to finish
+			if(radio_controller)
+				radio_controller.add_object(src, "[frequency]")
+		del(src)
 
 	// timed process
 
@@ -60,7 +60,7 @@ var/list/status_display_text_images = list()
 		//qdel(src)
 		//return
 
-		if(status & NOPOWER)
+		if(stat & NOPOWER)
 			ClearAllOverlays()
 			return
 
@@ -82,7 +82,7 @@ var/list/status_display_text_images = list()
 			if(1)	// shuttle timer
 				if(emergency_shuttle.online)
 					var/displayloc
-					if(emergency_shuttle.location == SHUTTLE_LOC_STATION)
+					if(emergency_shuttle.location == 1)
 						displayloc = "ETD "
 					else
 						displayloc = "ETA "
@@ -116,6 +116,9 @@ var/list/status_display_text_images = list()
 
 				update_display(disp1, disp2)
 			*/
+
+			if(6)
+				update_display_lines("ORE","[score_oremined]")
 			if(2)
 				/*
 				var/line1
@@ -141,13 +144,13 @@ var/list/status_display_text_images = list()
 				if((index1 || index2) && repeat_update)	// if either line is scrolling
 														// and we haven't forced an update yet
 
-					SPAWN_DBG(5)
+					spawn(5)
 						repeat_update = 0
 						update()		// set to update again in 5 ticks
 						repeat_update = 1
 				*/
 				if(text_ticker.len)
-					DEBUG_MESSAGE("Updating text display index: [ticker_index], len: [text_ticker.len]")
+					DEBUG("Updating text display index: [ticker_index], len: [text_ticker.len]")
 					update_display_lines(,,text_ticker[ticker_index])
 					ticker_index = ((ticker_index + 1) % text_ticker.len)
 			else
@@ -211,7 +214,7 @@ var/list/status_display_text_images = list()
 				temp.overlays += texticon(line1, 23, -9)
 				temp.overlays += texticon(line2, 23, -17)
 
-			DEBUG_MESSAGE("Line 1: [line1], Line 2: [line2]")
+			DEBUG("Line 1: [line1], Line 2: [line2]")
 
 			text_ticker += temp
 
@@ -249,7 +252,7 @@ var/list/status_display_text_images = list()
 	proc/update_display_lines(var/line1, var/line2, var/image/override = null)
 
 		if(override) //Ok, we're gonna use our own image entirely, sidestepping the image building process
-			DEBUG_MESSAGE("[UpdateOverlays(override, "text") ? "Success" : "Failure"]")
+			DEBUG("[UpdateOverlays(override, "text") ? "Success" : "Failure"]")
 			return
 
 		if(line1 == lastdisplayline1 && line2 == lastdisplayline2)
@@ -390,7 +393,7 @@ var/list/status_display_text_images = list()
 		pic_image = image('icons/obj/status_display.dmi', icon_state = picture_state)
 
 	process()
-		if (status & NOPOWER)
+		if (stat & NOPOWER)
 			UpdateOverlays(null, "emotion_img")
 			picture_state = null
 			return
@@ -423,7 +426,7 @@ var/list/status_display_text_images = list()
 
 	get_desc()
 		..()
-		if (status & NOPOWER)
+		if (stat & NOPOWER)
 			return
 		if (src.message)
 			. += "<br>It says: \"[src.message]\""

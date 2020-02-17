@@ -3,7 +3,6 @@
 	artifact = 1
 	associated_datum = /datum/artifact/melee
 	module_research_no_diminish = 1
-	click_delay = COMBAT_CLICK_DELAY
 
 	attack(mob/M as mob, mob/user as mob)
 		if (!src.ArtifactSanityCheck())
@@ -44,14 +43,14 @@
 			src.KO_time = rand(3,12)
 		if (prob(1))
 			src.deadly = 1
-		src.hitsound = pick('sound/impact_sounds/Metal_Hit_Heavy_1.ogg','sound/impact_sounds/Wood_Hit_1.ogg','sound/effects/exlow.ogg','sound/effects/mag_magmisimpact.ogg','sound/impact_sounds/Energy_Hit_1.ogg',
-		'sound/impact_sounds/Generic_Snap_1.ogg','sound/machines/mixer.ogg','sound/impact_sounds/Generic_Hit_Heavy_1.ogg','sound/weapons/ACgun2.ogg','sound/impact_sounds/Energy_Hit_3.ogg','sound/weapons/flashbang.ogg',
+		src.hitsound = pick('sound/effects/bang.ogg','sound/effects/zhit.ogg','sound/effects/exlow.ogg','sound/effects/mag_magmisimpact.ogg','sound/effects/shieldhit2.ogg',
+		'sound/effects/snap.ogg','sound/machines/mixer.ogg','sound/misc/meteorimpact.ogg','sound/weapons/ACgun2.ogg','sound/weapons/Egloves.ogg','sound/weapons/flashbang.ogg',
 		'sound/weapons/grenade.ogg','sound/weapons/railgun.ogg')
 
 	effect_melee_attack(var/obj/O,var/mob/living/user,var/mob/living/target)
 		if (..())
 			return
-		if (!isliving(user) || !isliving(target))
+		if (!istype(user,/mob/living/) || !istype(target,/mob/living/))
 			return
 		user.visible_message("<span style=\"color:red\"><b>[user.name]</b> attacks [target.name] with [O]!</span>")
 		var/turf/T = get_turf(user)
@@ -70,6 +69,6 @@
 						var/mob/living/carbon/human/H = target
 						H.toxloss += rand(1, dmg_amount)
 			if (src.stun_time)
-				target.changeStatus("stunned", src.stun_time * 15)
+				target.stunned = src.stun_time
 			if (src.KO_time)
-				target.changeStatus("paralysis", src.KO_time*15)
+				target.paralysis = src.KO_time

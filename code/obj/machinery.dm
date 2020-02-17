@@ -11,10 +11,8 @@
 /obj/machinery
 	name = "machinery"
 	icon = 'icons/obj/stationobjs.dmi'
-	flags = FPRINT | FLUID_SUBMERGE
-
-	var/status = 0
-	var/mob/current_user = null //GC WOES (airlocks seem to capture current_user a lot and prevent mob gc)
+	var/stat = 0
+	var/mob/current_user = null
 	var/power_usage = 0
 	var/power_channel = EQUIP
 	var/power_credit = 0
@@ -27,13 +25,8 @@
 /obj/machinery/New()
 	..()
 	SubscribeToProcess()
-	if (current_state > GAME_STATE_WORLD_INIT)
-		spawn(5)
-			src.power_change()
-
-/obj/machinery/initialize()
-	..()
-	src.power_change()
+	spawn(5)
+		src.power_change()
 
 /obj/machinery/disposing()
 	UnsubscribeProcess()
@@ -58,7 +51,7 @@
 	// For machines that are part of a pipe network, this routine also calculates the gas flow to/from this machine.
 	if (machines_may_use_wired_power && power_usage)
 		power_change()
-		if (!(status & NOPOWER) && wire_powered)
+		if (!(stat & NOPOWER) && wire_powered)
 			use_power(power_usage, power_channel)
 			power_credit = power_usage
 
@@ -74,43 +67,40 @@
 	s.start()
 
 	// NORTH
-	gib = make_cleanable( /obj/decal/cleanable/machine_debris,location)
+	gib = new /obj/decal/cleanable/machine_debris(location)
 	if (prob(25))
 		gib.icon_state = "gibup1"
 	gib.streak(list(NORTH, NORTHEAST, NORTHWEST))
-	LAGCHECK(LAG_LOW)
 
 	// SOUTH
-	gib = make_cleanable( /obj/decal/cleanable/machine_debris,location)
+	gib = new /obj/decal/cleanable/machine_debris(location)
 	if (prob(25))
 		gib.icon_state = "gibdown1"
 	gib.streak(list(SOUTH, SOUTHEAST, SOUTHWEST))
-	LAGCHECK(LAG_LOW)
 
 	// WEST
-	gib = make_cleanable( /obj/decal/cleanable/machine_debris,location)
+	gib = new /obj/decal/cleanable/machine_debris(location)
 	gib.streak(list(WEST, NORTHWEST, SOUTHWEST))
-	LAGCHECK(LAG_LOW)
 
 	// EAST
-	gib = make_cleanable( /obj/decal/cleanable/machine_debris,location)
+	gib = new /obj/decal/cleanable/machine_debris(location)
 	gib.streak(list(EAST, NORTHEAST, SOUTHEAST))
-	LAGCHECK(LAG_LOW)
 
 	// RANDOM
-	gib = make_cleanable( /obj/decal/cleanable/machine_debris,location)
+	gib = new /obj/decal/cleanable/machine_debris(location)
 	gib.streak(alldirs)
+	sleep(-1)
 
 /obj/machinery/Topic(href, href_list)
 	..()
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		//boutput(usr, "<span style='color:red'>That machine is not powered!</span>")
 		return 1
 	if(usr.restrained() || usr.lying || usr.stat)
 		//boutput(usr, "<span style='color:red'>You are unable to do that currently!</span>")
 		return 1
 	if(!hasvar(src,"portable") || !src:portable)
-		if ((!in_range(src, usr) || !istype(src.loc, /turf)) && !issilicon(usr) && !isAI(usr))
+		if ((!in_range(src, usr) || !istype(src.loc, /turf)) && !istype(usr, /mob/living/silicon))
 			if (!usr)
 				message_coders("[type]/Topic(): no usr in Topic - [name] at [showCoords(x, y, z)].")
 			else if (x in list(usr.x - 1, usr.x, usr.x + 1) && y in list(usr.y - 1, usr.y, usr.y + 1) && z == usr.z && isturf(loc))
@@ -118,7 +108,7 @@
 			//boutput(usr, "<span style='color:red'>You must be near the machine to do this!</span>")
 			return 1
 	else
-		if ((!in_range(src.loc, usr) || !istype(src.loc.loc, /turf)) && !issilicon(usr) && !isAI(usr))
+		if ((!in_range(src.loc, usr) || !istype(src.loc.loc, /turf)) && !istype(usr, /mob/living/silicon))
 			//boutput(usr, "<span style='color:red'>You must be near the machine to do this!</span>")
 			return 1
 	src.add_fingerprint(usr)
@@ -128,21 +118,18 @@
 	return src.attack_hand(user)
 
 /obj/machinery/attack_hand(mob/user as mob)
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return 1
-	if(user && (user.lying || user.stat))
+	if(user.lying || user.stat)
 		return 1
-	if (user && (get_dist(src, user) > 1 || !istype(src.loc, /turf)) && !issilicon(user) && !isAI(usr))
+	if ((get_dist(src, user) > 1 || !istype(src.loc, /turf)) && !istype(user, /mob/living/silicon))
 		return 1
-	if (user && ishuman(user))
+	if (ishuman(user))
 		if(user.get_brain_damage() >= 60 || prob(user.get_brain_damage()))
 			boutput(user, "<span style=\"color:red\">You are too dazed to use [src] properly.</span>")
 			return 1
 
-	if (user)
-		src.add_fingerprint(user)
-		interact_particle(user,src)
-
+	src.add_fingerprint(user)
 	return 0
 
 /obj/machinery/ex_act(severity)
@@ -231,10 +218,10 @@
 										// by default, check equipment channel & set flag
 										// can override if needed
 	if(powered())
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
 
-		status |= NOPOWER
+		stat |= NOPOWER
 	return
 
 /obj/machinery/emp_act()
@@ -247,7 +234,7 @@
 	pulse2.anchored = 1
 	pulse2.dir = pick(cardinal)
 
-	SPAWN_DBG(10)
+	spawn(10)
 		qdel(pulse2)
 	return
 
@@ -287,11 +274,11 @@
 	icon_state = "switch"
 	anchored = 1
 	density = 0
-	var/ID = 0
-	var/noise = 0
-	var/broken = 0
-	var/sound = 0
-	var/rep = 0
+	var ID = 0
+	var noise = 0
+	var broken = 0
+	var sound = 0
+	var rep = 0
 
 /obj/machinery/noise_maker
 	name = "Alert Horn"
@@ -300,16 +287,28 @@
 	icon_state = "nm n +o"
 	anchored = 1
 	density = 0
-	var/ID = 0
-	var/sound = 0
-	var/broken = 0
-	var/containment_fail = 0
-	var/last_shot = 0
-	var/fire_delay = 4
+	var ID = 0
+	var sound = 0
+	var broken = 0
+	var containment_fail = 0
+	var last_shot = 0
+	var fire_delay = 4
 
 /obj/machinery/wire
 	name = "wire"
 	icon = 'icons/obj/power_cond.dmi'
+
+/obj/machinery/crema_switch
+	desc = "Burn baby burn!"
+	name = "crematorium igniter"
+	icon = 'icons/obj/power.dmi'
+	icon_state = "crema_switch"
+	anchored = 1.0
+	req_access = list(access_crematorium)
+	var/on = 0
+	var/area/area = null
+	var/otherarea = null
+	var/id = 1
 
 /obj/machinery/transmitter
 	name = "transmitter"
@@ -321,3 +320,4 @@
 
 	var/list/signals = list()
 	var/list/transmitters = list()
+

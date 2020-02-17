@@ -4,7 +4,7 @@
 	var/list/suspended = list()
 	var/locked = 0
 
-	var/topBarRendered = 1
+	var/topBarRendered = 0
 	var/rendered = 1
 	var/datum/targetable/shiftPower = null
 	var/datum/targetable/ctrlPower = null
@@ -21,91 +21,32 @@
 
 	var/mob/owner = null
 
-	var/x_occupied = 0
-	var/y_occupied = 0
-	var/datum/abilityHolder/composite_owner = 0
-	var/any_abilities_displayed = 0
-
-	var/cast_while_dead = 0
-
-	// cirr's effort to make these work like normal huds, take 1
-	var/datum/hud/hud
-
 	New(var/mob/M)
 		owner = M
-		hud = new()
-		if(owner)
-			owner.attach_hud(hud)
 
-	disposing()
-		for (var/obj/screen/S in hud.objects)
-			if (hasvar(S, "master") && S:master == src)
-				S:master = null
-		if (owner)
-			owner.detach_hud(hud)
-		hud.clear_master()
-		hud.mobs -= src
-
-		if (owner)
-			owner.huds -= hud
-			owner = null
-		..()
-
-	proc/onLife(var/mult = 1)
-		.= 0
-
-	proc/updateButtons(var/called_by_owner = 0, var/start_x = 1, var/start_y = 0)
-		//MBC : sorry, but for things to work correctly in the case of composite with multiple holders (omnitraitor) we need to update via the composite holder only
-		//note that the composite holder reads in x_occupied and y_occupied. that's important for positioning over multiple holders.
-		if (composite_owner && !called_by_owner)
-			composite_owner.updateButtons()
-			return
-
-		x_occupied = 0
-		y_occupied = 0
-		any_abilities_displayed = 0
-
+	proc/updateButtons()
 		if (src.topBarRendered && src.rendered)
 			if(!src.owner || !src.owner.client)
 				return
 
-			if (!called_by_owner)
-				for(var/obj/screen/ability/A in src.hud)
-					src.hud -= A
+			for(var/obj/screen/ability/A in src.owner.client.screen)
+				src.owner.client.screen -= A
 
-			if (ishuman(owner))
-				var/mob/living/carbon/human/H = owner
-				// are we viewing genetic powers instead of our item abilities and other abilities?
-				// if so, don't bother adding buttons back to hud, keep it empty
-				if (H.hud.current_ability_set == 2)
-					return
+			var/pos_x = 1
+			var/pos_y = 0
 
-			var/pos_x = start_x
-			var/pos_y = start_y
 			for(var/datum/targetable/B in src.abilities)
 				if (!istype(B.object, /obj/screen/ability/topBar))
 					continue
-				if (!B.display_available())
-					B.object.screen_loc = null
-					continue
-				any_abilities_displayed = 1
 				var/obj/screen/ability/topBar/button = B.object
 				button.update_on_hud(pos_x,pos_y)
-				button.icon = B.icon
-				button.icon_state = B.icon_state
 				if (!B.special_screen_loc)
 					pos_x++
 					if(pos_x > 15)
 						pos_x = 1
 						pos_y++
-
-			x_occupied = pos_x
-			y_occupied = pos_y
 			return
 
-		// legacy stat panel button rendering
-		// hopefully one day we can just axe this completely
-		// wouldn't that be a fuckin' dream come true
 		if(src.rendered)
 			if(!src.owner || !src.owner.client)
 				return
@@ -131,18 +72,14 @@
 	proc/addBonus(var/value)
 		bonus += value
 
-	proc/generatePoints(var/mult = 1)
+	proc/generatePoints()
 		lastBonus = bonus
 		points += bonus
-		points += regenRate * mult
+		points += regenRate
 		bonus = 0
 
 	proc/transferOwnership(var/newbody)
-		if(owner)
-			owner.detach_hud(hud)
 		owner = newbody
-		if(owner)
-			owner.attach_hud(hud)
 
 	proc/Stat()
 		if (usesPoints && pointName != "" && rendered)
@@ -152,18 +89,12 @@
 				stat("Generation Rate:", "[src.regenRate] + [src.lastBonus]")
 
 	proc/StatAbilities()
-		if (!rendered)
+		if (topBarRendered || !rendered)
 			return
-
-		if (topBarRendered) //Topbar shows abilities, just display the toplevel info in Status
-			statpanel("Status")
-			onAbilityStat()
-			stat(null, " ")
-		else
-			statpanel(src.tabName)
-			onAbilityStat()
-			for (var/datum/targetable/spell in src.abilities)
-				spell.Stat()
+		statpanel(src.tabName)
+		onAbilityStat()
+		for (var/datum/targetable/spell in src.abilities)
+			spell.Stat()
 
 	proc/onAbilityStat()
 		return
@@ -248,21 +179,21 @@
 			return 0
 		if (params["alt"])
 			if (altPower)
-				altPower.handleCast(target, params)
+				altPower.handleCast(target)
 				return 1
 			//else
 			//	boutput(owner, "<span style=\"color:red\">Nothing is bound to alt.</span>")
 			return 0
 		else if (params["ctrl"])
 			if (ctrlPower)
-				ctrlPower.handleCast(target, params)
+				ctrlPower.handleCast(target)
 				return 1
 			//else
 			//	boutput(owner, "<span style=\"color:red\">Nothing is bound to ctrl.</span>")
 			return 0
 		else if (params["shift"])
 			if (shiftPower)
-				shiftPower.handleCast(target, params)
+				shiftPower.handleCast(target)
 				return 1
 			//else
 			//	boutput(owner, "<span style=\"color:red\">Nothing is bound to shift.</span>")
@@ -315,15 +246,6 @@
 		updateButtons()
 		return 0
 
-	proc/onAbilityHolderInstanceAdd()
-		return 0
-
-	proc/remove_unlocks()
-		return 0
-
-	proc/set_loc_callback(var/newloc)
-		.=0
-
 /obj/screen/ability
 	var/datum/targetable/owner
 	var/static/image/binding = image('icons/mob/spell_buttons.dmi',"binding")
@@ -338,10 +260,6 @@
 	var/static/image/eight = image('icons/mob/spell_buttons.dmi',"8")
 	var/static/image/nine = image('icons/mob/spell_buttons.dmi',"9")
 	var/static/image/zero = image('icons/mob/spell_buttons.dmi',"0")
-
-	disposing()
-		owner = null
-		..()
 
 	proc/updateIcon()
 		src.overlays.Cut()
@@ -395,7 +313,7 @@
 				use_targeted = 2 // Abort parent proc.
 			else if (targets.len == 1) // Only one guy nearby, but we need the mob reference for handleCast() then.
 				use_targeted = 0
-				SPAWN_DBG(0)
+				spawn
 					spell.handleCast(targets[1])
 				use_targeted = 2 // Abort parent proc.
 			else
@@ -406,19 +324,14 @@
 
 	//WIRE TOOLTIPS
 	MouseEntered(location, control, params)
-		if (src && src.owner && usr.client.tooltipHolder && control == "mapwindow.map")
-			var/theme = src.owner.theme
+		var/theme
+		if (istype(owner, /datum/targetable/wraithAbility) || istype(owner, /datum/targetable/revenantAbility))
+			theme = "wraith"
 
-			usr.client.tooltipHolder.showHover(src, list(
-				"params" = params,
-				"title" = src.name,
-				"content" = (src.desc ? src.desc : null),
-				"theme" = theme
-			))
+		usr.client.tooltip.show(src, params, title = src.name, content = (src.desc ? src.desc : null), theme = theme)
 
 	MouseExited()
-		if (usr.client.tooltipHolder)
-			usr.client.tooltipHolder.hideHover()
+		usr.client.tooltip.hide()
 
 /obj/screen/ability/topBar
 	var/static/image/ctrl_highlight = image('icons/mob/spell_buttons.dmi',"ctrl")
@@ -429,14 +342,10 @@
 
 	var/obj/screen/pseudo_overlay/cd_tens
 	var/obj/screen/pseudo_overlay/cd_secs
-	var/tens_offset_x = 19
-	var/tens_offset_y = 7
-	var/secs_offset_x = 23
-	var/secs_offset_y = 7
-
-	//mbc : used for updates called without positioning - just use last poistion
-	var/last_x = 0
-	var/last_y = 0
+	var/tens_offset_x = 0
+	var/tens_offset_y = 0
+	var/secs_offset_x = 0
+	var/secs_offset_y = 0
 
 	New()
 		..()
@@ -450,13 +359,10 @@
 		S.y_offset = secs_offset_y
 		cd_tens = T
 		cd_secs = S
-		if (isnull(darkener)) // fuck. -drsingh
-			darkener = image('icons/mob/spell_buttons.dmi',"darkener")
 		darkener.alpha = 100
-		SPAWN_DBG(0)
-			if(owner)
-				T.color = owner.cd_text_color
-				S.color = owner.cd_text_color
+		spawn(0)
+			T.color = owner.cd_text_color
+			S.color = owner.cd_text_color
 
 	updateIcon()
 		var/mob/M = get_controlling_mob()
@@ -499,25 +405,16 @@
 
 		var/name = initial(owner.name)
 		if (owner.holder)
-			if (owner.holder.usesPoints && owner.pointCost)
-				name += "<br> Cost: [owner.pointCost] [owner.holder.pointName]"
-			if (owner.cooldown)
-				name += "<br> Cooldown: [owner.cooldown / 10] s"
+			if (owner.holder.usesPoints)
+				name += "; Cost: [owner.pointCost] [owner.holder.pointName]"
+			name += "; Cooldown: [owner.cooldown / 10] seconds"
 			src.name = name
 
-		var/datum/hud/abilityHud
-		if(owner.holder)
-			// for nice, well-behaved abilities that live in a holder
-			abilityHud = owner.holder.hud
-		else
-			// for fucking deviant genetics abilities that know neither ethics nor morality
-			if(ishuman(M)) // they better fucking be human i'm not dealing with other things getting bioeffects
-				var/mob/living/carbon/human/H = M
-				abilityHud = H.hud
 
-		abilityHud.add_object(src)
-		abilityHud.remove_object(src.cd_tens)
-		abilityHud.remove_object(src.cd_secs)
+
+		M.client.screen += src
+		M.client.screen -= src.cd_tens
+		M.client.screen -= src.cd_secs
 
 		var/on_cooldown = round((owner.last_cast - world.time) / 10)
 		if (on_cooldown > 0)
@@ -527,13 +424,10 @@
 			if (on_cooldown >= 10)
 				src.cd_tens.icon_state = "[get_digit_from_number(on_cooldown,2)]"
 				src.cd_tens.screen_loc = "NORTH-[pos_y]:[src.tens_offset_y],[pos_x]:[src.tens_offset_x]"
-				abilityHud.add_object(src.cd_tens)
+				M.client.screen += src.cd_tens
 			src.cd_secs.icon_state = "[get_digit_from_number(on_cooldown,1)]"
 			src.cd_secs.screen_loc = "NORTH-[pos_y]:[src.secs_offset_y],[pos_x]:[src.secs_offset_x]"
-			abilityHud.add_object(src.cd_secs)
-
-		last_x = pos_x
-		last_y = pos_y
+			M.client.screen += src.cd_secs
 
 	clicked(parameters)
 		if (!owner.holder || !owner.holder.owner || usr != owner.holder.owner)
@@ -635,7 +529,7 @@
 		name = null
 		desc = null
 
-		max_range = 10
+		max_range = 7
 		targeted = 0
 		target_anything = 0
 		last_cast = 0
@@ -657,7 +551,6 @@
 		check_range = 1 //Does this check for range at all?
 		sticky = 0 //Targeting stays active after using spell if this is 1. click button again to disable the active spell.
 		ignore_sticky_cooldown = 0 //if 1, Ability will stick to cursor even if ability goes on cooldown after first cast.
-		interrupt_action_bars = 1 //if 1, we will interrupt any action bars running with the INTERRUPT_ACT flag
 
 		action_key_number = -1 //Number hotkey assigned to this ability. Only used if > 0
 		waiting_for_hotkey = 0 //If 1, the next number hotkey pressed will be bound to this.
@@ -667,27 +560,9 @@
 		icon = 'icons/mob/spell_buttons.dmi'
 		icon_state = "blob-template"
 
-		theme = null // for wire's tooltips, it's about time this got varized
-
-	New()
-		..()
-		var/obj/screen/ability/topBar/B = new /obj/screen/ability/topBar(null)
-		B.icon = src.icon
-		B.icon_state = src.icon_state
-		B.owner = src
-		B.name = src.name
-		B.desc = src.desc
-		src.object = B
-
-	disposing()
-		if (object && object.owner == src)
-			object.owner = null
-		..()
-
 	proc
-		handleCast(atom/target, params)
-			Z_LOG_DEBUG("abilities", "handle shit [target] / [params]")
-			var/result = tryCast(target, params)
+		handleCast(atom/target)
+			var/result = tryCast(target)
 			if (result && result != 999)
 				last_cast = 0 // reset cooldown
 			else if (result != 999)
@@ -696,7 +571,6 @@
 			holder.updateButtons()
 
 		cast(atom/target)
-			if(interrupt_action_bars) actions.interrupt(holder.owner, INTERRUPT_ACT)
 			return
 
 		onAttach(var/datum/abilityHolder/H)
@@ -706,8 +580,7 @@
 
 		// Don't remove the holder.locked checks, as lots of people used lag and click-spamming
 		// to execute one ability multiple times. The checks hopefully make it a bit more difficult.
-		tryCast(atom/target, params)
-			Z_LOG_DEBUG("abilities", "fucking christ [target] / [params]")
+		tryCast(atom/target)
 			if (!holder || !holder.owner)
 				logTheThing("debug", usr, null, "orphaned ability clicked: [name]. ([holder ? "no owner" : "no holder"])")
 				return 1
@@ -719,10 +592,6 @@
 			if (!holder.pointCheck(pointCost))
 				src.holder.locked = 0
 				return 1000
-			if (!holder.cast_while_dead && isdead(holder.owner))
-				boutput(holder.owner, "<span style=\"color:red\">You cannot cast this ability while you are dead.</span>")
-				src.holder.locked = 0
-				return 999
 			if (last_cast > world.time)
 				boutput(holder.owner, "<span style=\"color:red\">That ability is on cooldown for [round((last_cast - world.time) / 10)] seconds.</span>")
 				src.holder.locked = 0
@@ -752,7 +621,7 @@
 			if (!castcheck())
 				src.holder.locked = 0
 				return 998
-			. = cast(target, params)
+			. = cast(target)
 			src.holder.locked = 0
 			if (!.)
 				holder.deductPoints(pointCost)
@@ -762,8 +631,6 @@
 
 		doCooldown()
 			src.last_cast = world.time + src.cooldown
-			SPAWN_DBG(src.cooldown + 5)
-				holder.updateButtons()
 
 		castcheck()
 			return 1
@@ -850,9 +717,6 @@
 
 			return targets
 
-		display_available()
-			.= 1
-
 /obj/screen/pseudo_overlay
 	// this is hack as all get out
 	// but since i cant directly alter the pixel offset of a screen overlay it'll have to do
@@ -864,21 +728,13 @@
 
 /datum/abilityHolder/composite
 	var/list/holders = list()
-	rendered = 1
-	topBarRendered = 1
-
-
-	disposing()
-		for (var/datum/abilityHolder/H in holders)
-			H.owner = null
-		..()
+	rendered = 0
 
 	proc/addHolder(holderType)
 		for (var/datum/abilityHolder/H in holders)
 			if (H.type == holderType)
 				return
 		holders += new holderType(owner)
-		holders[holders.len].composite_owner = src
 		updateButtons()
 
 	proc/addHolderInstance(var/datum/abilityHolder/N)
@@ -888,13 +744,11 @@
 		holders += N
 		if (N.owner != owner)
 			N.owner = owner
-		N.onAbilityHolderInstanceAdd()
 		updateButtons()
 
 	proc/removeHolder(holderType)
 		for (var/datum/abilityHolder/H in holders)
 			if (H.type == holderType)
-				H.composite_owner = 0
 				holders -= H
 		updateButtons()
 
@@ -928,27 +782,17 @@
 			if(used) return used
 		return 0
 
-	updateButtons(var/called_by_owner = 0, var/start_x = 1, var/start_y = 0)
-		if (src.topBarRendered && src.rendered && src.hud)
-			for(var/obj/screen/ability/A in src.hud)
-				src.hud -= A
-
-		x_occupied = 1
-		y_occupied = 0
-		any_abilities_displayed = 0
+	updateButtons()
 		for (var/datum/abilityHolder/H in holders)
-			H.updateButtons(called_by_owner = 1, start_x = x_occupied, start_y = y_occupied)
-			x_occupied = H.x_occupied
-			y_occupied = H.y_occupied
-			any_abilities_displayed = any_abilities_displayed || H.any_abilities_displayed
+			H.updateButtons()
 
 	addBonus(var/value)
 		for (var/datum/abilityHolder/H in holders)
 			H.addBonus(value)
 
-	generatePoints(var/mult = 1)
+	generatePoints()
 		for (var/datum/abilityHolder/H in holders)
-			H.generatePoints(mult)
+			H.generatePoints()
 
 	Stat()
 		for (var/datum/abilityHolder/H in holders)
@@ -983,15 +827,13 @@
 				A.holder = H
 				H.abilities += A
 				A.onAttach(H)
-				//H.updateButtons()
+				H.updateButtons()
 				return
 		var/datum/abilityHolder/X = holders[1]
 		A.holder = X
 		X.abilities += A
-		//X.updateButtons()
+		X.updateButtons()
 		A.onAttach(X)
-
-		src.updateButtons()
 		return A
 
 	removeAbility(var/abilityType)
@@ -1021,7 +863,7 @@
 		return 1
 
 	deepCopy()
-		var/datum/abilityHolder/composite/copy = new src.type(src.owner)
+		var/datum/abilityHolder/composite/copy = new src.type
 		for (var/datum/abilityHolder/H in holders)
 			copy.holders += H.deepCopy()
 		return copy
@@ -1030,15 +872,3 @@
 		for (var/datum/abilityHolder/H in holders)
 			H.transferOwnership(newbody)
 		owner = newbody
-
-	remove_unlocks()
-		for (var/datum/abilityHolder/H in holders)
-			H.remove_unlocks()
-
-	onLife(var/mult = 1)
-		for (var/datum/abilityHolder/H in holders)
-			H.onLife(mult)
-
-	set_loc_callback(var/newloc)
-		for (var/datum/abilityHolder/H in holders)
-			H.set_loc_callback(newloc)

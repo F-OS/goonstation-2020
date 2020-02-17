@@ -13,14 +13,8 @@
 			usr:targeting_spell = owner
 			usr.update_cursor()
 		else
-			SPAWN_DBG(0)
+			spawn
 				spell.handleCast()
-
-/obj/screen/ability/topBar/chaplain
-	tens_offset_x = 19
-	tens_offset_y = 7
-	secs_offset_x = 23
-	secs_offset_y = 7
 
 /datum/abilityHolder/religious
 	usesPoints = 0
@@ -30,6 +24,7 @@
 	var/god_name = null
 	var/god_epithet = null
 	var/god_domain = null
+	var/atheist = 0
 
 	New()
 		..()
@@ -58,7 +53,7 @@
 
 	proc/incapacitationCheck()
 		var/mob/living/M = holder.owner
-		return M.restrained() || M.stat || M.getStatusDuration("paralysis") || M.stunned || M.getStatusDuration("weakened")
+		return M.restrained() || M.stat || M.paralysis || M.stunned || M.weakened
 
 	castcheck()
 		if (incapacitationCheck())
@@ -78,7 +73,7 @@
 			return
 		last_cast = world.time + cooldown
 		holder.updateButtons()
-		SPAWN_DBG(cooldown + 5)
+		spawn(cooldown + 5)
 			holder.updateButtons()
 
 /proc/assemble_name(var/datum/abilityHolder/religious/religiousHolder)
@@ -87,7 +82,7 @@
 	var/list/namebegin = strings("gods.txt", "namebegin")
 	var/list/nameend = strings("gods.txt", "nameend")
 	religiousHolder.god_fullname = ""
-	if (religiousHolder.god_domain == "Atheism") // dweeb detected
+	if (religiousHolder.atheist == 1) // dweeb detected
 		religiousHolder.god_name = religiousHolder.owner.real_name
 		religiousHolder.god_epithet = "Smug Bastard"
 	else
@@ -96,7 +91,7 @@
 		religiousHolder.god_epithet += "[capitalize(pick(god_adjective))] "
 		religiousHolder.god_epithet += "[capitalize(pick(god_noun))]"
 	religiousHolder.god_fullname += "[religiousHolder.god_name] the [religiousHolder.god_epithet], "
-	if (religiousHolder.god_domain  == "Atheism")
+	if (religiousHolder.atheist == 1)
 		if (religiousHolder.owner.gender == MALE)
 			religiousHolder.god_fullname += "'God'"
 		else
@@ -105,7 +100,7 @@
 		religiousHolder.god_fullname += pick("God", "Goddess")
 	religiousHolder.god_fullname += " of [religiousHolder.god_domain]"
 
-	boutput(religiousHolder.owner, "<span style=\"color:blue\"><b>You are now a priest of [religiousHolder.god_fullname]!</b></span>")
+	boutput(religiousHolder.owner, "<span style=\"color:blue\">You are now a priest of [religiousHolder.god_fullname]!</span>")
 	return
 
 /datum/targetable/chaplain/chooseReligion
@@ -130,41 +125,33 @@
 			domainChoice = domains[domainChoice]
 		switch (domainChoice)
 			if (1)
+				religiousHolder.atheist = 1
 				religiousHolder.god_domain = "Atheism"
 				assemble_name(religiousHolder)
-
 			if (2)
 				religiousHolder.god_domain = "Order"
 				assemble_name(religiousHolder)
-
 			if (3)
 				religiousHolder.god_domain = "Chaos"
 				assemble_name(religiousHolder)
-
 			if (4)
 				religiousHolder.god_domain = "Light"
 				assemble_name(religiousHolder)
-
 			if (5)
 				religiousHolder.god_domain = "Darkness"
 				assemble_name(religiousHolder)
-
 			if (6)
 				religiousHolder.god_domain = "Life"
-				religiousHolder.addAbility(/datum/targetable/chaplain/stabilize)
 				assemble_name(religiousHolder)
-
 			if (7)
 				religiousHolder.god_domain = "Death"
 				assemble_name(religiousHolder)
-
 			if (8)
 				religiousHolder.god_domain = "Machinery"
 				usr.robot_talk_understand = 1
 				religiousHolder.addAbility(/datum/targetable/chaplain/chaplainDemag)
 				religiousHolder.addAbility(/datum/targetable/chaplain/sootheMachineSpirits)
 				assemble_name(religiousHolder)
-
 			if (9)
 				religiousHolder.god_domain = "Nature"
 				religiousHolder.addAbility(/datum/targetable/chaplain/blessWeed)
@@ -178,9 +165,6 @@
 
 //100% worthless gimmick shit, free fedora, supersmug emote, immunity to fedora gib?
 
-//every bible hit causes brain damage. might almost be 2overpowered4ourplayerbase but if you're wearing a hat it's stopped cold
-//also a way to be a subtle douchebag as a traitor, "no I swear I just keep getting really unlucky" *whack whack whack*
-
 //*************** ORDER *****************
 
 //Clean everything in an aoe
@@ -192,8 +176,7 @@
 
 //*************** LIGHT *****************
 
-//Flash immunity worked into apply_flash + pt laser + welding tools
-
+//Flash immunity
 //Photokinesis
 //Glowy
 
@@ -202,67 +185,16 @@
 //Erebokinesis
 //Ignore all darkness
 
-//get fucked over by lights/flashes
-
 //*************** LIFE *****************
 
-/datum/targetable/chaplain/stabilize
-	name = "Stabilize"
-	desc = "Stabilizes someone experiencing shock, hemorrhages, cardiac failure, or cardiac arrest. They will probably still require further medical attention."
-	cooldown = 1500
-	max_range = 1
-	icon_state = "absorbcorpse"
-
-	cast(atom/T)
-		var/datum/abilityHolder/religious/religiousHolder = src.holder
-		if (..())
-			return 1
-		if (get_dist(usr, T) > src.max_range)
-			boutput(usr, __red("[T] is too far away."))
-			return 1
-		if (!iscarbon(T))
-			boutput(usr, "<span style=\"color:red\">That's not exactly what this power was meant to work on.</span>")
-			return 1
-		var/mob/living/carbon/human/C = T
-		if (isdead(C))
-			boutput(usr, "<span style=\"color:red\">[C]'s dead, Jim! You're a miracle-worker, not...uh...look, it ain't gonna work.</span>")
-			return 1
-
-		usr.visible_message("<span style=\"color:blue\">[src.holder.owner] lays hands upon [C], murmuring a soft prayer to [religiousHolder.god_name]!</span>")
-		boutput(C, "<span style=\"color:blue\">You feel less terrible!</span>")
-		playsound(usr.loc, "sound/voice/heavenly.ogg", 50, 1)
-		var/datum/ailment_data/disease/D
-		for(D in C.ailments)
-			if (istype(D.master, /datum/ailment/disease/heartfailure))
-				C.cure_disease(D)
-			if (istype(D.master, /datum/ailment/disease/flatline))
-				C.cure_disease(D)
-			if (istype(D.master, /datum/ailment/disease/shock))
-				C.cure_disease(D)
-			if (istype(D.master, /datum/ailment/disease/noheart))
-				boutput(usr, "<span style\"color:red\">[C] is still sort of missing their heart. Maybe this calls for an actual doctor. Just saying.</span>")
-
-		C.take_oxygen_deprivation(-INFINITY)
-		C.losebreath = 0
-		C.paralysis--
-		C.bleeding = 0
-		C.updatehealth()
-		if (C.blood_volume < 101)
-			C.blood_volume = 101 //this is to prevent people from instantly relapsing into shock/heart failure/braindeath at low blood
-
-		return 0
-
-//zero chance to accidentally beat people with the bible
-//this sounds kind of low-impact except 2/5ths of the bible's hits are wasted and give brain damage
-//so you're getting a 40% increase in efficiency and can't accidentally murder someone who was recently in crit
+//stabilize someone in shock/heart attack, long cd
+//self-regen/heal
 
 //*************** DEATH *****************
 
 //passively sense when deaths occur
-
 //????
 //Animate meatcubes maybe???
-
 
 //*************** NATURE *****************
 
@@ -271,6 +203,8 @@
 	name = "Bless Weed"
 	desc = "Make some herb into sacred herbs."
 	cooldown = 150
+	targeted = 1
+	target_anything = 1
 	icon_state = "absorbcorpse"
 
 	cast(atom/T)
@@ -283,12 +217,12 @@
 			return 1
 
 		if (istype(T,/obj/item/plant/herb/cannabis/black))
-			boutput(holder.owner, "<span style=\"color:blue\">You purify the toxins in [T].</span>")
+			boutput(holder.owner, "<span style=\"color:blue\">You purify the toxins in [T]!</span>")
 			new/obj/item/plant/herb/cannabis/spawnable(T.loc)
 			qdel(T)
 			return 0
 		if (istype(T, /obj/item/plant/herb/cannabis/mega))
-			boutput(holder.owner, "<span style=\"color:blue\">You bestow [religiousHolder.god_name]'s <i>special</i> blessing upon [T].</span>")
+			boutput(holder.owner, "<span style=\"color:blue\">You bestow [religiousHolder.god_name]'s blessing upon [T]!</span>")
 			new/obj/item/plant/herb/cannabis/omega/spawnable(T.loc)
 			qdel(T)
 			return 0
@@ -299,7 +233,7 @@
 			boutput(holder.owner, "<span style=\"color:red\">Look, this shit could glue [religiousHolder.god_name] to the couch already. Making it any more dank might cause some sort of weedularity.</span>")
 			return 1
 		else
-			boutput(holder.owner, "<span style=\"color:blue\">You bestow [religiousHolder.god_name]'s blessing upon [T].</span>")
+			boutput(holder.owner, "<span style=\"color:blue\">You bestow [religiousHolder.god_name]'s blessing upon [T]!</span>")
 			new/obj/item/plant/herb/cannabis/white/spawnable(T.loc)
 			qdel(T)
 			return 0
@@ -307,8 +241,9 @@
 /datum/targetable/chaplain/fortifySeed
 	name = "Fortify Seed"
 	desc = "Blesses a seed, giving small, random improvements to all of its traits."
-	cooldown = 150
-	max_range = 1
+	cooldown = 450
+	targeted = 1
+	target_anything = 1
 	icon_state = "absorbcorpse"
 
 	proc/fortify(var/obj/item/seed/S)
@@ -321,12 +256,10 @@
 		DNA.endurance += rand(0,3)
 
 	cast(atom/T)
-		var/datum/abilityHolder/religious/religiousHolder = src.holder
 		if (..())
 			return 1
 
 		if (istype(T, /obj/item/seed))
-			boutput(holder.owner, "<span style=\"color:blue\">You bestow [religiousHolder.god_name]'s blessing upon [T].</span>")
 			fortify(T)
 			return 0
 		else
@@ -340,10 +273,11 @@
 	name = "Demag"
 	desc = "Repairs damage to sensitive electronics due to electromagnetic scrambling. Note: cyborg circuitry is too complex for this to work."
 	cooldown = 1800
+	targeted = 1
+	target_anything = 1
 	icon_state = "absorbcorpse"
 
 	cast(atom/T)
-		var/datum/abilityHolder/religious/religiousHolder = src.holder
 		if (..())
 			return 1
 
@@ -354,7 +288,7 @@
 		var/obj/O = T
 		// go to jail, do not pass src, do not collect pushed messages
 		if (O.demag())
-			boutput(usr, "<span style=\"color:blue\">You repair the damage to [O] in the name of [religiousHolder.god_name].</span>")
+			boutput(usr, "<span style=\"color:blue\">You repair the damage to [O].</span>")
 			return 0
 		else
 			boutput(usr, "<span style=\"color:red\">It doesn't seem like this needs fixing.</span>")
@@ -364,6 +298,8 @@
 	name = "Soothe Machine Spirits"
 	desc = "NT-model thermoelectric engines tend to be...tempermental. You're able to calm them down better than most."
 	cooldown = 900
+	targeted = 1
+	target_anything = 1
 	max_range = 1
 	icon_state = "absorbcorpse"
 
@@ -381,7 +317,8 @@
 
 		var/obj/machinery/power/generatorTemp/E = T
 		usr.visible_message("<span style=\"color:blue\">[usr] places a hand on the [E] and mumbles something.</span>")
-		playsound(usr.loc, "sound/voice/heavenly.ogg", 50, 1)
+		playsound(usr.loc, "sound/effects/heavenly.ogg", 50, 1)
+		spawn(30)
 		E.grump = 0
 		E.visible_message("<span style=\"color:blue\"><b>The [E] suddenly seems very chill!</b></span>")
 

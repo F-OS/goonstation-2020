@@ -21,6 +21,7 @@
 	stamina_crit_chance = 5
 	var/working = 0
 	var/mob/holder //this is hacky way to get the user without looping through all mobs in process
+	var/obj/item/holding
 	var/processHeld = 0
 	var/highpower = 0 //high power mode (holding during movement)
 
@@ -46,8 +47,6 @@
 		..()
 		src.holder = user
 		src.verbs |= /obj/item/magtractor/proc/toggleHighPower
-		src.set_mob(user)
-		src.show_buttons()
 
 	dropped(mob/user)
 		..()
@@ -57,24 +56,20 @@
 	attackby(obj/item/W as obj, mob/user as mob)
 		if (!W) return 0
 
-		if (get_dist(get_turf(src), get_turf(W)) > 1)
-			out(user, "<span style='color: red;'>\The [W] is too far away!</span>")
-			return 0
-
 		if (src.holding)
-			out(user, "<span style='color: red;'>\The [src] is already holding \the [src.holding]!</span>")
+			out(user, "<span style='color: red;'>The [src.name] is already holding \the [src.holding]!</span>")
 			return 0
 
-		if (W.anchored || W.w_class >= 4) //too bulky for backpacks, too bulky for this
-			out(user, "<span style='color: blue;'>\The [src] can't possibly hold that heavy an item!</span>")
+		if (W.anchored || W.w_class == 4) //too bulky for backpacks, too bulky for this
+			out(user, "<span style='color: blue;'>The [src.name] can't possibly hold that heavy an item!</span>")
 			return 0
 
 		if (istype(W, /obj/item/magtractor))
-			var/turf/T = get_ranged_target_turf(user, turn(user.dir, 180), 7)
-			playsound(user.loc, "sound/impact_sounds/Metal_Hit_Heavy_1.ogg", 50, 1)
+			var/turf/T = get_ranged_target_turf(user, GetOppositeDirection(user.dir), 7)
+			playsound(user.loc, "sound/effects/bang.ogg", 50, 1)
 			user.visible_message("<span class='combat bold'>\The [src]'s magnets violently repel as they counter a similar magnetic field!</span>")
 			user.throw_at(T, 7, 10)
-			user.changeStatus("stunned", 2 SECONDS)
+			user.stunned += 2
 			return 0
 		else
 			actions.start(new/datum/action/bar/private/icon/magPicker(W, src), user)
@@ -93,36 +88,29 @@
 		if (!A) return 0
 
 		if (!src.holding)
-			if (!isitem(A)) return 0
-			if (get_dist(get_turf(src), get_turf(A)) > 1)
-				out(user, "<span style='color: red;'>\The [A] is too far away!</span>")
-				return 0
+			if (!istype(A, /obj/item)) return 0
 			var/obj/item/target = A
 
 			if (target.anchored || target.w_class == 4) //too bulky for backpacks, too bulky for this
-				out(user, "<span style='color: blue;'>\The [src] can't possibly hold that heavy an item!</span>")
+				out(user, "<span style='color: blue;'>The [src.name] can't possibly hold that heavy an item!</span>")
 				return 0
 
 			if (istype(target, /obj/item/magtractor))
 				return 0
 
 			//pick up item
+			user.u_equip(A) //For when holding the item in other hand
 			actions.start(new/datum/action/bar/private/icon/magPicker(target, src), user)
-
-		else if (src.holding && src.holding.loc != src) // it's gone!!
-			actions.stopId("magpickerhold", usr)
 
 		return 1
 
 	throw_begin(atom/target)
 		..()
-		actions.stopId("magpicker", usr)
 		if (src.holding)
 			actions.stopId("magpickerhold", usr)
 
 	dropped(mob/user as mob)
 		..()
-		actions.stopId("magpicker", usr)
 		if (src.holding)
 			actions.stopId("magpickerhold", usr)
 
@@ -141,17 +129,17 @@
 		set desc = "Release the item currently held by the magtractor"
 		set category = "Local"
 
-		if (!src || !src.holding || usr.stat || usr.getStatusDuration("stunned") || usr.getStatusDuration("weakened") || usr.getStatusDuration("paralysis")) return 0
+		if (!src || !src.holding || usr.stat || usr.stunned || usr.weakened || usr.paralysis) return 0
 		actions.stopId("magpickerhold", usr)
 		return 1
 
 	proc/toggleHighPower()
 		set src in usr
 		set name = "Toggle HPM (High Power Mode)"
-		set desc = "Increases power driven to the magtractor, allowing it to carry items while moving."
+		set desc = "Boosts the magtractor power levels above safe amounts, allowing it to hold onto items during movement"
 		set category = "Local"
 
-		if (!src || usr.stat || usr.getStatusDuration("stunned") || usr.getStatusDuration("weakened") || usr.getStatusDuration("paralysis")) return 0
+		if (!src || usr.stat || usr.stunned || usr.weakened || usr.paralysis) return 0
 
 		var/image/magField = GetOverlayImage("magField")
 		var/msg = "<span style='color: blue;'>You toggle the [src]'s HPM "
@@ -183,18 +171,17 @@
 
 	//Called by action_controls.dm, magPicker
 	proc/pickupItem(obj/item/W as obj, mob/user as mob)
-		if (!W || !user || !isitem(W) || !ismob(user) || src.holding) return 0
+		if (!W || !user || !istype(W, /obj/item) || !ismob(user) || src.holding) return 0
 
 		src.working = 1
-		user.set_pulling(null)
+		user.pulling = null //quit pullin
+		user:hud:update_pulling()
 
 		var/atom/oldloc = W.loc
 		W.set_loc(src)
-		W.pickup(user)
 
 		if (istype(oldloc, /obj/item/storage)) //For removing items from containers with the tractor
-			var/obj/item/storage/S = oldloc
-			S.hud.remove_item(W) // ugh
+			oldloc:hud:remove_item(W) // ugh
 			W.layer = 3 //why is this necessary aaaaa!.
 
 		src.holding = W
@@ -218,43 +205,34 @@
 		playsound(src.loc, "sound/machines/ping.ogg", 50, 1)
 		//user.visible_message("<span class='bold' style='color: blue;'>[user] pulls \the [W] into the [src.name]</span>", "<span style='color: blue;'>The [src.name] pulls \the [W] into it's magnetic field and flickers worryingly.[src.highpower ? "" : " You must hold still while using this item."]</span>")
 
-		for (var/obj/ability_button/magtractor_drop/abil in src)
-			abil.icon_state = "mag_drop1"
 		src.verbs |= /obj/item/magtractor/proc/releaseItem
 		src.working = 0
 
 		return 1
 
 	//Called by action_controls.dm, magPickerHold
-	proc/dropItem(var/setloc = 1)
+	proc/dropItem()
 		if (src.working) return 0
 
 		src.holdAction = null
 		src.verbs -= /obj/item/magtractor/proc/releaseItem
 
-		if (isitem(src.holding) && usr)
-			src.holding.dropped(usr)
 		src.working = 1
 		src.w_class = 3.0 //normal
 		src.useInnerItem = 0
 		var/turf/T = get_turf(src)
 
-		var/msg = "<span class='bold' style='color: blue;'>\The [src] deactivates its magnetic field"
+		var/msg = "<span class='bold' style='color: blue;'>The [src.name] deactivates it's magnetic field"
 		if (src.holding) //item still exists, dropping
-			if (src.holding.loc == src && setloc)
-				src.holding.set_loc(T)
-				src.holding.layer = initial(src.holding.layer)
-				msg += " and lets \the [src.holding] fall to the floor."
-			else
-				msg += "."
+			src.holding.set_loc(T)
+			src.holding.layer = initial(src.holding.layer)
+			msg += " and lets \the [src.holding] fall to the floor."
 			src.holding = null
 		else //item no longer exists (was used up)
-			msg += " with nothing left to hold."
+			msg += " with nothing left to hold"
 		msg += "</span>"
 		T.visible_message(msg)
 
-		for (var/obj/ability_button/magtractor_drop/abil in src)
-			abil.icon_state = "mag_drop0"
 		src.icon_state = "magtractor"
 		src.UpdateOverlays(null, "magField")
 		src.updateHeldOverlay()
@@ -263,5 +241,3 @@
 		src.processHeld = 0
 
 		return 1
-
-/obj/item/magtractor/abilities = list(/obj/ability_button/magtractor_toggle, /obj/ability_button/magtractor_drop)

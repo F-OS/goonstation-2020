@@ -28,7 +28,7 @@
 		dir = dirn
 		set_wavelength(lambda)
 		..(newloc)
-		SPAWN_DBG(0)
+		spawn(0)
 			src.propagate()
 		src.verbs -= /atom/movable/verb/pull
 
@@ -42,7 +42,7 @@
 				next.prev = src
 				next.master = src.master
 			else
-				SPAWN_DBG(5)
+				spawn(5)
 					propagate()
 
 

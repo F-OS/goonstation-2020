@@ -55,7 +55,7 @@
 			src.installed(location)
 		src.id = "\ref[src]"
 
-	disposing()
+	Del()
 		if(host)
 			host.peripherals.Remove(src)
 		..()
@@ -72,7 +72,7 @@
 			if(!command || !host)
 				return
 
-			if(!istype(host) || (host.status & (NOPOWER|BROKEN)))
+			if(!istype(host) || (host.stat & (NOPOWER|BROKEN)))
 				return
 
 			src.host.receive_command(src, command, pfile)
@@ -108,10 +108,10 @@
 		if(usr.stat || usr.restrained())
 			return 1
 
-		if ((!usr.contents.Find(src.host) && (!in_range(src.host, usr) || !istype(src.host.loc, /turf))) && (!issilicon(usr)))
+		if ((!usr.contents.Find(src.host) && (!in_range(src.host, usr) || !istype(src.host.loc, /turf))) && (!istype(usr, /mob/living/silicon)))
 			return 1
 
-		if(src.host.status & (NOPOWER|BROKEN))
+		if(src.host.stat & (NOPOWER|BROKEN))
 			return 1
 
 		return 0
@@ -230,7 +230,7 @@
 		return
 
 	receive_signal(datum/signal/signal)
-		if(!src.host || host.status & (NOPOWER|BROKEN))
+		if(!src.host || host.stat & (NOPOWER|BROKEN))
 			return
 
 		if(!signal || (signal.encryption && signal.encryption != code))
@@ -254,7 +254,7 @@
 					var/broadcast_range = src.range
 					if(src.setup_netmode_norange)
 						broadcast_range = 0
-					SPAWN_DBG(5) //Send a reply for those curious jerks
+					spawn(5) //Send a reply for those curious jerks
 						src.radio_connection.post_signal(src, pingsignal, broadcast_range)
 
 				return //Just toss out the rest of the signal then I guess
@@ -288,7 +288,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(10)
+		spawn(10)
 			if(src.host && !src.link) //Wait for the map to load and hook up if installed() hasn't done it.
 				src.check_connection()
 			//Let's blindy attempt to generate a unique network ID!
@@ -351,7 +351,7 @@
 		return
 
 	receive_signal(datum/signal/signal)
-		if(!src.host || host.status & (NOPOWER|BROKEN))
+		if(!src.host || host.stat & (NOPOWER|BROKEN))
 			return
 		if(!signal || !src.net_id || (signal.encryption && signal.encryption != code))
 			return
@@ -372,7 +372,7 @@
 				pingsignal.data["address_1"] = signal.data["sender"]
 				pingsignal.data["command"] = "ping_reply"
 				pingsignal.transmission_method = TRANSMISSION_WIRE
-				SPAWN_DBG(5) //Send a reply for those curious jerks
+				spawn(5) //Send a reply for those curious jerks
 					src.link.post_signal(src, pingsignal)
 
 			return //Just toss out the rest of the signal then I guess
@@ -468,7 +468,7 @@
 				if(!print_data)
 					src.printing = 0
 					return
-				SPAWN_DBG(50)
+				spawn(50)
 					var/obj/item/paper/P = new /obj/item/paper( src.host.loc )
 					P.info = print_data
 					if(print_title)
@@ -498,7 +498,7 @@
 			if(!print_data)
 				src.printing = 0
 				return
-			SPAWN_DBG(50)
+			spawn(50)
 				var/obj/item/paper/P = new /obj/item/paper( src.host.loc )
 				P.info = print_data
 				if(print_title)
@@ -568,17 +568,20 @@
 				prize.name = "electronic blink toy game"
 				prize.desc = "Blink.  Blink.  Blink."
 			if(3)
-				prize = new /obj/item/device/light/zippo( prize_location )
+				prize = new /obj/item/zippo( prize_location )
 				prize.name = "Burno Lighter"
 				prize.desc = "Almost like a decent lighter!"
 			if(4)
 				prize = new /obj/item/toy/sword( prize_location )
 			if(5)
-				prize = new /obj/item/instrument/harmonica( prize_location )
+				prize = new /obj/item/harmonica( prize_location )
 				prize.name = "reverse harmonica"
 				prize.desc = "To the untrained eye it is like any other harmonica, but the professional will notice that it is BACKWARDS."
 			if(6)
-				prize = new /obj/item/wrench/gold(prize_location)
+				prize = new /obj/item/wrench( prize_location )
+				prize.name = "golden wrench"
+				prize.desc = "A generic wrench, but now with gold plating!"
+				prize.icon_state = "gold_wrench"
 			if(7)
 				prize = new /obj/item/firework( prize_location )
 				prize.icon = 'icons/obj/device.dmi'
@@ -657,10 +660,10 @@
 				var/datum/computer/file/record/newrec = new
 				newrec.fields["registered"] = src.authid.registered
 				newrec.fields["assignment"] = src.authid.assignment
-				newrec.fields["access"] = jointext(src.authid.access, ";")
+				newrec.fields["access"] = dd_list2text(src.authid.access, ";")
 				newrec.fields["balance"] = src.authid.money
 
-				SPAWN_DBG(4)
+				spawn(4)
 					send_command("card_authed", newrec)
 
 				return newrec
@@ -677,7 +680,7 @@
 					newrec.fields["registered"] = src.authid.registered
 					newrec.fields["assignment"] = src.authid.assignment
 					newrec.fields["balance"] = src.authid.money
-					SPAWN_DBG(4)
+					spawn(4)
 						send_command("card_authed", newrec)
 
 					return newrec
@@ -688,13 +691,13 @@
 
 				//We need correct PIN numbers you jerks.
 				if(text2num(rec.fields["pin"]) != src.authid.pin)
-					SPAWN_DBG(4)
+					spawn(4)
 						send_command("card_bad_pin")
 					return
 
 				var/charge_amount = text2num(rec.fields["amount"])
 				if(!charge_amount || (charge_amount <= 0) || charge_amount > src.authid.money)
-					SPAWN_DBG(4)
+					spawn(4)
 						send_command("card_bad_charge")
 					return
 
@@ -717,7 +720,7 @@
 					var/datum/signal/newrec = new
 					newrec.fields["access"] = new_access
 */
-					SPAWN_DBG(4)
+					spawn(4)
 						send_command("card_add")
 
 					return
@@ -737,7 +740,7 @@
 					var/datum/signal/newrec = new
 					newrec.fields["access"] = rem_access
 */
-					SPAWN_DBG(4)
+					spawn(4)
 						send_command("card_remove")
 
 					return
@@ -749,7 +752,7 @@
 		if(..())
 			return
 
-		if(issilicon(usr) && get_dist(src, usr) > 1)
+		if(istype(usr,/mob/living/silicon) && get_dist(src, usr) > 1)
 			boutput(usr, "<span style=\"color:red\">You cannot press the ejection button.</span>")
 			return
 
@@ -864,7 +867,7 @@
 		if(..())
 			return
 
-		if(issilicon(usr) && get_dist(src, usr) > 1)
+		if(istype(usr,/mob/living/silicon) && get_dist(src, usr) > 1)
 			boutput(usr, "<span style=\"color:red\">You cannot press the ejection button.</span>")
 			return
 
@@ -963,7 +966,7 @@
 		if(..())
 			return
 
-		if(issilicon(usr) && get_dist(src, usr) > 1)
+		if(istype(usr,/mob/living/silicon) && get_dist(src, usr) > 1)
 			boutput(usr, "<span style=\"color:red\">You cannot press the ejection button.</span>")
 			return
 
@@ -1044,7 +1047,24 @@
 		var/dat = {"Cell: <font color=[readout_color]>[readout]%</font>"}
 		return dat
 */
+//Putting this here for the moment, a bit wary about arbitrary DNA modification.
+//I guess they wouldn't be able to make a working signal but WHAT IF MAN
+/*
+/proc/ishex(hex)
 
+	if (!( istext(hex) ))
+		return 0
+	hex = lowertext(hex)
+	var/list/hex_list = list("0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f")
+	var/i = null
+	i = length(hex)
+	while(i > 0)
+		var/char = copytext(hex, i, i + 1)
+		if(!(char in hex_list))
+			return 0
+		i--
+	return 1
+*/
 /obj/item/peripheralx/videocard
 	name = "fancy video card"
 	desc = "A G0KU FACTORY-OC eXeter 4950XL. You have no clue what any of that means."
@@ -1057,7 +1077,7 @@
 		if(..())
 			return 1
 
-		SPAWN_DBG(rand(50,100))
+		spawn(rand(50,100))
 			if(host)
 				for(var/mob/M in viewers(host, null))
 					if(M.client)

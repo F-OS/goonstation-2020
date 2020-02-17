@@ -18,21 +18,6 @@
 /* ----- Standard ----- */
 /* ==================== */
 
-/obj/storage/closet/wardrobe/pride
-	name = "pride wardrobe"
-	icon_state = "gay"
-	icon_closed = "gay"
-	spawn_contents = list(/obj/item/clothing/under/pride = 2,
-	/obj/item/clothing/under/pride/ace = 2,
-	/obj/item/clothing/under/pride/aro = 2,
-	/obj/item/clothing/under/pride/bi = 2,
-	/obj/item/clothing/under/pride/inter = 2,
-	/obj/item/clothing/under/pride/pan = 2,
-	/obj/item/clothing/under/pride/poly = 2,
-	/obj/item/clothing/under/pride/nb = 2,
-	/obj/item/clothing/under/pride/lesb = 2,
-	/obj/item/clothing/under/pride/trans = 2)
-
 /obj/storage/closet/wardrobe/black
 	name = "black wardrobe"
 	icon_state = "black"
@@ -76,7 +61,6 @@
 	icon_state = "orange"
 	icon_closed = "orange"
 	spawn_contents = list(/obj/item/clothing/under/color/orange = 4,
-	/obj/item/clothing/under/misc = 3,
 	/obj/item/clothing/shoes/orange = 4)
 
 /obj/storage/closet/wardrobe/yellow
@@ -116,19 +100,6 @@
 /* =================== */
 /* ----- Special ----- */
 /* =================== */
-/obj/storage/closet/wardrobe/specialty_janitor // adhara stuff
-	name = "janitor wardrobe"
-	desc = "It's a closet! This one can be opened AND closed. Comes with specialty janitor's clothing."
-	icon_state = "mixed"
-	icon_closed = "mixed"
-	spawn_contents = list(/obj/item/clothing/under/rank/janitor = 1,
-	/obj/item/clothing/suit/bio_suit/janitor = 1,
-	/obj/item/clothing/head/bio_hood/janitor = 1,
-	/obj/item/clothing/mask/gas = 1,
-	/obj/item/clothing/gloves/long = 1,
-	/obj/item/clothing/shoes/galoshes = 1,
-	/obj/item/device/light/flashlight = 1)
-
 
 /obj/storage/closet/wardrobe/black/chaplain
 	name = "\improper Chaplain wardrobe"
@@ -172,7 +143,6 @@
 	/obj/item/clothing/under/misc/tourist,
 	/obj/item/clothing/under/misc/tourist/max_payne,
 	/obj/item/clothing/under/misc/serpico,
-	/obj/item/clothing/gloves/fingerless,
 	/obj/item/clothing/head/serpico,
 	/obj/item/clothing/head/red,
 	/obj/item/clothing/head/flatcap,
@@ -231,13 +201,12 @@
 	/obj/item/clothing/shoes/pink)
 
 	make_my_stuff()
-		if (..()) // make_my_stuff is called multiple times due to lazy init, so the parent returns 1 if it actually fired and 0 if it already has
-			for (var/i = 4, i > 0, i--)
-				var/obj/item/clothing/under/color/JS = pick(src.list_jump)
-				new JS(src)
-				var/obj/item/clothing/shoes/SH = pick(src.list_shoe)
-				new SH(src)
-			return 1
+		..()
+		for (var/i = 4, i > 0, i--)
+			var/obj/item/clothing/under/color/JS = pick(src.list_jump)
+			new JS(src)
+			var/obj/item/clothing/shoes/SH = pick(src.list_shoe)
+			new SH(src)
 
 /obj/storage/closet/wardrobe/wizard
 	name = "magical wardrobe"
@@ -249,9 +218,6 @@
 	/obj/item/staff/crystal = 2,
 	/obj/item/clothing/suit/wizrobe/necro = 2,
 	/obj/item/clothing/head/wizard/necro = 2,
-	/obj/item/clothing/head/wizard/witch = 2,
-	/obj/item/clothing/suit/wizrobe/green = 2,
-	/obj/item/clothing/head/wizard/green = 2,
 	/obj/item/clothing/suit/wizrobe/purple = 2,
 	/obj/item/clothing/head/wizard/purple = 2,
 	/obj/item/clothing/suit/wizrobe/red = 2,

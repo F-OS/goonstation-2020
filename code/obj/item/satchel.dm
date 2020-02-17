@@ -28,7 +28,9 @@
 			W.set_loc(src)
 			W.dropped()
 			boutput(user, "<span style=\"color:blue\">You put [W] in [src].</span>")
-			if (src.contents.len == src.maxitems) boutput(user, "<span style=\"color:blue\">[src] is now full!</span>")
+			var/itemamt = src.contents.len
+			src.desc = "A leather bag. It holds [itemamt]/[src.maxitems] [src.itemstring]."
+			if (itemamt == src.maxitems) boutput(user, "<span style=\"color:blue\">[src] is now full!</span>")
 			src.satchel_updateicon()
 		else boutput(user, "<span style=\"color:red\">[src] is full!</span>")
 
@@ -38,72 +40,9 @@
 			for (var/obj/item/I in src.contents)
 				I.set_loc(T)
 			boutput(user, "<span style=\"color:blue\">You empty out [src].</span>")
+			src.desc = "A leather bag. It holds 0/[src.maxitems] [src.itemstring]."
 			src.satchel_updateicon()
 		else ..()
-
-	attack_hand(mob/user as mob)
-		if (get_dist(user, src) <= 0 && src.contents.len)
-			if (user.l_hand == src || user.r_hand == src)
-				if  (src.contents.len > 1)
-					user.visible_message("<span style=\"color:blue\"><b>[user]</b> rummages through [src].</span>",\
-					"<span style=\"color:blue\">You rummage through [src].</span>")
-					if (src.contents.len > 20)
-						user.visible_message("<span style=\"color:blue\"><b>[user]</b> rummages through [src] fruitlessly.</span>",\
-						"<span style=\"color:blue\">You try to rummage through [src], but this satchel is so overloaded it can only burst open!</span>")
-						return
-
-					var/list/satchel_contents = list()
-					for (var/obj/item/I in src.contents)
-						satchel_contents += I
-						LAGCHECK(LAG_REALTIME)
-					var/obj/item/chosenItem = pick(satchel_contents)
-					if (!chosenItem)
-						return
-					user.visible_message("<span style=\"color:blue\"><b>[usr]</b> takes [chosenItem.name] out of [src].</span>",\
-					"<span style=\"color:blue\">You take [chosenItem.name] from [src].</span>")
-					user.put_in_hand_or_drop(chosenItem)
-		return ..(user)
-
-	verb/search_through()
-		set name = "Search Through Contents"
-		set src in usr
-
-		var/mob/living/user = usr
-
-		if(!istype(user))
-			return
-
-		if (get_dist(user, src) <= 0 && src.contents.len && !user.stat)
-			if (user.l_hand == src || user.r_hand == src)
-				if (src.contents.len > 1)
-					user.visible_message("<span style=\"color:blue\"><b>[user]</b> digs through [src].</span>",\
-					"<span style=\"color:blue\">You digs through [src].</span>")
-					var/list/satchel_contents = list()
-					var/list/has_dupes = list()
-					var/temp = ""
-					for (var/obj/item/I in src.contents)
-						temp = ""
-						if (satchel_contents[I.name])
-							if (has_dupes[I.name])
-								has_dupes[I.name] = has_dupes[I.name] + 1
-							else
-								has_dupes[I.name] = 2
-							temp = "[I.name] ([has_dupes[I.name]])"
-							satchel_contents += temp
-							satchel_contents[temp] = I
-						else
-							temp = "[I.name]"
-							satchel_contents += temp
-							satchel_contents[temp] = I
-					var/chosenItem = input("Select an item to pull out.", "Choose Item") as null|anything in satchel_contents
-					if (!chosenItem)
-						return
-					var/obj/item/itemToGive = satchel_contents[chosenItem]
-					if (!itemToGive)
-						return
-					user.visible_message("<span style=\"color:blue\"><b>[usr]</b> takes [itemToGive.name] out of [src].</span>",\
-					"<span style=\"color:blue\">You take [itemToGive.name] from [src].</span>")
-					user.put_in_hand_or_drop(itemToGive)
 
 	MouseDrop_T(atom/movable/O as obj, mob/user as mob)
 		var/proceed = 0
@@ -118,11 +57,14 @@
 		if (src.contents.len < src.maxitems)
 			user.visible_message("<span style=\"color:blue\">[user] begins quickly filling [src]!</span>")
 			var/staystill = user.loc
+			var/amt
 			for(var/obj/item/I in view(1,user))
 				if (!istype(I, O)) continue
 				if (I in user)
 					continue
 				I.set_loc(src)
+				amt = src.contents.len
+				src.desc = "A leather bag. It holds [amt]/[src.maxitems] [src.itemstring]."
 				src.satchel_updateicon()
 				sleep(2)
 				if (user.loc != staystill) break
@@ -152,11 +94,6 @@
 				src.overlays += image('icons/obj/items.dmi', "satcounter4")
 			if (100 to INFINITY)
 				src.overlays += image('icons/obj/items.dmi', "satcounter5")
-
-		src.desc = "A leather bag. It holds [src.contents.len]/[src.maxitems] [src.itemstring]."
-
-		signal_event("icon_updated")
-
 
 /obj/item/satchel/hydro
 	name = "produce satchel"

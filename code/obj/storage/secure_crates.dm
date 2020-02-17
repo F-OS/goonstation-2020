@@ -24,7 +24,7 @@
 	confiscated_items
 		name = "confiscated items crate"
 		desc = "Secure storage for confiscated contraband."
-		req_access_txt = "2"
+		req_access = list(access_brig)
 
 	armory
 		name = "secure weapons crate"
@@ -48,8 +48,7 @@
 		pod_weapons
 			name = "pod weapons crate"
 			spawn_contents = list(/obj/item/shipcomponent/mainweapon/disruptor_light = 2,\
-			/obj/item/shipcomponent/mainweapon/laser = 2,\
-			/obj/item/ammo/bullets/autocannon/seeker = 2)
+			/obj/item/shipcomponent/mainweapon/laser = 2)
 
 /obj/storage/secure/crate/plasma
 	desc = "A secure plasma crate."
@@ -66,7 +65,7 @@
 		anti_biological
 			name = "anti-biological crate"
 			spawn_contents = list(/obj/item/storage/box/flaregun = 2,\
-			/obj/item/flamethrower/loaded = 2)
+			/obj/item/flamethrower/loaded)
 
 /obj/storage/secure/crate/gear
 	desc = "A secure gear crate."
@@ -87,7 +86,7 @@
 
 	sarin_grenades
 		name = "nerve agent crate (DANGER)"
-		req_access_txt = "52"
+		req_access = list(access_syndicate_shuttle)
 		spawn_contents = list(/obj/item/reagent_containers/syringe/atropine = 3,\
 		/obj/item/chem_grenade/sarin = 3)
 
@@ -102,26 +101,3 @@
 	loaded
 		req_access = list(access_hydro)
 		spawn_contents = list(/obj/item/bee_egg_carton = 5)
-
-		var/blog = ""
-
-		make_my_stuff()
-			.=..()
-			if (.)
-				for(var/obj/item/bee_egg_carton/carton in src)
-					carton.ourEgg.blog += blog
-				return 1
-
-/obj/storage/secure/crate/eng
-	name = "Engineering crate"
-	desc = "A yellow crate."
-	icon_state = "engcrate"
-	density = 1
-	icon_opened = "engcrate-open"
-	icon_closed = "engcrate"
-
-	explosives
-		name = "engineering explosive crate"
-		desc = "Contains controlled explosives designed for trench use."
-		req_access = list(access_engineering)
-		spawn_contents = list(/obj/item/pipebomb/bomb/engineering = 6)

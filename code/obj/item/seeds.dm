@@ -28,35 +28,9 @@
 		if (src.auxillary_datum && !src.planttype)
 			src.planttype = new src.auxillary_datum(src)
 		if (do_color)
-			docolor()
+			src.plant_seed_color(src.seedcolor)
 		// Colors in the seed packet, if we want to do that. Any seed that doesn't use the
 		// standard seed packet sprite shouldn't do this or it'll end up looking stupid.
-
-	proc/docolor() //bleh, used when unpooling
-		src.plant_seed_color(src.seedcolor)
-
-	proc/removecolor()
-		src.overlays = 0
-
-	unpooled()
-		..()
-		src.plantgenes = new /datum/plantgenes(src)
-
-		if (src.auxillary_datum && !src.planttype)
-			src.planttype = new src.auxillary_datum(src)
-
-		if (src.planttype)
-			src.name = "[src.planttype.name] seed"
-
-	pooled()
-		..()
-		seeddamage = 0
-		generation = 0
-		planttype = 0
-		plantgenes = 0
-		seedcolor = "#000000"
-
-
 
 	proc/generic_seed_setup(var/datum/plant/P)
 		// This proc is pretty much entirely for regular seeds you find from the vendor
@@ -81,9 +55,6 @@
 			src.name = "[P.name] seed"
 			src.plant_seed_color(P.seedcolor)
 			// Calls on a variable in the referenced plant datum to get the seed packet's color.
-		else
-			src.name = "[src.name] seed"
-
 
 	proc/plant_seed_color(var/colorRef)
 		// A small proc which usually takes the color reference from a plant datum and uses
@@ -154,66 +125,37 @@
 	isstrange = 1
 
 	New()
-		..()
-		gen_plant_type()
-
-	unpooled()
-		..()
-		gen_plant_type()
-
-	proc/gen_plant_type()
 		if (src.type == /obj/item/seed/alien)
 			// let's make the base seed randomise itself for fun and also for functionality
-			switch(rand(1,8))
-				if (1) src.planttype = HY_get_species_from_path(/datum/plant/artifact/pukeplant, src)
-				if (2) src.planttype = HY_get_species_from_path(/datum/plant/artifact/dripper, src)
-				if (3) src.planttype = HY_get_species_from_path(/datum/plant/artifact/rocks, src)
-				if (4) src.planttype = HY_get_species_from_path(/datum/plant/artifact/litelotus, src)
-				if (5) src.planttype = HY_get_species_from_path(/datum/plant/artifact/peeker, src)
-				if (6) src.planttype = HY_get_species_from_path(/datum/plant/artifact/plasma, src)
-				if (7) src.planttype = HY_get_species_from_path(/datum/plant/artifact/goldfish, src)
-				if (8) src.planttype = HY_get_species_from_path(/datum/plant/artifact/cat, src)
-
-	HY_set_species(var/datum/plant/species)
-		if (species)
-			src.planttype = species
+			switch(rand(1,5))
+				if (1) src.planttype = HY_get_species_from_path(/datum/plant/artifact/pukeplant)
+				if (2) src.planttype = HY_get_species_from_path(/datum/plant/artifact/dripper)
+				if (3) src.planttype = HY_get_species_from_path(/datum/plant/artifact/rocks)
+				if (4) src.planttype = HY_get_species_from_path(/datum/plant/artifact/litelotus)
+				if (5) src.planttype = HY_get_species_from_path(/datum/plant/artifact/peeker)
+		..()
 
 /obj/item/seed/alien/pukeplant
-	gen_plant_type()
+	New()
 		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/pukeplant, src)
+		src.planttype = HY_get_species_from_path(/datum/plant/artifact/pukeplant)
 
 /obj/item/seed/alien/dripper
-	gen_plant_type()
+	New()
 		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/dripper, src)
+		src.planttype = HY_get_species_from_path(/datum/plant/artifact/dripper)
 
 /obj/item/seed/alien/rocks
-	gen_plant_type()
+	New()
 		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/rocks, src)
+		src.planttype = HY_get_species_from_path(/datum/plant/artifact/rocks)
 
 /obj/item/seed/alien/litelotus
-	gen_plant_type()
+	New()
 		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/litelotus, src)
+		src.planttype = HY_get_species_from_path(/datum/plant/artifact/litelotus)
 
 /obj/item/seed/alien/peeker
-	gen_plant_type()
+	New()
 		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/peeker, src)
-
-/obj/item/seed/alien/plasma
-	gen_plant_type()
-		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/plasma, src)
-
-/obj/item/seed/alien/goldfish
-	gen_plant_type()
-		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/goldfish, src)
-
-/obj/item/seed/alien/cat
-	gen_plant_type()
-		..()
-		src.planttype = HY_get_species_from_path(/datum/plant/artifact/cat, src)
+		src.planttype = HY_get_species_from_path(/datum/plant/artifact/peeker)

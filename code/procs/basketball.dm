@@ -1,4 +1,4 @@
-/mob/proc/bball_nova()
+proc/bball_nova()
 	set category = "Spells"
 	set name = "B-Ball Nova"
 	set desc = "Causes an eruption of explosive basketballs from your location"
@@ -15,9 +15,9 @@
 	if(!M.bball_spellpower())
 		return
 
-	M.verbs -= /mob/proc/bball_nova
-	SPAWN_DBG(300)
-		M.verbs += /mob/proc/bball_nova
+	M.verbs -= /proc/bball_nova
+	spawn(300)
+		M.verbs += /proc/bball_nova
 
 	M.visible_message("<span style=\"color:red\">A swarm of basketballs erupts from [M]!</span>")
 
@@ -34,7 +34,7 @@
 	icon_state = "bball_spin"
 	hits = 6
 
-/mob/proc/showboat_slam(mob/target as mob in oview(6))
+/proc/showboat_slam(mob/target as mob in oview(6))
 	set category = "Spells"
 	set name = "Showboat Slam"
 	set desc = "Leap up and slam your target for massive damage"
@@ -48,9 +48,9 @@
 	if(!isturf(M.loc) || !M.bball_spellpower())
 		return
 
-	M.verbs -= /mob/proc/showboat_slam
-	SPAWN_DBG(300)
-		M.verbs += /mob/proc/showboat_slam
+	M.verbs -= /proc/showboat_slam
+	spawn(300)
+		M.verbs += /proc/showboat_slam
 
 	for(var/obj/item/basketball/B in M.contents)
 		B.item_state = "bball2"
@@ -80,23 +80,22 @@
 	O.anchored = 1
 	O.name = "Explosion"
 	O.layer = NOLIGHT_EFFECTS_LAYER_BASE
-	O.pixel_x = -92
-	O.pixel_y = -96
-	O.icon = 'icons/effects/214x246.dmi'
+	O.pixel_x = -17
+	O.icon = 'icons/effects/hugeexplosion.dmi'
 	O.icon_state = "explosion"
-	SPAWN_DBG(35) qdel(O)
+	spawn(35) qdel(O)
 
 	for(var/mob/N in AIviewers(M, null))
 		if(get_dist(N, target) <= 2)
 			if(N != M)
-				N.changeStatus("weakened", 5 SECONDS)
+				N.weakened = max(N.weakened, 5)
 				random_brute_damage(N, 10)
 		if(N.client)
 			shake_camera(N, 6, 5)
 			N.show_message("<span style=\"color:red\">[M] showboat slams [target] to the ground!</span>", 1)
 	random_brute_damage(target, 40)
 
-/mob/proc/holy_jam()
+/proc/holy_jam()
 	set category = "Spells"
 	set name = "Holy Jam"
 	set desc = "Powerful jam that blinds surrounding enemies"
@@ -110,9 +109,9 @@
 	if(!isturf(M.loc) || !M.bball_spellpower())
 		return
 
-	M.verbs -= /mob/proc/holy_jam
-	SPAWN_DBG(150)
-		M.verbs += /mob/proc/holy_jam
+	M.verbs -= /proc/holy_jam
+	spawn(150)
+		M.verbs += /proc/holy_jam
 
 	for(var/obj/item/basketball/B in M.contents)
 		B.item_state = "bball2"
@@ -123,7 +122,7 @@
 
 	M.visible_message("<span style=\"color:red\">[M] takes a divine leap towards the ceiling!</span>")
 
-	playsound(M.loc, "sound/voice/heavenly.ogg", 50, 1)
+	playsound(M.loc, "sound/effects/heavenly.ogg", 50, 1)
 
 	for(var/i = 0, i < 10, i++)
 		M.pixel_y += 4
@@ -148,7 +147,7 @@
 
 	playsound(M.loc, "sound/weapons/flashbang.ogg", 50, 1)
 
-/mob/proc/blitz_slam()
+proc/blitz_slam()
 	set category = "Spells"
 	set name = "Blitz Slam"
 	set desc="Teleport randomly to a nearby tile."
@@ -176,11 +175,11 @@
 	var/turf/picked = pick(turfs)
 	if(!isturf(picked)) return
 	M.set_loc(picked)
-	M.verbs -= /mob/proc/blitz_slam
-	SPAWN_DBG(40)
-		M.verbs += /mob/proc/blitz_slam
+	M.verbs -= /proc/blitz_slam
+	spawn(40)
+		M.verbs += /proc/blitz_slam
 
-/mob/proc/clown_jam(mob/living/target as mob in oview(6))
+/proc/clown_jam(mob/living/target as mob in oview(6))
 	set category = "Spells"
 	set name = "Clown Jam"
 	set desc = "Jams the target into a fat cursed clown"
@@ -193,9 +192,9 @@
 
 	var/SPtime = 3000
 	if (M.bball_spellpower()) SPtime = 900
-	M.verbs -= /mob/proc/clown_jam
-	SPAWN_DBG(SPtime)
-	M.verbs += /mob/proc/clown_jam
+	M.verbs -= /proc/clown_jam
+	spawn(SPtime)
+	M.verbs += /proc/clown_jam
 
 	for(var/obj/item/basketball/B in M.contents)
 		B.item_state = "bball2"
@@ -222,7 +221,7 @@
 	for(var/mob/N in AIviewers(M, null))
 		if(get_dist(N, target) <= 2)
 			if(N != M)
-				N.changeStatus("weakened", 5 SECONDS)
+				N.weakened = max(N.weakened, 5)
 		if(N.client)
 			shake_camera(N, 6, 4)
 			N.show_message("<span style=\"color:red\">[M] clown jams [target]!</span>", 1)
@@ -231,7 +230,7 @@
 		B.item_state = "bball"
 
 	playsound(target.loc, "explosion", 50, 1)
-	playsound(target.loc, "sound/musical_instruments/Bikehorn_1.ogg", 50, 1)
+	playsound(target.loc, "sound/items/bikehorn.ogg", 50, 1)
 
 
 	var/datum/effects/system/harmless_smoke_spread/smoke = new /datum/effects/system/harmless_smoke_spread()
@@ -246,11 +245,12 @@
 		target.job = "Clown"
 		target.contract_disease(/datum/ailment/disease/cluwneing_around, null, null, 1) // path, name, strain, bypass resist
 		target.contract_disease(/datum/ailment/disability/clumsy, null, null, 1) // path, name, strain, bypass resist
+		target.nutrition = 9000
 		target.change_misstep_chance(60)
 
 		target.unequip_all()
 
-		if(ishuman(target))
+		if(istype(target, /mob/living/carbon/human))
 			var/mob/living/carbon/human/cursed = target
 			cursed.equip_if_possible(new /obj/item/clothing/under/gimmick/cursedclown(cursed), cursed.slot_w_uniform)
 			cursed.equip_if_possible(new /obj/item/clothing/shoes/cursedclown_shoes(cursed), cursed.slot_shoes)
@@ -268,6 +268,7 @@
 		H.stuttering = 0
 		H.job = "Lawyer"
 		H.change_misstep_chance(-INFINITY)
+		H.nutrition = 0
 		for(var/datum/ailment_data/A in H.ailments)
 			if(istype(A.master,/datum/ailment/disability/clumsy))
 				H.cure_disease(A)
@@ -297,7 +298,7 @@
 
 		return
 
-/mob/proc/chaos_dunk()
+/proc/chaos_dunk()
 	set category = "Spells"
 	set name = "Chaos Dunk"
 	set desc = "Destroy the entire station with the ultimate slam"
@@ -322,7 +323,7 @@
 		boutput(M, __red("You can't dunk without a b-ball, yo!"))
 		return
 
-	M.verbs -= /mob/proc/chaos_dunk
+	M.verbs -= /proc/chaos_dunk
 
 	logTheThing("combat", M, null, "<b>triggers a chaos dunk in [M.loc.loc] ([showCoords(M.x, M.y, M.z)])!</b>")
 
@@ -341,19 +342,19 @@
 		M.dir = turn(M.dir, 90)
 		sleep(1)
 	M.layer = 0
-	var/sound/siren = sound('sound/misc/airraid_loop_short.ogg')
+	var/sound/siren = sound('sound/misc/airraid_loop.ogg')
 	siren.repeat = 1
 	siren.channel = 5
 	world << siren
-	command_alert("A massive influx of negative b-ball protons has been detected in [get_area(M)]. A Chaos Dunk is imminent. All personnel currently on [station_name(1)] have 15 seconds to reach minimum safe distance. This is not a test.")
+	command_alert("A massive influx of negative b-ball protons has been detected in [get_area(M)]. A Chaos Dunk is imminent. All personnel currently on [station_name()] have 15 seconds to reach minimum safe distance. This is not a test.")
 	for(var/area/A in world)
-		A.eject = 1
-		A.updateicon()
-		LAGCHECK(LAG_LOW)
+		spawn(0)
+			A.eject = 1
+			A.updateicon()
 	for(var/mob/N in mobs)
-		SPAWN_DBG(0)
+		spawn(0)
 			shake_camera(N, 120, 2)
-	SPAWN_DBG(0)
+	spawn(0)
 		var/thunder = 70
 		while(thunder > 0)
 			thunder--
@@ -375,15 +376,14 @@
 	siren.channel = 5
 	world << siren
 	M.visible_message("<span style=\"color:red\">[M] successfully executes a Chaos Dunk!</span>")
-	M.unlock_medal("Shut Up and Jam", 1)
 	explosion_new(src, get_turf(M), 1500, 22.78)
 
 	for(var/area/A in world)
-		LAGCHECK(LAG_LOW)
-		A.eject = 0
-		A.updateicon()
+		spawn(0)
+			A.eject = 0
+			A.updateicon()
 
-/mob/proc/spin()
+/proc/spin()
 	set category = "Spells"
 	set name = "360 Spin"
 	set desc = "Get fools off your back."
@@ -404,7 +404,7 @@
 			N.show_message("<span style=\"color:red\">[M] does a quick spin, knocking you off guard!</span>", 1)
 		if(get_dist(N, M) <= 2)
 			if(N != M)
-				N.changeStatus("stunned", 2 SECONDS)
+				N.stunned = max(N.stunned, 2)
 
 	M.dir = NORTH
 	sleep(1)
@@ -416,9 +416,9 @@
 
 	M.transforming = 0
 
-	M.verbs -= /mob/proc/spin
-	SPAWN_DBG(40)
-		M.verbs += /mob/proc/spin
+	M.verbs -= /proc/spin
+	spawn(40)
+		M.verbs += /proc/spin
 
 /obj/item/bball_uplink
 	name = "station bounced radio"
@@ -457,7 +457,7 @@
 			dat = "[src.temp]<BR><BR><A href='byond://?src=\ref[src];temp=1'>Clear</A>"
 		else
 			dat = "<B>ZauberTech Baller Uplink Console:</B><BR>"
-			dat += "[syndicate_currency] left: [src.uses]<BR>"
+			dat += "Tele-Crystals left: [src.uses]<BR>"
 			dat += "<HR>"
 			dat += "<B>Request item:</B><BR>"
 			dat += "<I>Each item costs 1 telecrystal. The number afterwards is the cooldown time.</I><BR>"
@@ -473,7 +473,7 @@
 				dat += "<A href='byond://?src=\ref[src];lock=1'>Lock</A><BR>"
 				dat += "<HR>"
 			dat += "<A href='byond://?src=\ref[src];selfdestruct=1'>Self-Destruct</A>"
-	user.Browse(dat, "window=radio")
+	user << browse(dat, "window=radio")
 	onclose(user, "radio")
 	return
 
@@ -482,7 +482,7 @@
 	if (usr.stat || usr.restrained())
 		return
 	var/mob/living/carbon/human/H = usr
-	if (!( ishuman(H)))
+	if (!( istype(H, /mob/living/carbon/human)))
 		return 1
 	if ((usr.contents.Find(src) || (in_range(src,usr) && istype(src.loc, /turf))))
 		usr.machine = src
@@ -490,29 +490,29 @@
 			if (src.uses >= 1)
 				src.uses -= 1
 				src.temp = "This jam will cause an eruption of explosive basketballs from your location."
-				usr.verbs += /mob/proc/bball_nova
+				usr.verbs += /proc/bball_nova
 		if (href_list["spell_showboat"])
 			if (src.uses >= 1)
 				src.uses -= 1
-				usr.verbs += /mob/proc/showboat_slam
+				usr.verbs += /proc/showboat_slam
 				src.temp = "Leap up high above your target and slam them for massive damage."
 		if (href_list["spell_holy"])
 			if (src.uses >= 1)
 				src.uses -= 1
-				usr.verbs += /mob/proc/holy_jam
+				usr.verbs += /proc/holy_jam
 				src.temp = "A powerful and sacred jam that blinds surrounding enemies."
 		if (href_list["spell_blink"])
 			if (src.uses >= 1)
 				src.uses -= 1
-				usr.verbs += /mob/proc/blitz_slam
+				usr.verbs += /proc/blitz_slam
 				src.temp = "This slam will allow you to teleport randomly at a short distance."
 		if (href_list["spell_revengeclown"])
 			if (src.uses >= 1)
 				src.uses -= 1
-				usr.verbs += /mob/proc/clown_jam
+				usr.verbs += /proc/clown_jam
 				src.temp = "This unspoken jam bamboozles your target to the extent that they will become an obese, idiotic, horrible, and useless clown."
 		if (href_list["spell_spin"])
-			usr.verbs += /mob/proc/spin
+			usr.verbs += /proc/spin
 			src.temp = "This spell lets you do a 360 spin, knocking down any fools tailing you."
 /*
 		if (href_list["spell_summongolem"])
@@ -524,7 +524,7 @@
 		else if (href_list["lock"] && src.origradio)
 			// presto chango, a regular radio again! (reset the freq too...)
 			usr.machine = null
-			usr.Browse(null, "window=radio")
+			usr << browse(null, "window=radio")
 			var/obj/item/device/radio/T = src.origradio
 			var/obj/item/bball_uplink/R = src
 			R.set_loc(T)
@@ -540,13 +540,13 @@
 			src.temp = "<A href='byond://?src=\ref[src];selfdestruct2=1'>Self-Destruct</A>"
 		else if (href_list["selfdestruct2"])
 			src.selfdestruct = 1
-			SPAWN_DBG (100)
+			spawn (100)
 				explode()
 				return
 		else
 			if (href_list["temp"])
 				src.temp = null
-		if (ismob(src.loc))
+		if (istype(src.loc, /mob))
 			attack_self(src.loc)
 		else
 			for(var/mob/M in viewers(1, src))

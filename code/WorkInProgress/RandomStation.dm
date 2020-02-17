@@ -20,7 +20,7 @@
 	icon_state = "yellow"
 	requires_power = 0
 	luminosity = 1
-	force_fullbright = 1
+	RL_Lighting = 0
 
 var/list/rnd_rooms = new/list()
 var/list/rnd_cons = new/list()
@@ -115,20 +115,16 @@ proc/copy_room_to(var/obj/room_props/source, var/turf/target)
 
 /proc/cleanuprnd()
 	for(var/obj/room_props/p in world)
-		del(p)
-		LAGCHECK(LAG_LOW)
+		qdel(p)
 	for(var/obj/room_connection/c in world)
-		del(c)
-		LAGCHECK(LAG_LOW)
+		qdel(c)
 	var/area/A = locate(/area/random_source)
 	for(var/obj/toDel in A)
-		del(toDel)
-		LAGCHECK(LAG_LOW)
+		qdel(toDel)
 
 proc/spawnmonsters()
 	var/theme = pick("undead", "plantsnanimals", "aliens", "demonsnmutants")
 	for(var/obj/room_monsterspawn/S in world)
-		LAGCHECK(LAG_LOW)
 		if(S.z != RANDOM_Z_LEVEL_TARGET)
 			continue
 		if(prob(S.probability))
@@ -136,29 +132,28 @@ proc/spawnmonsters()
 				if("undead")
 					var/selected = pick(/obj/critter/spirit, /obj/critter/zombie, /obj/critter/zombie/scientist, /obj/critter/zombie/security)
 					new selected(S.loc)
-					del(S)
+					qdel(S)
 				if("plantsnanimals")
 					var/selected = pick(/obj/critter/bear, /obj/critter/spacebee, /obj/critter/lion, /obj/critter/killertomato, /obj/critter/maneater)
 					new selected(S.loc)
-					del(S)
+					qdel(S)
 				if("aliens")
 					var/selected = pick(/obj/critter/martian/soldier, /obj/critter/martian/warrior, /obj/critter/martian/psychic)
 					new selected(S.loc)
-					del(S)
+					qdel(S)
 				if("demonsnmutants")
 					var/selected = pick(/obj/critter/bloodling, /obj/critter/blobman, /obj/critter/mimic)
 					new selected(S.loc)
-					del(S)
+					qdel(S)
 
 proc/spawnrewards()
 	for(var/obj/room_rewardspawn/S in world)
-		LAGCHECK(LAG_LOW)
 		if(S.z != RANDOM_Z_LEVEL_TARGET)
 			continue
 		if(prob(S.probability))
 			var/selected = pick(/obj/storage/crate/loot) //No idea what the rewards should be
 			new selected(S.loc)
-			del(S)
+			qdel(S)
 
 proc/spawndeco()
 	var/theme = pick("bloody", "messy", "dirty", "clean")
@@ -203,7 +198,6 @@ proc/create_random_station()
 	var/turf/origin = locate(mid_x, mid_y, RANDOM_Z_LEVEL_TARGET)
 
 	for(var/obj/room_props/p in world)
-		LAGCHECK(LAG_LOW)
 		if(p.z != RANDOM_Z_LEVEL_SOURCE) continue
 		rnd_rooms.Add(p)
 		var/turf/north = locate(p.x, p.y + p.room_range, RANDOM_Z_LEVEL_SOURCE)
@@ -242,7 +236,6 @@ proc/create_random_station()
 	var/list/multi_rooms = new/list()
 	for(var/obj/room_props/p_seed in rnd_rooms)
 		if(p_seed.connections.len >= 2) multi_rooms.Add(p_seed)
-		LAGCHECK(LAG_LOW)
 
 	var/obj/room_props/selected = pick(multi_rooms)
 	copy_room_to(selected, origin)
@@ -250,12 +243,10 @@ proc/create_random_station()
 	var/list/unconnected = new/list()
 	for(var/obj/room_connection/R in range(selected.room_range, origin))
 		unconnected.Add(R)
-		LAGCHECK(LAG_LOW)
 
 	var/rooms_left = RANDOM_Z_LEVEL_MAXROOMS
 
 	while(rooms_left > 0 && unconnected.len && multi_rooms.len)
-		LAGCHECK(LAG_LOW)
 		var/obj/room_connection/newcon = pick(unconnected)
 		unconnected.Remove(newcon)
 		var/list/valid_rooms = new/list()
@@ -286,7 +277,6 @@ proc/create_random_station()
 
 	filling_holes:
 		for(var/obj/room_connection/C in unconnected)
-			LAGCHECK(LAG_LOW)
 			var/turf/con_next = get_step(C.loc, C.open_dir)
 			if(istype(con_next, /turf/space))
 				if(prob(50))

@@ -16,7 +16,6 @@
 	opacity = 0
 	brainloss_stumble = 1
 	autoclose = 1
-	event_handler_flags = USE_FLUID_ENTER | USE_CHECKEXIT | USE_CANPASS
 
 	New()
 		..()
@@ -34,7 +33,7 @@
 			return src.attackby(null, user)
 
 	attackby(obj/item/I as obj, mob/user as mob)
-		if (user.getStatusDuration("stunned") || user.getStatusDuration("weakened") || user.stat || user.restrained())
+		if (user.stunned || user.weakened || user.stat || user.restrained())
 			return
 		if (src.isblocked() == 1)
 			return
@@ -53,7 +52,7 @@
 				src.close()
 			return
 
-		if (src.allowed(user))
+		if (src.allowed(user, req_only_one_required))
 			if (src.density)
 				src.open()
 			else
@@ -71,7 +70,7 @@
 		if (prob(40))
 			if (src.secondsElectrified == 0)
 				src.secondsElectrified = -1
-				SPAWN_DBG (300)
+				spawn (300)
 					if (src)
 						src.secondsElectrified = 0
 		return
@@ -79,7 +78,7 @@
 	emag_act(var/mob/user, var/obj/item/card/emag/E)
 		if (src.density && src.cant_emag != 1 && src.isblocked() != 1)
 			flick(text("[]spark", src.base_state), src)
-			SPAWN_DBG (6)
+			spawn (6)
 				if (src)
 					src.open(1)
 			return 1
@@ -138,9 +137,6 @@
 			if (istype(source)) air_master.queue_update_tile(source)
 			if (istype(target)) air_master.queue_update_tile(target)
 
-		if (istype(source))
-			source.selftilenotify() //for fluids
-
 		return 1
 
 	open(var/emag_open = 0)
@@ -154,20 +150,17 @@
 		playsound(src.loc, "sound/machines/windowdoor.ogg", 100, 1)
 		src.icon_state = text("[]open", src.base_state)
 
-		SPAWN_DBG (8)
+		spawn (10)
 			if (src)
-				src.set_density(0)
-				if (ignore_light_or_cam_opacity)
-					src.opacity = 0
-				else
-					src.RL_SetOpacity(0)
+				src.density = 0
+				src.RL_SetOpacity(0)
 				src.update_nearby_tiles()
 				if (emag_open == 1)
 					src.operating = -1
 				else
 					src.operating = 0
 
-		SPAWN_DBG (50)
+		spawn (50)
 			if (src && !src.operating && !src.density && src.autoclose == 1)
 				src.close()
 
@@ -184,15 +177,12 @@
 		playsound(src.loc, "sound/machines/windowdoor.ogg", 100, 1)
 		src.icon_state = text("[]", src.base_state)
 
-		src.set_density(1)
+		src.density = 1
 		if (src.visible)
-			if (ignore_light_or_cam_opacity)
-				src.opacity = 1
-			else
-				src.RL_SetOpacity(1)
+			src.RL_SetOpacity(1)
 		src.update_nearby_tiles()
 
-		SPAWN_DBG (10)
+		spawn (10)
 			if (src)
 				src.operating = 0
 
@@ -205,7 +195,7 @@
 
 		if (isobserver(usr) || isintangible(usr))
 			return
-		if (usr.getStatusDuration("stunned") > 0 || usr.getStatusDuration("weakened") || usr.getStatusDuration("paralysis") > 0 || usr.stat || usr.restrained())
+		if (usr.stunned > 0 || usr.weakened > 0 || usr.paralysis > 0 || usr.stat || usr.restrained())
 			return
 		if (!in_range(src, usr))
 			usr.show_text("You are too far away.", "red")
@@ -213,7 +203,7 @@
 		if (src.hardened == 1)
 			usr.show_text("You cannot control this door.", "red")
 			return
-		if (!src.allowed(usr))
+		if (!src.allowed(usr, req_only_one_required))
 			usr.show_text("Access denied.", "red")
 			return
 		if (src.operating == -1) // Emagged.
@@ -224,7 +214,7 @@
 			src.autoclose = 0
 		else
 			src.autoclose = 1
-			SPAWN_DBG (50)
+			spawn (50)
 				if (src && !src.density)
 					src.close()
 
@@ -239,7 +229,7 @@
 	icon_state = "leftsecure"
 	base_state = "leftsecure"
 	var/id = 1.0
-	req_access_txt = "2"
+	req_access = list(access_brig)
 	autoclose = 0 //brig doors close only when the cell timer starts
 
 	// Please keep synchronizied with these lists for easy map changes:

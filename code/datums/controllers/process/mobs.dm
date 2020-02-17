@@ -10,7 +10,7 @@ datum/controller/process/mobs
 
 	setup()
 		name = "Mob"
-		schedule_interval = 40
+		schedule_interval = 20
 		detailed_count = new
 		src.mobs = global.mobs
 
@@ -18,29 +18,26 @@ datum/controller/process/mobs
 		detailed_count = other.detailed_count
 
 	doWork()
+		var/currentTick = ticks
+
 		src.mobs = global.mobs
 		var/c
-
+		
 		for(var/mob/living/M in src.mobs)
-			if( M.z == 4 && !Z4_ACTIVE ) continue
 			M.Life(src)
 			if (!(c++ % 5))
-				scheck()
+				scheck(currentTick)
 
 		for(var/mob/wraith/W in src.mobs)
 			W.Life(src)
-			scheck()
-
+			scheck(currentTick)
+		
 		// For periodic antag overlay updates (Convair880).
 		for (var/mob/dead/G in src.mobs)
-#ifdef HALLOWEEN 
-			if (TRUE)
-#else
-			if (isadminghost(G) || IS_TWITCH_CONTROLLED(G))
-#endif
+			if (isadminghost(G))
 				G:Life(src)
-				scheck()
-
+				scheck(currentTick)
+				
 		/*
 		for(var/mob/living/M in src.mobs)
 			tick_counter = world.timeofday

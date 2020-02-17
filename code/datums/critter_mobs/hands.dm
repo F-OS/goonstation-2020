@@ -7,9 +7,8 @@
 	var/offset_x = 0							// pixel offset on the x axis for inhands
 	var/offset_y = 0							// pixel offset on the y axis for inhands
 	var/render_layer = MOB_INHAND_LAYER			// the layer of the inhands overlay
-	var/show_inhands = 1						// if not null, will show inhands normally, otherwise they won't display at all
 	var/obj/item/item							// the item held in the hand
-	var/icon/icon = 'icons/mob/critter_ui.dmi'	// the icon of the hand UI background
+	var/icon/icon = 'icons/mob/hud_human.dmi'	// the icon of the hand UI background
 	var/icon_state = "handn"					// the icon state of the hand UI background
 	var/obj/screen/hud/screenObj				// ease of life
 	var/limb_name = "left arm"					// name for the dummy holder
@@ -43,10 +42,6 @@
 		if (cd > 0)
 			cooldown_overlay = 1
 			screenObj.overlays += obscurer
-			SPAWN_DBG (cd)
+			spawn (cd)
 				cooldown_overlay = 0
 				screenObj.overlays -= obscurer
-
-	proc/can_special_attack()
-		if (!holder || !limb) return 0
-		.= (holder.a_intent == INTENT_DISARM && limb.disarm_special) || (holder.a_intent == INTENT_HARM && limb.harm_special)

@@ -14,7 +14,6 @@ datum/controller/process/critters
 	doWork()
 		var/i
 		for(var/datum/c in global.critters)
-			if(c:z == 4 && !Z4_ACTIVE) continue
 			c:process()
 			if (!(i++ % 10))
 				scheck()

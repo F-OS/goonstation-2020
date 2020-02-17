@@ -32,7 +32,7 @@
 /obj/machinery/door/supernorn/maintenance
 	name = "Maintenance Access"
 	icon = 'icons/Testing/newicons/obj/NEWdoors/door_maintenance.dmi'
-	req_access = list(access_maint_tunnels*/
+	req_access = list(access_maint_tunnels)*/
 
 /obj/machinery/door/supernorn/update_icon()
 	if (vertical)
@@ -41,43 +41,35 @@
 		icon_state = p_open ? "opened" : "closed"
 
 /obj/machinery/door/supernorn/open()
-	if (p_open || welded || locked || operating || (status & NOPOWER))
+	if (p_open || welded || locked || operating || (stat & NOPOWER))
 		return
 	operating = 1
-	if (ignore_light_or_cam_opacity)
-		src.opacity = 0
-	else
-		src.RL_SetOpacity(0)
+	src.RL_SetOpacity(0)
 	p_open = 1
 	play_animation("opening")
-	update_icon()
 	playsound(src, "sound/machines/airlock_swoosh_temp.ogg", 100, 0)
-	SPAWN_DBG(2.5)
-		set_density(0) // let them through halfway through the anim
-	SPAWN_DBG(5)
+	spawn(2.5)
+		density = 0 // let them through halfway through the anim
+	spawn(5)
 		operating = 0
 	if (autoclose_delay)
-		SPAWN_DBG(autoclose_delay)
+		spawn(autoclose_delay)
 			try_autoclose()
 
 /obj/machinery/door/supernorn/close()
-	if (!p_open || locked || operating || (status & NOPOWER))
+	if (!p_open || locked || operating || (stat & NOPOWER))
 		return
 	if (!check_safeties())
 		return
 	operating = 1
 	p_open = 0
 	play_animation("closing")
-	update_icon()
 	playsound(src, "sound/machines/airlock_swoosh_temp.ogg", 100, 0)
-	SPAWN_DBG(2.5)
-		set_density(1)
-	SPAWN_DBG(5)
+	spawn(2.5)
+		density = 1
+	spawn(5)
 		operating = 0
-		if (ignore_light_or_cam_opacity)
-			src.opacity = 1
-		else
-			src.RL_SetOpacity(1)
+		src.RL_SetOpacity(1)
 
 /obj/machinery/door/supernorn/play_animation(animation)
 	switch(animation)
@@ -109,7 +101,7 @@
 	if (check_safeties())
 		close()
 	else
-		SPAWN_DBG(10) // something was in the way
+		spawn(10) // something was in the way
 			try_autoclose()
 
 /obj/machinery/door/tempfiredoor

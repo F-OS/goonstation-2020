@@ -1,4 +1,4 @@
-/obj/screen/ability/topBar/critter
+/obj/screen/ability/critter
 	clicked(params)
 		var/datum/targetable/critter/spell = owner
 		if (!istype(spell))
@@ -17,16 +17,13 @@
 			usr:targeting_spell = owner
 			usr.update_cursor()
 		else
-			SPAWN_DBG(0)
+			spawn
 				spell.handleCast()
 
 /datum/abilityHolder/critter
 	usesPoints = 0
 	regenRate = 0
 	tabName = "Abilities"
-	topBarRendered = 1
-	rendered = 1
-
 
 // ----------------------------------------
 // Generic abilities that critters may have
@@ -43,7 +40,7 @@
 	preferred_holder_type = /datum/abilityHolder/critter
 
 	New()
-		var/obj/screen/ability/topBar/critter/B = new /obj/screen/ability/topBar/critter(null)
+		var/obj/screen/ability/critter/B = new /obj/screen/ability/critter(null)
 		B.icon = src.icon
 		B.icon_state = src.icon_state
 		B.owner = src
@@ -54,7 +51,7 @@
 	updateObject()
 		..()
 		if (!src.object)
-			src.object = new /obj/screen/ability/topBar/critter()
+			src.object = new /obj/screen/ability/critter()
 			object.icon = src.icon
 			object.owner = src
 		if (disabled)
@@ -76,7 +73,7 @@
 
 	proc/incapacitationCheck()
 		var/mob/living/M = holder.owner
-		return M.restrained() || M.stat || M.getStatusDuration("paralysis") || M.getStatusDuration("stunned") || M.getStatusDuration("weakened")
+		return M.restrained() || M.stat || M.paralysis || M.stunned || M.weakened
 
 	castcheck()
 		if (incapacitationCheck())

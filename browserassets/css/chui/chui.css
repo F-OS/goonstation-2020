@@ -12,8 +12,8 @@ body {
 }
 table {
 	width: 100%;
-	border-collapse: separate;
-	border-spacing: 0;
+	border-collapse: separate; 
+	border-spacing: 0; 
 	padding: 0;
 	*border-collapse: expression('separate', cellSpacing = '0px');
 }
@@ -73,7 +73,7 @@ table {
 	right: 15px;
 }
 #titlebar a:hover {
-	color: #58B4DC;
+	color: #379abe;
 }
 /* TITLEBAR END */
 
@@ -119,7 +119,7 @@ table {
 	left: 0;
 	word-wrap: break-word;
 	overflow: hidden;
-	border-top: 3px solid #58B4DC;
+	border-top: 3px solid #379abe;
 	border-left: 3px solid #21272c;
 	border-right: 3px solid #21272c;
 	border-bottom: 3px solid #21272c;
@@ -223,27 +223,30 @@ table {
   display: block;
 }
 .nano > .nano-pane {
-  background : #21272c;
+/*  background : #b5b5b5;
+  background : rgba(0,0,0,.25);*/
+  background : transparent;
   position   : absolute;
   width      : 10px;
   right      : 0;
   top        : 0;
   bottom     : 17px; /* #resizeArea height + padding */
   visibility : hidden\9; /* Target only IE7 and IE8 with this hack */
-  opacity    : 0.75;
+  opacity    : .01;
   -webkit-transition    : .2s;
   -moz-transition       : .2s;
   -o-transition         : .2s;
   transition            : .2s;
 }
 .nano > .nano-pane > .nano-slider {
-  background: #58B4DC;
+  background: #444;
+  background: rgba(0,0,0,.5);
   position              : relative;
   margin                : 0;
 }
 .nano:hover > .nano-pane, .nano-pane.active, .nano-pane.flashed {
   visibility : visible\9; /* Target only IE7 and IE8 with this hack */
-  opacity    : 1;
+  opacity    : 0.99;
 }
 /* CUSTOM SCROLLBARS END */
 
@@ -367,7 +370,7 @@ table {
 }
 .button:hover .bottom, .button:active .bottom {
 	height: 4px;
-	border-bottom: 2px solid #58B4DC;
+	border-bottom: 2px solid #379abe;
 }
 .button:active .bottom {
 	border-left-color: #788492;
@@ -429,21 +432,21 @@ table {
 /* Dark
 BG: #21272c
 Border: #3f4b54
-Highlight: #58B4DC
+Highlight: #379abe
 Text: #fff
 */
-.dark.button,
-.dark.button .top,
+.dark.button, 
+.dark.button .top, 
 .dark.button .bottom {background-color: #21272c;}
-.dark.button:active,
+.dark.button:active, 
 .dark.button:active .top {border-color: #21272c;}
 .dark.button:active .bottom {border-left-color: #21272c;}
-.dark.button,
-.dark.button .top,
+.dark.button, 
+.dark.button .top, 
 .dark.button .bottom {border-color: #3f4b54;}
 
 .dark.button:hover .bottom,
-.dark.button:active .bottom {border-bottom-color: #58B4DC;}
+.dark.button:active .bottom {border-bottom-color: #379abe;}
 
 .dark.button .top:before {background-image: url('btn-standard-tl.gif');}
 .dark.button:active .top:before {background-image: url('btn-standard-active-tl.gif');}
@@ -469,8 +472,8 @@ Text: #fff
 .traitor-tips .center {text-align:center;margin: 0 auto;}
 .traitor-tips .image-right {padding-right: 50px;}
 
-#createobj .selector_hs {
-    width: 400px;
+#createobj .selector_hs {    
+    width: 400px; 
     overflow: auto;
 }
 
@@ -513,5 +516,3 @@ a.manulink:active {border:none 0px; font-family: "Arial", sans-serif; color: whi
 	border: 0px;
 	overflow: hidden;
 }
-
-.emoji {font-family: "Segoe UI Emoji" !important;}

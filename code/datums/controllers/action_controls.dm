@@ -37,14 +37,17 @@ var/datum/action_controller/actions
 		if(!running.Find(owner))
 			running.Add(owner)
 			running[owner] = list(A)
+			A.owner = owner
+			A.started = world.time
+			A.onStart()
 		else
 			interrupt(owner, INTERRUPT_ACTION)
 			running[owner] += A
+			A.owner = owner
+			A.started = world.time
+			A.onStart()
 
-		A.owner = owner
-		A.started = world.time
-		A.onStart()
-		return A // cirr here, I added action ref to the return because I need it for AI stuff, thank you
+		return
 
 	proc/interrupt(var/atom/owner, var/flag) //Is called by all kinds of things to check for action interrupts.
 		if(running.Find(owner))
@@ -104,83 +107,57 @@ var/datum/action_controller/actions
 	proc/onDelete()				   //Called when the action is complete and about to be deleted. Usable for cleanup and such.
 		return
 
-	proc/updateBar()				// Updates the animations
-		return
-
 /datum/action/bar //This subclass has a progressbar that attaches to the owner to show how long we need to wait.
 	var/obj/actions/bar/bar
 	var/obj/actions/border/border
 
 	onStart()
 		..()
-		var/atom/movable/A = owner
 		if(owner != null)
 			bar = unpool(/obj/actions/bar)
 			bar.loc = owner.loc
 			border = unpool(/obj/actions/border)
 			border.loc = owner.loc
 			bar.pixel_y = 5
-			bar.pixel_x = 0
 			border.pixel_y = 5
-			if (!islist(A.attached_objs))
-				A.attached_objs = list()
-			A.attached_objs.Add(bar)
-			A.attached_objs.Add(border)
-			// this will absolutely obviously cause no problems.
-			bar.color = "#4444FF"
-			updateBar()
+			owner.attached_objs.Add(bar)
+			owner.attached_objs.Add(border)
 
 	onDelete()
 		..()
-		var/atom/movable/A = owner
-		if (owner != null && islist(A.attached_objs))
-			A.attached_objs.Remove(bar)
-			A.attached_objs.Remove(border)
-		SPAWN_DBG(5)
-			if (bar)
-				pool(bar)
-				bar = null
-			if (border)
-				pool(border)
-				border = null
+		if(owner != null)
+			owner.attached_objs.Remove(bar)
+			owner.attached_objs.Remove(border)
+		if (bar)
+			pool(bar)
+			bar = null
+		if (border)
+			pool(border)
+			border = null
 
 	onEnd()
-		if (bar)
-			bar.color = "#FFFFFF"
-			animate( bar, color = "#00CC00", time = 2.5 , flags = ANIMATION_END_NOW)
-			bar.transform = matrix() //Tiny cosmetic fix. Makes it so the bar is completely filled when the action ends.
+		bar.color = "#00FF00"
+		bar.transform = matrix() //Tiny cosmetic fix. Makes it so the bar is completely filled when the action ends.
+		bar.pixel_x = 0
 		..()
 
 	onInterrupt(var/flag)
 		if(state != ACTIONSTATE_DELETE)
-			if (bar)
-				updateBar(0)
-				bar.color = "#FFFFFF"
-				animate( bar, color = "#CC0000", time = 2.5 )
+			bar.color = "#FF0000"
 		..()
 
 	onUpdate()
-		updateBar()
-		..()
-
-	updateBar(var/animate = 1)
-		if (duration <= 0)
-			return
 		var/done = world.time - started
-		// inflate it a little to stop it from hitting 100% "too early"
-		var/fakeduration = duration + ((animate && done < duration) ? (world.tick_lag * 7) : 0)
-		var/remain = max(0, fakeduration - done)
-		var/complete = clamp(done / fakeduration, 0, 1)
-		bar.transform = matrix(complete, 0, -15 * (1 - complete), 0, 1, 0)
-		if (animate)
-			animate( bar, transform = matrix(1, 0, 0, 0, 1, 0), time = remain )
-		else
-			animate( bar, flags = ANIMATION_END_NOW )
+		var/complete = max(min((done / duration), 1), 0)
+		bar.transform = matrix(complete, 1, MATRIX_SCALE)
+		bar.color = "#0000FF"
+		bar.pixel_x = -nround( ((30 - (30 * complete)) / 2) )
+		..()
 
 /datum/action/bar/blob_health // WOW HACK
 	onUpdate()
 		var/obj/blob/B = owner
-		if (!owner || !istype(owner) || !bar || !border) //Wire note: Fix for Cannot modify null.invisibility
+		if (!owner || !istype(owner))
 			return
 		if (B.health == B.health_max)
 			border.invisibility = 101
@@ -199,7 +176,6 @@ var/datum/action_controller/actions
 
 	onStart()
 		..()
-		var/atom/movable/A = owner
 		if(owner != null)
 			shield_bar = unpool(/obj/actions/bar)
 			shield_bar.loc = owner.loc
@@ -207,10 +183,8 @@ var/datum/action_controller/actions
 			armor_bar.loc = owner.loc
 			shield_bar.pixel_y = 5
 			armor_bar.pixel_y = 5
-			if (!islist(A.attached_objs))
-				A.attached_objs = list()
-			A.attached_objs.Add(shield_bar)
-			A.attached_objs.Add(armor_bar)
+			owner.attached_objs.Add(shield_bar)
+			owner.attached_objs.Add(armor_bar)
 			shield_bar.layer = initial(shield_bar.layer) + 2
 			armor_bar.layer = initial(armor_bar.layer) + 1
 
@@ -220,10 +194,9 @@ var/datum/action_controller/actions
 		armor_bar.invisibility = 0
 		bar.invisibility = 0
 		border.invisibility = 0
-		var/atom/movable/A = owner
-		if (owner != null && islist(A.attached_objs))
-			A.attached_objs.Remove(shield_bar)
-			A.attached_objs.Remove(armor_bar)
+		if(owner != null)
+			owner.attached_objs.Remove(shield_bar)
+			owner.attached_objs.Remove(armor_bar)
 		pool(shield_bar)
 		shield_bar = null
 		pool(armor_bar)
@@ -280,25 +253,21 @@ var/datum/action_controller/actions
 /datum/action/bar/icon //Visible to everyone and has an icon.
 	var/icon
 	var/icon_state
-	var/icon_y_off = 30
+	var/icon_y_off = 20
 	var/icon_x_off = 0
 	var/image/icon_image
 
 	onStart()
 		..()
 		if(icon && icon_state && owner)
-			icon_image = image(icon, border ,icon_state, 10)
+			icon_image = image(icon, border ,icon_state, 7)
 			icon_image.pixel_y = icon_y_off
 			icon_image.pixel_x = icon_x_off
-			icon_image.plane = PLANE_HUD
-			icon_image.filters += filter(type="outline", size=0.5, color=rgb(255,255,255))
 			border.overlays += icon_image
 
 	onDelete()
-		if (bar)
-			bar.overlays.Cut()
-		if (icon_image)
-			del(icon_image)
+		bar.overlays.Cut()
+		del(icon_image)
 		..()
 
 /datum/action/bar/icon/build
@@ -310,10 +279,8 @@ var/datum/action_controller/actions
 	var/amount
 	var/objname
 	var/callback = null
-	var/obj/item/sheet/sheet2 // in case you need to pull from more than one sheet
-	var/cost2 // same as above
-	var/spot
-	New(var/obj/item/sheet/csheet, var/cobjtype, var/ccost, var/datum/material/cmat, var/camount, var/cicon, var/cicon_state, var/cobjname, var/post_action_callback = null, var/obj/item/sheet/csheet2, var/ccost2, var/spot)
+
+	New(var/obj/item/sheet/csheet, var/cobjtype, var/ccost, var/datum/material/cmat, var/camount, var/cicon, var/cicon_state, var/cobjname, var/post_action_callback = null)
 		..()
 		icon = cicon
 		icon_state = cicon_state
@@ -324,15 +291,10 @@ var/datum/action_controller/actions
 		amount = camount
 		objname = cobjname
 		callback = post_action_callback
-		src.spot = spot
-		if (csheet2)
-			sheet2 = csheet2
-		if (ccost2)
-			cost2 = ccost2
 
 	onStart()
 		..()
-		if(ishuman(owner))
+		if(istype(owner, /mob/living/carbon/human))
 			var/mob/living/carbon/human/H = owner
 			if(H.traitHolder.hasTrait("carpenter"))
 				duration = round(duration / 2)
@@ -342,14 +304,12 @@ var/datum/action_controller/actions
 	onEnd()
 		..()
 		owner.visible_message("<span style=\"color:blue\">[owner] assembles [objname]!</span>")
-		var/obj/item/R = new objtype(get_turf(spot || owner))
+		var/obj/item/R = new objtype(get_turf(owner))
 		R.setMaterial(mat)
 		if (istype(R))
 			R.amount = amount
 		R.dir = owner.dir
 		sheet.consume_sheets(cost)
-		if (sheet2 && cost2)
-			sheet2.consume_sheets(cost2)
 		logTheThing("station", owner, null, "builds [objname] (<b>Material:</b> [mat && istype(mat) && mat.mat_id ? "[mat.mat_id]" : "*UNKNOWN*"]) at [log_loc(owner)].")
 		if (callback)
 			call(callback)(src, R)
@@ -407,18 +367,16 @@ var/datum/action_controller/actions
 /datum/action/bar/private/icon //Only visible to the owner and has a little icon on the bar.
 	var/icon
 	var/icon_state
-	var/icon_y_off = 30
+	var/icon_y_off = 25
 	var/icon_x_off = 0
 	var/image/icon_image
 
 	onStart()
 		..()
 		if(icon && icon_state && owner)
-			icon_image = image(icon ,owner,icon_state,10)
+			icon_image = image(icon ,owner,icon_state,7)
 			icon_image.pixel_y = icon_y_off
 			icon_image.pixel_x = icon_x_off
-			icon_image.plane = PLANE_HUD
-			icon_image.filters += filter(type="outline", size=0.5, color=rgb(255,255,255))
 			owner << icon_image
 
 	onDelete()
@@ -468,20 +426,9 @@ var/datum/action_controller/actions
 
 		target.add_fingerprint(source) // Added for forensics (Convair880).
 
-		if (source.at_gunpoint && source.at_gunpoint.holding_at_gunpoint != source)
-			source.at_gunpoint.shoot_at_gunpoint(source)
-
 		if(item)
 			if(!target.can_equip(item, slot))
 				boutput(source, "<span style=\"color:red\">[item] can not be put there.</span>")
-				interrupt(INTERRUPT_ALWAYS)
-				return
-			if(!isturf(target.loc))
-				boutput(source, "<span style=\"color:red\">You can't put [item] on [target] when [(he_or_she(target))] is in [target.loc]!</span>")
-				interrupt(INTERRUPT_ALWAYS)
-				return
-			if(issilicon(source))
-				source.show_text("You can't put \the [item] on [target] when it's attached to you!", "red")
 				interrupt(INTERRUPT_ALWAYS)
 				return
 			logTheThing("combat", source, target, "tries to put \an [item] on %target% at at [log_loc(target)].")
@@ -492,10 +439,6 @@ var/datum/action_controller/actions
 
 			if(!I)
 				boutput(source, "<span style=\"color:red\">There's nothing in that slot.</span>")
-				interrupt(INTERRUPT_ALWAYS)
-				return
-			if(!isturf(target.loc))
-				boutput(source, "<span style=\"color:red\">You can't remove [I] from [target] when [(he_or_she(target))] is in [target.loc]!</span>")
 				interrupt(INTERRUPT_ALWAYS)
 				return
 			/* Some things use handle_other_remove to do stuff (ripping out staples, wiz hat probability, etc) should only be called once per removal.
@@ -652,11 +595,6 @@ var/datum/action_controller/actions
 			interrupt(INTERRUPT_ALWAYS)
 			return
 
-		if(ishuman(owner))
-			var/mob/living/carbon/human/H = owner
-			if(H.traitHolder.hasTrait("training_security"))
-				duration = round(duration / 2)
-
 		for(var/mob/O in AIviewers(owner))
 			O.show_message("<span style=\"color:red\"><B>[owner] attempts to handcuff [target]!</B></span>", 1)
 
@@ -694,7 +632,6 @@ var/datum/action_controller/actions
 			target.drop_from_slot(target.l_hand)
 			target.drop_juggle()
 			target.update_clothing()
-			target.setStatus("handcuffed", duration = null)
 
 			for(var/mob/O in AIviewers(ownerMob))
 				O.show_message("<span style=\"color:red\"><B>[owner] handcuffs [target]!</B></span>", 1)
@@ -763,7 +700,7 @@ var/datum/action_controller/actions
 
 	onEnd()
 		..()
-		if(owner != null && ishuman(owner) && owner:handcuffed)
+		if(owner != null && istype(owner, /mob/living/carbon/human) && owner:handcuffed)
 			var/mob/living/carbon/human/H = owner
 			H.handcuffed:set_loc(H.loc)
 			H.handcuffed.unequipped(H)
@@ -810,7 +747,6 @@ var/datum/action_controller/actions
 					O.show_message("<span style=\"color:red\"><B>[H] manages to remove the shackles!</B></span>", 1)
 				H.show_text("You successfully remove the shackles.", "blue")
 
-
 //CLASSES & OBJS
 
 /obj/actions //These objects are mostly used for the attached_objs var on mobs to attach progressbars to mobs.
@@ -825,8 +761,7 @@ var/datum/action_controller/actions
 
 /obj/actions/bar
 	icon_state = "bar"
-	layer = 101
-	plane = PLANE_HUD + 1
+	layer = 6
 	var/image/img
 	New()
 		img = image('icons/ui/actions.dmi',src,"bar",6)
@@ -842,9 +777,7 @@ var/datum/action_controller/actions
 		overlays.len = 0
 
 /obj/actions/border
-	layer = 100
 	icon_state = "border"
-	plane = PLANE_HUD + 1
 	var/image/img
 	New()
 		img = image('icons/ui/actions.dmi',src,"border",5)
@@ -890,14 +823,7 @@ var/datum/action_controller/actions
 		else
 			picker.working = 1
 			playsound(picker.loc, "sound/machines/whistlebeep.ogg", 50, 1)
-			out(owner, "<span style='color: blue;'>\The [picker.name] starts to pick up \the [target].</span>")
-			if (picker.highpower && owner:cell)
-				var/hpm_cost = 25 * (target.w_class * 2 + 1)
-				// Buff HPM by making it pick things up faster, at the expense of cell charge
-				// only allow it if more than double that power remains to keep it from bottoming out
-				if (owner:cell.charge >= hpm_cost * 2)
-					duration /= 3
-					owner:cell.use(hpm_cost)
+			out(owner, "<span style='color: blue;'>The [picker.name] whirs and beeps as it charges it's coils. You must hold still...</span>")
 
 	onInterrupt(var/flag) //They did something else while picking it up. I guess you dont have to do anything here unless you want to.
 		..()
@@ -906,9 +832,6 @@ var/datum/action_controller/actions
 	onEnd()
 		..()
 		//Shove the item into the picker here!!!
-		if (ismob(target.loc))
-			var/mob/M = target.loc
-			M.u_equip(target)
 		picker.pickupItem(target, owner)
 		actions.start(new/datum/action/magPickerHold(picker, picker.highpower), owner)
 
@@ -942,155 +865,11 @@ var/datum/action_controller/actions
 
 	onEnd()
 		..()
-		if (picker)
-			picker.dropItem()
+		picker.dropItem()
 
 	onInterrupt(var/flag)
 		..()
-		if (picker)
-			picker.dropItem()
-
-
-/datum/action/bar/icon/butcher_living_critter //Used when butchering a player-controlled critter
-	duration = 120
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_STUNNED
-	id = "butcherlivingcritter"
-	var/mob/living/critter/target
-
-	New(Target)
-		target = Target
-		..()
-
-	onUpdate()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onStart()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-		for(var/mob/O in AIviewers(owner))
-			O.show_message("<span style=\"color:red\"><B>[owner] begins to butcher [target].</B></span>", 1)
-
-	onEnd()
-		..()
-		if(owner && target)
-			target.butcher(owner)
-			for(var/mob/O in AIviewers(owner))
-				O.show_message("<span style=\"color:red\"><B>[owner] butchers [target].[target.butcherable == 2 ? "<b>WHAT A MONSTER</b>" : null]</B></span>", 1)
-
-/datum/action/bar/icon/rev_flash
-	duration = 18 SECONDS
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_STUNNED
-	id = "rev_flash"
-	icon = 'icons/ui/actions.dmi'
-	icon_state = "rev_imp"
-	var/mob/living/target
-	var/obj/item/device/flash/revolution/flash
-
-	New(Flash, Target)
-		flash = Flash
-		target = Target
-		..()
-
-	onUpdate()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onStart()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onEnd()
-		..()
-		if(owner && target)
-			if (ishuman(target))
-				var/mob/living/carbon/human/H = target
-				var/obj/item/implant/antirev/found_imp = (locate(/obj/item/implant/antirev) in H.implant)
-				if (found_imp)
-					found_imp.on_remove(target)
-					H.implant.Remove(found_imp)
-					qdel(found_imp)
-
-					playsound(target.loc, 'sound/impact_sounds/Crystal_Shatter_1.ogg', 50, 0.1, 0, 0.9)
-					target.visible_message("<span style=\"color:blue\">The loyalty implant inside [target] shatters into one million pieces!</span>")
-
-				flash.flash_mob(target, owner)
-
-/datum/action/bar/icon/mop_thing
-	duration = 30
-	interrupt_flags = INTERRUPT_STUNNED
-	id = "mop_thing"
-	icon = 'icons/obj/janitor.dmi' //In these two vars you can define an icon you want to have on your little progress bar.
-	icon_state = "mop"
-	var/atom/target
-	var/obj/item/mop/mop
-
-	New(Mop, Target)
-		mop = Mop
-		target = Target
-		duration = istype(target,/obj/fluid) ? 0 : 10
-		..()
-
-	onUpdate()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onStart()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onEnd()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-		if(owner && target)
-			mop.clean(target, owner)
-
-
-/datum/action/bar/private/spy_steal //Used when a spy tries to steal a large object
-	duration = 30
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_STUNNED
-	id = "spy_steal"
-	var/atom/target
-	var/obj/item/uplink/integrated/pda/spy/uplink
-
-	New(Target, Uplink)
-		target = Target
-		uplink = Uplink
-		..()
-
-	onUpdate()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onStart()
-		..()
-		if(get_dist(owner, target) > 1 || target == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-		playsound(owner.loc, "sound/machines/click.ogg", 60, 1)
-
-	onEnd()
-		..()
-		if(owner && target && uplink)
-			uplink.try_deliver(target, owner)
-
-
+		picker.dropItem()
 
 //DEBUG STUFF
 
@@ -1112,71 +891,3 @@ var/datum/action_controller/actions
 	New()
 		actions.start(new/datum/action/bar/private/bombtest(), src)
 		..()
-
-/datum/action/fire_roll //constant rolling
-	duration = -1
-	interrupt_flags = INTERRUPT_STUNNED
-	id = "fire_roll"
-
-	var/mob/living/M = 0
-
-	var/sfx_interval = 5
-	var/sfx_count = 0
-
-	var/pixely = 0
-	var/up = 1
-
-	New()
-		..()
-
-	onUpdate()
-		..()
-		if (M && M.resting && !M.stat && M.getStatusDuration("burning"))
-			M.update_burning(-1.2)
-
-			M.dir = turn(M.dir,up ? -90 : 90)
-			pixely += up ? 1 : -1
-			if (pixely != CLAMP(pixely, -5,5))
-				up = !up
-			M.pixel_y = pixely
-
-			sfx_count += 1
-			if (sfx_count >= sfx_interval)
-				playsound(M.loc, 'sound/impact_sounds/Generic_Shove_1.ogg', 50, 1, 0 , 0.7)
-				sfx_count = 0
-
-			var/turf/T = get_turf(M)
-			if (T.active_liquid)
-				T.active_liquid.HasEntered(M, T)
-
-		else
-			interrupt(INTERRUPT_ALWAYS)
-
-
-	onStart()
-		..()
-		M = owner
-		if (!M.resting)
-			M.resting = 1
-			var/mob/living/carbon/human/H = M
-			if (istype(H))
-				H.hud.update_resting()
-			for (var/mob/O in AIviewers(M))
-				O.show_message("<span style=\"color:red\"><B>[M] throws themselves onto the floor!</B></span>", 1, group = "resist")
-		else
-			for (var/mob/O in AIviewers(M))
-				O.show_message("<span style=\"color:red\"><B>[M] rolls around on the floor, trying to extinguish the flames.</B></span>", 1, group = "resist")
-		M.update_burning(-1.5)
-
-		M.unlock_medal("Through the fire and flames", 1)
-		playsound(M.loc, 'sound/impact_sounds/Generic_Shove_1.ogg', 50, 1, 0 , 0.7)
-
-	onInterrupt(var/flag)
-		..()
-		if (M)
-			M.pixel_y = 0
-
-	onEnd()
-		..()
-		if (M)
-			M.pixel_y = 0

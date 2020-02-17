@@ -6,10 +6,6 @@ var/datum/job_controller/job_controls
 	var/allow_special_jobs = 1 // hopefully this doesn't break anything!!
 	var/datum/job/job_creator = null
 
-	var/loaded_save = 0
-	var/last_client = null
-	var/load_another_ckey = null
-
 	New()
 		..()
 		if (derelict_mode)
@@ -80,30 +76,16 @@ var/datum/job_controller/job_controls
 		dat += "<A href='?src=\ref[src];JobCreator=1'>Create New Job</A>"
 		dat += "</body></html>"
 
-		usr.Browse(dat,"window=jobconfig;size=300x600")
-
-	proc/check_user_changed()//Since this is a 'public' window that everyone can get to, make sure we keep the user contained to their own savefile
-		if (last_client != usr.client)
-			src.savefile_unlock(usr)
-			src.last_client = usr.client
-			src.loaded_save = 0
-			src.load_another_ckey = null
-			return 1
-		return 0
+		usr << browse(dat,"window=jobconfig;size=300x600")
 
 	proc/job_creator()
-		src.check_user_changed()
 		var/dat = "<html><body><title>Job Creation</title>"
 		dat += "<b><u>Job Creator</u></b><HR>"
 
 		dat += "<A href='?src=\ref[src];EditName=1'>Job Name:</A> [src.job_creator.name]<br>"
 		dat += "<A href='?src=\ref[src];EditWages=1'>Wages Per Payday:</A> [src.job_creator.wages]<br>"
 		dat += "<A href='?src=\ref[src];EditLimit=1'>Job Limit:</A> [src.job_creator.limit]<br>"
-		dat += "<A href='?src=\ref[src];ChangeName=1'>Can Change Name on Spawn:</A> [src.job_creator.change_name_on_spawn ? "Yes":"No"]<br>"
-		dat += "<A href='?src=\ref[src];SetSpawnLoc=1'>Spawn Location:</A> [src.job_creator.special_spawn_location ? locate(src.job_creator.spawn_x,src.job_creator.spawn_y,src.job_creator.spawn_z) : "Default"]<br>"
-		dat += "<A href='?src=\ref[src];EditObjective=1'>Custom Objective:</A> [src.job_creator.objective][src.job_creator.objective ? (src.job_creator.spawn_miscreant ? " (Miscreant)" : " (Crew Objective)") : ""]<br>"
 		dat += "<A href='?src=\ref[src];EditMob=1'>Mob Type:</A> [src.job_creator.mob_type]<br>"
-		dat += "<BR>"
 		if (ispath(src.job_creator.mob_type, /mob/living/carbon/human))
 			dat += "<A href='?src=\ref[src];EditHeadgear=1'>Starting Headgear:</A> [src.job_creator.slot_head]<br>"
 			dat += "<A href='?src=\ref[src];EditMask=1'>Starting Mask:</A>  [src.job_creator.slot_mask]<br>"
@@ -120,57 +102,21 @@ var/datum/job_controller/job_controls
 			dat += "<A href='?src=\ref[src];EditPock2=1'>Starting 2nd Pocket Item:</A> [src.job_creator.slot_poc2]<br>"
 			dat += "<A href='?src=\ref[src];EditLhand=1'>Starting Left Hand Item:</A> [src.job_creator.slot_lhan]<br>"
 			dat += "<A href='?src=\ref[src];EditRhand=1'>Starting Right Hand Item:</A> [src.job_creator.slot_rhan]<br>"
-			dat += "<A href='?src=\ref[src];GetAccess=1'>Set Access Permissions </A>"
-			if (src.job_creator.access.len > 1)
-				dat += " "
-				dat += "<A href='?src=\ref[src];AddAccess=1'>(Add More):</A>"
-			dat += ":<BR>"
+			dat += "<A href='?src=\ref[src];GetAccess=1'>Access Permissions:</A><br>"
 			for(var/X in src.job_creator.access)
 				dat += "[X], "
-			dat += "<BR>"
-			dat += "<A href='?src=\ref[src];BioEffects=1'>Bio Effects:</A> [src.job_creator.bio_effects]<br>"
-		else if (ispath(src.job_creator.mob_type, /mob/living/critter))
-			dat += "<A href='?src=\ref[src];GetAccess=1'>Set Implanted Access Permissions</A>"
-			if (src.job_creator.access.len > 1)
-				dat += " "
-				dat += "<A href='?src=\ref[src];AddAccess=1'>(Add More):</A>"
-
 		dat += "<BR>"
 		dat += "<A href='?src=\ref[src];CreateJob=1'><b>Create Job</b></A>"
-		dat += "<BR><BR>"
-
-		if (loaded_save)
-			dat += "<b>Saved Jobs:</b>"
-			if (src.load_another_ckey)
-				dat += "<b> (Showing [src.load_another_ckey]'s jobs)</b>"
-			dat += "<br><small>"
-			for (var/i=1, i <= CUSTOMJOB_SAVEFILE_PROFILES_MAX, i++)
-				dat += " <a href='?src=\ref[src];Load=[i]'>[src.savefile_get_job_name(usr,i) || i]</a>"
-				dat += "&nbsp;"
-				if (!src.load_another_ckey)
-					dat += " <a href='?src=\ref[src];Save=[i]'>(Save here)</a>"
-				dat += "<br>"
-			dat += "</small><br>"
-			if (src.load_another_ckey)
-				dat += "<A href='?src=\ref[src];SaveLoad=1'><b>Load your own jobs</b></A>"
-			else
-				dat += "<A href='?src=\ref[src];LoadDifKey=1'><b>Load another admin's jobs</b></A>"
-		else
-			dat += "<A href='?src=\ref[src];SaveLoad=1'>Save/Load</A>"
-
 		dat += "</body></html>"
 
-		usr.Browse(dat,"window=jobcreator;size=500x650")
+		usr << browse(dat,"window=jobcreator;size=500x600")
 
 	Topic(href, href_list[])
 		// JOB CONFIG COMMANDS
-		usr_admin_only
 		if(href_list["AlterCap"])
 			var/list/alljobs = src.staple_jobs | src.special_jobs
 			var/datum/job/JOB = locate(href_list["AlterCap"]) in alljobs
-			var/newcap = input("Choose the new cap.","Job Cap Config", JOB.limit) as null|num
-			if (isnull(newcap))
-				return
+			var/newcap = input("Choose the new cap.","Job Cap Config") as num
 			JOB.limit = newcap
 			message_admins("Admin [key_name(usr)] altered [JOB.name] job cap to [newcap]")
 			logTheThing("admin", usr, null, "altered [JOB.name] job cap to [newcap]")
@@ -692,60 +638,6 @@ var/datum/job_controller/job_controls
 			src.job_creator.access = get_access(picker)
 			src.job_creator()
 
-		if(href_list["AddAccess"])
-			var/picker = input("Make this job's access comparable to which job?","Job Creator") in list("Captain","Head of Security",
-			"Head of Personnel","Chief Engineer","Research Director","Security Officer","Detective","Geneticist","Roboticist","Scientist",
-			"Medical Doctor","Quartermaster","Miner","Mechanic","Engineer","Chef","Barman","Botanist","Janitor","Chaplain","Staff Assistant","No Access")
-			src.job_creator.access |= get_access(picker)
-			src.job_creator()
-
-		if(href_list["BioEffects"])
-			switch(alert("Clear or reselect bioeffects?","Job Creator","Clear","Reselect"))
-				if("Clear")
-					src.job_creator.bio_effects = null
-				if("Reselect")
-					var/pick = input("Which effect(s)? Enter IDs - seperate using semicolons.","["Give"] Bioeffects") as null|text
-					if (!pick)
-						src.job_creator.bio_effects = null
-					else
-						src.job_creator.bio_effects = pick
-			src.job_creator()
-
-		if(href_list["EditObjective"])
-			switch(alert("Clear or redefine objective?","Job Creator","Clear","Redefine"))
-				if("Clear")
-					src.job_creator.objective = null
-				if("Redefine")
-					var/input = input("Enter a custom objective.","Enter Objective") as null|text
-					src.job_creator.objective = input
-					switch(alert("Objective type?","Job Creator","Miscreant Objective","Crew Objective"))
-						if("Miscreant Objective")
-							src.job_creator.spawn_miscreant = 1
-						if("Crew Objective")
-							src.job_creator.spawn_miscreant = 0
-			src.job_creator()
-
-		if(href_list["ChangeName"])
-			if (src.job_creator.change_name_on_spawn == 0)
-				src.job_creator.change_name_on_spawn = 1
-			else
-				src.job_creator.change_name_on_spawn = 0
-			src.job_creator()
-
-		if(href_list["SetSpawnLoc"])
-			switch(alert("Clear or reselect spawn location?","Job Creator","Clear","Reselect"))
-				if("Clear")
-					src.job_creator.special_spawn_location = null
-				if("Reselect")
-					alert("Please move to the target location and then press OK.")
-					var/atom/trg = get_turf(usr)
-					if(trg)
-						src.job_creator.special_spawn_location = 1
-						src.job_creator.spawn_x = trg.x
-						src.job_creator.spawn_y = trg.y
-						src.job_creator.spawn_z = trg.z
-			src.job_creator()
-
 		if(href_list["CreateJob"])
 			var/datum/job/match_check = find_job_in_controller_by_string(src.job_creator.name)
 			if (match_check)
@@ -754,8 +646,6 @@ var/datum/job_controller/job_controls
 			else
 				var/datum/job/created/JOB = new /datum/job/created(src)
 				src.special_jobs += JOB
-				wagesystem.jobs[JOB.name] = src.job_creator.wages
-
 				JOB.name = src.job_creator.name
 				JOB.wages = src.job_creator.wages
 				JOB.limit = src.job_creator.limit
@@ -776,45 +666,9 @@ var/datum/job_controller/job_controls
 				JOB.slot_lhan = src.job_creator.slot_lhan
 				JOB.slot_rhan = src.job_creator.slot_rhan
 				JOB.access = JOB.access | src.job_creator.access
-				JOB.change_name_on_spawn = src.job_creator.change_name_on_spawn
-				JOB.special_spawn_location = src.job_creator.special_spawn_location
-				JOB.spawn_x = src.job_creator.spawn_x
-				JOB.spawn_y = src.job_creator.spawn_y
-				JOB.spawn_z = src.job_creator.spawn_z
-				JOB.bio_effects = src.job_creator.bio_effects
-				JOB.objective = src.job_creator.objective
-				JOB.spawn_miscreant = src.job_creator.spawn_miscreant
 				message_admins("Admin [key_name(usr)] created special job [JOB.name]")
 				logTheThing("admin", usr, null, "created special job [JOB.name]")
 				logTheThing("diary", usr, null, "created special job [JOB.name]", "admin")
-
-			src.job_creator()
-
-		if(href_list["Save"])
-			if (!src.check_user_changed())
-				src.savefile_save(usr, (isnum(text2num(href_list["Save"])) ? text2num(href_list["Save"]) : 1))
-				boutput(usr, "<span style=\"color:blue\"><b>Job saved to Slot [text2num(href_list["Save"])].</b></span>")
-			src.job_creator()
-
-		if(href_list["Load"])
-			if (!src.check_user_changed())
-				if (!src.savefile_load(usr, (isnum(text2num(href_list["Load"])) ? text2num(href_list["Load"]) : 1)))
-					alert(usr, "You do not have a job saved in this slot.")
-				else
-					boutput(usr, "<span style=\"color:blue\"><b>Job loaded from Slot [text2num(href_list["Load"])].</b></span>")
-			src.job_creator()
-
-		if(href_list["SaveLoad"])
-			src.loaded_save = 1
-			src.load_another_ckey = null
-			src.job_creator()
-
-		if (href_list["LoadDifKey"])
-			var/key = input("Which admin's jobs? (Enter ckey)","Job Creator")
-			src.load_another_ckey = key
-			if (!src.savefile_path_exists(usr))
-				src.load_another_ckey = null
-				alert(usr, "Could not find a savefile with that ckey!.")
 			src.job_creator()
 
 /proc/find_job_in_controller_by_string(var/string,var/staple_only = 0)

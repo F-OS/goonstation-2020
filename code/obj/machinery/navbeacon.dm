@@ -4,7 +4,7 @@
 /obj/machinery/navbeacon
 
 	icon = 'icons/obj/objects.dmi'
-	icon_state = "navbeacon0"//-f"
+	icon_state = "navbeacon0-f"
 	name = "navigation beacon"
 	desc = "A radio beacon used for bot navigation."
 	level = 1		// underfloor
@@ -31,16 +31,12 @@
 		var/turf/T = loc
 		hide(T.intact)
 
-		SPAWN_DBG(5)	// must wait for map loading to finish
+		spawn(5)	// must wait for map loading to finish
 			if(radio_controller)
 				radio_controller.add_object(src, "[freq]")
 
 			if(!net_id)
 				net_id = generate_net_id(src)
-
-	disposing()
-		radio_controller.remove_object(src, "[freq]")
-		..()
 
 	// set the transponder codes assoc list from codes_txt
 	proc/set_codes()
@@ -49,7 +45,7 @@
 
 		codes = new()
 
-		var/list/entries = splittext(codes_txt, ";")	// entries are separated by semicolons
+		var/list/entries = dd_text2List(codes_txt, ";")	// entries are separated by semicolons
 
 		for(var/e in entries)
 			var/index = findtext(e, "=")		// format is "key=value"
@@ -69,8 +65,14 @@
 
 	// update the icon_state
 	proc/updateicon()
-		icon_state="navbeacon[open]"
-		alpha = invisibility ? 128 : 255
+		var/state="navbeacon[open]"
+
+		if(invisibility)
+			icon_state = "[state]-f"	// if invisible, set icon to faded version
+										// in case revealed by T-scanner
+		else
+			icon_state = "[state]"
+
 
 	// look for a signal of the form "findbeacon=X"
 	// where X is any
@@ -79,12 +81,12 @@
 	// if found, return a signal
 	receive_signal(datum/signal/signal)
 
-//		if(status & NOPOWER)
+//		if(stat & NOPOWER)
 //			return
 
 		var/request = signal.data["findbeacon"]
 		if(request && ((request in codes) || request == "any" || request == location))
-			SPAWN_DBG(1)
+			spawn(1)
 				post_signal()
 
 
@@ -113,7 +115,7 @@
 		if (T.intact)
 			return		// prevent intraction when T-scanner revealed
 
-		if (isscrewingtool(I))
+		if (istype(I, /obj/item/screwdriver))
 			open = !open
 
 			user.visible_message("[user] [open ? "opens" : "closes"] the beacon's cover.", "You [open ? "open" : "close"] the beacon's cover.")
@@ -124,7 +126,7 @@
 			I = I:ID_card
 		if (istype(I, /obj/item/card/id))
 			if (open)
-				if (src.allowed(user))
+				if (src.allowed(user, req_only_one_required))
 					src.locked = !src.locked
 					boutput(user, "Controls are now [src.locked ? "locked." : "unlocked."]")
 				else
@@ -186,7 +188,7 @@ Transponder Codes:<UL>"}
 			t += "<small><A href='byond://?src=\ref[src];add=1;'>(add new)</A></small><BR>"
 			t+= "<UL></TT>"
 
-		user.Browse(t, "window=navbeacon")
+		user << browse(t, "window=navbeacon")
 		onclose(user, "navbeacon")
 		return
 
@@ -194,7 +196,7 @@ Transponder Codes:<UL>"}
 		..()
 		if (usr.stat)
 			return
-		if ((in_range(src, usr) && istype(src.loc, /turf)) || (issilicon(usr)))
+		if ((in_range(src, usr) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon)))
 			if(open && !locked)
 				usr.machine = src
 
@@ -258,7 +260,7 @@ Transponder Codes:<UL>"}
 /obj/machinery/wirenav
 	name = "Wired Nav Beacon"
 	icon = 'icons/obj/objects.dmi'
-	icon_state = "wirednav"//-f"
+	icon_state = "wirednav-f"
 	level = 1		// underfloor
 	layer = OBJ_LAYER
 	anchored = 1
@@ -269,8 +271,7 @@ Transponder Codes:<UL>"}
 
 	hide(var/intact)
 		invisibility = intact ? 101 : 0
-		//src.icon_state = "wirednav[invisibility ? "-f" : ""]"
-		alpha = invisibility ? 128 : 255
+		src.icon_state = "wirednav[invisibility ? "-f" : ""]"
 
 	New()
 		..()
@@ -278,7 +279,7 @@ Transponder Codes:<UL>"}
 		var/turf/T = get_turf(src)
 		hide(T.intact)
 
-		SPAWN_DBG(6)
+		spawn(6)
 			if(!nav_tag)
 				src.nav_tag = "NOWHERE"
 				var/area/A = get_area(src)
@@ -297,7 +298,7 @@ Transponder Codes:<UL>"}
 		return
 
 	receive_signal(datum/signal/signal)
-		if(status & NOPOWER || !src.link)
+		if(stat & NOPOWER || !src.link)
 			return
 
 		if(!signal || signal.encryption || !signal.data["sender"])
@@ -315,7 +316,7 @@ Transponder Codes:<UL>"}
 			reply.data["netid"] = src.net_id
 			reply.data["data"] = src.nav_tag
 			reply.data["navdat"] = "x=[src.x]&y=[src.y]&z=[src.z]"
-			SPAWN_DBG(5)
+			spawn(5)
 				src.link.post_signal(src, reply)
 			return
 
@@ -587,7 +588,7 @@ Transponder Codes:<UL>"}
 		west
 			codes_txt = "delivery;dir=8"
 	hallway_fore_north
-		location = "North Primary Hallway"
+		location = "Fore Primary Hallway"
 		codes_txt = "delivery;dir=1"
 
 		east
@@ -597,7 +598,7 @@ Transponder Codes:<UL>"}
 		west
 			codes_txt = "delivery;dir=8"
 	hallway_starboard_north
-		location = "East Primary Hallway"
+		location = "Starboard Primary Hallway"
 		codes_txt = "delivery;dir=1"
 
 		east
@@ -607,7 +608,7 @@ Transponder Codes:<UL>"}
 		west
 			codes_txt = "delivery;dir=8"
 	hallway_aft_north
-		location = "South Primary Hallway"
+		location = "Aft Primary Hallway"
 		codes_txt = "delivery;dir=1"
 
 		east
@@ -617,7 +618,7 @@ Transponder Codes:<UL>"}
 		west
 			codes_txt = "delivery;dir=8"
 	hallway_port_north
-		location = "West Primary Hallway"
+		location = "Port Primary Hallway"
 		codes_txt = "delivery;dir=1"
 
 		east
@@ -636,457 +637,3 @@ Transponder Codes:<UL>"}
 			codes_txt = "delivery;dir=2"
 		west
 			codes_txt = "delivery;dir=8"
-
-/obj/machinery/navbeacon/tour
-	name = "tour beacon"
-	freq = 1443
-
-/obj/machinery/navbeacon/tour/cog1
-	tour0
-		name = "tour beacon - start"
-		location = "tour0"
-		codes_txt = "tour;next_tour=tour1;desc=Hello! Welcome to to the Nanotrasen C-Class Orbital Facility Tour! I will be your tourguide today on this adventure! Let's get started!"
-
-	tour1
-		name = "tour beacon - 'Bar'"
-		location = "tour1"
-		codes_txt = "tour;next_tour=tour2;desc=A happy crew is a productive crew! During approved breaks, please enjoy your station's cafeteria and lounge. Be sure to drink responsibly though!"
-
-	tour2
-		name = "tour beacon - 'Detective'"
-		location = "tour2"
-		codes_txt = "tour;next_tour=tour3;desc=Oh, um... here's where the detective works. I think they might have a drinking problem, but that's just between you and me. "
-
-	tour3
-		name = "tour beacon - 'Chapel'"
-		location = "tour3"
-		codes_txt = "tour;next_tour=tour4;desc=Are you in need of spiritual counseling? Your station's theological staff is here to provide counseling and uplifting advice in the Chapel. The pen-and-paper game club meets in here too! Your station's hard-working Janitor's office is down below the Chapel. There's also a fully equipped hydroponics facility on this end of the station, helping to keep everyone healthy with bushels and bushels of tasty fruits and veggies!"
-
-	tour4
-		name = "tour beacon - 'Lounge'"
-		location = "tour4"
-		codes_txt = "tour;next_tour=tour5;desc=This is the Arthur Muggins Memorial Jazz Lounge, brought to you by Nanotrasen Cultural Directive 45-T, Subsection 3."
-
-	tour5
-		name = "tour beacon - 'Fitness'"
-		location = "tour5"
-		codes_txt = "tour;next_tour=tour6;desc=It's important to remain fit and healthy while working in an extraplanetary workplace! You'll find a swimming pool below you and a boxing ring above. We also have a state-of-the-art virtual entertainment arcade for those of a less athletic persuasion."
-
-	tour6
-		name = "tour beacon - 'Crew Quarters'"
-		location = "tour6"
-		codes_txt = "tour;next_tour=tour7;desc=We are now in the crew quarters. Need a nap? Need a haircut? Here's your home away from home!"
-
-	tour7
-		name = "tour beacon - 'Security'"
-		location = "tour7"
-		codes_txt = "tour;next_tour=tour8;desc=Corporate espionage and criminal misdeeds are a sad fact of life out in deep space. If you see something, say something! Your helpful security team is hard at work keeping your station safe."
-
-	tour8
-		name = "tour beacon - 'Courtroom'"
-		location = "tour8"
-		codes_txt = "tour;next_tour=tour9;desc=This is your station's command lobby and courtroom. Your Head of Personnel might have some new work for you. You might also get to see the thrilling drama of the legal process at work!"
-
-	tour9
-		name = "tour beacon - 'Owlery'"
-		location = "tour9"
-		codes_txt = "tour;next_tour=tour10;desc=Hoot! Hoot! Did you know that your Regional Director is a noted amateur ornithologist? If you're feeling stressed out at work, please enjoy the company and soothing hoots of these majestic beasts. Pardon the darkness, they are nocturnal after all."
-
-	tour10
-		name = "tour beacon - 'EVA'"
-		location = "tour10"
-		codes_txt = "tour;next_tour=tour11;desc=Please keep your hands inside the station at all times! Remember, Safety First! In the event that you do need to go out in space though, you will probably want an EVA suit. Make sure to ask for permission first!"
-
-	tour11
-		name = "tour beacon - 'AI'"
-		location = "tour11"
-		codes_txt = "tour;next_tour=tour12;desc=Your station's hard-working and dependable AI construct lives near here! Please remember to treat it with respect. Vehicular pods may be available in the adjacent hangar, but due to budget constraints you may have to build your own. Please forward any complaints to your Head of Personnel."
-
-	tour12
-		name = "tour beacon - 'Research'"
-		location = "tour12"
-		codes_txt = "tour;next_tour=tour13;desc=What would a research station be without a research sector? Beats me! Anyways, that's what's in here. Authorized personnel only! Your station's science team is very busy working on very serious and important sciencey stuff!"
-
-	tour13
-		name = "tour beacon - 'Medbay'"
-		location = "tour13"
-		codes_txt = "tour;next_tour=tour14;desc=Safety first! Accidents do happen though, and if you find yourself injured in the line of work, please hurry along to see your Medbay staff. NOTICE: It has been zero (0) days since the last workplace injury."
-
-	tour14
-		name = "tour beacon - 'Engine'"
-		location = "tour14"
-		codes_txt = "tour;next_tour=tour15;desc=Thanks to advances in plasma research, your C-class station has been equipped with a new Thermo-Electric Generator engine! Singularity accidents are a thing of the past! Who ever thought it was a good idea to keep a black hole inside a space station anyways? Yeesh!"
-
-	tour15
-		name = "tour beacon - 'Quartermasters'"
-		location = "tour15"
-		codes_txt = "tour;next_tour=tour16;desc=Need some new equipment or supplies for your workplace? Come on down to your local Quartermasters' office! If they ain't got it, you probably don't want it anyways."
-
-	tour16
-		name = "tour beacon - 'Escape'"
-		location = "tour16"
-		codes_txt = "tour;next_tour=tour17;desc=In the event of catastrophic station damage or approved shift change, a shuttle will be dispatched from the regional Central Command dock to this location. Should this occur, remember to line up quietly and enter single-file. No shoving please!"
-
-	tour17
-		name = "tour beacon - end"
-		location = "tour17"
-		codes_txt = "tour;next_tour=tour18;desc=I hope you all have an excellent, safe and productive shift onboard this station! If you've enjoyed the tour, please put in a nice word about Murray if you see your captain."
-
-	tour18
-		name = "tour beacon - home"
-		location = "tour18"
-		codes_txt = "tour"
-
-/obj/machinery/navbeacon/tour/cog2
-	tour0
-		name = "tour beacon - 'Arrivals'"
-		location = "tour0"
-		codes_txt = "tour;next_tour=tour1;desc=Hello! Welcome to to the Nanotrasen C-Class Orbital Facility Tour! I will be your tourguide today on this adventure! Let's get started!\nThis fine place is the arrival lobby!  It features a full shuttle dock for arriving workers!  It never takes leaving employees, though.  I think they fumigate the shuttle on the way back."
-
-	tour1
-		name = "tour beacon - 'Net Cafe'"
-		location = "tour1"
-		codes_txt = "tour;next_tour=tour2;desc=This is the \"Network Cafe!\"  It has computers...on a network!  I think it used to have a bulletin board set up, but the computer running that fell off a shelf and nobody has fixed it yet."
-
-	tour2
-		name = "tour beacon - 'Chapel'"
-		location = "tour2"
-		codes_txt = "tour;next_tour=tour3;desc=The station chapel is here to meet all of the crew's spiritual needs.  It is non-denominational and may serve as a chapel, synagogue, mosque, shrine, house of worship, or fire temple.  Also, sometimes there are bingo nights and it's a good place to store extra chairs."
-
-	tour3
-		name = "tour beacon - 'Fitness'"
-		location = "tour3"
-		codes_txt = "tour;next_tour=tour4;desc=Fitness is very important in space, as time spent in low or zero gravity rapidly diminishes muscle mass.  To combat this, the station has a full fitness and recreation center, including a pool!  I hear that pools are pretty fun, but I don't think water wings would work for me since I only have one arm.  Also because I am a robot and would die."
-
-	tour4
-		name = "tour beacon - 'Bar'"
-		location = "tour4"
-		codes_txt = "tour;next_tour=tour5;desc=The station bar is the primary dining area for station employees, offering a full assortment of great food and drinks.  The detective's office is connected in the back.  I, um, hope they don't fall off the wagon..."
-
-	tour5
-		name = "tour beacon - 'Podbays'"
-		location = "tour5"
-		codes_txt = "tour;next_tour=tour6;desc=Here are the station pod bays and outer engineering compartments.  Don't worry, the engine is supposed to be full of fire!  Um, the black tiled parts are, I mean.  Well, some of them.  Please try to avoid touching energy beams and hot surfaces."
-
-	tour6
-		name = "tour beacon - 'MedSci'"
-		location = "tour6"
-		codes_txt = "tour;next_tour=tour7;desc=The station's medical bay and research facilities are some of the most advanced out there!  For the purposes of that previous statement, \"out there\" is defined as \"on this side of the Channel wormhole, orbiting this gas giant, and at this particular apogee, perigee, and inclination.\"  Don't forget to come down here if you or a coworker need medical attention!"
-
-	tour7
-		name = "tour beacon - 'Cargo'"
-		location = "tour7"
-		codes_txt = "tour;next_tour=tour8;desc=The cargo bay serves the station's need for supplies and sells off surplus materials.  One time they spent the entire budget on crates of tapioca pudding."
-
-	tour8
-		name = "tour beacon - 'Mining'"
-		location = "tour8"
-		codes_txt = "tour;next_tour=tour9;desc=The station isn't the only thing in orbit!  There's also a wide variety of captured asteroids and similar objects.  Mining pulls them in and harvests them for resources.  I hope they fixed the thing where the asteroid keeps moving and shears the entire department off."
-
-	tour9
-		name = "tour beacon - 'Escape'"
-		location = "tour9"
-		codes_txt = "tour;next_tour=tour10;desc=This is the escape shuttle dock.  It's where you will leave the station at the end of your shift.  It's also the designated meeting area for the INCREDIBLY UNLIKELY case that a disaster occurs and the station needs to be evacuated."
-
-	tour10
-		name = "tour beacon - 'Bridge'"
-		location = "tour10"
-		codes_txt = "tour;next_tour=tour11;desc=If the engine is the station's heart, then the bridge is its brain!  And security here is its lymph nodes or kidneys or something.  I'm, um, not very good at biology, sorry."
-
-	tour11
-		name = "tour beacon - 'End'"
-		location = "tour11"
-		codes_txt = "tour;"
-
-/obj/machinery/navbeacon/tour/destiny
-	tour0
-		name = "tour beacon - start"
-		location = "tour0"
-		codes_txt = "tour;next_tour=tour1;desc=Hello, vital crew member! You have been awakened for a shift on the NSS Destiny. This is year... five! of this exciting exploratory mission in the %system% system. If you would like to be re-familiarized with the ship layout, please follow me in an orderly manner!"
-		New()
-			var/system_name = pick(uppercase_letters) + pick(vowels_upper) + pick(consonants_upper)
-			src.codes_txt = replacetext(src.codes_txt, "%system%", system_name)
-			..()
-
-	tour1
-		name = "tour beacon - 'Cryogenics'"
-		location = "tour1"
-		codes_txt = "tour;next_tour=tour2;desc=I hope you had a good nap in cryosleep! Ha ha! I'm just making conversation, I know it's a dreamless silence.\nIn any case, please be careful around the cryonics equipment. Remember: just because somebody dared you to lick a coolant pipe doesn't mean you have to. I mean, if everyone else was jumping off an airbridge into the cold of space, would you? Statistically yes, but please don't."
-
-	tour2
-		name = "tour beacon - 'Bar'"
-		location = "tour2"
-		codes_txt = "tour;next_tour=tour3;desc=This is the bar! It will serve all of your dietary needs and act as a great place for social interaction and relaxation. There is also a full stock of bad action movie video tapes... somewhere..."
-
-	tour3
-		name = "tour beacon - 'Detective'"
-		location = "tour3"
-		codes_txt = "tour;next_tour=tour4;desc=This is the detective's office! They help investigate crimes and perform forensic work, not that there is much crime on the ship! I, um, think they might have a drinking problem...\nUp that hallway are the restroom facilities. The rest facilities of the NSS Destiny were more than doubled in size during construction due to growing... hygiene issues... on other NT facilities."
-
-	tour4
-		name = "tour beacon - 'Medbay'"
-		location = "tour4"
-		codes_txt = "tour;next_tour=tour5;desc=Safety first! Accidents do happen though, and if you find yourself injured in the line of work, please hurry along to see your Medbay staff. NOTICE: It has been zero (0) days since the last workplace injury."
-
-	tour5
-		name = "tour beacon - 'Engineering'"
-		location = "tour5"
-		codes_txt = "tour;next_tour=tour6;desc=Thanks to advances in plasma research, the NSS Destiny has been equipped with a new Thermo-Electric Generator engine! Singularity accidents are a thing of the past! Who ever thought it was a good idea to keep a black hole inside a spaceship anyways? Yeesh!"
-
-	tour6
-		name = "tour beacon - 'Security'"
-		location = "tour6"
-		codes_txt = "tour;next_tour=tour7;desc=This is the NSS Destiny's security office and courtroom. Corporate espionage and criminal misdeeds are a sad fact of life out in deep space. If you see something, say something! Your helpful security team is hard at work keeping the ship safe. You might also get to see the thrilling drama of the legal process at work!"
-
-	tour7
-		name = "tour beacon - 'EVA'"
-		location = "tour7"
-		codes_txt = "tour;next_tour=tour8;desc=Please keep your hands inside the station at all times! Remember, Safety First! In the event that you do need to go out in space though, you will probably want an EVA suit. Make sure to ask for permission first!"
-
-	tour8
-		name = "tour beacon - 'Fitness'"
-		location = "tour8"
-		codes_txt = "tour;next_tour=tour9;desc=Fitness is very important in space, as time spent in low or zero gravity rapidly diminishes muscle mass.  To combat this, the ship has a full fitness and recreation center, including a pool!  I hear that pools are pretty fun, but I don't think water wings would work for me since I only have one arm.  Also because I am a robot and would die."
-
-	tour9
-		name = "tour beacon - 'Cargo'"
-		location = "tour9"
-		codes_txt = "tour;next_tour=tour10;desc=The cargo bay serves the station's need for supplies and sells off surplus materials.  One time they spent the entire budget on crates of tapioca pudding."
-
-	tour10
-		name = "tour beacon - 'Research'"
-		location = "tour10"
-		codes_txt = "tour;next_tour=tour11;desc=What would a research vessel be without a research sector? Beats me! Anyways, that's what's in here. Authorized personnel only! The Destiny's science team is very busy working on very serious and important sciencey stuff!"
-
-	tour11
-		name = "tour beacon - 'Hydroponics'"
-		location = "tour11"
-		codes_txt = "tour;next_tour=tour12;desc=This is the Destiny's fully equipped hydroponics facility! It helps keep everyone healthy with bushels and bushels of tasty fruits and veggies, delivered straight to the kitchen!"
-
-	tour12
-		name = "tour beacon - 'Bridge'"
-		location = "tour12"
-		codes_txt = "tour;next_tour=tour13;desc=This is the core of the NSS Destiny, the bridge! Your station's hard-working and dependable AI construct lives here as well! Please remember to treat it with respect."
-
-	tour13
-		name = "tour beacon - 'Chapel'"
-		location = "tour13"
-		codes_txt = "tour;next_tour=tour14;desc=Are you in need of spiritual counseling? The Destiny's theological staff is here to provide counseling and uplifting advice in the Chapel. It is non-denominational and may serve as a chapel, synagogue, mosque, shrine, house of worship, or fire temple.  Also, sometimes there are bingo nights and it's a good place to store extra chairs."
-
-	tour14
-		name = "tour beacon - 'Crew Quarters'"
-		location = "tour14"
-		codes_txt = "tour;next_tour=tour15;desc=We are now in the crew quarters. Need a nap? Need a haircut? Here's your home away from home!"
-
-	tour15
-		name = "tour beacon - 'Net Cafe'"
-		location = "tour15"
-		codes_txt = "tour;next_tour=tour16;desc=This is the \"Network Cafe!\" It has computers... on a network! I think it used to have a bulletin board set up, but the computer running that fell off a shelf and nobody has fixed it yet."
-
-	tour16
-		name = "tour beacon - 'Heads'"
-		location = "tour16"
-		codes_txt = "tour;next_tour=tour17;desc=This is the Head of Personnel's office! You can come here to ask them for assistance with a variety of issues, from changing jobs to getting fired! The Captain's office is just up the hall, and the other department heads' quarters are just behind us. Boy, there sure are a lot of command staff all bunched up here in this thin, fragile part of the ship!"
-
-	tour17
-		name = "tour beacon - 'Aviary'"
-		location = "tour17"
-		codes_txt = "tour;next_tour=tour18;desc=Squawk! Squawk! Did you know that your Regional Director is a noted amateur ornithologist? If you're feeling stressed out at work, please enjoy the company and soothing squawks and hoots of these majestic beasts. Please don't leave anything valuable in the aviary, as the birds have been known to steal things left lying around."
-
-	tour18
-		name = "tour beacon - 'Escape'"
-		location = "tour18"
-		codes_txt = "tour;next_tour=tour19;desc=This is the escape shuttle dock. It's where you will leave the station at the end of your shift. It's also the designated meeting area for the INCREDIBLY UNLIKELY case that a disaster occurs and the station needs to be evacuated. Vehicular pods may be available in the adjacent hangar, but due to budget constraints you may have to build your own. Please forward any complaints to your Head of Personnel."
-
-	tour19
-		name = "tour beacon - end"
-		location = "tour19"
-		codes_txt = "tour;next_tour=tour20;desc=I hope you all have an excellent, safe and productive shift onboard the NSS Destiny! If you've enjoyed the tour, please put in a nice word about Mary if you see your captain."
-
-	tour20
-		name = "tour beacon - home"
-		location = "tour20"
-		codes_txt = "tour;"
-
-
-/obj/machinery/navbeacon/tour/oshan
-	tour0
-		name = "tour beacon - 'Arrivals'"
-		location = "tour0"
-		codes_txt = "tour;next_tour=tour1;desc=Hello friend, and welcome to to the Nanotrasen Deep Sea Facility Tour! I will be your tourguide today on this adventure! Let's get started!\nThis lovely location is the arrivals lobby! It supports the PRISMA arrival pod system, which provides employees with their own private and efficient shuttle transport. Where do they launch from? Well, that's classified."
-
-	tour1
-		name = "tour beacon - 'Radio Lab'"
-		location = "tour1"
-		codes_txt = "tour;next_tour=tour2;desc=If you'll look to the east, you'll see our station's very own radio laboratory. Recently installed, it features everything you'd need to host an engaging show, and is equipped to broadcast all the way over to the next sector. Though, you'd have to pay Syndicate - um, syndication - fees first."
-
-	tour2
-		name = "tour beacon - 'Information Office'"
-		location = "tour2"
-		codes_txt = "tour;next_tour=tour3;desc=This is our information office. It's stocked with all sorts of reading materials and news equipment, if you'd ever like to try your hand at being a reporter. And if you ever feel lost and alone, you should see the station psychotherapist. But if they're off-duty, this is a pretty good alternative. The help desk should provide directions and insight, if not for your life, to the station's bar and on what drinks to order."
-
-	tour3
-		name = "tour beacon - 'Customs'"
-		location = "tour3"
-		codes_txt = "tour;next_tour=tour4;desc=Customs, the first stop for every new employee. Here, you can receive additional access, apply for a raise, or fill out the forms required for the deep sea transport of exotic birds or nuclear missiles." // TODO: Ask Haine if we can have a bird in a trench area that is actually a bomb
-
-	tour4
-		name = "tour beacon - 'Courtroom'"
-		location = "tour4"
-		codes_txt = "tour;next_tour=tour5;desc=Ah, the courtroom. Where trials are held and justice is served. Did you know that the concept for monkeys in suits and funny hats was popularized by the resident monkey, Tanhony, when he starred as a fresh-faced lawyer in The Tale of Heisenbee? Yes, it's really quite incredible."
-
-	tour5
-		name = "tour beacon - 'Bridge'"
-		location = "tour5"
-		codes_txt = "tour;next_tour=tour6;desc=Shh, you gotta be quiet here. Something important might be going on inside. After all, the bridge is where the all powerful heads of staff convene and confer on the most serious matters. Today, the legalization of space cannabis. Tomorrow, the working rights of the downtrodden simian and common staff assistant."
-
-	tour6
-		name = "tour beacon - 'Security'"
-		location = "tour6"
-		codes_txt = "tour;next_tour=tour7;desc=The security department here at Oshan Laboratory is exceptional. Contrary to popular belief, they're all pretty decent, upstanding folk, who really do want to make the station a better and safer place. Hooty McJudgementowl over there can attest. Bring them a donut and a coffee sometime!"
-
-	tour7
-		name = "tour beacon - 'Network Cafe'"
-		location = "tour7"
-		codes_txt = "tour;next_tour=tour8;desc=This is the network cafe, featuring a full range of state of the ark - er, art - computers and consoles. Here, you can check your email, work on your stock portfolio, or print some nice pamphlets. To preserve employee productivity and combat misinformation, all connections are monitored and filtered."
-
-	tour8
-		name = "tour beacon - 'Supply Lobby'"
-		location = "tour8"
-		codes_txt = "tour;next_tour=tour9;desc=Here, in the supply lobby, you can order whatever you'd like - a home networking kit, a Golden Gannet delivery, a haberdasher's crate - and watch in real time as expert quartermasters process your order and ensure its smooth delivery. It's wonderfully instant gratification."
-
-	tour9
-		name = "tour beacon - 'Fitness Room'"
-		location = "tour9"
-		codes_txt = "tour;next_tour=tour10;desc=The fitness room is where the crew visit if they're ever in need of some excitement or endorphins. We used to have weekly boxing tournaments, but they were eventually phased out after one too many traumatic brain injuries. Now we have Tango Tuesdays which do a great job of repurposing the boxing mat."
-
-	tour10
-		name = "tour beacon - 'Bar'"
-		location = "tour10"
-		codes_txt = "tour;next_tour=tour11;desc=Nanotrasen bars are known for their astounding array of tasty beverages. It was here at Oshan Laboratory that the first Tom Collins was mixed and served, named for the intrepid deep sea explorer Tom Collins, who one day disappeared into the trench, never to be seen again...\nTime and time again, our beloved bar has been bestowed awards and letters of appreciation for its bold and inventive take on classic drinks. Most recently, we've received an offer from Delectable Dan's to tour their new distillery and give advice on their offerings."
-
-	tour11
-		name = "tour beacon - 'Hydroponics'"
-		location = "tour11"
-		codes_txt = "tour;next_tour=tour12;desc=It's just as important to get your vitamins A through Z in the deep sea as it is in deep space! Nine out of ten of our botanists are licensed nutritionists and will happily assist you on your food journey. One out of ten are licensed bee caretakers and are unfortunately too busy for appointments."
-
-	tour12
-		name = "tour beacon - 'Crew Quarters'"
-		location = "tour12"
-		codes_txt = "tour;next_tour=tour13;desc=I like to think that each and every employee truly enjoys being here with us at Oshan Laboratory, but that ultimately is never the case. Life under the sea can get pretty isolating or even frustrating, and, really, I get it. If you're ever looking for a quiet place to de-stress and relax, crew quarters is your best bet. It's guaranteed space abestos free, and has good feng shui to boot."
-
-	tour13
-		name = "tour beacon - 'Chapel'"
-		location = "tour13"
-		codes_txt = "tour;next_tour=tour14;desc=According to a recent survey, the majority of Nanotrasen employees are nonreligious. But no matter what you do or don't believe in - some God, Sol, your ability to scarf down a hundred Little Danny's Snack Cakes - the chapel is your place to go for spiritual counseling. It also offers services such as marriage ceremonies, bee blessings, funerals, and other meaningful rituals."
-
-	tour14
-		name = "tour beacon - 'Medbay'"
-		location = "tour14"
-		codes_txt = "tour;next_tour=tour15;desc=Here at Oshan Laboratory, we truly want the best for our employees' physical and mental wellbeing. That's why our medical personnel consistently rank as the kindest and most competent on Nanotrasen's annual report. Got shrapnel stuck in you? They'll dig it out. In need of better physical facilities? Enjoy robotic limbs and a robotic heart. Need to be cloned after a tragic bible-farting? No problem! Want to pet Morty? They'll even let you scream at him!"
-
-	tour15
-		name = "tour beacon - 'Research'"
-		location = "tour15"
-		codes_txt = "tour;next_tour=tour16;desc=This is the research department. They're all very intense employees, so please disregard any screams or explosions or clouds of green smoke. That's how research gets done, and Oshan Laboratory has a reputation to keep, as one of Nanotrasen's most successful research stations!"
-
-	tour16
-		name = "tour beacon - 'Robot Depot'"
-		location = "tour16"
-		codes_txt = "tour;next_tour=tour17;desc=Oh hey! That's the Robot Depot, home to many station robuddies. We don't have to go in and say hi - I understand that you're rather shy."
-
-	tour17
-		name = "tour beacon - 'Data Center'"
-		location = "tour17"
-		codes_txt = "tour;next_tour=tour18;desc=This is the data center. Phase one of a new venture by Nano - bzZT - a pretty nondescript area for a nondescript name. Move along now!"
-
-	tour18
-		name = "tour beacon - 'Engineering'"
-		location = "tour18"
-		codes_txt = "tour;next_tour=tour19;desc=You probably don't have x-ray vision, but behind this airlock is engineering, the mitochondria of the station. Did you know that Oshan Laboratory was rated as one of Nanotrasen's most efficient stations, and presented with a PTL installation as an award? Our engineers make good use harnessing the thermal energy here in abundance under the sea, and I'm sure they'll make good use of the PTL as well!"
-
-	tour19
-		name = "tour beacon - 'Podbay'"
-		location = "tour19"
-		codes_txt = "tour;next_tour=tour20;desc=The deep sea trench which Oshan Laboratory was constructured around is teeming with new and undiscovered flora and fauna. This public access podbay allows crewmembers to take a pod and explore the area for themselves. I must caution you, however - going alone and without preparation proves quite dangerous!"
-
-	tour20
-		name = "tour beacon - 'Escape Shuttle Hallway'"
-		location = "tour20"
-		codes_txt = "tour;next_tour=tour21;desc=So we have come to the end of our rendezvous. I appreciate you listening to my anecdotes, and hope that you've learned something; perhaps about the station, perhaps about yourself. \nAt the end of every shift, all employees of the station gather here and wait for the emergency shuttle to dock - this is also where we'll part. Take care!"
-
-	tour21
-		name = "tour beacon - 'End'"
-		location = "tour21"
-		codes_txt = "tour;"
-
-/obj/machinery/navbeacon/tour/atlas
-	tour0
-		name = "tour beacon - 'Arrivals'"
-		location = "tour0"
-		codes_txt = "tour;next_tour=tour1;desc=Hello and welcome to Nanotrasen's premier stellar cartography vessel, NCS Atlas! My name's Mabel and today I'll be taking you on a tour of all the ship essentials. There's not a huge amount of ground to cover, but stick close!"
-
-	tour1
-		name = "tour beacon - 'Cargo'"
-		location = "tour1"
-		codes_txt = "tour;next_tour=tour2;desc=Our first stop is the cargo bay, where our team of quartermasters can requisition any equipment that you might need to fulfill your role aboard ship. For a fair price, of course!"
-
-	tour2
-		name = "tour beacon - 'Engineering'"
-		location = "tour2"
-		codes_txt = "tour;next_tour=tour3;desc=Down this corridor to our left you'll find the entrance to our engineering wing. Atlas is powered by a conventional thermo-electric generator, watched over by our highly-trained team of engineers, don't be surprised if you bump in to them skulking around the maintenance shafts! The central core of our onboard artificial intelligence is also situated to our right."
-
-	tour3
-		name = "tour beacon - 'Teleporter'"
-		location = "tour3"
-		codes_txt = "tour;next_tour=tour4;desc=Infront of us here is the crew teleporter, if the ship researchers arrange an away mission, you'll muster here to join it! Remember that your personnel life-insurance does not cover you for extra-vehicular activities."
-
-	tour4
-		name = "tour beacon - 'Research Lobby'"
-		location = "tour4"
-		codes_txt = "tour;next_tour=tour5;desc=Over here we have the research wing lobby, just give the fella behind the desk a yell if you encounter any mysterious artifacts for them to investigate or require any exciting chemicals from the chemistry department."
-
-	tour5
-		name = "tour beacon - 'Medical Lobby'"
-		location = "tour5"
-		codes_txt = "tour;next_tour=tour6;desc=Here's one you'll want to remember, the medbay lobby! In your service to Nanotrasen you may find yourself with a mortal wound, debilitating disease or missing limb/organ and these nice folks will be on hand to stitch you back together. I'd recommend you make some friends here!"
-
-	tour6
-		name = "tour beacon - 'Cafeteria'"
-		location = "tour6"
-		codes_txt = "tour;next_tour=tour7;desc=If you find yourself with some downtime, you can visit the mess hall and grab a bite served by our ship chef or sit down at our full-service bar! Remember, no alcoholic beverages before your shift ends!"
-
-	tour7
-		name = "tour beacon - 'Cloning'"
-		location = "tour7"
-		codes_txt = "tour;next_tour=tour8;desc=To the left of us you have the waiting area for our cloning facility! Should a crewman lose their life in service to Nanotrasen, we have the ability to revive them! Or uh, a version of them at least. Try not to ask any prying questions to our cloned personnel. They tend to come out with a few lil memory gaps. Uh. Oh! On the right here is the bathroom! Yeah!"
-
-	tour8
-		name = "tour beacon - 'Customs'"
-		location = "tour8"
-		codes_txt = "tour;next_tour=tour9;desc=Up ahead you'll usually find the Head of Personnel manning their desk at customs. If you require re-assignment or amendments to your ID card's access, here's where to go! There's usually a lot of paperwork involved."
-
-	tour9
-		name = "tour beacon - 'Escape'"
-		location = "tour9"
-		codes_txt = "tour;next_tour=tour10;desc=Up here past the chapel is the escape arm. This one's super important so commit it to memory! If the worst should happen and the captain orders us to abandon ship, a Nanotrasen escape shuttle will dock here to whisk us away to safety! Atlas has never required emergency assistance in it's service history, but strange things can happen when you're out charting deep space."
-
-	tour10
-		name = "tour beacon - 'Security'"
-		location = "tour10"
-		codes_txt = "tour;next_tour=tour11;desc=This is the main desk of our security wing. If you find yourself the victim of a crime or suspect one of your fellow crew may be a turncoat or otherwise criminally incompetent, you'll want to come report them to a security officer to take care of. Stay vigilent, crewman!"
-
-	tour11
-		name = "tour beacon - 'Hydroponics'"
-		location = "tour11"
-		codes_txt = "tour;next_tour=tour12;desc=As we wind down, we're just heading past the hydroponics department, where our friendly botanists tend to the crops that supply the catering department and keep our personnel full and healthy! Please note that Greater Domestic Space Bee's are supposed to be that big. No really!"
-
-	tour12
-		name = "tour beacon - 'Kitchen'"
-		location = "tour12"
-		codes_txt = "tour;next_tour=tour13;desc=Here at our last stop, you'll see the kitchen shutters which will open when mealtimes arrive. Make sure you don't miss it! And that's everything! Atlas is a compact stellar cartography ship which requires a minimal compliment to function, we're just pleased as punch that you made the cut and joined us aboard!"
-
-	tour13
-		name = "tour beacon - Finish"
-		location = "tour13"
-		codes_txt = "tour;"

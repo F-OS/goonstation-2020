@@ -44,7 +44,7 @@
 
 /obj/machinery/vehicle/Bump(var/atom/A)
 	//boutput(world, "[src] bumped into [A]")
-	SPAWN_DBG (0)
+	spawn (0)
 		..()
 		src.speed = 0
 		return
@@ -80,7 +80,7 @@
 /obj/machinery/vehicle/verb/board()
 	set src in oview(1)
 
-	if (usr.stat || isintangible(usr))
+	if (usr.stat || istype(usr, /mob/living/intangible))
 		return
 
 	if (src.one_person_only && locate(/mob, src))

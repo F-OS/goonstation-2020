@@ -23,12 +23,12 @@
 		return
 
 	attackby(obj/item/W, mob/user)
-		if (iswrenchingtool(W))
+		if(istype(W, /obj/item/weapon/wrench))
 			var/turf/T = get_turf(src.loc)
 			if(istype(T,/turf/simulated/floor/plating))
 				var/obj/machinery/atmos/pipe/P = new/obj/machinery/atmos/pipe(T)
 				P.set_dir(up,down,left,right)
-				SPAWN_DBG(1)
+				spawn(1)
 					qdel(src)//This might need to be changed to have them drop it first
 			else
 				boutput(user, "<span style=\"color:red\">You are unable to place the pipe there.</span>")
@@ -80,7 +80,7 @@
 	var/right = 0
 
 	New()
-		SPAWN_DBG(5)
+		spawn(5)
 			build()
 		return//Dont need to be on the gameticker so dont add us
 
@@ -91,7 +91,9 @@
 		return
 
 	attackby(obj/item/W, mob/user)
-		if (!iswrenchingtool(W))
+		if(istype(W, /obj/item/weapon/wrench))
+
+		else
 			..()//Add ID swipe
 
 	proc/set_dir(var/u, var/d, var/l, var/r)

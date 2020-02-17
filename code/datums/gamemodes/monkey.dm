@@ -8,7 +8,7 @@
 	boutput(world, "<B>Escape on the shuttle but the humans have precedence!</B>")
 
 /datum/game_mode/monkey/post_setup()
-	SPAWN_DBG (50)
+	spawn (50)
 		var/list/players = list()
 		for (var/mob/living/carbon/human/player in mobs)
 			if (player.client)
@@ -30,20 +30,20 @@
 				rabid_monkey.contract_disease(/datum/ailment/disease/jungle_fever,null,null,1)
 
 /datum/game_mode/monkey/check_finished()
-	if(emergency_shuttle.location == SHUTTLE_LOC_RETURNED)
+	if(emergency_shuttle.location==2)
 		return 1
 
 	return 0
 
 /datum/game_mode/monkey/declare_completion()
-	var/area/escape_zone = locate(map_settings.escape_centcom)
+	var/area/escape_zone = locate(/area/shuttle/escape/centcom)
 
 	var/monkeywin = 0
 	for(var/mob/living/carbon/human/monkey_player in mobs)
 		if (!ismonkey(monkey_player))
 			continue
 
-		if (!isdead(monkey_player))
+		if (monkey_player.stat != 2)
 			var/turf/location = get_turf(monkey_player.loc)
 			if (location in escape_zone)
 				monkeywin = 1
@@ -54,7 +54,7 @@
 			if (ismonkey(human_player))
 				continue
 
-			if (!isdead(human_player))
+			if (human_player.stat != 2)
 				var/turf/location = get_turf(human_player.loc)
 				if (istype(human_player.loc, /turf))
 					if (location in escape_zone)

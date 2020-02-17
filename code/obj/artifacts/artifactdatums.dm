@@ -3,7 +3,6 @@
 /datum/artifact/
 	var/associated_object = null
 	var/rarity_class = 0
-	//Bigger rarity means its less likely to show up. Thanks for documenting this, guys. - Azungar
 
 	var/datum/artifact_origin/artitype = null
 	var/list/validtypes = list("ancient","martian","wizard","eldritch","precursor")
@@ -24,14 +23,13 @@
 	var/deact_sound = null       // Guess.
 	var/deact_text = null        // No really, have a wild guess.
 	var/scramblechance = 10      // how likely this artifact is to look like a type it isnt
-	var/nofx = 0			 	 // used to set straight icon_states on activation instead of fx overlays
 
 	var/list/faults = list()      // Automatically handled
 	var/list/fault_types = list() // this is set up based on the artifact's origin type
 
 	var/list/triggers = list()
 	var/validtriggers = list(/datum/artifact_trigger/force,/datum/artifact_trigger/electric,/datum/artifact_trigger/heat,
-	/datum/artifact_trigger/radiation,/datum/artifact_trigger/carbon_touch,/datum/artifact_trigger/silicon_touch,/datum/artifact_trigger/data)
+	/datum/artifact_trigger/radiation,/datum/artifact_trigger/carbon_touch,/datum/artifact_trigger/silicon_touch)
 	var/min_triggers = 1
 	var/max_triggers = 1
 	var/hint_text = "emits a faint noise."
@@ -104,10 +102,6 @@
 	proc/effect_click_tile(var/obj/O,var/mob/living/user,var/turf/T)
 		if (!O || !user || !T)
 			return 1
-		if (user.client && get_dist(T,user) > (istext(user.client.view) ? 10 : user.client.view)) // shitty hack // we cannot see that far, we're probably being a butt and trying to do something through a camera
-			return 1
-		else if (!user.client && get_dist(T,user) > world.view) // idk, SOMEhow someone would find a way
-			return 1
 		O.add_fingerprint(user)
 		if (!istype(O, /obj/item/artifact/attack_wand)) // Special log handling required there.
 			ArtifactLogs(user, T, O, "used", "triggering its effect on target turf", 0)
@@ -136,7 +130,7 @@
 	activated = 0
 	min_triggers = 0
 	max_triggers = 0
-	react_xray = list(10,100,100,11,"NONE","NONE")
+	react_xray = list(10,100,100,11,"NONE")
 
 // DATUMS USED BY ARTIFACTS
 
@@ -179,10 +173,3 @@
 			src.window_pass = 1
 		// Rare chance of the gun firing several shots in a burst
 		shot_number = pick(1, prob(25); 2, prob(5); 3, prob(1); 4)
-
-// for use with the wizard spell prismatic_spray
-/datum/projectile/artifact/prismatic_projectile
-
-	New()
-		..()
-		src.randomise()

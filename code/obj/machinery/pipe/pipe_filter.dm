@@ -61,7 +61,7 @@
 		leak_to_turf(3)
 
 	// transfer gas from ngas->f_ngas according to extraction rate, but only if we have power
-	if(! (status & NOPOWER) )
+	if(! (stat & NOPOWER) )
 		use_power(min(src.f_per, 100),ENVIRON)
 		var/datum/gas_mixture/ndelta = src.get_extract()
 		ngas.sub_delta(ndelta)
@@ -118,7 +118,7 @@
 /obj/machinery/pipefilter/attackby(obj/item/weapon/W, mob/user as mob)
 	if(istype(W, /obj/item/weapon/detective_scanner))
 		return ..()
-	if (isscrewingtool(W))
+	if(istype(W, /obj/item/weapon/screwdriver))
 		if(bypassed)
 			user.show_message(text("<span style=\"color:red\">Remove the foreign wires first!</span>"), 1)
 			return
@@ -144,7 +144,7 @@
 		bypassed = 1
 		src.updateicon()
 		return
-	if (issnippingtool(W) && bypassed)
+	if(istype(W, /obj/item/weapon/wirecutters) && bypassed)
 		src.add_fingerprint(user)
 		user.show_message(text("<span style=\"color:red\">Now removing the bypass wires... <I>(This may take a while)</I></span>"), 1)
 		sleep(50)
@@ -167,7 +167,7 @@
 	return src.attack_hand(user)
 
 /obj/machinery/pipefilter/attack_hand(mob/user as mob)
-/*	if(status & NOPOWER)
+/*	if(stat & NOPOWER)
 		user << browse(null, "window=pipefilter")
 		user.machine = null
 		return
@@ -198,7 +198,7 @@
 	..()
 	if(usr.restrained() || usr.lying)
 		return
-	if ((((get_dist(src, usr) <= 1 || usr.telekinesis == 1) || isAI(usr)) && istype(src.loc, /turf)))
+	if ((((get_dist(src, usr) <= 1 || usr.telekinesis == 1) || istype(usr, /mob/living/silicon/ai)) && istype(src.loc, /turf)))
 		usr.machine = src
 		if (href_list["close"])
 			usr << browse(null, "window=pipefilter;")
@@ -223,15 +223,15 @@
 
 /obj/machinery/pipefilter/power_change()
 	if(powered(ENVIRON))
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
-		status |= NOPOWER
-	SPAWN_DBG(rand(1,15))	//so all the filters don't come on at once
+		stat |= NOPOWER
+	spawn(rand(1,15))	//so all the filters don't come on at once
 		updateicon()
 
 /obj/machinery/pipefilter/proc/updateicon()
 	src.overlays = null
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "filter-off"
 	else
 		icon_state = "filter"

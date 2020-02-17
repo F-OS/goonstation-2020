@@ -73,24 +73,23 @@
 				if (make_inherent == 1)
 					A5.is_inherent = 1
 
-		if (belt_check != 1 && (src.mind && src.mind.special_role != "omnitraitor" && src.mind.special_role != "Faustian Wrestler"))
-			SHOW_WRESTLER_TIPS(src)
+		if (belt_check != 1 && (src.mind && src.mind.special_role != "omnitraitor"))
+			src << browse(grabResource("html/traitorTips/wrestlerTips.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
 
 	else return
 
 //////////////////////////////////////////// Ability holder /////////////////////////////////////////
 
-/obj/screen/ability/topBar/wrestler
+/obj/screen/ability/wrestler
 	clicked(params)
 		var/datum/targetable/wrestler/spell = owner
 		if (!istype(spell))
 			return
 		if (!spell.holder)
 			return
-		if (owner.holder.owner) //how even
-			if (!isturf(owner.holder.owner.loc))
-				boutput(owner.holder.owner, "<span style=\"color:red\">You can't use this ability here.</span>")
-				return
+		if (!isturf(owner.holder.owner.loc))
+			boutput(owner.holder.owner, "<span style=\"color:red\">You can't use this ability here.</span>")
+			return
 		if (spell.targeted && usr:targeting_spell == owner)
 			usr:targeting_spell = null
 			usr.update_cursor()
@@ -105,7 +104,7 @@
 			owner.holder.owner.targeting_spell = owner
 			owner.holder.owner.update_cursor()
 		else
-			SPAWN_DBG(0)
+			spawn
 				spell.handleCast()
 		return
 
@@ -119,8 +118,8 @@
 /////////////////////////////////////////////// Wrestler spell parent ////////////////////////////
 
 /datum/targetable/wrestler
-	icon = 'icons/mob/spell_buttons.dmi'
-	icon_state = "wrestler-template"
+	icon = 'icons/mob/critter_ui.dmi'
+	icon_state = "template"  // No custom sprites yet.
 	cooldown = 0
 	start_on_cooldown = 1 // So you can't bypass the cooldown by taking off your belt and re-equipping it.
 	last_cast = 0
@@ -130,7 +129,7 @@
 	var/not_when_handcuffed = 0
 
 	New()
-		var/obj/screen/ability/topBar/wrestler/B = new /obj/screen/ability/topBar/wrestler(null)
+		var/obj/screen/ability/wrestler/B = new /obj/screen/ability/wrestler(null)
 		B.icon = src.icon
 		B.icon_state = src.icon_state
 		B.owner = src
@@ -142,7 +141,7 @@
 	updateObject()
 		..()
 		if (!src.object)
-			src.object = new /obj/screen/ability/topBar/wrestler()
+			src.object = new /obj/screen/ability/wrestler()
 			object.icon = src.icon
 			object.owner = src
 		if (src.last_cast > world.time)
@@ -169,12 +168,12 @@
 
 		switch (stunned_only_is_okay)
 			if (0)
-				if (!isalive(M) || M.getStatusDuration("stunned") > 0 || M.getStatusDuration("paralysis") > 0 || M.getStatusDuration("weakened"))
+				if (M.stat != 0 || M.stunned > 0 || M.paralysis > 0 || M.weakened > 0)
 					return 0
 				else
 					return 1
 			if (1)
-				if (!isalive(M) || M.getStatusDuration("paralysis") > 0)
+				if (M.stat != 0 || M.paralysis > 0)
 					return 0
 				else
 					return 1
@@ -242,7 +241,7 @@
 			R = src.cooldown * 2.5 // Chems with severe stamina penalty exist, so this should be capped.
 		CD = max((src.cooldown / 2.5), R) // About the same minimum as the old wrestling belt procs.
 
-		//DEBUG_MESSAGE("Default CD: [src.cooldown]. Modifier: [R]. Actual CD: [CD].")
+		//DEBUG("Default CD: [src.cooldown]. Modifier: [R]. Actual CD: [CD].")
 		return CD
 
 	doCooldown()
@@ -252,9 +251,8 @@
 			return
 
 		// Why isn't this in afterCast()? Well, failed attempts to use an abililty call it too.
-		SPAWN_DBG (rand(200, 900))
+		spawn (rand(200, 900))
 			if (src.holder && src.holder.owner && ismob(src.holder.owner))
 				src.holder.owner.emote("flex")
 
-		SPAWN_DBG(calculate_cooldown() + 5)
-			holder.updateButtons()
+		return

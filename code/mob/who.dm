@@ -1,83 +1,62 @@
 /mob/verb/who()
 	set name = "Who"
-	var/rendered = "<div class='who-list'>"
+	var/rendered = "---------------------<br>"
 
 	var/list/whoAdmins = list()
 	var/list/whoMentors = list()
 	var/list/whoNormies = list()
-	for (var/client/C in clients)
-		if (!C || !C.mob) continue
+	for (var/mob/M in mobs)
+		if (!M.client) continue
 
 		//Admins
-		if (C.holder)
+		if (M.client.holder)
+			var/thisW = "<span class='adminooc text-normal'>"
 			if (usr.client.holder) //The viewer is an admin, we can show them stuff
-				var/thisW = "<a href='?src=\ref[usr.client.holder];action=adminplayeropts;targetckey=[C.ckey]' class='adminooc text-normal'>"
-				if (C.stealth || C.alt_key)
-					thisW += "[C.key] <i>(as [C.fakekey])</i>"
+				if (M.client.stealth || M.client.alt_key)
+					thisW += "[M.client.key] <i>(as [M.client.fakekey])</i></span>"
+					whoAdmins += thisW
 				else
-					thisW += C.key
-
-				whoAdmins += thisW + "</a>"
+					thisW += "[M.client.key]</span>"
+					whoAdmins += thisW
 
 			else //A lowly normal person is viewing, hide!
-				var/thisW = "<span class='adminooc text-normal'>"
-				if (C.alt_key)
-					thisW += "[C.fakekey]</span>"
+				if (M.client.alt_key)
+					thisW += "[M.client.fakekey]</span>"
 					whoAdmins += thisW
-				else if (C.stealth) // no you fucks don't show us as an admin anyway!!
-					whoNormies += "<span class='ooc text-normal'>[C.fakekey]</span>"
+				else if (M.client.stealth) // no you fucks don't show us as an admin anyway!!
+					whoNormies += "<span class='ooc text-normal'>[M.client.fakekey]</span>"
 				else
-					thisW += "[C.key]</span>"
+					thisW += "[M.client.key]</span>"
 					whoAdmins += thisW
 
 		//Mentors
-		else if (C.can_see_mentor_pms())
-			var/thisW
-			if (usr.client.holder)
-				thisW += "<a href='?src=\ref[usr.client.holder];action=adminplayeropts;targetckey=[C.ckey]' class='mentorooc text-normal'>"
-			else
-				thisW += "<span class='mentorooc text-normal'>"
-
-			thisW += C.key + (usr.client.holder ? "</a>" : "</span>")
-			whoMentors += thisW
+		else if (M.client.mentor)
+			whoMentors += "<span class='mentorooc text-normal'>[M.client.key]</span>"
 
 		//Normies
 		else
-			var/thisW
-			if (usr.client.holder)
-				thisW += "<a href='?src=\ref[usr.client.holder];action=adminplayeropts;targetckey=[C.ckey]' class='ooc text-normal'>"
-			else
-				thisW += "<span class='ooc text-normal'>"
-
-			thisW += C.key + (usr.client.holder ? "</a>" : "</span>")
-			whoNormies += thisW
+			whoNormies += "<span class='ooc text-normal'>[M.client.key]</span>"
 
 	whoAdmins = sortList(whoAdmins)
 	whoMentors = sortList(whoMentors)
 	whoNormies = sortList(whoNormies)
 
 	if (whoAdmins.len)
-		rendered += "<b>Admins:</b>"
+		rendered += "<b>Admins:</b><br>"
 		for (var/anAdmin in whoAdmins)
-			rendered += anAdmin
+			rendered += anAdmin + "<br>"
 	if (whoMentors.len)
-		rendered += "<b>Mentors:</b>"
+		rendered += "<b>Mentors:</b><br>"
 		for (var/aMentor in whoMentors)
-			rendered += aMentor
+			rendered += aMentor + "<br>"
 	if (whoNormies.len)
-		rendered += "<b>Normal:</b>"
+		rendered += "<b>Normal:</b><br>"
 		for (var/aNormie in whoNormies)
-			rendered += aNormie
+			rendered += aNormie + "<br>"
 
-	rendered += "<b>Total Players: [whoAdmins.len + whoMentors.len + whoNormies.len]</b>"
-	rendered += "</div>"
+	rendered += "<b>Total Players: [whoAdmins.len + whoMentors.len + whoNormies.len]</b><br>"
+	rendered += "---------------------"
 	boutput(usr, rendered)
-
-	if (!usr.client.holder)
-		logTheThing("admin", usr, null, "used Who and saw [whoAdmins.len] admins.")
-		logTheThing("diary", usr, null, "used Who and saw [whoAdmins.len] admins.", "admin")
-		if (whoAdmins.len < 1)
-			message_admins("<span style='color:blue'>[key_name(usr)] used Who and saw [whoAdmins.len] admins.</span>")
 
 /client/verb/adminwho()
 	set category = "Commands"
@@ -86,30 +65,26 @@
 	var/rendered = ""
 	rendered += "<b>Remember: even if there are no admins ingame, your adminhelps will still be sent to our IRC channel. Current Admins:</b><br>"
 
-	for (var/client/C in clients)
-		if (C && C.mob && C.holder && !C.player_mode)
+	for (var/mob/M in mobs)
+		if (M && M.client && M.client.holder && !M.client.player_mode)
 			if (usr.client.holder)
-				rendered += "[C.key] is "
-
-				if (C.holder.rank == "Administrator")
-					rendered += "an"
+				if (M.client.holder.rank == "Administrator")
+					rendered += "[M.key] is an [M.client.holder.rank][(M.client.stealth || M.client.fakekey) ? " <i>(as [M.client.fakekey])</i>" : ""]<br>"
 				else
-					rendered += "a"
-
-				rendered += " [C.holder.rank][(C.stealth || C.fakekey) ? " <i>(as [C.fakekey])</i>" : ""]<br>"
+					rendered += "[M.key] is a [M.client.holder.rank][(M.client.stealth || M.client.fakekey) ? " <i>(as [M.client.fakekey])</i>" : ""]<br>"
 			else
-				if (C.alt_key)
-					rendered += "&emsp;[C.fakekey]<br>"
+				if (M.client.alt_key)
+					rendered += "&emsp;[M.client.fakekey]<br>"
 					adwnum++
-				else if (!C.stealth)
-					rendered += "&emsp;[C]<br>"
+				else if (!M.client.stealth)
+					rendered += "&emsp;[M.client]<br>"
 					adwnum++
 
 	rendered += "<br><b>Current Mentors:</b><br>"
 
-	for (var/client/C in clients)
-		if(C && C.mob && !C.holder && C.can_see_mentor_pms())
-			rendered += "&emsp;[C]<br>"
+	for (var/mob/M in mobs)
+		if(M && M.client && M.client.mentor)
+			rendered += "&emsp;[M.client]<br>"
 
 	boutput(usr, rendered)
 
@@ -117,4 +92,4 @@
 		logTheThing("admin", usr, null, "used adminwho and saw [adwnum] admins.")
 		logTheThing("diary", usr, null, "used adminwho and saw [adwnum] admins.", "admin")
 		if(adwnum < 1)
-			message_admins("<span style='color:blue'>[key_name(usr)] used adminwho and saw [adwnum] admins.</span>")
+			message_admins("<span style=\"color:blue\">[key_name(usr)] used adminwho and saw [adwnum] admins.</span>")

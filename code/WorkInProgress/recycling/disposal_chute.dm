@@ -19,20 +19,16 @@
 	var/obj/disposalpipe/trunk/trunk = null // the attached pipe trunk
 	var/flushing = 0	// true if flushing in progress
 	var/icon_style = "disposal"
-	var/handle_normal_state = null // this is the overlay added when the handle is in the non-flushing position (for the small chutes, mainly this can be ignored otherwise)
-	var/light_style = "disposal" // for the lights and stuff
+	var/handle_state = null // this is the overlay added when the handle is in the normal position (for the small chutes, mainly this can be ignored otherwise)
 	var/image/handle_image = null
-	var/destination_tag = null
 	mats = 20			// whats the point of letting people build trunk pipes if they cant build new disposals?
 	power_usage = 100
-
-	var/is_processing = 1 //optimization thingy. kind of dumb. mbc fault. only process chute when flushed or recharging.
 
 	// create a new disposal
 	// find the attached trunk (if present) and init gas resvr.
 	New()
 		..()
-		SPAWN_DBG(5)
+		spawn(5)
 			if (src)
 				trunk = locate() in src.loc
 				if(!trunk)
@@ -45,14 +41,6 @@
 				update()
 
 	disposing()
-		if (trunk)
-			trunk.linked = null
-		else
-			trunk = locate() in src.loc //idk maybe this can happens
-			if (trunk)
-				trunk.linked = null
-		trunk = null
-
 		if(air_contents)
 			pool(air_contents)
 			air_contents = null
@@ -67,7 +55,7 @@
 
 	// attack by item places it in to disposal
 	attackby(var/obj/item/I, var/mob/user)
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			return
 		if (istype(I,/obj/item/electronics/scanner))
 			user.visible_message("<span style=\"color:red\"><B>[user] hits [src] with [I]!</B></span>")
@@ -84,10 +72,7 @@
 				S.satchel_updateicon()
 				user.visible_message("<b>[user.name]</b> dumps out [S] into [src].")
 				return
-		var/obj/item/magtractor/mag
-		if (istype(I.loc, /obj/item/magtractor))
-			mag = I.loc
-		else if (issilicon(user))
+		if (issilicon(user))
 			boutput(user, "<span style=\"color:red\">You can't put that in the trash when it's attached to you!</span>")
 			return
 
@@ -105,13 +90,11 @@
 				actions.interrupt(G.affecting, INTERRUPT_MOVE)
 				actions.interrupt(user, INTERRUPT_ACT)
 		else
-			if (istype(mag))
-				actions.stopId("magpickerhold", user)
-			else if (!user.drop_item())
+			if (!user.drop_item())
 				return
 			I.set_loc(src)
-			user.visible_message("[user.name] places \the [I] into \the [src].",\
-			"You place \the [I] into \the [src].")
+			boutput(user, "You place \the [I] into the [src].")
+			user.show_message("[user.name] places \the [I] into the [src].")
 			actions.interrupt(user, INTERRUPT_ACT)
 
 		update()
@@ -120,10 +103,10 @@
 	//
 	MouseDrop_T(mob/target, mob/user)
 		//jesus fucking christ
-		if (!istype(target) || target.buckled || get_dist(user, src) > 1 || get_dist(user, target) > 1 || user.stat || user.getStatusDuration("paralysis") || user.getStatusDuration("stunned") || user.getStatusDuration("weakened") || isAI(user) || isAI(target) || isghostcritter(user))
+		if (!istype(target) || target.buckled || get_dist(user, src) > 1 || get_dist(user, target) > 1 || user.stat || user.paralysis || user.stunned || user.weakened || istype(user, /mob/living/silicon/ai) || istype(target, /mob/living/silicon/ai))
 			return
 
-		if (istype(src, /obj/machinery/disposal/mail) && isliving(target))
+		if (istype(src, /obj/machinery/disposal/mail) && istype(target, /mob/living))
 			//Is this mob allowed to ride mailchutes?
 			if (!target.canRideMailchutes())
 				boutput(user, "<span style=\"color:red\">That won't fit!</span>")
@@ -132,10 +115,6 @@
 		var/msg
 		var/turf/Q = target.loc
 		sleep (5)
-		//heyyyy maybe we should check distance AFTER the sleep??											//If you get stunned while *climbing* into a chute, you can still go in
-		if (target.buckled || get_dist(user, src) > 1 || get_dist(user, target) > 1 || ((user.stat || user.getStatusDuration("paralysis") || user.getStatusDuration("stunned") || user.getStatusDuration("weakened")) && user != target))
-			return
-
 		if(target == user && !user.stat)	// if drop self, then climbed in
 												// must be awake
 			msg = "[user.name] climbs into the [src]."
@@ -153,9 +132,6 @@
 		if (msg)
 			src.visible_message(msg)
 
-		if (target == user && !istype(src,/obj/machinery/disposal/transport))
-			src.interact(user)
-
 		update()
 		return
 
@@ -165,7 +141,7 @@
 		if (istype(src, /obj/machinery/disposal/mail))
 			return ..()
 
-		if(isitem(MO))
+		if(istype(MO, /obj/item))
 			var/obj/item/I = MO
 
 			if(prob(20)) //It might land!
@@ -176,7 +152,7 @@
 				else	//Aaaa the tension!
 					src.visible_message("<span style=\"color:red\">\The [I] teeters on the edge of \the [src]!</span>")
 					var/delay = rand(5, 15)
-					SPAWN_DBG(0)
+					spawn(0)
 						var/in_x = I.pixel_x
 						for(var/d = 0; d < delay; d++)
 							if(I) I.pixel_x = in_x + rand(-1, 1)
@@ -201,9 +177,6 @@
 					src.visible_message("<span style=\"color:red\"><B><I>...accidentally hitting the handle!</I></B></span>")
 					H.show_text("<B><I>...accidentally hitting the handle!</I></B>", "red")
 					flush = 1
-					if (!is_processing)
-						SubscribeToProcess()
-						is_processing = 1
 					update()
 		else
 			return ..()
@@ -218,15 +191,12 @@
 		if(user.stat || src.flushing)
 			return
 		src.go_out(user)
-		step_rand(user)
 		return
 
 	// leave the disposal
 	proc/go_out(mob/user)
 		user.set_loc(src.loc)
-		if (!user.hasStatus("weakened"))
-			user.changeStatus("weakened", 1 SECONDS)
-			user.force_laydown_standup()
+		user.weakened = max(user.weakened, 2)
 		update()
 		return
 
@@ -237,11 +207,10 @@
 	// human interact with machine
 	attack_hand(mob/user as mob)
 		interact(user, 0)
-		interact_particle(user,src)
 
 	proc/interact(mob/user, var/ai=0)
 		src.add_fingerprint(user)
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			user.machine = null
 			return
 
@@ -271,67 +240,59 @@
 
 
 		user.machine = src
-		user.Browse(dat, "window=disposal;size=360x235")
+		user << browse(dat, "window=disposal;size=360x170")
 		onclose(user, "disposal")
 
 	// handle machine interaction
 
 	Topic(href, href_list)
-		if(..())
-			return
+		..()
 		src.add_fingerprint(usr)
-		if(status & BROKEN)
-			DEBUG_MESSAGE("[src] is broken")
+		if(stat & BROKEN)
+			DEBUG("[src] is broken")
 			return
 		if(usr.stat || usr.restrained() || src.flushing)
-			DEBUG_MESSAGE("[src] is flushing/usr.stat returned with someting/usr is restrained")
+			DEBUG("[src] is flushing/usr.stat returned with someting/usr is restrained")
 			return
 
 		if (in_range(src, usr) && isturf(src.loc))
-			DEBUG_MESSAGE("in range of [src] and it is on a turf")
+			DEBUG("in range of [src] and it is on a turf")
 			usr.machine = src
 
 			if(href_list["close"])
-				DEBUG_MESSAGE("closed [src]")
+				DEBUG("closed [src]")
 				usr.machine = null
-				usr.Browse(null, "window=disposal")
+				usr << browse(null, "window=disposal")
 				return
 
 			if(href_list["pump"])
 				if(text2num(href_list["pump"]))
-					DEBUG_MESSAGE("[src] pump engaged")
+					DEBUG("[src] pump engaged")
 					power_usage = 600
 					mode = 1
 				else
-					DEBUG_MESSAGE("[src] pump disengaged")
+					DEBUG("[src] pump disengaged")
 					power_usage = 100
 					mode = 0
 				update()
 
 			if(href_list["handle"])
-				DEBUG_MESSAGE("[src] handle")
+				DEBUG("[src] handle")
 				flush = text2num(href_list["handle"])
-				if (flush)
-					if (!is_processing)
-						SubscribeToProcess()
-						is_processing = 1
 				update()
-				playsound(get_turf(src), "sound/misc/handle_click.ogg", 50, 1)
 
 			if(href_list["eject"])
-				DEBUG_MESSAGE("[src] eject")
+				DEBUG("[src] eject")
 				eject()
 		else
 			if (!isturf(src.loc))
-				DEBUG_MESSAGE("[src]'s loc is not a turf: [src.loc]")
+				DEBUG("[src]'s loc is not a turf: [src.loc]")
 			if (!in_range(src, usr))
-				DEBUG_MESSAGE("[src] and [usr] are too far apart: [src] [log_loc(src)], [usr] [log_loc(usr)]")
+				DEBUG("[src] and [usr] are too far apart: [src] [log_loc(src)], [usr] [log_loc(usr)]")
 
-			usr.Browse(null, "window=disposal")
+			usr << browse(null, "window=disposal")
 			usr.machine = null
 			return
-
-		src.updateDialog()
 		return
 
 	// eject the contents of the disposal unit
@@ -343,7 +304,7 @@
 
 	// update the icon & overlays to reflect mode & status
 	proc/update()
-		if (status & BROKEN)
+		if (stat & BROKEN)
 			icon_state = "disposal-broken"
 			ClearAllOverlays()
 			mode = 0
@@ -352,34 +313,30 @@
 
 		// flush handle
 		if (flush)
-			ENSURE_IMAGE(src.handle_image, src.icon, "[icon_style]-fhandle")
-			//if (!src.handle_image)
-				//src.handle_image = image(src.icon, "[icon_style]-handle")
-			//else if (!src.handle_state)
-				//src.handle_image.icon_state = "[icon_style]-handle"
+			if (!src.handle_image)
+				src.handle_image = image(src.icon, "[icon_style]-over-handle")
+			else if (!src.handle_state)
+				src.handle_image.icon_state = "[icon_style]-over-handle"
 			UpdateOverlays(src.handle_image, "handle")
 		else
-			if (src.handle_normal_state)
-				ENSURE_IMAGE(src.handle_image, src.icon, src.handle_normal_state)
-				//if (!src.handle_image)
-					//src.handle_image = image(src.icon, src.handle_normal_state)
-				//else
-					//src.handle_image.icon_state = src.handle_state
+			if (src.handle_state)
+				if (!src.handle_image)
+					src.handle_image = image(src.icon, src.handle_state)
+				else
+					src.handle_image.icon_state = src.handle_state
 				UpdateOverlays(src.handle_image, "handle")
 			else
 				UpdateOverlays(null, "handle", 0, 1)
 
 		// only handle is shown if no power
-		if (status & NOPOWER)
-			UpdateOverlays(null, "content_light", 0, 1)
-			UpdateOverlays(null, "status", 0, 1)
+		if (stat & NOPOWER)
 			return
 
 		// 	check for items in disposal - occupied light
 		if (contents.len > 0)
 			var/image/I = GetOverlayImage("content_light")
 			if (!I)
-				I = image(src.icon, "[light_style]-full")
+				I = image(src.icon, "dispover-full")
 			UpdateOverlays(I, "content_light")
 		else
 			UpdateOverlays(null, "content_light", 0, 1)
@@ -387,12 +344,12 @@
 		// charging and ready light
 		var/image/I = GetOverlayImage("status")
 		if (!I)
-			I = image(src.icon, "[light_style]-charge")
+			I = image(src.icon, "dispover-charge")
 		switch (mode)
 			if (1)
-				I.icon_state = "[light_style]-charge"
+				I.icon_state = "dispover-charge"
 			if (2)
-				I.icon_state = "[light_style]-ready"
+				I.icon_state = "dispover-ready"
 			else
 				I = null
 
@@ -406,7 +363,7 @@
 	// timed process
 	// charge the gas reservoir and perform flush if ready
 	process()
-		if(status & BROKEN)			// nothing can happen if broken
+		if(stat & BROKEN)			// nothing can happen if broken
 			return
 
 		..()
@@ -414,10 +371,10 @@
 		src.updateDialog()
 
 		if(flush && air_contents.return_pressure() >= 2*ONE_ATMOSPHERE)	// flush can happen even without power
-			SPAWN_DBG(0) //Quit holding up the process you fucker
+			spawn(0) //Quit holding up the process you fucker
 				flush()
 
-		if(status & NOPOWER)			// won't charge if no power
+		if(stat & NOPOWER)			// won't charge if no power
 			return
 
 		if (!loc) return
@@ -449,9 +406,6 @@
 			mode = 2
 			power_usage = 100
 			update()
-			if (is_processing)
-				UnsubscribeProcess()
-				is_processing = 0
 		return
 
 	// perform a flush
@@ -460,12 +414,10 @@
 		flushing = 1
 		flick("[icon_style]-flush", src)
 
-		var/obj/disposalholder/H = unpool(/obj/disposalholder)	// virtual holder object which actually
-																// travels through the pipes.
+		var/obj/disposalholder/H = new()	// virtual holder object which actually
+											// travels through the pipes.
 
 		H.init(src)	// copy the contents of disposer to holder
-		if (!isnull(src.destination_tag))
-			H.mail_tag = src.destination_tag
 
 		air_contents.zero()
 
@@ -503,36 +455,31 @@
 
 			AM.set_loc(src.loc)
 			AM.pipe_eject(0)
-			SPAWN_DBG(1)
+			spawn(1)
 				if(AM)
 					AM.throw_at(target, 5, 1)
 
 		H.vent_gas(loc)
 		qdel(H)
 
-	custom_suicide = 1
-	suicide(var/mob/living/carbon/human/user as mob)
-		if (!istype(user) || !src.user_can_suicide(user))
-			return 0
-		if (src.mode != 2)//!hasvar(user,"organHolder")) I will END YOU
-			return 0
+	suicide(var/mob/user as mob)
+		if(src.mode != 2 || !hasvar(user,"organHolder")) return 0
 
-		user.visible_message("<span style='color:red'><b>[user] sticks [his_or_her(user)] head into [src] and pulls the flush!</b></span>")
-		var/obj/head = user.organHolder.drop_organ("head")
+		user.visible_message("<span style=\"color:red\"><b>[user] sticks \his head into the [src.name] and pulls the flush!</b></span>")
+		var/obj/head = user:organHolder.drop_organ("head")
 		head.set_loc(src)
 		src.flush()
-		playsound(src.loc, 'sound/impact_sounds/Flesh_Stab_1.ogg', 50, 1)
-		if (user) //ZeWaka: Fix for null.loc
-			make_cleanable( /obj/decal/cleanable/blood,user.loc)
-			user.updatehealth()
-		SPAWN_DBG(500)
-			if (user && !isdead(user))
+		playsound(src.loc, 'sound/effects/bloody_stab.ogg', 50, 1)
+		new /obj/decal/cleanable/blood(user.loc)
+		user.updatehealth()
+		spawn(100)
+			if (user)
 				user.suiciding = 0
 		return 1
 
 /obj/machinery/disposal/small
 	icon = 'icons/obj/disposal_small.dmi'
-	handle_normal_state = "disposal-handle"
+	handle_state = "dispover-handle"
 	density = 0
 
 	north
@@ -550,51 +497,11 @@
 	desc = "A pneumatic delivery chute for sending things directly to the brig."
 	icon_style = "brig"
 
-/obj/machinery/disposal/brig/small
-	icon = 'icons/obj/disposal_small.dmi'
-	handle_normal_state = "brig-handle"
-	density = 0
-
-	north
-		dir = NORTH
-	east
-		dir = EAST
-	south
-		dir = SOUTH
-	west
-		dir = WEST
-
 /obj/machinery/disposal/morgue
 	name = "morgue chute"
 	icon_state = "morguechute"
 	desc = "A pneumatic delivery chute for sending things directly to the morgue."
 	icon_style = "morgue"
-
-/obj/machinery/disposal/sci
-	name = "research chute"
-	icon_state = "scichute"
-	desc = "A pneumatic delivery chute for sending completed research to the public."
-	icon_style = "sci"
-
-/obj/machinery/disposal/ore
-	name = "ore chute"
-	icon_state = "orechute"
-	desc = "A pneumatic delivery chute for ferrying ore around the station."
-	icon_style = "ore"
-
-/obj/machinery/disposal/ore/small
-	icon = 'icons/obj/disposal_small.dmi'
-	handle_normal_state = "ore-handle"
-	density = 0
-
-	north
-		dir = NORTH
-	east
-		dir = EAST
-	south
-		dir = SOUTH
-	west
-		dir = WEST
 
 /obj/machinery/disposal/alert_a_chump
 	var/message = null
@@ -606,15 +513,11 @@
 
 	New()
 		..()
-		SPAWN_DBG(8)
+		spawn(8)
 			if(radio_controller)
 				radio_connection = radio_controller.add_object(src, "[frequency]")
 			if(!src.net_id)
 				src.net_id = generate_net_id(src)
-
-	disposing()
-		radio_controller.remove_object(src, "[frequency]")
-		..()
 
 	expel(var/obj/disposalholder/H)
 		..(H)
@@ -632,70 +535,3 @@
 			newsignal.data["sender"] = src.net_id
 
 			radio_connection.post_signal(src, newsignal)
-
-/obj/machinery/disposal/cart_port
-	name = "disposal cart port"
-	desc = "A pneumatic disposal chute that carts can empty their contents into."
-	icon_state = "cartport"
-	icon_style = "cartport"
-	light_style = "cartport"
-	density = 0
-	layer = OBJ_LAYER-0.1
-
-	MouseDrop_T(obj/storage/cart/target, mob/user)
-		if (!istype(target) || target.loc != src.loc || get_dist(user, src) > 1 || get_dist(user, target) > 1 || user.stat || user.getStatusDuration("paralysis") || user.getStatusDuration("stunned") || user.getStatusDuration("weakened") || isAI(user))
-			return ..()
-
-		if (!target.contents.len)
-			boutput(user, "[target] doesn't have anything in it to load!")
-			return
-		src.visible_message("[user] begins depositing [target]'s contents into [src].")
-		playsound(src.loc ,"sound/items/Deconstruct.ogg", 80, 0)
-		for (var/atom/movable/AM in target)
-			if (get_dist(user, src) > 1 || get_dist(user, target) > 1 || user.stat || user.getStatusDuration("paralysis") || user.getStatusDuration("stunned") || user.getStatusDuration("weakened"))
-				break
-			if (AM.anchored || AM.loc != target)
-				continue
-			AM.set_loc(src)
-			sleep(5)
-		src.visible_message("[user] deposits [target]'s contents into [src].")
-		update()
-
-/obj/machinery/disposal/transport
-	name = "transportation unit"
-	icon = 'icons/obj/disposal.dmi'
-	icon_state = "scichute"
-	desc = "A pneumatic delivery chute for transporting people. Ever see Futurama? It's like that."
-	icon_style = "sci"
-
-	go_out(mob/user)
-		user.set_loc(src.loc)
-		update()
-		return
-
-	attackby(var/obj/item/I, var/mob/user)
-		return
-
-	MouseDrop_T(mob/target, mob/user)
-		..()
-		flush = 1
-
-		if (!is_processing)
-			SubscribeToProcess()
-			is_processing = 1
-
-		playsound(get_turf(src), "sound/misc/handle_click.ogg", 50, 1)
-
-		update()
-		return
-
-	hitby(MO as mob|obj)
-		if(istype(MO,/mob/living))
-			return ..()
-		return
-
-	attack_ai(mob/user as mob)
-		return
-
-	attack_hand(mob/user as mob)
-		return

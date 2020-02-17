@@ -13,7 +13,7 @@
 		src.dig_power = rand(1,5)
 		if (prob(33))
 			src.extrahit = rand(0,4)
-		src.dig_sound = pick('sound/effects/exlow.ogg','sound/effects/mag_magmisimpact.ogg','sound/impact_sounds/Energy_Hit_1.ogg')
+		src.dig_sound = pick('sound/effects/exlow.ogg','sound/effects/mag_magmisimpact.ogg','sound/effects/shieldhit2.ogg')
 
 	examine()
 		set src in oview()

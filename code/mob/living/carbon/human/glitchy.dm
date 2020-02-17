@@ -1,14 +1,14 @@
 /mob/living/carbon/human/glitchy
 	var/list/glitchy_noises = list('sound/machines/romhack1.ogg', 'sound/machines/romhack3.ogg', 'sound/machines/fortune_greeting_broken.ogg',
-	'sound/effects/glitchy1.ogg', 'sound/effects/glitchy2.ogg', 'sound/effects/glitchy3.ogg', 'sound/musical_instruments/WeirdHorn_12.ogg')
+	'sound/effects/glitchy1.ogg', 'sound/effects/glitchy2.ogg', 'sound/effects/glitchy3.ogg', 'sound/items/hellhorn_12.ogg')
 
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			src.rename_self()
 			sound_burp = pick(glitchy_noises)
-			sound_scream = pick(glitchy_noises)
-			//sound_femalescream = pick(glitchy_noises)
+			sound_malescream = pick(glitchy_noises)
+			sound_femalescream = pick(glitchy_noises)
 			sound_fart = pick(glitchy_noises)
 			sound_snap = pick(glitchy_noises)
 			sound_fingersnap = pick(glitchy_noises)

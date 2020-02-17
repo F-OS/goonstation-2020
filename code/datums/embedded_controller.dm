@@ -403,7 +403,7 @@ obj/machinery/embedded_controller
 	var/on = 1
 
 	attack_hand(mob/user)
-		user.Browse(return_text(), "window=computer")
+		user << browse(return_text(), "window=computer")
 		user.machine = src
 		onclose(user, "computer")
 
@@ -448,10 +448,6 @@ obj/machinery/embedded_controller
 	radio
 		var/frequency
 		var/datum/radio_frequency/radio_connection
-
-		disposing()
-			radio_controller.remove_object(src,"[frequency]")
-			..()
 
 		initialize()
 			set_frequency(frequency)
@@ -644,7 +640,7 @@ obj/machinery/embedded_controller/radio/department_controller
 		program = new_prog
 
 	update_icon()
-		if(!(status & NOPOWER) && program)
+		if(!(stat & NOPOWER) && program)
 			if(program.memory["processing"])
 				icon_state = "access_control_process"
 			else
@@ -662,7 +658,7 @@ obj/machinery/embedded_controller/radio/department_controller
 		usr.machine = src
 
 	process()
-		if(status & NOPOWER)
+		if(stat & NOPOWER)
 			return
 		if(program)
 			var/update = program.process()
@@ -675,7 +671,7 @@ obj/machinery/embedded_controller/radio/department_controller
 		if (istype(I, /obj/item/device/pda2) && I:ID_card)
 			I = I:ID_card
 		if(istype(I, /obj/item/card/id))
-			if (src.allowed(user))
+			if (src.allowed(user, req_only_one_required))
 				user.visible_message("[user] [src.locked ? "unlocks" : "locks"] the access panel.","You [src.locked ? "unlock" : "lock"] the access panel.")
 				src.locked = !src.locked
 			else
@@ -689,7 +685,7 @@ obj/machinery/embedded_controller/radio/department_controller
 		return attack_hand(user)
 
 	attack_hand(mob/user)
-		if (src.status & NOPOWER)
+		if (src.stat & NOPOWER)
 			return
 
 		user.machine = src
@@ -714,6 +710,6 @@ obj/machinery/embedded_controller/radio/department_controller
 		else
 			output += "[state_options]<hr><b>Airlock Status: </b> [door_status]"
 
-		user.Browse(output, "window=dcontroller;size=245x302")
+		user << browse(output, "window=dcontroller;size=245x302")
 		onclose(user, "dcontroller")
 

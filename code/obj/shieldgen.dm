@@ -42,7 +42,7 @@ Shield and graivty well generators
 		src.active = 1
 		src.icon_state = malfunction ? "shieldonbr":"shieldon"
 
-		SPAWN_DBG(0) src.process()
+		spawn src.process()
 
 	shields_down()
 		if(!active) return 0
@@ -62,7 +62,7 @@ Shield and graivty well generators
 			while(prob(10))
 				qdel(pick(deployed_shields))
 
-		SPAWN_DBG(30)
+		spawn(30)
 			src.process()
 	return
 
@@ -85,7 +85,7 @@ Shield and graivty well generators
 	return
 
 /obj/shield/meteorhit(obj/O as obj)
-	playsound(src.loc, "sound/impact_sounds/Energy_Hit_1.ogg", 50, 1)
+	playsound(src.loc, "sound/effects/shieldhit2.ogg", 50, 1)
 	return
 
 /obj/shieldgen/ex_act(severity)
@@ -135,7 +135,6 @@ Shield and graivty well generators
 		density = 1
 		opacity = 0
 		anchored = 1
-		event_handler_flags = USE_FLUID_ENTER | USE_CANPASS
 
 /obj/shieldwall
 		name = "shield"
@@ -237,14 +236,14 @@ Shield and graivty well generators
 			var/dist = get_dist(src,X)
 
 			//Adjust probability accordingly
-			if ((istype(X,/obj) || isliving(X)) && prob(100/dist))
+			if ((istype(X,/obj) || istype(X,/mob/living)) && prob(100/dist))
 				//Skip if wearing magnetic shoes
-				if (ishuman(X) && (X:shoes && X:shoes.magnetic) )
+				if (istype(X,/mob/living/carbon/human) && istype(X:shoes, /obj/item/clothing/shoes/magnetic) )
 					continue
 				//If not achored make them move towards it
 				if (!X:anchored)
 					step_towards(X,src)
 
-		SPAWN_DBG(17)
+		spawn(17)
 			src.Life()
 

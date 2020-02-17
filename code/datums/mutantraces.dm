@@ -1,10 +1,7 @@
-#define OVERRIDE_ARM_L 1
-#define OVERRIDE_ARM_R 2
-#define OVERRIDE_LEG_R 4
-#define OVERRIDE_LEG_L 8
 // mutant races: cheap way to add new "types" of mobs
 // without copy/pasting the human code a million times.
 // Now a robust object-oriented version!!!!
+
 /datum/mutantrace
 	var/name = null				// used for identification in diseases, clothing, etc
 	var/override_eyes = 1
@@ -20,7 +17,6 @@
 	var/uses_special_head = 0	// unused
 	var/human_compatible = 1	// if 1, allows human diseases and dna injectors to affect this mutantrace
 	var/uses_human_clothes = 1	// if 0, can only wear clothes listed in an item's compatible_species var
-	var/clothing_icon_override = null // set to an icon to have human.update_clothing() look through its icon_states for matching things
 	var/exclusive_language = 0	// if 1, only understood by others of this mutantrace
 	var/voice_message = null	// overrides normal voice message if defined (and others don't understand us, ofc)
 	var/voice_name = "human"
@@ -30,34 +26,19 @@
 	var/icon_state = "epileptic"
 	var/icon_head = null
 	var/icon_beard = null
-	var/icon_override_static = 0 // does this look different enough from a default human to warrant a static icon of its own?
 
 	var/head_offset = 0 // affects pixel_y of clothes
 	var/hand_offset = 0
 	var/body_offset = 0
 
-	var/r_limb_arm_type_mutantrace = null // Should we get custom arms? Dispose() replaces them with normal human arms.
-	var/l_limb_arm_type_mutantrace = null
-	var/r_limb_leg_type_mutantrace = null
-	var/l_limb_leg_type_mutantrace = null
+	var/r_limb_type_mutantrace = null // Should we get custom arms? Dispose() replaces them with normal human arms.
+	var/l_limb_type_mutantrace = null
 	var/ignore_missing_limbs = 0 // Replace both arms regardless of mob status (new and dispose).
 
 	var/firevuln = 1 //Scales damage, just like critters.
 	var/brutevuln = 1
-	var/toxvuln = 1
-	var/aquatic = 0 //ignores suffocation from being underwater + moves at full speed underwater
-	var/needs_oxy = 1
-
-	var/voice_override = 0
 
 	var/mob/living/carbon/human/mob = null
-
-	var/anchor_to_floor = 0
-
-	var/image/detail_1
-	var/image/detail_2
-	var/image/detail_3
-
 
 	proc/say_filter(var/message)
 		return message
@@ -81,7 +62,7 @@
 	proc/sight_modifier()
 		return
 
-	proc/onLife(var/mult = 1)	//Called every Life cycle of our mob
+	proc/onLife()	//Called every Life cycle of our mob
 		return
 
 	proc/onDeath() //Called when our mob dies.  Returning a true value will short circuit the normal death proc right before deathgasp/headspider/etc
@@ -109,58 +90,32 @@
 
 			// Replacement for custom_attack() of several mutantraces, which used an entire copy of
 			// pre-stamina melee code. They do the same stuff with more flexible limb datums (Convair880).
-			if (src.r_limb_arm_type_mutantrace)
+			if (!isnull(src.r_limb_type_mutantrace))
 				if (M.limbs.r_arm || src.ignore_missing_limbs == 1)
-					var/obj/item/parts/human_parts/arm/limb = new src.r_limb_arm_type_mutantrace(M)
-					if (istype(limb))
+					var/obj/item/parts/human_parts/arm/limb = new src.r_limb_type_mutantrace(M)
+					if (limb && istype(limb))
 						qdel(M.limbs.r_arm)
 						limb.quality = 0.5
 						M.limbs.r_arm = limb
 						limb.holder = M
 						limb.remove_stage = 0
 
-			if (src.l_limb_arm_type_mutantrace)
+			if (!isnull(src.l_limb_type_mutantrace))
 				if (M.limbs.l_arm || src.ignore_missing_limbs == 1)
-					var/obj/item/parts/human_parts/arm/limb = new src.l_limb_arm_type_mutantrace(M)
-					if (istype(limb))
+					var/obj/item/parts/human_parts/arm/limb2 = new src.l_limb_type_mutantrace(M)
+					if (limb2 && istype(limb2))
 						qdel(M.limbs.l_arm)
-						limb.quality = 0.5
-						M.limbs.l_arm = limb
-						limb.holder = M
-						limb.remove_stage = 0
-
-			//////////////LEGS//////////////////
-			if (src.r_limb_leg_type_mutantrace)
-				if (M.limbs.r_leg || src.ignore_missing_limbs == 1)
-					var/obj/item/parts/human_parts/leg/limb = new src.r_limb_leg_type_mutantrace(M)
-					if (istype(limb))
-						qdel(M.limbs.r_leg)
-						limb.quality = 0.5
-						M.limbs.r_leg = limb
-						limb.holder = M
-						limb.remove_stage = 0
-
-			if (src.l_limb_leg_type_mutantrace)
-				if (M.limbs.l_leg || src.ignore_missing_limbs == 1)
-					var/obj/item/parts/human_parts/leg/limb = new src.l_limb_leg_type_mutantrace(M)
-					if (istype(limb))
-						qdel(M.limbs.l_leg)
-						limb.quality = 0.5
-						M.limbs.l_leg = limb
-						limb.holder = M
-						limb.remove_stage = 0
-
-
+						limb2.quality = 0.5
+						M.limbs.l_arm = limb2
+						limb2.holder = M
+						limb2.remove_stage = 0
 
 			M.update_face()
 			M.update_body()
 
-			if (M.bioHolder && M.bioHolder.mobAppearance)
-				M.bioHolder.mobAppearance.UpdateMob()
-
-			SPAWN_DBG (25) // Don't remove.
+			spawn (25) // Don't remove.
 				if (M && M.organHolder && M.organHolder.skull)
-					M.assign_gimmick_skull() // For hunters (Convair880).
+					M.assign_gimmick_skull() // For predators (Convair880).
 
 		else
 			src.dispose()
@@ -184,7 +139,7 @@
 						W.dropped(mob)
 						W.layer = initial(W.layer)
 
-			if (ishuman(mob))
+			if (istype(mob,/mob/living/carbon/human/))
 				var/mob/living/carbon/human/H = mob
 				H.image_eyes.pixel_y = initial(H.image_eyes.pixel_y)
 				H.image_cust_one.pixel_y = initial(H.image_cust_one.pixel_y)
@@ -192,55 +147,30 @@
 				H.image_cust_three.pixel_y = initial(H.image_cust_three.pixel_y)
 
 				// And the other way around (Convair880).
-				if (src.r_limb_arm_type_mutantrace)
+				if (!isnull(src.r_limb_type_mutantrace))
 					if (H.limbs.r_arm || src.ignore_missing_limbs == 1)
 						var/obj/item/parts/human_parts/arm/limb = new /obj/item/parts/human_parts/arm/right(H)
-						if (istype(limb))
+						if (limb && istype(limb))
 							qdel(H.limbs.r_arm)
 							limb.quality = 0.5
 							H.limbs.r_arm = limb
 							limb.holder = H
 							limb.remove_stage = 0
 
-				if (src.l_limb_arm_type_mutantrace)
+				if (!isnull(src.l_limb_type_mutantrace))
 					if (H.limbs.l_arm || src.ignore_missing_limbs == 1)
-						var/obj/item/parts/human_parts/arm/limb = new /obj/item/parts/human_parts/arm/left(H)
-						if (istype(limb))
+						var/obj/item/parts/human_parts/arm/limb2 = new /obj/item/parts/human_parts/arm/left(H)
+						if (limb2 && istype(limb2))
 							qdel(H.limbs.l_arm)
-							limb.quality = 0.5
-							H.limbs.l_arm = limb
-							limb.holder = H
-							limb.remove_stage = 0
-			
-			//////////////LEGS//////////////////
-				if (src.r_limb_leg_type_mutantrace)
-					if (H.limbs.r_leg || src.ignore_missing_limbs == 1)
-						var/obj/item/parts/human_parts/leg/limb = new /obj/item/parts/human_parts/leg/right(H)
-						if (istype(limb))
-							qdel(H.limbs.r_leg)
-							limb.quality = 0.5
-							H.limbs.r_leg = limb
-							limb.holder = H
-							limb.remove_stage = 0
-
-				if (src.l_limb_leg_type_mutantrace)
-					if (H.limbs.l_leg || src.ignore_missing_limbs == 1)
-						var/obj/item/parts/human_parts/leg/limb = new /obj/item/parts/human_parts/leg/left(H)
-						if (istype(limb))
-							qdel(H.limbs.l_leg)
-							limb.quality = 0.5
-							H.limbs.l_leg = limb
-							limb.holder = H
-							limb.remove_stage = 0
-
-				detail_1 = null
-				detail_2 = null
-				detail_3 = null
+							limb2.quality = 0.5
+							H.limbs.l_arm = limb2
+							limb2.holder = H
+							limb2.remove_stage = 0
 
 				H.set_face_icon_dirty()
 				H.set_body_icon_dirty()
 
-				SPAWN_DBG (25) // Don't remove.
+				spawn (25) // Don't remove.
 					if (H && H.organHolder && H.organHolder.skull) // check for H.organHolder as well so we don't get null.skull runtimes
 						H.assign_gimmick_skull() // We might have to update the skull (Convair880).
 
@@ -249,62 +179,6 @@
 
 		..()
 		return
-
-/datum/mutantrace/blob // podrick's july assjam submission, it's pretty cute
-	name = "blob"
-	icon = 'icons/mob/blob_ambassador.dmi'
-	icon_state = "blob"
-	human_compatible = 0
-	uses_human_clothes = 0
-	hand_offset = -1
-	body_offset = -8
-	voice_override = "bloop"
-
-	say_verb()
-		return pick("burbles", "gurgles", "blurbs", "gloops")
-
-/datum/mutantrace/flubber
-    name = "flubber"
-    icon = 'icons/mob/flubber.dmi'
-    icon_state = "flubber"
-    uses_human_clothes = 0
-    head_offset = -7
-    override_hair = 1
-    override_beard = 1
-    override_detail = 1
-    voice_override = "bloop"
-
-    //override_static = 1
-
-    jerk = 0 //flubber is a good goo person
-
-    sight_modifier()
-        mob.see_in_dark = SEE_DARK_FULL
-
-    movement_delay()
-        playsound(get_turf(mob), "sound/misc/boing/[rand(1,6)].ogg", 20, 1 )
-        animate(mob, time = 1, pixel_y = 16, easing = ELASTIC_EASING)
-        animate(time = 1, pixel_y = 0, easing = ELASTIC_EASING)
-        return -2
-
-    say_filter(var/message)
-        return pick("Wooo!!", "Whopeee!!", "Boing!!", "Čapaš!!")
-
-    onLife(var/mult = 1)
-        if (!isdead(mob))
-            mob.reagents.add_reagent("flubber", 10) //change "flubber" to whatever flubber is in code obviously
-
-        if (mob.health < mob.max_health && mob.health>0) //you can kill flubber with extreme measures
-            mob.full_heal()
-
-    onDeath()
-        var/turf/T = get_turf(mob)
-        T.fluid_react_single("flubber", 500)
-        mob.gib()
-
-
-    say_verb()
-        return "flubbers"
 
 /datum/mutantrace/flashy
 	name = "flashy"
@@ -318,18 +192,6 @@
 	name = "virtual"
 	icon_state = "virtual"
 	override_attack = 0
-	override_hair = 0
-	override_beard = 0
-	override_detail = 0
-
-	New(var/mob/living/carbon/human/H)
-		..()
-		if(ishuman(mob))
-			mob.blood_color = pick("#FF0000","#FFFF00","#00FF00","#00FFFF","#0000FF","#FF00FF")
-			H.abilityHolder = new /datum/abilityHolder/virtual(H)
-			H.abilityHolder.owner = H
-			H.abilityHolder.addAbility(/datum/targetable/virtual/logout)
-
 
 /datum/mutantrace/blank
 	name = "blank"
@@ -340,100 +202,18 @@
 	override_detail = 0
 	override_attack = 0
 
-/datum/mutantrace/grey
-	name = "grey"
-	icon_state = "grey"
-	voice_name = "grey"
-	voice_message = "hums"
-	override_eyes = 1
-	override_hair = 1
-	override_beard = 1
-	override_detail = 1
-	exclusive_language = 1
-	jerk = 1
-	var/original_blood_color = null
-
-	New(var/mob/living/carbon/human/M)
-		..()
-		if(ishuman(mob))
-			original_blood_color = mob.blood_color
-			mob.blood_color = "#000000"
-
-	disposing()
-		if(ishuman(mob))
-			if(!isnull(original_blood_color))
-				mob.blood_color = original_blood_color
-		original_blood_color = null
-		..()
-
-	sight_modifier()
-		mob.sight |= SEE_MOBS
-		mob.see_in_dark = SEE_DARK_FULL
-		mob.see_invisible = 3
-
-	emote(var/act)
-		var/message = null
-		if(act == "scream")
-			if(mob.emote_allowed)
-				mob.emote_allowed = 0
-				message = "<B>[mob]</B> screams with \his mind! Guh, that's creepy!"
-				playsound(get_turf(mob), "sound/voice/screams/Psychic_Scream_1.ogg", 80, 0, 0, max(0.7, min(1.2, 1.0 + (30 - mob.bioHolder.age)/60)))
-				SPAWN_DBG(30)
-					mob.emote_allowed = 1
-			return message
-		else
-			..()
-
 /datum/mutantrace/lizard
 	name = "lizard"
-	// icon_state = "lizard"
 	icon_state = "lizard"
-	icon_override_static = 1
 	allow_fat = 1
 	override_attack = 0
-	voice_override = "lizard"
-
-	New(var/mob/living/carbon/human/H)
-		..()
-		if(ishuman(mob))
-			var/datum/appearanceHolder/aH = mob.bioHolder.mobAppearance
-
-			detail_1 = image('icons/effects/genetics.dmi', icon_state="lizard_detail-1", layer = MOB_LIMB_LAYER+0.1)
-			detail_2 = image('icons/effects/genetics.dmi', icon_state="lizard_detail-2", layer = MOB_LIMB_LAYER+0.2)
-			detail_3 = image('icons/effects/genetics.dmi', icon_state="lizard_detail-3", layer = MOB_LIMB_LAYER+0.3)
-
-			hex_to_rgb_list(aH.customization_first_color)
-
-			detail_1.color = fix_colors(aH.customization_first_color)
-			detail_2.color = fix_colors(aH.customization_second_color)
-			detail_3.color = fix_colors(aH.customization_third_color)
-
-			// detail_1.color = aH.customization_first_color
-			// detail_2.color = aH.customization_second_color
-			// detail_3.color = aH.customization_third_color
-
-			mob.update_face()
-			mob.update_body()
-			mob.update_clothing()
-
-	proc/fix_colors(var/hex)
-		var/list/L = hex_to_rgb_list(hex)
-		for (var/i in L)
-			L[i] = min(L[i], 190)
-			L[i] = max(L[i], 50)
-		if (L.len == 3)
-			return rgb(L["r"], L["g"], L["b"])
-		return rgb(22, 210, 22)
-
-	disposing()
-		..()
 
 	sight_modifier()
 		mob.see_in_dark = SEE_DARK_HUMAN + 1
 		mob.see_invisible = 1
 
 	say_filter(var/message)
-		return replacetext(message, "s", stutter("ss"))
+		return dd_replaceText(message, "s", stutter("ss"))
 
 /datum/mutantrace/zombie
 	name = "zombie"
@@ -443,214 +223,44 @@
 	override_detail = 0
 	jerk = 1
 
-
-	New(var/mob/living/carbon/human/M)
-		..()
-		if(ishuman(mob))
-			src.add_ability(mob)
-
-		M.add_stam_mod_max("zombie", -100)
-		M.add_stam_mod_regen("zombie", 15)
-
-	disposing()
-		if (ishuman(mob))
-			mob.remove_stam_mod_max("zombie")
-			mob.remove_stam_mod_regen("zombie")
-
-	proc/add_ability(var/mob/living/carbon/human/H)
-		return
-
 	sight_modifier()
 		mob.sight |= SEE_MOBS
 		mob.see_in_dark = SEE_DARK_FULL
 		mob.see_invisible = 0
 
 	movement_delay()
-		return 4
+		return 3
 
 	say_filter(var/message)
-		return pick("Urgh...", "Brains...", "Hungry...", "Kill...")
-
-	emote(var/act)
-		var/message = null
-		if(act == "scream")
-			if(mob.emote_allowed)
-				mob.emote_allowed = 0
-				message = "<B>[mob]</B> moans!"
-				playsound(get_turf(mob), "sound/voice/Zgroan[pick("1","2","3","4")].ogg", 80, 0, 0, max(0.7, min(1.2, 1.0 + (30 - mob.bioHolder.age)/60)))
-				SPAWN_DBG(30)
-					mob.emote_allowed = 1
-			return message
-		else
-			..()
+		return pick("Urgh...", "Brains...", "Hungry...")
 
 	onDeath()
-		mob.show_message("<span style=\"color:blue\">You can feel your flesh re-assembling. You will rise once more. (This will take about one minute.)</span>")
-		SPAWN_DBG(450)
+		mob.show_message("<span style=\"color:blue\">You can feel your flesh re-assembling. You will rise once more.</span>")
+		spawn(200)
 			if (mob)
-				if (!mob.organHolder.brain || !mob.organHolder.skull || !mob.organHolder.head)
-					mob.show_message("<span style=\"color:blue\">You fail to rise, your brain has been destroyed.</span>")
-				else
-					// ha ha nope. Instead we copy paste a bunch of shit from full_heal but leave out select bits such as : limb regeneration, reagent clearing
-					//mob.full_heal()
-
-					mob.HealDamage("All", 100000, 100000)
-					mob.drowsyness = 0
-					mob.stuttering = 0
-					mob.losebreath = 0
-					mob.delStatus("paralysis")
-					mob.delStatus("stunned")
-					mob.delStatus("weakened")
-					mob.delStatus("slowed")
-					mob.delStatus("radiation")
-					mob.change_eye_blurry(-INFINITY)
-					mob.take_eye_damage(-INFINITY)
-					mob.take_eye_damage(-INFINITY, 1)
-					mob.take_ear_damage(-INFINITY)
-					mob.take_ear_damage(-INFINITY, 1)
-					mob.take_brain_damage(-120)
-					mob.health = mob.max_health
-					if (mob.stat > 1)
-						setalive(mob)
-
-					mob.remove_ailments()
-					mob.take_toxin_damage(-INFINITY)
-					mob.take_oxygen_deprivation(-INFINITY)
-					mob.change_misstep_chance(-INFINITY)
-
-					mob.blinded = 0
-					mob.bleeding = 0
-					mob.blood_volume = 500
-
-					if (!mob.organHolder)
-						mob.organHolder = new(src)
-					mob.organHolder.create_organs()
-
-					if (mob.get_stamina() != (STAMINA_MAX + mob.get_stam_mod_max()))
-						mob.set_stamina(STAMINA_MAX + mob.get_stam_mod_max())
-
-					mob.update_body()
-					mob.update_face()
-
-					mob.updatehealth()
-
-
-					mob.emote("scream")
-					mob.visible_message("<span style=\"color:red\"><B>[mob]</B> rises from the dead!</span>")
+				mob.HealDamage("All", 1000, 1000)
+				mob.take_toxin_damage(-INFINITY)
+				mob.take_oxygen_deprivation(-INFINITY)
+				mob.take_eye_damage(-INFINITY)
+				mob.paralysis = 0
+				mob.stunned = 0
+				mob.weakened = 0
+				mob.radiation = 0
+				mob.take_brain_damage(-120)
+				mob.health = mob.max_health
+				mob.updatehealth()
+				if (mob.stat > 1)
+					mob.stat=0
+				//..()
+				mob.emote("scream")
+				mob.visible_message("<span style=\"color:red\"><B>[mob]</B> rises from the dead!</span>")
 
 		return 1
-
-/datum/mutantrace/zombie/can_infect
-
-	add_ability(var/mob/living/carbon/human/H)
-		H.abilityHolder = new /datum/abilityHolder/critter(src) //lol
-		H.abilityHolder.owner = H
-		H.abilityHolder.addAbility(/datum/targetable/critter/zombify)
-
-	disposing()
-		if (ishuman(mob))
-			var/mob/living/carbon/human/H = mob
-			H.abilityHolder.removeAbility(/datum/targetable/critter/zombify)
-
-/datum/mutantrace/vamp_zombie
-	name = "vampiric zombie"
-	icon_state = "vamp_zombie"
-	override_hair = 0
-	override_beard = 0
-	override_detail = 0
-	jerk = 1
-
-	var/blood_points = 0
-	var/const/blood_decay = 0.5
-	var/cleanable_tally = 0
-	var/const/blood_to_health_scalar = 0.5 //200 blood = 100 health
-
-	New(var/mob/living/carbon/human/M)
-		..()
-		if(ishuman(mob))
-			src.add_ability(mob)
-
-		M.add_stam_mod_max("vamp_zombie", 100)
-		//M.add_stam_mod_regen("vamp_zombie", 15)
-
-	disposing()
-		if (ishuman(mob))
-			mob.remove_stam_mod_max("vamp_zombie")
-			//mob.remove_stam_mod_regen("vamp_zombie")
-
-	proc/add_ability(var/mob/living/carbon/human/H)
-		H.make_vampiric_zombie()
-
-	onLife(var/mult = 1)
-		..()
-
-		if (mob.bleeding)
-			blood_points -= blood_decay * mob.bleeding
-
-		var/prev_blood = blood_points
-		blood_points -= blood_decay * mult
-		blood_points = max(0,blood_points)
-		cleanable_tally += (prev_blood - blood_points)
-		if (cleanable_tally > 20)
-			make_cleanable(/obj/decal/cleanable/blood,get_turf(mob))
-			cleanable_tally = 0
-
-		mob.max_health = blood_points * blood_to_health_scalar
-		mob.max_health = (max(20,mob.max_health))
-
-
-	movement_delay()
-		.= 1
-		if (blood_points <= 150)
-			.= 2
-		else if (blood_points <= 100)
-			.= 3
-		else if (blood_points <= 50)
-			.= 4
-
-
-	//say_filter(var/message)
-		//play sound
-	//	..()
-		//return pick("Urgh...", "Brains...", "Hungry...", "Kill...")
-
-	emote(var/act)
-		var/message = null
-		if(act == "scream")
-			if(mob.emote_allowed)
-				mob.emote_allowed = 0
-				message = "<B>[mob]</B> moans!"
-				playsound(get_turf(mob), "sound/voice/Zgroan[pick("1","2","3","4")].ogg", 80, 0, 0, max(0.7, min(1.2, 1.0 + (30 - mob.bioHolder.age)/60)))
-				SPAWN_DBG(30)
-					mob.emote_allowed = 1
-			return message
-		else
-			..()
-
-	onDeath()
-		var/datum/abilityHolder/vampiric_zombie/abil = mob.get_ability_holder(/datum/abilityHolder/vampiric_zombie)
-		if (abil)
-			if (abil.master)
-				abil.master.remove_thrall(mob)
-			else
-				remove_mindslave_status(mob)
-		..()
 
 /datum/mutantrace/skeleton
 	name = "skeleton"
 	icon = 'icons/mob/human.dmi'
 	icon_state = "skeleton"
-	icon_override_static = 1
-	voice_override = "skelly"
-
-	New(var/mob/living/carbon/human/M)
-		..()
-		if(ishuman(M))
-			M.mob_flags |= IS_BONER
-
-	disposing()
-		if (ishuman(mob) && (mob.mob_flags & IS_BONER))
-			mob.mob_flags &= ~IS_BONER
 
 /*
 /datum/mutantrace/ape
@@ -661,24 +271,20 @@
 /datum/mutantrace/nostalgic
 	name = "Homo nostalgius"
 	icon_state = "oldhuman"
-	icon_override_static = 1
 	override_skintone = 0
 	override_attack = 0
 
 /datum/mutantrace/abomination
 	name = "abomination"
 	icon_state = "abomination"
-	icon_override_static = 1
 	human_compatible = 0
 	uses_human_clothes = 0
 	jerk = 1
 	brutevuln = 0.2
 	override_attack = 0
-	r_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/right/abomination
-	l_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/left/abomination
-	ignore_missing_limbs = 1 //OVERRIDE_ARM_L | OVERRIDE_ARM_R
-
-	anchor_to_floor = 1
+	r_limb_type_mutantrace = /obj/item/parts/human_parts/arm/right/abomination
+	l_limb_type_mutantrace = /obj/item/parts/human_parts/arm/left/abomination
+	ignore_missing_limbs = 1
 
 	var/last_drain = 0
 	var/drains_dna_on_life = 1
@@ -701,18 +307,17 @@
 	movement_delay()
 		return 1
 
-	onLife(var/mult = 1)
+	onLife()
 		//Bringing it more in line with how it was before it got broken (in a hilarious fashion)
-		if (ruff_tuff_and_ultrabuff && !(mob.getStatusDuration("burning") && prob(90))) //Are you a macho abomination or not?
-			mob.delStatus("paralysis")
-			mob.delStatus("weakened")
-			mob.delStatus("stunned")
-			mob.delStatus("disorient")
+		if (ruff_tuff_and_ultrabuff && !(mob.burning && prob(90))) //Are you a macho abomination or not?
+			mob.paralysis = 0
+			mob.weakened = 0
+			mob.stunned = 0
 			mob.drowsyness = 0
 			mob.change_misstep_chance(-INFINITY)
-			mob.delStatus("slowed")
+			mob.slowed = 0
 			mob.stuttering = 0
-			changeling_super_heal_step(mob, mult = mult)
+			changeling_super_heal_step(mob)
 
 		if (drains_dna_on_life) //Do you continuously lose DNA points when in this form?
 			var/datum/abilityHolder/changeling/C = mob.get_ability_holder(/datum/abilityHolder/changeling)
@@ -745,7 +350,7 @@
 					mob.emote_allowed = 0
 					message = "<span style=\"color:red\"><B>[mob] screeches!</B></span>"
 					playsound(get_turf(mob), "sound/voice/creepyshriek.ogg", 60, 1)
-					SPAWN_DBG (30)
+					spawn (30)
 						if (mob) mob.emote_allowed = 1
 		return message
 
@@ -758,23 +363,22 @@
 /datum/mutantrace/werewolf
 	name = "werewolf"
 	icon_state = "werewolf"
-	icon_override_static = 1
 	human_compatible = 0
 	uses_human_clothes = 0
 	head_offset = -1
 	var/original_name
 	jerk = 1
 	override_attack = 0
-	r_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/right/werewolf
-	l_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/left/werewolf
+	r_limb_type_mutantrace = /obj/item/parts/human_parts/arm/right/werewolf
+	l_limb_type_mutantrace = /obj/item/parts/human_parts/arm/left/werewolf
 	ignore_missing_limbs = 0
 
 	New()
 		..()
 		if (mob)
-			mob.add_stam_mod_max("werewolf", 40) // Gave them a significant stamina boost, as they're melee-orientated (Convair880).
-			mob.add_stam_mod_regen("werewolf", 9) //mbc : these increase as they feast now. reduced!
-			mob.max_health += 50
+			mob.add_stam_mod_max("werewolf", 100) // Gave them a significant stamina boost, as they're melee-orientated (Convair880).
+			mob.add_stam_mod_regen("werewolf", 25)
+
 			src.original_name = mob.real_name
 			mob.real_name = "werewolf"
 
@@ -783,7 +387,7 @@
 			if(D)
 				D.cycles++
 				duration = rand(2000, 4000) * D.cycles
-				SPAWN_DBG(duration)
+				spawn(duration)
 					if(src)
 						if (mob) mob.show_text("<b>You suddenly transform back into a human!</b>", "red")
 						qdel(src)
@@ -792,12 +396,14 @@
 		if (mob)
 			mob.remove_stam_mod_max("werewolf")
 			mob.remove_stam_mod_regen("werewolf")
-			mob.max_health -= 30
 
 			if (!isnull(src.original_name))
 				mob.real_name = src.original_name
 
 		return ..()
+
+	movement_delay()
+		return -1
 
 	sight_modifier()
 		if (mob && ismob(mob))
@@ -807,17 +413,20 @@
 		return
 
 	// Werewolves (being a melee-focused role) are quite buff.
-	onLife(var/mult = 1)
+	onLife()
 		if (mob && ismob(mob))
-			mob.changeStatus("paralysis", -20 * mult)
-			mob.changeStatus("stunned", -20 * mult)
-			mob.changeStatus("weakened", -20 * mult)
+			if (mob.paralysis)
+				mob.paralysis = max(0, mob.paralysis - 2)
+			if (mob.weakened)
+				mob.weakened = max(0, mob.weakened - 2)
+			if (mob.stunned)
+				mob.stunned = max(0, mob.stunned - 2)
 			if (mob.drowsyness)
-				mob.drowsyness = max(0, mob.drowsyness - 2)
+				mob.drowsyness = max(0, mob.stunned - 2)
 			if (mob.misstep_chance)
-				mob.change_misstep_chance(-10 * mult)
-			if (mob.getStatusDuration("slowed"))
-				mob.changeStatus("slowed", -20 * mult)
+				mob.change_misstep_chance(-10)
+			if (mob.slowed)
+				mob.slowed = max(0, mob.slowed -2)
 
 		return
 
@@ -834,43 +443,46 @@
 				if(mob.emote_allowed)
 					mob.emote_allowed = 0
 					message = "<span style=\"color:red\"><B>[mob] howls [pick("ominously", "eerily", "hauntingly", "proudly", "loudly")]!</B></span>"
-					playsound(get_turf(mob), "sound/voice/animal/werewolf_howl.ogg", 80, 0, 0, max(0.7, min(1.2, 1.0 + (30 - mob.bioHolder.age)/60)))
-					SPAWN_DBG(30)
+					playsound(get_turf(mob), "sound/misc/werewolf_howl.ogg", 80, 0, 0, max(0.7, min(1.2, 1.0 + (30 - mob.bioHolder.age)/60)))
+					spawn(30)
 						mob.emote_allowed = 1
 			if("burp")
 				if(mob.emote_allowed)
 					mob.emote_allowed = 0
 					message = "<B>[mob]</B> belches."
-					playsound(get_turf(mob), "sound/voice/burp_alien.ogg", 60, 1)
-					SPAWN_DBG(10)
+					playsound(get_turf(mob), "sound/misc/burp_alien.ogg", 60, 1)
+					spawn(10)
 						mob.emote_allowed = 1
 		return message
 
-/datum/mutantrace/hunter
-	name = "hunter"
-	icon_state = "hunter"
+/datum/mutantrace/predator
+	name = "predator"
+	icon_state = "predator"
 	human_compatible = 0
 	jerk = 1
 	override_attack = 0
-	r_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/right/hunter
-	l_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/left/hunter
+	r_limb_type_mutantrace = /obj/item/parts/human_parts/arm/right/predator
+	l_limb_type_mutantrace = /obj/item/parts/human_parts/arm/left/predator
 	ignore_missing_limbs = 0
 
 	// Gave them a minor stamina boost (Convair880).
 	New(var/mob/living/carbon/human/M)
-		M.add_stam_mod_max("hunter", 50)
-		M.add_stam_mod_regen("hunter", 10)
+		M.add_stam_mod_max("predator", 50)
+		M.add_stam_mod_regen("predator", 10)
 		return ..(M)
 
 	disposing()
 		if(mob)
-			mob.remove_stam_mod_max("hunter")
-			mob.remove_stam_mod_regen("hunter")
+			mob.remove_stam_mod_max("predator")
+			mob.remove_stam_mod_regen("predator")
 		return ..()
 
 	sight_modifier()
 		mob.see_in_dark = SEE_DARK_FULL
 		return
+
+	movement_delay()
+		return -1
 
 	say_verb()
 		return "snarls"
@@ -878,12 +490,9 @@
 /datum/mutantrace/ithillid
 	name = "ithillid"
 	icon_state = "squid"
-	icon_override_static = 1
 	allow_fat = 1
 	jerk = 1
 	override_attack = 0
-	aquatic = 1
-	voice_override = "blub"
 
 	say_verb()
 		return "glubs"
@@ -891,7 +500,6 @@
 /datum/mutantrace/dwarf
 	name = "dwarf"
 	icon_state = "dwarf"
-	icon_override_static = 1
 	head_offset = -3
 	hand_offset = -2
 	body_offset = -3
@@ -905,7 +513,6 @@
 	name = "monkey"
 	icon = 'icons/mob/monkey.dmi'
 	icon_state = "monkey"
-	icon_override_static = 1
 	head_offset = -9
 	hand_offset = -5
 	body_offset = -7
@@ -916,8 +523,7 @@
 	voice_name = "monkey"
 	override_language = "monkey"
 	understood_languages = list("english")
-	clothing_icon_override = 'icons/mob/monkey.dmi'
-	var/sound_monkeyscream = 'sound/voice/screams/monkey_scream.ogg'
+	var/sound_monkeyscream = 'sound/voice/monkey_scream.ogg'
 	var/had_tablepass = 0
 	var/table_hide = 0
 
@@ -927,15 +533,11 @@
 				had_tablepass = 1
 			else
 				M.flags ^= TABLEPASS
-		M.add_stam_mod_max("monkey", -50)
 		..()
 
 	disposing()
 		if(mob && !had_tablepass)
 			mob.flags ^= TABLEPASS
-
-		if (ishuman(mob))
-			mob:remove_stam_mod_max("monkey")
 		..()
 
 	say_verb()
@@ -969,83 +571,37 @@
 		switch(act)
 			if("scratch")
 				if (!mob.restrained())
-					. = "<B>[mob.name]</B> scratches."
+					. = "<B>The [mob.name]</B> scratches."
 			if("whimper")
 				if (!muzzled)
-					. = "<B>[mob.name]</B> whimpers."
+					. = "<B>The [mob.name]</B> whimpers."
 			if("yawn")
 				if (!muzzled)
-					. = "<b>[mob.name]</B> yawns."
+					. = "<b>The [mob.name]</B> yawns."
 			if("roar")
 				if (!muzzled)
-					. = "<B>[mob.name]</B> roars."
+					. = "<B>The [mob.name]</B> roars."
 			if("tail")
-				. = "<B>[mob.name]</B> waves \his tail."
+				. = "<B>The [mob.name]</B> waves \his tail."
 			if("paw")
 				if (!mob.restrained())
-					. = "<B>[mob.name]</B> flails \his paw."
+					. = "<B>The [mob.name]</B> flails \his paw."
 			if("scretch")
 				if (!muzzled)
-					. = "<B>[mob.name]</B> scretches."
+					. = "<B>The [mob.name]</B> scretches."
 			if("sulk")
-				. = "<B>[mob.name]</B> sulks down sadly."
-			/*if("dance")
+				. = "<B>The [mob.name]</B> sulks down sadly."
+			if("dance")
 				if (!mob.restrained())
-					. = "<B>[mob.name]</B> dances around happily."
-					SPAWN_DBG(0)
-						for (var/i = 0, i < 4, i++)
-							src.mob.pixel_x+= 1
-							sleep(1)
-						for (var/i = 0, i < 4, i++)
-							src.mob.dir = turn(src.mob.dir, -90)
-							sleep(2)
-						for (var/i = 0, i < 4, i++)
-							src.mob.pixel_x-= 1
-							sleep(1)
-					SPAWN_DBG(5)
-						var/beeMax = 15
-						for (var/obj/critter/domestic_bee/responseBee in range(7, src.mob))
-							if (!responseBee.alive)
-								continue
-
-							if (beeMax-- < 0)
-								break
-
-							responseBee.dance_response()
-
-						var/parrotMax = 15
-						for (var/obj/critter/parrot/responseParrot in range(7, src.mob))
-							if (!responseParrot.alive)
-								continue
-							if (parrotMax-- < 0)
-								break
-							responseParrot.dance_response()
-
-					if (src.mob.traitHolder && src.mob.traitHolder.hasTrait("happyfeet"))
-						if (prob(33))
-							SPAWN_DBG(5)
-								for (var/mob/living/carbon/human/responseMonkey in range(1, src.mob)) // they don't have to be monkeys, but it's signifying monkey code
-									if (responseMonkey.stat || responseMonkey.getStatusDuration("paralysis") || responseMonkey.sleeping || responseMonkey.getStatusDuration("stunned") || (responseMonkey == src.mob))
-										continue
-									responseMonkey.emote("dance")
-
-					if (src.mob.reagents)
-						if (src.mob.reagents.has_reagent("ants") && src.mob.reagents.has_reagent("mutagen"))
-							var/ant_amt = src.mob.reagents.get_reagent_amount("ants")
-							var/mut_amt = src.mob.reagents.get_reagent_amount("mutagen")
-							src.mob.reagents.del_reagent("ants")
-							src.mob.reagents.del_reagent("mutagen")
-							src.mob.reagents.add_reagent("spiders", ant_amt + mut_amt)
-							boutput(src.mob, "<span style=\"color:blue\">The ants arachnify.</span>")
-							playsound(get_turf(src.mob), "sound/effects/bubbles.ogg", 80, 1)*/
+					. = "<B>The [mob.name]</B> dances around happily."
 			if("roll")
 				if (!mob.restrained())
-					. = "<B>[src.name]</B> rolls."
+					. = "<B>The [src.name]</B> rolls."
 			if("gnarl")
 				if (!muzzled)
 					. = "<B>[mob]</B> gnarls and shows \his teeth.."
 			if("jump")
-				. = "<B>[mob.name]</B> jumps!"
+				. = "<B>The [mob.name]</B> jumps!"
 			if ("scream")
 				if(mob.emote_allowed)
 					if(!(mob.client && mob.client.holder))
@@ -1054,7 +610,7 @@
 					. = "<B>[mob]</B> screams!"
 					playsound(get_turf(mob), src.sound_monkeyscream, 80, 0, 0, mob.get_age_pitch())
 
-					SPAWN_DBG(50)
+					spawn(50)
 						if (mob)
 							mob.emote_allowed = 1
 			if ("fart")
@@ -1096,35 +652,37 @@
 							if(25) . = "<B>[mob]</B> makes a big goofy grin and farts loudly."
 							if(26) . = "<B>[mob]</B> hovers off the ground for a moment using a powerful fart."
 							if(27) . = "<B>[mob]</B> plays drums on its ass while farting."
-					playsound(mob.loc, "sound/voice/farts/poo2.ogg", 80, 0, 0, mob.get_age_pitch())
+					playsound(mob.loc, "sound/misc/poo2.ogg", 80, 0, 0, mob.get_age_pitch())
 
 					mob.remove_stamina(STAMINA_DEFAULT_FART_COST)
 					mob.stamina_stun()
 	#ifdef DATALOGGER
 					game_stats.Increment("farts")
 	#endif
-					SPAWN_DBG(10)
+					spawn(10)
 						mob.emote_allowed = 1
-
-
-/datum/mutantrace/monkey/seamonkey
-	name = "sea monkey"
-	icon = 'icons/mob/monkey.dmi'
-	icon_state = "seamonkey"
-	aquatic = 1
+					for(var/mob/living/carbon/human/M in viewers(mob, null))
+						if (!M.stat && M.get_brain_damage() >= 60)
+							spawn(10)
+								if(prob(20))
+									switch(pick(1,2,3))
+										if(1)
+											M.say("[mob.name] made a fart!!")
+										if(2)
+											M.emote("giggle")
+										if(3)
+											M.emote("clap")
 
 /datum/mutantrace/martian
 	name = "martian"
 	icon_state = "martian"
-	icon_override_static = 1
 	human_compatible = 0
 	uses_human_clothes = 0
 	override_language = "martian"
 
-/datum/mutantrace/stupidbaby
-	name = "stupid alien baby"
-	icon_state = "stupidbaby"
-	icon_override_static = 1
+/datum/mutantrace/retardedbaby
+	name = "retarded alien baby"
+	icon_state = "tardbaby"
 	human_compatible = 0
 	uses_human_clothes = 0
 	jerk = 1
@@ -1143,7 +701,6 @@
 	name = "premature clone"
 	icon = 'icons/mob/human.dmi'
 	icon_state = "mutant3"
-	icon_override_static = 1
 	human_compatible = 1
 	uses_human_clothes = 1
 	override_hair = 0
@@ -1152,27 +709,30 @@
 
 	New()
 		..()
-		if(mob)
-			if (isitem(mob.l_hand))
-				var/obj/item/toDrop = mob.l_hand
-				mob.u_equip(toDrop)
-				if (toDrop)
-					toDrop.layer = initial(toDrop.layer)
-					toDrop.set_loc(mob.loc)
-
-			if (mob.limbs && mob.limbs.l_arm)
-				mob.limbs.l_arm.delete()
+		if(mob && istype(mob.l_hand, /obj/item))
+			var/obj/item/toDrop = mob.l_hand
+			mob.u_equip(toDrop)
+			if (toDrop)
+				toDrop.layer = initial(toDrop.layer)
+				toDrop.set_loc(mob.loc)
 
 	say_verb()
 		return "gurgles"
 
+	//They only have one working hand :(
+	custom_attack(atom/target)
+		if (mob.hand)
+			return null
+
+		return target.attack_hand(mob)
+
 	onDeath()
-		SPAWN_DBG(20)
+		spawn(20)
 			if (mob)
 				mob.visible_message("<span style=\"color:red\"><B>[mob]</B> starts convulsing violently!</span>", "You feel as if your body is tearing itself apart!")
-				mob.changeStatus("weakened", 150)
+				mob.weakened = max(15, mob.weakened)
 				mob.make_jittery(1000)
-				sleep(rand(40, 120))
+				sleep(rand(20, 100))
 				mob.gib()
 		return
 
@@ -1204,7 +764,6 @@
 /datum/mutantrace/roach
 	name = "roach"
 	icon_state = "roach"
-	icon_override_static = 1
 	override_attack = 0
 
 	say_verb()
@@ -1213,192 +772,3 @@
 	sight_modifier()
 		mob.see_in_dark = SEE_DARK_HUMAN + 1
 		mob.see_invisible = 1
-
-/datum/mutantrace/cat // we have the sprites so ~why not add them~? (I fully expect to get shit for this)
-	name = "cat"
-	icon_state = "cat"
-	icon_override_static = 1
-	jerk = 1
-	override_attack = 0
-	firevuln = 1.5 // very flammable catthings
-
-	say_verb()
-		return "meows"
-
-	sight_modifier()
-		mob.see_in_dark = SEE_DARK_HUMAN + 1
-		mob.see_invisible = 1
-
-
-/datum/mutantrace/amphibian
-	name = "amphibian"
-	icon_state = "amphibian"
-	icon_override_static = 1
-	firevuln = 1.3
-	brutevuln = 0.7
-	human_compatible = 0
-	uses_human_clothes = 1
-	aquatic = 1
-	voice_name = "amphibian"
-	jerk = 1
-	head_offset = 0
-	hand_offset = -3
-	body_offset = -3
-	allow_fat = 1
-	var/original_blood_color = null
-
-	say_verb()
-		return "croaks"
-
-	say_filter(var/message)
-		return replacetext(message, "r", stutter("rrr"))
-
-
-	New(var/mob/living/carbon/human/M)
-		..()
-		if(ishuman(mob))
-			original_blood_color = mob.blood_color
-			mob.blood_color = "#22EE99"
-			M.bioHolder.AddEffect("mattereater")
-			M.bioHolder.AddEffect("jumpy")
-			M.bioHolder.AddEffect("vowelitis")
-			M.bioHolder.AddEffect("accent_chav")
-			M.bioHolder.AddEffect("fat")
-
-
-	disposing()
-		if(ishuman(mob))
-			if(!isnull(original_blood_color))
-				mob.blood_color = original_blood_color
-		original_blood_color = null
-		..()
-
-	movement_delay()
-		return(1.5)
-
-	emote(var/act)
-		var/message = null
-		switch (act)
-			if ("scream","howl","laugh")
-				if (mob.emote_allowed)
-					mob.emote_allowed = 0
-					message = "<span style=\"color:red\"><B>[mob] makes an awful noise!</B></span>"
-					playsound(get_turf(mob), pick("sound/voice/screams/frogscream1.ogg","sound/voice/screams/frogscream3.ogg","sound/voice/screams/frogscream4.ogg"), 60, 1)
-					SPAWN_DBG (30)
-						if (mob) mob.emote_allowed = 1
-					return message
-
-			if("burp","fart","gasp")
-				if(mob.emote_allowed)
-					mob.emote_allowed = 0
-					message = "<B>[mob]</B> croaks."
-					playsound(get_turf(mob), "sound/voice/farts/frogfart.ogg", 60, 1)
-					SPAWN_DBG(10)
-						if (mob) mob.emote_allowed = 1
-					return message
-			else ..()
-
-/datum/mutantrace/kudzu
-	name = "kudzu"
-	icon_state = "kudzu-w"
-	// icon_override_static = 1		//Level 2 and 3
-	// anchor_to_floor = 1			//Level 3
-	human_compatible = 0
-	uses_human_clothes = 0
-	var/original_name
-	jerk = 1						//Not really, but NT doesn't really like treehuggers
-	aquatic = 1
-	needs_oxy = 0					//get their nutrients from the kudzu
-	understood_languages = list("english", "kudzu")
-
-	override_eyes = 0
-	override_hair = 0
-	override_beard = 0
-	override_detail = 0
-	override_skintone = 0
-
-	override_attack = 1
-	// r_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/right/
-	// l_limb_arm_type_mutantrace = /obj/item/parts/human_parts/arm/left/ //kudzu
-	// ignore_missing_limbs = OVERRIDE_ARM_L | OVERRIDE_ARM_R
-	custom_attack(atom/target) // Fixed: monkeys can click-hide under every table now, not just the parent type. Also added beds (Convair880).
-		if(ishuman(target))
-			mob.visible_message("<span style=\"color:red\"><B>[mob]</B> waves its limbs at [target] threateningly!</span>")
-		else
-			return target.attack_hand(mob)
-
-	var/nutrients = 0
-
-	say_verb()
-		return "rasps"
-
-	New(var/mob/living/carbon/human/H)
-		..()
-		H.max_health -= 50
-		H.add_stam_mod_max("kudzu", -100)
-		H.add_stam_mod_regen("kudzu", -5)
-		if(ishuman(mob))
-			H.abilityHolder = new /datum/abilityHolder/kudzu(H)
-			H.abilityHolder.owner = H
-			H.abilityHolder.addAbility(/datum/targetable/kudzu/guide)
-			H.abilityHolder.addAbility(/datum/targetable/kudzu/heal_other)
-			H.abilityHolder.addAbility(/datum/targetable/kudzu/stealth)
-			H.abilityHolder.addAbility(/datum/targetable/kudzu/kudzusay)
-
-
-	disposing()
-		if(ishuman(mob))
-			var/mob/living/carbon/human/H = mob
-			H.abilityHolder.removeAbility(/datum/targetable/kudzu/guide)
-			H.abilityHolder.removeAbility(/datum/targetable/kudzu/heal_other)
-			H.abilityHolder.removeAbility(/datum/targetable/kudzu/stealth)
-			H.abilityHolder.addAbility(/datum/targetable/kudzu/kudzusay)
-			H.remove_stam_mod_max("kudzu")
-			H.remove_stam_mod_regen("kudzu")
-		return ..()
-
-	// movement delay modifier
-	movement_delay()
-		return 5
-
-	// vision modifier (see_mobs, etc i guess)
-	sight_modifier()
-		mob.sight |= SEE_TURFS
-		mob.sight |= SEE_MOBS
-		mob.sight |= SEE_OBJS
-		mob.see_in_dark = SEE_DARK_FULL
-		return
-
-	onLife(var/mult = 1)	//Called every Life cycle of our mob
-		if (!mob.abilityHolder)
-			mob.abilityHolder = new /datum/abilityHolder/kudzu(mob)
-
-		var/datum/abilityHolder/kudzu/KAH = mob.abilityHolder
-		var/round_mult = max(1, round((mult)))
-		var/turf/T = get_turf(mob)
-		//if on kudzu, get nutrients for later use. If at max nutrients. Then heal self.
-		if (T && T.temp_flags & HAS_KUDZU)
-			if (KAH.points < KAH:MAX_POINTS)
-				KAH.points += round_mult
-			else
-				//at max points, so heal
-				mob.take_toxin_damage(-round_mult)
-				mob.HealDamage("All", round_mult, round_mult)
-		else
-			//nutrients for a bit of grace period
-			if (KAH.points > 0)
-				KAH.points -= 10
-			else
-				//do effects from not being on kudzu here.
-				mob.take_toxin_damage(2 * round_mult)
-				mob.changeStatus("slowed", 3 SECONDS)
-				// random_brute_damage(mob, 2 * mult)
-				if (prob(30))
-					mob.changeStatus("weakened", 3 SECONDS)
-
-		return
-
-#undef OVERRIDE_ARM_L
-#undef OVERRIDE_ARM_R
-#undef OVERRIDE_LEG_R
-#undef OVERRIDE_LEG_L

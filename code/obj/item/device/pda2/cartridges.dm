@@ -26,7 +26,7 @@
 		New()
 			..()
 			src.root.add_file( new /datum/computer/file/pda_program/manifest(src))
-			//src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
+			src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
 			src.root.add_file( new /datum/computer/file/pda_program/signaler(src))
 			src.root.add_file( new /datum/computer/file/pda_program/qm_records(src))
 			src.root.add_file( new /datum/computer/file/pda_program/scan/forensic_scan(src))
@@ -34,9 +34,7 @@
 			src.root.add_file( new /datum/computer/file/pda_program/records/security(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/medical(src))
 			src.root.add_file( new /datum/computer/file/pda_program/security_ticket(src))
-			src.root.add_file( new /datum/computer/file/pda_program/power_checker(src))
 			//src.root.add_file( new /datum/computer/file/pda_program/hologram_control(src))
-			src.root.add_file( new /datum/computer/file/pda_program/station_name(src))
 			src.file_amount = src.file_used
 			src.read_only = 1
 
@@ -47,12 +45,11 @@
 		New()
 			..()
 			src.root.add_file( new /datum/computer/file/pda_program/manifest(src))
-			//src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
+			src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
 			src.root.add_file( new /datum/computer/file/pda_program/qm_records(src))
 			src.root.add_file( new /datum/computer/file/pda_program/scan/forensic_scan(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/security(src))
 			src.root.add_file( new /datum/computer/file/pda_program/security_ticket(src))
-			src.root.add_file( new /datum/computer/file/pda_program/power_checker(src))
 			src.read_only = 1
 
 	ai
@@ -63,22 +60,18 @@
 			..()
 			src.root.add_file( new /datum/computer/file/pda_program/manifest(src))
 			src.root.add_file( new /datum/computer/file/pda_program/atmos_alerts(src))
-			src.root.add_file( new /datum/computer/file/pda_program/power_checker(src))
-			// src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
+			src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
+			src.root.add_file( new /datum/computer/file/pda_program/signaler(src))
 			src.root.add_file( new /datum/computer/file/pda_program/qm_records(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/security(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/medical(src))
-			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portananomed(src))
-			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portamedbay(src))
-			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portasci(src))
-			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portabrig(src))
 			src.root.add_file( new /datum/computer/file/pda_program/bot_control/secbot(src))
 			src.root.add_file( new /datum/computer/file/pda_program/bot_control/mulebot(src))
 			src.root.add_file( new /datum/computer/file/pda_program/pingtool(src) )
 			src.root.add_file( new /datum/computer/file/pda_program/packet_sniffer(src) )
 			src.root.add_file( new /datum/computer/file/pda_program/packet_sender(src) )
 			src.root.add_file( new /datum/computer/file/text/diagnostic_readme(src))
-			src.root.add_file( new /datum/computer/file/pda_program/signaler(src))
+			src.read_only = 1
 
 	cyborg
 		name = "Cyborg Internal PDA Cartridge"
@@ -92,16 +85,15 @@
 			src.root.add_file( new /datum/computer/file/pda_program/qm_records(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/security(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/medical(src))
-			src.root.add_file( new /datum/computer/file/pda_program/security_ticket(src))
-			// src.root.add_file( new /datum/computer/file/pda_program/scan/health_scan(src))
-			// src.root.add_file( new /datum/computer/file/pda_program/scan/reagent_scan(src))
+			src.root.add_file( new /datum/computer/file/pda_program/scan/health_scan(src))
+			src.root.add_file( new /datum/computer/file/pda_program/scan/reagent_scan(src))
 			src.root.add_file( new /datum/computer/file/pda_program/bot_control/secbot(src))
 			src.root.add_file( new /datum/computer/file/pda_program/bot_control/mulebot(src))
 			src.root.add_file( new /datum/computer/file/pda_program/pingtool(src) )
 			src.root.add_file( new /datum/computer/file/pda_program/packet_sniffer(src) )
 			src.root.add_file( new /datum/computer/file/pda_program/packet_sender(src) )
 			src.root.add_file( new /datum/computer/file/text/diagnostic_readme(src))
-			src.root.add_file( new /datum/computer/file/pda_program/power_checker(src))
+			src.read_only = 1
 
 	research_director
 		name = "SciMaster Cartridge"
@@ -111,7 +103,7 @@
 		New()
 			..()
 			src.root.add_file( new /datum/computer/file/pda_program/manifest(src))
-			//src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
+			src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
 			src.root.add_file( new /datum/computer/file/pda_program/scan/health_scan(src))
 			src.root.add_file( new /datum/computer/file/pda_program/scan/reagent_scan(src))
 			src.root.add_file( new /datum/computer/file/pda_program/signaler(src))
@@ -125,12 +117,11 @@
 		New()
 			..()
 			src.root.add_file( new /datum/computer/file/pda_program/manifest(src))
-			//src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
+			src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
 			src.root.add_file( new /datum/computer/file/pda_program/scan/health_scan(src))
 			src.root.add_file( new /datum/computer/file/pda_program/scan/reagent_scan(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/medical(src))
 			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portananomed(src))
-			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portamedbay(src))
 			src.read_only = 1
 
 
@@ -143,7 +134,6 @@
 			src.root.add_file( new /datum/computer/file/pda_program/scan/reagent_scan(src))
 			src.root.add_file( new /datum/computer/file/pda_program/records/medical(src))
 			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portananomed(src))
-			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portamedbay(src))
 			src.read_only = 1
 
 	mechanic
@@ -195,7 +185,7 @@
 		New()
 			..()
 			src.root.add_file( new /datum/computer/file/pda_program/manifest(src))
-			//src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
+			src.root.add_file( new /datum/computer/file/pda_program/status_display(src))
 			src.root.add_file( new /datum/computer/file/pda_program/bot_control/secbot(src))
 			src.root.add_file( new /datum/computer/file/pda_program/portable_machinery_control/portabrig(src))
 			src.root.add_file( new /datum/computer/file/pda_program/qm_records(src))
@@ -238,18 +228,6 @@
 			..()
 			src.root.add_file( new /datum/computer/file/pda_program/qm_records(src))
 			src.root.add_file( new /datum/computer/file/pda_program/bot_control/mulebot(src))
-			src.read_only = 1
-
-	engineer
-		name = "Engine-buddy Atmospherics Cartridge"
-		desc = "Great for the enterprising engineer in everyone!"
-
-		New()
-			..()
-			src.root.add_file( new /datum/computer/file/pda_program/power_checker(src))
-			src.root.add_file( new /datum/computer/file/pda_program/atmos_alerts(src))
-			src.root.add_file( new /datum/computer/file/pda_program/signaler(src))
-			src.root.add_file( new /datum/computer/file/pda_program/scan/health_scan(src))
 			src.read_only = 1
 
 	clown

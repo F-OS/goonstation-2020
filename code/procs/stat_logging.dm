@@ -168,12 +168,6 @@
 					special = syndicate_name()
 					if (ticker.mode:nuke_detonated)
 						message["success"] = 1
-			if ("spy_thief")
-				special = "Bounties claimed: "
-				for(var/stolen_item_name in M.spy_stolen_items)
-					if (stolen_item_name != "")
-						special += stolen_item_name
-						special += ", "
 
 		message["special"] = special
 

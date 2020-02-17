@@ -3,8 +3,8 @@
 	config_tag = "blob"
 	shuttle_available = 2
 
-	var/const/blobs_minimum = 2
-	var/const/blobs_possible = 3
+	var/const/blobs_minimum = 1
+	var/const/blobs_possible = 2
 	var/const/waittime_l = 600 //lower bound on time before intercept arrives (in tenths of seconds)
 	var/const/waittime_h = 1800 //upper bound on time before intercept arrives (in tenths of seconds)
 	var/finish_counter = 0
@@ -20,8 +20,8 @@
 	for(var/mob/new_player/player in mobs)
 		if(player.client && player.ready) num_players++
 
-	var/i = rand(-5, 0)
-	var/num_blobs = max(2, min(round((num_players + i) / 20), blobs_possible))
+	var/i = rand(-10, 0)
+	var/num_blobs = max(1, min(round((num_players + i) / 30), blobs_possible))
 
 	var/list/possible_blobs = get_possible_blobs(num_blobs)
 
@@ -38,13 +38,17 @@
 		message_admins("[key_name(tplayer.current)] successfully redeems an antag token.")
 		//num_blobs = max(0, num_blobs - 1)
 
-	var/list/chosen_blobs = antagWeighter.choose(pool = possible_blobs, role = "blob", amount = num_blobs, recordChosen = 1)
-	traitors |= chosen_blobs
-	for (var/datum/mind/blob in traitors)
-		blob.special_role = "blob"
-		blob.assigned_role = "MODE"
+	for(var/j = 0, j < num_blobs, j++)
+		var/datum/mind/blob = pick(possible_blobs)
+		traitors += blob
 		possible_blobs.Remove(blob)
 
+	for(var/datum/mind/blob in traitors)
+		if(!blob || !istype(blob))
+			traitors.Remove(blob)
+			continue
+		if(istype(blob))
+			blob.special_role = "blob"
 	return 1
 
 /datum/game_mode/blob/post_setup()
@@ -54,16 +58,16 @@
 		if (istype(blob))
 			bestow_objective(blob,/datum/objective/specialist/blob)
 
-			SPAWN_DBG(0)
+			spawn(0)
 				var/newname = input(blob.current, "You are a Blob. Please choose a name for yourself, it will show in the form: <name> the Blob", "Name change") as text
 
 				if (newname)
 					if (length(newname) >= 26) newname = copytext(newname, 1, 26)
-					newname = replacetext(newname, ">", "'") + " the Blob"
+					newname = dd_replacetext(newname, ">", "'") + " the Blob"
 					blob.current.real_name = newname
 					blob.current.name = newname
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 /datum/game_mode/blob/send_intercept()
@@ -83,7 +87,7 @@
 	for(var/A in possible_modes)
 		intercepttext += i_text.build(A, pick(ticker.minds))
 
-	for (var/obj/machinery/communications_dish/C in comm_dishes)
+	for (var/obj/machinery/communications_dish/C in machines)
 		C.add_centcom_report("Cent. Com. Status Summary", intercepttext)
 
 	command_alert("Summary downloaded and printed out at all communications consoles.", "Enemy communication intercept. Security Level Elevated.")
@@ -98,7 +102,7 @@
 			continue
 		if (M.special_role != "blob")
 			continue
-		if (isblob(M.current))
+		if (istype(M.current, /mob/living/intangible/blob_overmind))
 			var/mob/living/intangible/blob_overmind/O = M.current
 			if (O.blobs.len < 500)
 				finish_counter = 0
@@ -108,7 +112,7 @@
 			continue
 		if (M.special_role != "blob")
 			continue
-		if (isblob(M.current))
+		if (istype(M.current, /mob/living/intangible/blob_overmind))
 			var/mob/living/intangible/blob_overmind/O = M.current
 			if (O.blobs.len < 500)
 				finish_counter = 0
@@ -120,12 +124,12 @@
 	for (var/datum/mind/M in traitors)
 		if (!M)
 			continue
-		if (isblob(M.current))
+		if (istype(M.current, /mob/living/intangible/blob_overmind))
 			blobs += M.current
 	for (var/datum/mind/M in Agimmicks)
 		if (!M)
 			continue
-		if (isblob(M.current))
+		if (istype(M.current, /mob/living/intangible/blob_overmind))
 			blobs += M.current
 
 	if (!blobs.len)

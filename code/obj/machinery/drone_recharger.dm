@@ -11,27 +11,23 @@
 	var/chargerate = 400
 	var/mob/living/silicon/ghostdrone/occupant = null
 	var/transition = 0 //For when closing
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	New()
 		..()
 
 	process()
-		if(!(status & BROKEN))
+		if(!(stat & BROKEN))
 			if (occupant)
 				power_usage = 500
 			else
 				power_usage = 50
 			..()
-		if(status & (NOPOWER|BROKEN) || !anchored)
+		if(stat & (NOPOWER|BROKEN) || !anchored)
 			if (src.occupant)
 				src.turnOff("nopower")
 			return
 
 		if(src.occupant)
-			if (src.occupant.loc != src.loc || isdead(src.occupant)) // they left or died
-				src.turnOff()
-				return
 			if (!occupant.cell)
 				return
 			else if (occupant.cell.charge >= occupant.cell.maxcharge) //fully charged yo
@@ -49,7 +45,7 @@
 		if (!src.occupant && isghostdrone(AM) && !src.transition)
 			src.turnOn(AM)
 
-	HasExited(atom/movable/AM as mob|obj)
+	ProximityLeave(atom/movable/AM as mob|obj)
 		..()
 		if (AM.loc != src.loc && src.occupant == AM && isghostdrone(AM))
 			src.turnOff()
@@ -62,15 +58,15 @@
 		out(usr, "[msg]</span>")
 
 	proc/turnOn(mob/living/silicon/ghostdrone/G)
-		if (!G || G.getStatusDuration("stunned")) return 0
+		if (!G) return 0
 
 		out(G, "<span style='color: blue;'>The [src] grabs you as you float by and begins charging your power cell.</span>")
-		src.set_density(1)
+		src.density = 1
 		G.canmove = 0
 
 		//Do opening thing
 		src.icon_state = "drone-charger-open"
-		SPAWN_DBG(7) //Animation is 6 ticks, 1 extra for byond
+		spawn(7) //Animation is 6 ticks, 1 extra for byond
 			src.occupant = G
 			src.updateSprite()
 			G.charging = 1
@@ -101,8 +97,8 @@
 		//Do closing thing
 		src.icon_state = "drone-charger-close"
 		src.transition = 1
-		SPAWN_DBG(7)
-			src.set_density(0)
+		spawn(7)
+			src.density = 0
 			src.transition = 0
 			src.updateSprite()
 
@@ -137,9 +133,7 @@
 
 
 /obj/machinery/drone_recharger/factory
-	var/id = "ghostdrone"
 	mats = 0
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 
 	HasEntered(atom/movable/AM as mob|obj, atom/OldLoc)
 		if (!src.occupant && istype(AM, /obj/item/ghostdrone_assembly) && !src.transition)
@@ -156,6 +150,6 @@
 			available_ghostdrones += GD
 			src.turnOn(GD)
 			if (ghostdrone_factory_working)
-				ghostdrone_factory_working = null
+				ghostdrone_factory_working = 0
 			return 1
 		return 0

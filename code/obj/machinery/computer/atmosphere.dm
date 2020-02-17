@@ -7,10 +7,6 @@ Atmos alert computer
 /obj/machinery/computer/atmosphere
 	name = "atmos"
 
-	lr = 0.85
-	lg = 0.86
-	lb = 1
-
 /obj/machinery/computer/atmosphere/alerts
 	name = "Alert Computer"
 	icon_state = "atmos"
@@ -36,26 +32,25 @@ Atmos alert computer
 /obj/machinery/computer/atmosphere/alerts/attack_ai(mob/user)
 	add_fingerprint(user)
 
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	interact(user)
 
 /obj/machinery/computer/atmosphere/alerts/attack_hand(mob/user)
 	add_fingerprint(user)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	interact(user)
 
-/obj/machinery/computer/atmosphere/alerts/attackby(var/obj/item/I as obj, user as mob)
-	if (isscrewingtool(I))
+/obj/machinery/computer/atmosphere/alerts/attackby(I as obj, user as mob)
+	if(istype(I, /obj/item/screwdriver))
 		playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		if(do_after(user, 20))
-			if (src.status & BROKEN)
+			if (src.stat & BROKEN)
 				boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 				var/obj/computerframe/A = new /obj/computerframe( src.loc )
 				if(src.material) A.setMaterial(src.material)
-				var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-				G.set_loc(src.loc)
+				new /obj/item/raw_material/shard/glass( src.loc )
 				var/obj/item/circuitboard/atmospherealerts/M = new /obj/item/circuitboard/atmospherealerts( A )
 				for (var/obj/C in src)
 					C.set_loc(src.loc)
@@ -101,7 +96,7 @@ Atmos alert computer
 		else
 			dat += "-- All Systems Nominal<BR><br>"
 		dat += "<BR><br>"
-	user.Browse(dat, "window=alerts")
+	user << browse(dat, "window=alerts")
 	onclose(user, "alerts")
 
 /obj/machinery/computer/atmosphere/alerts/Topic(href, href_list)
@@ -110,7 +105,7 @@ Atmos alert computer
 	return
 
 /obj/machinery/computer/atmosphere/alerts/proc/triggerAlarm(var/class, area/A, var/O, var/alarmsource)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	var/list/L = src.alarms[class]
 	for (var/I in L)
@@ -132,7 +127,7 @@ Atmos alert computer
 	return 1
 
 /obj/machinery/computer/atmosphere/alerts/proc/cancelAlarm(var/class, area/A as area, obj/origin)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	var/list/L = src.alarms[class]
 	var/cleared = 0

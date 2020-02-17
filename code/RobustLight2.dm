@@ -2,44 +2,20 @@ var
 	RL_Generation = 0
 
 #define RL_Atten_Quadratic 2.2 // basically just brightness scaling atm
-#define RL_Atten_Constant -0.11 // constant subtracted at every point to make sure it goes <0 after some distance
-#define RL_MaxRadius 6 // maximum allowed light.radius value. if any light ends up needing more than this it'll cap and look screwy
-#define DLL 0.05 //Darkness Lower Limit, at 0 things can get absolutely pitch black.
+#define RL_Atten_Constant -0.1 // constant subtracted at every point to make sure it goes <0 after some distance
+#define RL_MaxRadius 7 // maximum allowed light.radius value. if any light ends up needing more than this it'll cap and look screwy
 
-#define D_BRIGHT 1
-#define D_COLOR 2
-#define D_HEIGHT 4
-#define D_ENABLE 8
-#define D_MOVE 16
-						//only if lag							OR we already have stuff queued   	also game needs to be started lol		and not doing a queue process currently
-//#define SHOULD_QUEUE ((world.tick_usage > LIGHTING_MAX_TICKUSAGE || light_update_queue.cur_size) && current_state > GAME_STATE_SETTING_UP && !queued_run)
-#define SHOULD_QUEUE (( light_update_queue.cur_size || world.tick_usage > LIGHTING_MAX_TICKUSAGE) && !queued_run && current_state > GAME_STATE_SETTING_UP)
 datum/light
 	var
 		x
 		y
 		z
 
-		x_des
-		y_des
-		z_des
-
 		r = 1
 		g = 1
 		b = 1
-
-		r_des = 1
-		g_des = 1
-		b_des = 1
-
 		brightness = 1
-
-		brightness_des = 1
-
 		height = 1
-
-		height_des = 1
-
 		enabled = 0
 
 		radius = 1
@@ -51,10 +27,6 @@ datum/light
 		attach_x = 0.5
 		attach_y = 0.5
 
-		dirty_flags = 0
-
-		//queued_run = 0
-
 	New(x=0, y=0, z=0)
 		src.x = x
 		src.y = y
@@ -65,24 +37,12 @@ datum/light
 				T.RL_Lights = list()
 			T.RL_Lights |= src
 
-
-	disposing()
-		disable(queued_run = 1) //dont queue... we wanna actually disable it before remove_from_turf etc
-		remove_from_turf()
-		detach()
-
 	proc
-		set_brightness(brightness, queued_run = 0)
-			src.brightness_des = brightness
-			if (src.brightness == brightness && !queued_run)
+		set_brightness(brightness)
+			if (src.brightness == brightness)
 				return
 
 			if (src.enabled)
-				if (SHOULD_QUEUE)
-					light_update_queue.queue(src)
-					dirty_flags |= D_BRIGHT
-					return
-
 				var/strip_gen = ++RL_Generation
 				var/list/affected = src.strip(strip_gen)
 
@@ -98,50 +58,17 @@ datum/light
 				src.brightness = brightness
 				src.precalc()
 
-		set_color(red, green, blue, queued_run = 0)
-
-			if (src.r == red && src.g == green && src.b == blue && !queued_run)
+		set_color(r, g, b)
+			if (src.r == r && src.g == g && src.b == b)
 				return
-
-			/*
-			src.r_des = red
-			src.g_des = green
-			src.b_des = blue
-			*/
-
-			//hello yes now it's ZeWaka exporting my hellcode implementations across the code
-			//scientific reasoning provided by Mokrzycki, Wojciech & Tatol, Maciej. (2011).
-			/*
-			var/R_sr = ((red + src.r*255) /2) //average value of R components in the two compared colors
-
-			var/deltaR2 = abs(red   - (src.r*255))**2
-			var/deltaG2 = abs(blue  - (src.b*255))**2
-			var/deltaB2 = abs(green - (src.g*255))**2
-			*/
-			//this is our weighted euclidean distance function, weights based on red component
-			//var/color_delta =( (2+(R_sr/256))*deltaR2 + (4*deltaG2) + (2+((255-R_sr)/256))*deltaB2 )
-
-			//DEBUG_MESSAGE("[x],[y]:[temperature], d:[color_delta], [red]|[green]|[blue] vs [src.*255]|[src.*255]|[src.*255]")
-
-			/*
-			// This breaks everything if a light's value is 0, so, begone
-			if (color_delta < 144) //determined via E'' sampling in science paper above, 144=12^2
-				Z_LOG_DEBUG("Lighting", "Color update would be ignored due to color_delta ([color_delta]) under 144. ([R_sr], [deltaR2] [deltaG2] [deltaB2])")
-				return
-			*/
 
 			if (src.enabled)
-				if (SHOULD_QUEUE)
-					light_update_queue.queue(src)
-					dirty_flags |= D_COLOR
-					return
-
 				var/strip_gen = ++RL_Generation
 				var/list/affected = src.strip(strip_gen)
 
-				src.r = red
-				src.g = green
-				src.b = blue
+				src.r = r
+				src.g = g
+				src.b = b
 				src.precalc()
 
 				for (var/turf/T in src.apply())
@@ -150,22 +77,16 @@ datum/light
 					if (T.RL_UpdateGeneration <= strip_gen)
 						T.RL_UpdateLight()
 			else
-				src.r = red
-				src.g = green
-				src.b = blue
+				src.r = r
+				src.g = g
+				src.b = b
 				src.precalc()
 
-		set_height(height, queued_run = 0)
-			src.height_des = height
-			if (src.height == height && !queued_run)
+		set_height(height)
+			if (src.height == height)
 				return
 
 			if (src.enabled)
-				if (SHOULD_QUEUE)
-					light_update_queue.queue(src)
-					dirty_flags |= D_HEIGHT
-					return
-
 				var/strip_gen = ++RL_Generation
 				var/list/affected = src.strip(strip_gen)
 
@@ -181,33 +102,17 @@ datum/light
 				src.height = height
 				src.precalc()
 
-		enable(queued_run = 0)
+		enable()
 			if (enabled)
-				dirty_flags &= ~D_ENABLE
 				return
-
-			if (SHOULD_QUEUE)
-				light_update_queue.queue(src)
-				dirty_flags |= D_ENABLE
-				return
-
 			enabled = 1
-
 			for (var/turf/T in src.apply())
 				T.RL_UpdateLight()
 
-		disable(queued_run = 0)
+		disable()
 			if (!enabled)
-				dirty_flags &= ~D_ENABLE
 				return
-
-			if (SHOULD_QUEUE)
-				light_update_queue.queue(src)
-				dirty_flags |= D_ENABLE
-				return
-
 			enabled = 0
-
 			for (var/turf/T in src.strip(++RL_Generation))
 				T.RL_UpdateLight()
 
@@ -221,57 +126,43 @@ datum/light
 				var/atom/old = src.attached_to
 				old.RL_Attached -= src
 
-			if (!A.RL_Attached)
-				A.RL_Attached = list(src)
-			else
-				A.RL_Attached += src
-
 			src.move(A.x + offset_x, A.y + offset_x, A.z)
 			src.attached_to = A
 			src.attach_x = offset_x
 			src.attach_y = offset_y
-
+			if (!A.RL_Attached)
+				A.RL_Attached = list(src)
+			else
+				A.RL_Attached += src
 
 		// internals
 		precalc()
 			src.premul_r = src.r * src.brightness
 			src.premul_g = src.g * src.brightness
 			src.premul_b = src.b * src.brightness
-			src.radius = min(round(sqrt(max((brightness * RL_Atten_Quadratic) / -RL_Atten_Constant - src.height**2, 0))), RL_MaxRadius)
+			src.radius = min(ceil(sqrt(max((brightness * RL_Atten_Quadratic) / -RL_Atten_Constant - src.height**2, 0)) + 1), RL_MaxRadius)
 
 		apply()
-			if (!RL_Started || RL_Suspended)
+			if (!RL_Started)
 				return list()
 
 			return apply_internal(++RL_Generation, src.premul_r, src.premul_g, src.premul_b)
 
 		strip(generation)
-			if (!RL_Started || RL_Suspended)
+			if (!RL_Started)
 				return list()
 
 			return apply_internal(generation, -src.premul_r, -src.premul_g, -src.premul_b)
 
-		remove_from_turf()
-			var/turf/T = locate(src.x, src.y, src.z)
-			if (T)
-				if (T.RL_Lights && T.RL_Lights.len) //ZeWaka: Fix for null.len
-					T.RL_Lights -= src
-					if (!T.RL_Lights.len)
-						T.RL_Lights = null
+		move(x, y, z)
+			var/turf/old_turf = locate(src.x, src.y, src.z)
+			if (old_turf)
+				if (old_turf.RL_Lights.len)
+					old_turf.RL_Lights -= src
+					if (!old_turf.RL_Lights.len)
+						old_turf.RL_Lights = null
 				else
-					T.RL_Lights = null
-
-		move(x, y, z, queued_run = 0)
-			src.x_des = x
-			src.y_des = y
-			src.z_des = z
-
-			if (SHOULD_QUEUE)
-				light_update_queue.queue(src)
-				dirty_flags |= D_MOVE
-				return
-
-			remove_from_turf()
+					old_turf.RL_Lights = null
 
 			var/strip_gen = ++RL_Generation
 			var/list/affected
@@ -289,15 +180,13 @@ datum/light
 				new_turf.RL_Lights |= src
 
 			if (src.enabled)
-				for (var/turf in src.apply())
-					var/turf/T = turf
+				for (var/turf/T in src.apply())
 					T.RL_UpdateLight()
-				for (var/turf in affected)
-					var/turf/T = turf
+				for (var/turf/T in affected)
 					if (T.RL_UpdateGeneration <= strip_gen)
 						T.RL_UpdateLight()
 
-		move_defer(x, y, z) //not called anywhere! if we decide to use this later add it to queueing ok thx
+		move_defer(x, y, z)
 			. = src.strip(++RL_Generation)
 			src.x = x
 			src.y = y
@@ -317,7 +206,7 @@ datum/light
 		apply_to(turf/T)
 			T.RL_ApplyLight(src.x, src.y, src.brightness, src.height**2, r, g, b)
 
-		#define ADDUPDATE(var) if (var && var.RL_UpdateGeneration < generation) { var.RL_UpdateGeneration = generation; . += var; }
+		#define ADDUPDATE(var) if (var.RL_UpdateGeneration < generation) { var.RL_UpdateGeneration = generation; . += var; }
 		apply_internal(generation, r, g, b)
 			. = list()
 			var/height2 = src.height**2
@@ -370,7 +259,6 @@ datum/light
 
 var
 	RL_Started = 0
-	RL_Suspended = 0
 
 proc
 	RL_Start()
@@ -379,26 +267,13 @@ proc
 			if (light.enabled)
 				light.apply()
 		for (var/turf/T in world)
-			LAGCHECK(LAG_HIGH)
 			T.RL_UpdateLight()
 
 	RL_Suspend()
-		RL_Suspended = 1
-		//TODO
+		// TODO
 
 	RL_Resume()
-		RL_Suspended = 0
 		// TODO
-		//I'm going to keep to my later statement for this and above: "for fucks sake tobba" -ZeWaka
-
-/obj/overlay/tile_effect
-	event_handler_flags = IMMUNE_SINGULARITY
-
-/obj/overlay/tile_effect/lighting
-	icon = 'icons/effects/light_overlay.dmi'
-	blend_mode = BLEND_ADD
-	layer = LIGHTING_LAYER_BASE
-	anchored = 2
 
 turf
 	var
@@ -416,13 +291,29 @@ turf
 		RL_OverlayState = ""
 		list/datum/light/RL_Lights = null
 
+		RL_Ignore = 0
+
+	luminosity = 1 // TODO
+
+	New()
+		..()
+		var/area/A = src.loc
+		if (!RL_Started)
+			RL_LumR += A.RL_AmbientRed
+			RL_LumG += A.RL_AmbientGreen
+			RL_LumB += A.RL_AmbientBlue
+
 	disposing()
 		..()
 		RL_Cleanup()
 
 		var/old_lights = src.RL_Lights
 		var/old_opacity = src.opacity
-		SPAWN_DBG(0) // ugghhh fuuck
+		spawn(0) // ugghhh fuuck
+			var/area/A = src.loc
+			RL_LumR = A.RL_AmbientRed
+			RL_LumG = A.RL_AmbientGreen
+			RL_LumB = A.RL_AmbientBlue
 			if (old_lights)
 				if (!RL_Lights)
 					RL_Lights = old_lights
@@ -441,14 +332,8 @@ turf
 	proc
 		RL_ApplyLight(lx, ly, brightness, height2, r, g, b)
 			var/area/A = loc
-			if (A.force_fullbright)
+			if (RL_Ignore || !A.RL_Lighting)
 				return
-
-			//MBC : this needed to be removed to fix construction. might be a bit slower but idk how else it would be fixed
-			//basically , even though fullbright turfs like space do not have light overlays...
-			//we still want them to keep track of how they would be affected by nearby lights, in case someone does build over them.
-			//if (fullbright)
-			//	return
 
 			var/atten = (brightness*RL_Atten_Quadratic) / ((src.x - lx)**2 + (src.y - ly)**2 + height2) + RL_Atten_Constant
 			if (atten < 0)
@@ -456,27 +341,17 @@ turf
 			RL_LumR += r*atten
 			RL_LumG += g*atten
 			RL_LumB += b*atten
-
-			//Needed these to prevent a weird bug from the dark times where tiles went pitch black and couldn't be fixed - ZeWaka
-			RL_LumR = max(RL_LumR, 0)
-			RL_LumG = max(RL_LumG, 0)
-			RL_LumB = max(RL_LumB, 0)
-
 			RL_AddLumR = min(max((RL_LumR - 1) * 0.5, 0), 0.3)
 			RL_AddLumG = min(max((RL_LumG - 1) * 0.5, 0), 0.3)
 			RL_AddLumB = min(max((RL_LumB - 1) * 0.5, 0), 0.3)
 			RL_NeedsAdditive = (RL_AddLumR > 0) || (RL_AddLumG > 0) || (RL_AddLumB > 0)
 
 		RL_UpdateLight()
-			if (!RL_Started || RL_Suspended)
+			if (!RL_Started)
 				return
 
 			var/area/A = loc
-			if (fullbright || A.force_fullbright)
-				return //MBC : see comment above. we still want these sitcking around.
-
-				if (fullbright == 0.5) //do not clear, just dont compute updates. this is a dumb MBC test.
-					return
+			if (RL_Ignore || !A.RL_Lighting)
 				if (src.RL_MulOverlay)
 					pool(src.RL_MulOverlay)
 					src.RL_MulOverlay.set_loc(null)
@@ -492,9 +367,10 @@ turf
 			var/turf/NE = get_step(src, NORTHEAST) || src
 
 			if (!src.RL_MulOverlay)
-				var/obj/overlay/tile_effect/overlay = unpool(/obj/overlay/tile_effect/lighting)
+				var/obj/overlay/tile_effect/overlay = unpool(/obj/overlay/tile_effect)
 				overlay.set_loc(src)
-				overlay.plane = PLANE_LIGHTING
+				overlay.blend_mode = BLEND_MULTIPLY
+				overlay.icon = 'icons/effects/light_overlay.dmi'
 				overlay.icon_state = src.RL_OverlayState
 				src.RL_MulOverlay = overlay
 			src.RL_MulOverlay.color = list(
@@ -502,14 +378,14 @@ turf
 				E.RL_LumR, E.RL_LumG, E.RL_LumB, 0,
 				N.RL_LumR, N.RL_LumG, N.RL_LumB, 0,
 				NE.RL_LumR, NE.RL_LumG, NE.RL_LumB, 0,
-				DLL, DLL, DLL, 1
-				)
+				0, 0, 0, 1)
 
 			if (src.RL_NeedsAdditive || E.RL_NeedsAdditive || N.RL_NeedsAdditive || NE.RL_NeedsAdditive)
 				if (!src.RL_AddOverlay)
-					var/obj/overlay/tile_effect/overlay = unpool(/obj/overlay/tile_effect/lighting)
+					var/obj/overlay/tile_effect/overlay = unpool(/obj/overlay/tile_effect)
 					overlay.set_loc(src)
-					overlay.plane = PLANE_SELFILLUM
+					overlay.blend_mode = BLEND_ADD
+					overlay.icon = 'icons/effects/light_overlay.dmi'
 					overlay.icon_state = src.RL_OverlayState
 					src.RL_AddOverlay = overlay
 				src.RL_AddOverlay.color = list(
@@ -544,14 +420,16 @@ turf
 				src.RL_AddOverlay.set_loc(null)
 				pool(src.RL_AddOverlay)
 				src.RL_AddOverlay = null
-			// cirr effort to remove redundant overlays that still persist EVEN THOUGH they shouldn't
-			for(var/obj/overlay/tile_effect/lighting/L in src.contents)
-				L.set_loc(null)
-				pool(L)
 
 		RL_Reset()
 			// TODO
-			//for fucks sake tobba - ZeWaka
+
+area
+	var
+		RL_Lighting = 1
+		RL_AmbientRed = 0.1
+		RL_AmbientGreen = 0.1
+		RL_AmbientBlue = 0.1
 
 atom
 	var
@@ -562,8 +440,7 @@ atom
 			var/old_loc = src.loc
 			. = ..()
 			if (src.loc != old_loc && src.RL_Attached)
-				for (var/L in src.RL_Attached)
-					var/datum/light/light = L
+				for (var/datum/light/light in src.RL_Attached)
 					light.move(src.x + light.attach_x, src.y + light.attach_y, src.z)
 
 		set_loc(atom/target)
@@ -589,20 +466,14 @@ atom
 				. = ..()
 
 			if (src.RL_Attached) // TODO: defer updates and update all affected tiles at once?
-				var/dont_queue = (loc == null) //if we are being thrown to a null loc, dont queue this move. we need it Now.
-				for (var/L in src.RL_Attached)
-					var/datum/light/light = L
-					light.move(src.x+0.5, src.y+0.5, src.z, queued_run = dont_queue)
+				for (var/datum/light/light in src.RL_Attached)
+					light.move(src.x+0.5, src.y+0.5, src.z)
 
 	disposing()
 		..()
 		if (src.RL_Attached)
-			for (var/L in src.RL_Attached)
-				var/datum/light/attached = L
-				attached.disable(queued_run = 1)
-				// Detach the light from its holder so that it gets cleaned up right if
-				// needed.
-				attached.detach()
+			for (var/datum/light/attached in src.RL_Attached)
+				attached.disable()
 		if (opacity)
 			RL_SetOpacity(0)
 

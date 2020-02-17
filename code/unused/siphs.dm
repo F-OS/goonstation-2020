@@ -65,7 +65,7 @@
 
 /obj/machinery/atmoalter/siphs/proc/setstate()
 
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "siphon:0"
 		return
 
@@ -103,9 +103,9 @@
 	src.setstate()
 	return
 
-/obj/machinery/atmoalter/siphs/fullairsiphon/air_vent/attackby(obj/item/W as obj, user as mob)
+/obj/machinery/atmoalter/siphs/fullairsiphon/air_vent/attackby(W as obj, user as mob)
 
-	if (isscrewingtool(W))
+	if (istype(W, /obj/item/weapon/screwdriver))
 		if (src.c_status)
 			src.anchored = 1
 			src.c_status = 0
@@ -113,14 +113,15 @@
 			if (locate(/obj/machinery/connector, src.loc))
 				src.anchored = 1
 				src.c_status = 3
-	else if (iswrenchingtool(W))
-		src.alterable = !( src.alterable )
+	else
+		if (istype(W, /obj/item/weapon/wrench))
+			src.alterable = !( src.alterable )
 	return
 
 /obj/machinery/atmoalter/siphs/fullairsiphon/air_vent/setstate()
 
 
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "vent-p"
 		return
 
@@ -141,7 +142,7 @@
 
 /obj/machinery/atmoalter/siphs/scrubbers/process()
 	/*
-	if(status & NOPOWER) return
+	if(stat & NOPOWER) return
 
 	if(src.gas.temperature >= 3000)
 		src.melt()
@@ -211,7 +212,7 @@
 
 /obj/machinery/atmoalter/siphs/scrubbers/air_filter/setstate()
 
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "vent-p"
 		return
 
@@ -224,9 +225,9 @@
 			src.icon_state = "vent1"
 	return
 
-/obj/machinery/atmoalter/siphs/scrubbers/air_filter/attackby(/obj/item/W as obj, user as mob)
+/obj/machinery/atmoalter/siphs/scrubbers/air_filter/attackby(W as obj, user as mob)
 
-	if (isscrewingtool(W))
+	if (istype(W, /obj/item/weapon/screwdriver))
 		if (src.c_status)
 			src.anchored = 1
 			src.c_status = 0
@@ -234,8 +235,9 @@
 			if (locate(/obj/machinery/connector, src.loc))
 				src.anchored = 1
 				src.c_status = 3
-	else if (iswrenchingtool(W))
-		src.alterable = !( src.alterable )
+	else
+		if (istype(W, /obj/item/weapon/wrench))
+			src.alterable = !( src.alterable )
 	return
 
 /obj/machinery/atmoalter/siphs/scrubbers/air_filter/reset(valve, auto)
@@ -247,7 +249,7 @@
 
 /obj/machinery/atmoalter/siphs/scrubbers/port/setstate()
 
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "scrubber:0"
 		return
 
@@ -287,11 +289,11 @@
 		return
 
 	if(!powered(ENVIRON))
-		SPAWN_DBG(rand(0,15))
-			status |= NOPOWER
+		spawn(rand(0,15))
+			stat |= NOPOWER
 			setstate()
 	else
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 		setstate()
 
 
@@ -299,7 +301,7 @@
 	/*
 //	var/dbg = (suffix=="d") && Debug
 
-	if(status & NOPOWER) return
+	if(stat & NOPOWER) return
 
 	if (src.t_status != 3)
 		var/turf/T = src.loc
@@ -379,9 +381,9 @@
 
 /obj/machinery/atmoalter/siphs/attack_hand(var/mob/user as mob)
 
-	if(status & NOPOWER) return
+	if(stat & NOPOWER) return
 
-	if(src.portable() && isAI(user)) //AI can't use portable siphons
+	if(src.portable() && istype(user, /mob/living/silicon/ai)) //AI can't use portable siphons
 		return
 
 	user.machine = src
@@ -418,9 +420,9 @@
 
 	if (usr.stat || usr.restrained())
 		return
-	if ((!( src.alterable )) && (!isAI(usr)))
+	if ((!( src.alterable )) && (!istype(usr, /mob/living/silicon/ai)))
 		return
-	if (((get_dist(src, usr) <= 1 || usr.telekinesis == 1) && istype(src.loc, /turf)) || (isAI(usr)))
+	if (((get_dist(src, usr) <= 1 || usr.telekinesis == 1) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon/ai)))
 		usr.machine = src
 		if (href_list["c"])
 			var/c = text2num(href_list["c"])
@@ -474,7 +476,7 @@
 		return
 	return
 
-/obj/machinery/atmoalter/siphs/attackby(obj/item/W as obj, mob/user as mob)
+/obj/machinery/atmoalter/siphs/attackby(var/obj/W as obj, mob/user as mob)
 
 	if (istype(W, /obj/item/weapon/tank))
 		if (src.holding)
@@ -484,7 +486,7 @@
 		T.set_loc(src)
 		src.holding = T
 	else
-		if (isscrewingtool(W))
+		if (istype(W, /obj/item/weapon/screwdriver))
 			var/obj/machinery/connector/con = locate(/obj/machinery/connector, src.loc)
 			if (src.c_status)
 				src.anchored = 0
@@ -502,7 +504,8 @@
 					user.show_message("<span style=\"color:blue\">There is nothing here to connect to the siphon.</span>")
 
 
-		else if (iswrenchingtool(W))
+		else
+			if (istype(W, /obj/item/weapon/wrench))
 				src.alterable = !( src.alterable )
 				if (src.alterable)
 					boutput(user, "<span style=\"color:blue\">You unlock the interface!</span>")

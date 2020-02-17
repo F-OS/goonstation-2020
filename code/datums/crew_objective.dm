@@ -29,7 +29,7 @@
 		if (isnull(rolePathString))
 			return
 
-		var/list/objectiveTypes = childrentypesof(rolePath)
+		var/list/objectiveTypes = typesof(rolePath) - rolePath
 		if (!objectiveTypes.len)
 			return
 
@@ -66,7 +66,7 @@
 			explanation_text = "Don't lose your hat!"
 			medal_name = "Hatris"
 			check_completion()
-				if(owner.current && owner.current.check_contents_for(/obj/item/clothing/head/caphat || owner.current.check_contents_for(/obj/item/clothing/head/fancy/captain)))
+				if(owner.current && owner.current.check_contents_for(/obj/item/clothing/head/caphat))
 					return 1
 				else
 					return 0
@@ -93,7 +93,7 @@
 			medal_name = "Suitable? How about the Oubliette?!"
 			check_completion()
 				for(var/datum/mind/M in ticker.minds)
-					if(M.special_role && M.current && !isobserver(M.current) && istype(get_area(M.current),/area/station/security/brig) && M.current.handcuffed) //think that's everything...
+					if(M.special_role && M.current && !istype(M.current,/mob/dead) && istype(get_area(M.current),/area/station/security/brig) && M.current.handcuffed) //think that's everything...
 						return 1
 				return 0
 		centcom
@@ -101,17 +101,9 @@
 			medal_name = "Dead or alive, you're coming with me"
 			check_completion()
 				for(var/datum/mind/M in ticker.minds)
-					if(M.special_role && M.current && !isobserver(M.current) && istype(get_area(M.current),map_settings.escape_centcom) && M.current.handcuffed)
-						if(owner.current && !isdead(owner.current) && istype(get_area(owner.current),map_settings.escape_centcom)) //split this up as it was long
+					if(M.special_role && M.current && !istype(M.current,/mob/dead) && istype(get_area(M.current),/area/shuttle/escape/centcom) && M.current.handcuffed)
+						if(owner.current && owner.current.stat != 2 && istype(get_area(owner.current),/area/shuttle/escape/centcom)) //split this up as it was long
 							return 1
-				return 0
-		brigstir
-			explanation_text = "Keep Monsieur Stirstir brigged but also make sure that he comes to absolutely no harm."
-			medal_name = "Monkey Duty"
-			check_completion()
-				for(var/mob/living/carbon/human/npc/monkey/stirstir/M in mobs)
-					if(!isdead(M) && (M.get_brute_damage() + M.get_oxygen_deprivation() + M.get_burn_damage() + M.get_toxin_damage()) == 0 && istype(get_area(M),/area/station/security/brig))
-						return 1
 				return 0
 
 	headofpersonnel
@@ -119,45 +111,26 @@
 			explanation_text = "End the round alive but not on the station or escape levels."
 			medal_name = "Unperson"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && owner.current.z != 1 && !istype(get_area(owner.current),map_settings.escape_centcom)) return 1
+				if(owner.current && owner.current.stat != 2 && owner.current.z != 1 && owner.current.z != 2) return 1
 				else return 0
 
 	chiefengineer
+		power
+			explanation_text = "Ensure that all APCs are powered at the end of the round."
+			medal_name = "1.21 Jiggawatts"
+			check_completion()
+				if(score_powerloss == 0) return 1
+				else return 0
 		furnaces
 			explanation_text = "Make sure all furnaces on the station are active at the end of the round."
 			medal_name = "Slow Burn"
 			check_completion()
 				for(var/obj/machinery/power/furnace/F in machines)
-					if(F.z == 1 && F.active == 1)
-						return 1
-				return 0
+					if(F.z == 1 && F.active == 0)
+						return 0
+				return 1
 
-	securityofficer // grabbed the HoS's two antag-related objectives cause they work just fine for regular sec too, so...?
-		brig
-			explanation_text = "Have at least one antagonist cuffed in the brig at the end of the round." //can be dead as people usually suicide
-			medal_name = "Suitable? How about the Oubliette?!"
-			check_completion()
-				for(var/datum/mind/M in ticker.minds)
-					if(M.special_role && M.current && !isobserver(M.current) && istype(get_area(M.current),/area/station/security/brig) && M.current.handcuffed) //think that's everything...
-						return 1
-				return 0
-		centcom
-			explanation_text = "Bring at least one antagonist back to CentCom in handcuffs for interrogation. You must accompany them on the escape shuttle." //can also be dead I guess
-			medal_name = "Dead or alive, you're coming with me"
-			check_completion()
-				for(var/datum/mind/M in ticker.minds)
-					if(M.special_role && M.current && !isobserver(M.current) && istype(get_area(M.current),map_settings.escape_centcom) && M.current.handcuffed)
-						if(owner.current && !isdead(owner.current) && istype(get_area(owner.current),map_settings.escape_centcom)) //split this up as it was long
-							return 1
-				return 0
-		brigstir
-			explanation_text = "Keep Monsieur Stirstir brigged but also make sure that he comes to absolutely no harm."
-			medal_name = "Monkey Duty"
-			check_completion()
-				for(var/mob/living/carbon/human/npc/monkey/stirstir/M in mobs)
-					if(!isdead(M) && (M.get_brute_damage() + M.get_oxygen_deprivation() + M.get_burn_damage() + M.get_toxin_damage()) == 0 && istype(get_area(M),/area/station/security/brig))
-						return 1
-				return 0
+//	securityofficer
 
 	quartermaster
 		profit
@@ -210,7 +183,7 @@
 			medal_name = "Reefer Madness"
 			check_completion()
 				for (var/obj/item/clothing/mask/cigarette/W in world)
-					if (W && W.reagents && W.reagents.has_reagent("THC"))
+					if (W.reagents.has_reagent("THC"))
 						if (istype(get_area(W), /area/station/hydroponics) || istype(get_area(W), /area/station/hydroponics/lobby))
 							return 0
 				for (var/obj/item/plant/herb/cannabis/C in world)
@@ -231,7 +204,7 @@
 			medal_name = "Bury the Dead"
 			check_completion()
 				for(var/mob/living/carbon/human/H in mobs)
-					if(H.z == 1 && isdead(H))
+					if(H.z == 1 && H.stat == 2)
 						return 0
 				return 1
 
@@ -269,6 +242,12 @@
 
 	miner
 		// just fyi dont make a "gather ore" objective, it'd be a boring-ass grind (like mining is(dohohohoho))
+		gems
+			explanation_text = "Find at least ten gems between all miners."
+			medal_name = "This object menaces with spikes of..."
+			check_completion()
+				if(score_gemsmined >= 10) return 1
+				else return 0
 		isa
 			explanation_text = "Create at least three suits of Industrial Space Armor."
 			medal_name = "40K"
@@ -318,7 +297,7 @@
 			explanation_text = "Ensure that Heisenbee escapes on the shuttle."
 			check_completion()
 				for (var/obj/critter/domestic_bee/heisenbee/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom) && H.alive)
+					if (istype(get_area(H),/area/shuttle/escape/centcom) && H.alive)
 						return 1
 				return 0
 		noscorch
@@ -347,9 +326,9 @@
 			explanation_text = "Escape on the shuttle alive while on fire with silver sulfadiazine in your bloodstream."
 			medal_name = "Better to burn out, than fade away"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && ishuman(owner.current))
+				if(owner.current && owner.current.stat != 2 && ishuman(owner.current))
 					var/mob/living/carbon/human/H = owner.current
-					if(istype(get_area(H),map_settings.escape_centcom) && H.getStatusDuration("burning") > 1 && owner.current.reagents.has_reagent("silver_sulfadiazine")) return 1
+					if(istype(get_area(H),/area/shuttle/escape/centcom) && H.burning > 1 && owner.current.reagents.has_reagent("silver_sulfadiazine")) return 1
 					else return 0
 
 	scientist
@@ -379,9 +358,9 @@
 			explanation_text = "Escape on the shuttle alive while on fire with silver sulfadiazine in your bloodstream."
 			medal_name = "Better to burn out, than fade away"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && ishuman(owner.current))
+				if(owner.current && owner.current.stat != 2 && ishuman(owner.current))
 					var/mob/living/carbon/human/H = owner.current
-					if(istype(get_area(H),map_settings.escape_centcom) && H.getStatusDuration("burning") > 1 && owner.current.reagents.has_reagent("silver_sulfadiazine")) return 1
+					if(istype(get_area(H),/area/shuttle/escape/centcom) && H.burning > 1 && owner.current.reagents.has_reagent("silver_sulfadiazine")) return 1
 					else return 0
 
 		/*artifact // This is going to be really fucking awkward to do so disabling for now
@@ -396,30 +375,21 @@
 			explanation_text = "Ensure that Dr. Acula escapes on the shuttle."
 			check_completion()
 				for (var/obj/critter/bat/doctor/Dr in world)
-					if (istype(get_area(Dr),map_settings.escape_centcom) && Dr.alive)
+					if (istype(get_area(Dr),/area/shuttle/escape/centcom) && Dr.alive)
 						return 1
 				return 0
-
-		dr_acula_feeds
-			explanation_text = "Ensure that Dr. Acula survives and drinks 200 units of blood by the end of the shift."
-			check_completion()
-				for (var/obj/critter/bat/doctor/Dr in world)
-					if (Dr.blood_volume >= 200 && Dr.alive)
-						return 1
-				return 0
-
 		headsurgeon
 			explanation_text = "Ensure that the Head Surgeon escapes on the shuttle."
 			medal_name = "What's this box doing here?"
 			check_completion()
 				for (var/obj/machinery/bot/medbot/head_surgeon/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom))
+					if (istype(get_area(H),/area/shuttle/escape/centcom))
 						return 1
 				for (var/obj/item/clothing/suit/cardboard_box/head_surgeon/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom))
+					if (istype(get_area(H),/area/shuttle/escape/centcom))
 						return 1
 				for (var/obj/machinery/bot/medbot/head_surgeon/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom))
+					if (istype(get_area(H),/area/shuttle/escape/centcom))
 						return 1
 				return 0
 		scanned
@@ -473,7 +443,7 @@
 			explanation_text = "Make sure you are completely unhurt when the escape shuttle leaves."
 			medal_name = "Smooth Operator"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && (owner.current.get_brute_damage() + owner.current.get_oxygen_deprivation() + owner.current.get_burn_damage() + owner.current.get_toxin_damage()) == 0)
+				if(owner.current && owner.current.stat != 2 && (owner.current.get_brute_damage() + owner.current.get_oxygen_deprivation() + owner.current.get_burn_damage() + owner.current.get_toxin_damage()) == 0)
 					return 1
 				else
 					return 0
@@ -502,6 +472,16 @@
 					if(C.records.len > 4)
 						return 1
 				return 0
+				/*
+		power
+			explanation_text = "Save a DNA sequence with at least one superpower onto a floppy disk and ensure it reaches CentCom."
+			check_completion()
+				for(var/obj/item/disk/data/floppy/F in world)
+					if(F.data_type == "se" && F.data && istype(get_area(F),/area/shuttle/escape/centcom)) //prerequesites
+						if(isblockon(getblock(F.data,XRAYBLOCK,3),8) || isblockon(getblock(F.data,FIREBLOCK,3),10) || isblockon(getblock(F.data,HULKBLOCK,3),2) || isblockon(getblock(F.data,TELEBLOCK,3),12))
+							return 1
+				return 0
+				*/
 
 	roboticist
 		cyborgs
@@ -513,7 +493,16 @@
 					borgcount ++
 				if(borgcount > 2) return 1
 				else return 0
-
+		/*
+		replicant
+			explanation_text = "Make sure at least one replicant survives until the end of the round."
+			medal_name = "Progenitor"
+			check_completion()
+				for(var/mob/living/silicon/robot/R in mobs)
+					if(R.replicant)
+						return 1
+				return 0
+		*/
 		medibots
 			explanation_text = "Have at least five medibots on the station level at the end of the round."
 			medal_name = "Silent Running"
@@ -550,7 +539,7 @@
 			explanation_text = "Make sure you are completely unhurt when the escape shuttle leaves."
 			medal_name = "Smooth Operator"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && (owner.current.get_brute_damage() + owner.current.get_oxygen_deprivation() + owner.current.get_burn_damage() + owner.current.get_toxin_damage()) == 0)
+				if(owner.current && owner.current.stat != 2 && (owner.current.get_brute_damage() + owner.current.get_oxygen_deprivation() + owner.current.get_burn_damage() + owner.current.get_toxin_damage()) == 0)
 					return 1
 				else
 					return 0
@@ -583,17 +572,17 @@
 			explanation_text = "Make sure that you are wearing your own butt on your head when the escape shuttle leaves."
 			medal_name = "Shit for brains"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && ishuman(owner.current))
+				if(owner.current && owner.current.stat != 2 && ishuman(owner.current))
 					var/mob/living/carbon/human/H = owner.current
-					if(istype(get_area(H),map_settings.escape_centcom) && H.head && H.head.name == "[H.real_name]'s butt") return 1
+					if(istype(get_area(H),/area/shuttle/escape/centcom) && H.head && H.head.name == "[H.real_name]'s butt") return 1
 				return 0
 		promotion
 			explanation_text = "Escape on the shuttle alive with a non-assistant ID registered to you."
 			medal_name = "Glass ceiling"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && ishuman(owner.current))
+				if(owner.current && owner.current.stat != 2 && ishuman(owner.current))
 					var/mob/living/carbon/human/H = owner.current
-					if(istype(get_area(H),map_settings.escape_centcom) && H.wear_id && H.wear_id:registered == H.real_name && H.wear_id:assignment != ("Technical Assistant" || "Staff Assistant" || "Medical Assistant")) return 1
+					if(istype(get_area(H),/area/shuttle/escape/centcom) && H.wear_id && H.wear_id:registered == H.real_name && H.wear_id:assignment != ("Technical Assistant" || "Staff Assistant" || "Medical Assistant")) return 1
 					else return 0
 		clown
 			explanation_text = "Escape on the shuttle alive wearing at least one piece of clown clothing."
@@ -608,7 +597,7 @@
 			medal_name = "Guardin' gnome"
 			check_completion()
 				for(var/obj/item/gnomechompski/G in world)
-					if (istype(get_area(G),map_settings.escape_centcom)) return 1
+					if (istype(get_area(G),/area/shuttle/escape/centcom)) return 1
 				return 0
 		mailman
 			explanation_text = "Escape on the shuttle alive wearing at least one piece of mailman clothing."
@@ -630,7 +619,7 @@
 			explanation_text = "Escape on the shuttle alive as a monkey."
 			medal_name = "Primordial"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && istype(get_area(owner.current),map_settings.escape_centcom) && ismonkey(owner.current)) return 1
+				if(owner.current && owner.current.stat != 2 && istype(get_area(owner.current),/area/shuttle/escape/centcom) && ismonkey(owner.current)) return 1
 				else return 0
 
 		headsurgeon
@@ -638,10 +627,10 @@
 			medal_name = "What's this box doing here?"
 			check_completion()
 				for (var/obj/machinery/bot/medbot/head_surgeon/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom))
+					if (istype(get_area(H),/area/shuttle/escape/centcom))
 						return 1
 				for (var/obj/item/clothing/suit/cardboard_box/head_surgeon/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom))
+					if (istype(get_area(H),/area/shuttle/escape/centcom))
 						return 1
 				return 0
 
@@ -651,9 +640,9 @@
 			explanation_text = "Make sure that you are wearing your own butt on your head when the escape shuttle leaves."
 			medal_name = "Shit for brains"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && ishuman(owner.current))
+				if(owner.current && owner.current.stat != 2 && ishuman(owner.current))
 					var/mob/living/carbon/human/H = owner.current
-					if(istype(get_area(H),map_settings.escape_centcom) && H.head && H.head.name == "[H.real_name]'s butt") return 1
+					if(istype(get_area(H),/area/shuttle/escape/centcom) && H.head && H.head.name == "[H.real_name]'s butt") return 1
 				return 0
 		mailman
 			explanation_text = "Escape on the shuttle alive wearing at least one piece of mailman clothing."
@@ -667,7 +656,7 @@
 			explanation_text = "Escape on the shuttle alive with a non-assistant ID registered to you."
 			medal_name = "Glass ceiling"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && istype(get_area(owner.current),map_settings.escape_centcom)) //checking basic stuff - they escaped alive and have an ID
+				if(owner.current && owner.current.stat != 2 && istype(get_area(owner.current),/area/shuttle/escape/centcom)) //checking basic stuff - they escaped alive and have an ID
 					var/mob/living/carbon/human/H = owner.current
 					if(H.wear_id && H.wear_id:registered == H.real_name && H.wear_id:assignment != ("Technical Assistant" || "Staff Assistant" || "Medical Assistant")) return 1
 					else return 0
@@ -685,13 +674,13 @@
 			explanation_text = "Escape on the shuttle alive as a monkey."
 			medal_name = "Primordial"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && istype(get_area(owner.current),map_settings.escape_centcom) && ismonkey(owner.current)) return 1
+				if(owner.current && owner.current.stat != 2 && istype(get_area(owner.current),/area/shuttle/escape/centcom) && ismonkey(owner.current)) return 1
 				else return 0
 		promotion
 			explanation_text = "Escape on the shuttle alive with a non-assistant ID registered to you."
 			medal_name = "Glass ceiling"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && istype(get_area(owner.current),map_settings.escape_centcom)) //checking basic stuff - they escaped alive and have an ID
+				if(owner.current && owner.current.stat != 2 && istype(get_area(owner.current),/area/shuttle/escape/centcom)) //checking basic stuff - they escaped alive and have an ID
 					var/mob/living/carbon/human/H = owner.current
 					if(H.wear_id && H.wear_id:registered == H.real_name && H.wear_id:assignment != ("Technical Assistant" || "Staff Assistant" || "Medical Assistant")) return 1
 					else return 0
@@ -699,7 +688,7 @@
 			explanation_text = "Make sure you are completely unhurt when the escape shuttle leaves."
 			medal_name = "Smooth Operator"
 			check_completion()
-				if(owner.current && !isdead(owner.current) && (owner.current.get_brute_damage() + owner.current.get_oxygen_deprivation() + owner.current.get_burn_damage() + owner.current.get_toxin_damage()) == 0)
+				if(owner.current && owner.current.stat != 2 && (owner.current.get_brute_damage() + owner.current.get_oxygen_deprivation() + owner.current.get_burn_damage() + owner.current.get_toxin_damage()) == 0)
 					return 1
 				else
 					return 0
@@ -708,9 +697,9 @@
 			medal_name = "What's this box doing here?"
 			check_completion()
 				for (var/obj/machinery/bot/medbot/head_surgeon/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom)) return 1
+					if (istype(get_area(H),/area/shuttle/escape/centcom)) return 1
 				for (var/obj/item/clothing/suit/cardboard_box/head_surgeon/H in world)
-					if (istype(get_area(H),map_settings.escape_centcom)) return 1
+					if (istype(get_area(H),/area/shuttle/escape/centcom)) return 1
 				return 0
 
 

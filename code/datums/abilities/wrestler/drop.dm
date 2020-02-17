@@ -1,7 +1,6 @@
 /datum/targetable/wrestler/drop
 	name = "Drop (prone)"
 	desc = "Smash down onto on an opponent."
-	icon_state = "Drop"
 	targeted = 1
 	target_anything = 0
 	target_nodamage_check = 1
@@ -28,10 +27,6 @@
 
 		if (get_dist(M, target) > src.max_range)
 			boutput(M, __red("[target] is too far away."))
-			return 1
-
-		if(check_target_immunity( target ))
-			M.visible_message("<span style='color:red'>You seem to attack [target]!</span>")
 			return 1
 
 		if (!target.lying)
@@ -72,8 +67,7 @@
 				if (falling == 1)
 					M.visible_message("<span style=\"color:red\"><B>...and dives head-first into the ground, ouch!</b></span>")
 					random_brute_damage(M, 15)
-					M.changeStatus("weakened", 3 SECONDS)
-					M.force_laydown_standup()
+					M.weakened += 3
 				boutput(M, __red("[target] is too far away!"))
 				return 0
 
@@ -82,12 +76,12 @@
 				boutput(M, __red("You can't drop onto [target] from here!"))
 				return 0
 
-			SPAWN_DBG (0)
+			spawn (0)
 				if (M)
 					animate(M, transform = matrix(90, MATRIX_ROTATE), time = 1, loop = 0)
 				sleep (10)
 				if (M)
-					animate(M, transform = null, time = 1, loop = 0)
+					animate(transform = null, time = 1, loop = 0)
 
 			M.set_loc(target.loc)
 
@@ -96,16 +90,15 @@
 			M.emote("scream")
 
 			if (falling == 1)
-				if (prob(33) || isdead(target))
+				if (prob(33) || target.stat == 2)
 					target.ex_act(3)
 				else
 					random_brute_damage(target, 25)
 			else
 				random_brute_damage(target, 15)
 
-			target.changeStatus("weakened", 1 SECONDS)
-			target.changeStatus("stunned", 2 SECONDS)
-			target.force_laydown_standup()
+			target.weakened++
+			target.stunned += 2
 
 			M.pixel_y = 0
 			logTheThing("combat", M, target, "uses the drop wrestling move on %target% at [log_loc(M)].")

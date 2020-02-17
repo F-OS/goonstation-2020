@@ -1,7 +1,6 @@
 /obj/item/device/disguiser
 	name = "holographic disguiser"
 	icon_state = "enshield0"
-	uses_multiple_icon_states = 1
 	desc = "Experimental device that projects a hologram of a randomly generated appearance onto the user, hiding their real identity."
 	flags = FPRINT | TABLEPASS| CONDUCT | EXTRADELAY | ONBELT
 	item_state = "electronic"
@@ -18,14 +17,14 @@
 	var/customization_second_color = 0
 	var/customization_third_color = 0
 	var/e_color = 0
-	var/s_tone = "#FAD7D0"
+	var/s_tone = 0
 	var/cust1 = null
 	var/cust2 = null
 	var/cust3 = null
 
 	dropped(mob/user)
 		..()
-		SPAWN_DBG(0) // Ported from cloaking device. Spawn call is necessary for some reason (Convair880).
+		spawn(0) // Ported from cloaking device. Spawn call is necessary for some reason (Convair880).
 			if (!src) return
 			if (ismob(src.loc) && src.loc == user)
 				if (ishuman(user))
@@ -152,7 +151,7 @@
 			var/obj/overlay/T = new/obj/overlay(get_turf(src))
 			T.icon = 'icons/effects/effects.dmi'
 			flick("emppulse",T)
-			SPAWN_DBG (8)
+			spawn (8)
 				if (T) qdel(T)
 
 		else
@@ -176,7 +175,7 @@
 			var/obj/overlay/T = new/obj/overlay(get_turf(src))
 			T.icon = 'icons/effects/effects.dmi'
 			flick("emppulse",T)
-			SPAWN_DBG (8)
+			spawn (8)
 				if (T) qdel(T)
 
 		return

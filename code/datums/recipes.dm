@@ -78,8 +78,3 @@
 /datum/recipe/popcorn
 	extra_item = /obj/item/reagent_containers/food/snacks/plant/corn
 	creates = "/obj/item/reagent_containers/food/snacks/popcorn"
-
-/datum/recipe/butterburger
-	flour_amount = 1
-	extra_item = /obj/item/reagent_containers/food/snacks/ingredient/butter
-	creates = "/obj/item/reagent_containers/food/snacks/burger/butterburger"

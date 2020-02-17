@@ -14,7 +14,7 @@
 	if (istype(O, /obj/item/sheet/metal))
 		if (src.metal_amount < 150000.0)
 			var/count = 0
-			SPAWN_DBG(15)
+			spawn(15)
 				while(metal_amount < 150000 && O:amount)
 
 					if(!O:amount)
@@ -34,12 +34,12 @@
 
 /obj/machinery/robotic_fabricator/power_change()
 	if (powered())
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
-		status |= NOPOWER
+		stat |= NOPOWER
 
 /obj/machinery/robotic_fabricator/process()
-	if (status & (NOPOWER | BROKEN))
+	if (stat & (NOPOWER | BROKEN))
 		return
 
 	use_power(1000)
@@ -137,7 +137,7 @@ Please wait until completion...</TT><BR>
 
 					use_power(5000)
 
-					SPAWN_DBG (build_time)
+					spawn (build_time)
 						if (!isnull(src.being_built))
 							src.being_built.set_loc(get_turf(src))
 							src.being_built = null

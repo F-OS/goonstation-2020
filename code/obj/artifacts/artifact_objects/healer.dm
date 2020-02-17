@@ -39,7 +39,7 @@
 		if (recharge_time > 0)
 			recharging = 1
 		T.visible_message("<b>[O]</b> emits a wave of energy!")
-		if(iscarbon(user))
+		if(istype(user,/mob/living/carbon/))
 			var/mob/living/carbon/C = user
 			C.HealDamage("All", heal_amt, heal_amt)
 			boutput(C, "<span style=\"color:blue\">Soothing energy saturates your body, making you feel refreshed and healthy.</span>")
@@ -49,6 +49,6 @@
 					continue
 				C.HealDamage("All", heal_amt, heal_amt)
 				boutput(C, "<span style=\"color:blue\">Waves of soothing energy wash over you, making you feel refreshed and healthy.</span>")
-		SPAWN_DBG(recharge_time)
+		spawn(recharge_time)
 			recharging = 0
 			T.visible_message("<b>[O]</b> becomes energized.")

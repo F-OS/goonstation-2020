@@ -100,16 +100,16 @@
 		return
 	var/obj/beam/focused_laser/I = new /obj/beam/focused_laser( (src.loc) )
 	I.master = src
-	I.set_density(1)
+	I.density = 1
 	I.dir = opp_dir(src.dir)
 	I.energy = src.energy
 	step(I, I.dir)
 	if (I)
 		I.dir = opp_dir(src.dir)
-		I.set_density(0)
+		I.density = 0
 		src.first = I
 		I.vis_spread(1)
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			if (I)
 				I.limit = 20
 				I.process()
@@ -136,7 +136,7 @@
 
 /obj/beam/focused_laser/proc/vis_spread(v)
 	src.visible = v
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		if (src.next)
 			src.next.vis_spread(v)
 		return
@@ -159,7 +159,7 @@
 
 	var/obj/beam/focused_laser/I = new /obj/beam/focused_laser( src.loc )
 	I.master = src.master
-	//I.set_density(1)
+	//I.density = 1
 	I.dir = src.dir
 	I.energy = src.energy
 	step(I, I.dir)
@@ -167,10 +167,10 @@
 	if (I)
 		if (!( src.next ) && I)
 			I.dir = src.dir
-			I.set_density(0)
+			I.density = 0
 			I.vis_spread(src.visible)
 			src.next = I
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				if ((I && src.limit > 0))
 					I.limit = src.limit - 1
 					I.process()
@@ -180,7 +180,7 @@
 				qdel(I)
 	else
 		qdel(src.next)
-	SPAWN_DBG( 10 )
+	spawn( 10 )
 		src.process()
 		return
 	return
@@ -196,7 +196,7 @@
 /obj/beam/focused_laser/HasEntered(atom/movable/AM as mob|obj)
 	if (istype(AM, /obj/beam))
 		return
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		src.hit()
 		return
 	return
@@ -223,7 +223,7 @@
 
 /obj/beam/engine_laser/proc/vis_spread(v)
 	src.visible = v
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		if (src.next)
 			src.next.vis_spread(v)
 		return
@@ -247,7 +247,7 @@
 
 	var/obj/beam/engine_laser/I = new /obj/beam/engine_laser( src.loc )
 	I.master = src.master
-	//I.set_density(1)
+	//I.density = 1
 	I.dir = src.dir
 	I.energy = src.energy
 	step(I, I.dir)
@@ -262,10 +262,10 @@
 			break
 		if (!( src.next ) && I)
 			I.dir = src.dir
-			I.set_density(0)
+			I.density = 0
 			I.vis_spread(src.visible)
 			src.next = I
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				if ((I && src.limit > 0))
 					I.limit = src.limit - 1
 					I.process()
@@ -275,7 +275,7 @@
 				qdel(I)
 	else
 		qdel(src.next)
-	SPAWN_DBG( 10 )
+	spawn( 10 )
 		src.process()
 		return
 	return
@@ -291,12 +291,12 @@
 /obj/beam/engine_laser/HasEntered(atom/movable/AM as mob|obj)
 	if (istype(AM, /obj/beam))
 		return
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		src.hit()
 		return
 	return
 
-/obj/beam/engine_laser/disposing()
+/obj/beam/engine_laser/Del()
 	if (src.next)
 		src.next.dispose()
 		src.next = null
@@ -319,22 +319,22 @@
 	if ((!( src.first ) && (src.state && (istype(src.loc, /turf)))))
 		var/obj/beam/engine_laser/I = new /obj/beam/engine_laser( (src.loc) )
 		I.master = src
-		I.set_density(1)
+		I.density = 1
 		I.dir = src.dir
 		step(I, I.dir)
 		if (I)
 			I.dir = src.dir
-			I.set_density(0)
+			I.density = 0
 			src.first = I
 			I.vis_spread(1)
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				if (I)
 					I.limit = 20
 					I.process()
 				return
 	if (!( src.state ))
 		qdel(src.first)
-	SPAWN_DBG(3)
+	spawn(3)
 		src.state = 0
 	return
 
@@ -368,20 +368,20 @@
 
 /obj/machinery/computer/laser_computer/New()
 	..()
-	SPAWN_DBG(100)
+	spawn(100)
 		for(var/obj/machinery/engine_laser_spawner/M in machines)
 			if(src.id == M.id)
 				src.emitters += M
 
 /obj/machinery/computer/laser_computer/attack_ai(mob/user)
 	add_fingerprint(user)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	interact(user)
 
 /obj/machinery/computer/laser_computer/attack_hand(mob/user)
 	add_fingerprint(user)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	interact(user)
 
@@ -427,12 +427,12 @@ text("<A href='?src=\ref[];pattern=1'>[src.pattern]</A>", src))
 			src.pattern = "Quad"
 		else
 			src.pattern = "Single"
-	if (ismob(src.loc))
+	if (istype(src.loc, /mob))
 		attack_hand(src.loc)
 		return
 
 /obj/machinery/computer/laser_computer/proc/testfire()
-	SPAWN_DBG(0)
+	spawn(0)
 		if(src.pattern == "Single")
 			for(var/obj/machinery/engine_laser_spawner/M in src.emitters)
 				M.state = 1
@@ -451,7 +451,7 @@ text("<A href='?src=\ref[];pattern=1'>[src.pattern]</A>", src))
 				M.state = 1
 
 /obj/machinery/computer/laser_computer/proc/realfire()
-	SPAWN_DBG(0)
+	spawn(0)
 		while(src.started)
 			if(src.pattern == "Single")
 				for(var/obj/machinery/engine_laser_spawner/M in src.emitters)
@@ -473,6 +473,6 @@ text("<A href='?src=\ref[];pattern=1'>[src.pattern]</A>", src))
 
 
 /obj/machinery/computer/laser_computer/process()
-	SPAWN_DBG(2)
+	spawn(2)
 		src.updateDialog()
 

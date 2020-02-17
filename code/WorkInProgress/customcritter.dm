@@ -39,7 +39,7 @@
 	var/attack_type = "brute"
 	var/stun_prob = 20
 	var/anger_text = "%src% charges at %target%!"
-	chase_text = "%src% slams into %target%!"
+	var/chase_text = "%src% slams into %target%!"
 	var/stun_text = "%src% knocks down %target%!"
 	var/stun_fail_text = "%src% fails to knock down %target%!"
 	var/attack_text = "%src% bashes %target%!"
@@ -122,7 +122,7 @@
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.health < 0) continue
 			if (C in src.friends) continue
 			if (ishuman(C))
@@ -130,7 +130,7 @@
 					continue
 			if (C.name == src.attacker) src.attack = 1
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -149,10 +149,10 @@
 		tokenized_message(chase_text, target)
 		play_optional_sound(chase_sound)
 		if (stun_prob)
-			SPAWN_DBG(10)
+			spawn(10)
 				if (get_dist(src, target) <= 1)
 					if (prob(stun_prob))
-						M.changeStatus("stunned", 3 SECONDS)
+						M.stunned += 3
 						tokenized_message(stun_text, target)
 						play_optional_sound(stun_sound)
 					else
@@ -172,7 +172,9 @@
 				M.take_oxygen_deprivation(damage)
 				M.updatehealth()
 			if ("radiation")
-				M.changeStatus("radiation", damage*10, 3)
+				M.radiation += damage
+				if (damage != 0)
+					M.take_toxin_damage(damage / 2)
 				M.updatehealth()
 
 	CritterAttack(mob/N)
@@ -187,7 +189,7 @@
 		for (var/datum/critterEvent/E in events)
 			if (E.attachment_point == EVENT_ATTACHMENT_POINT_MELEE)
 				E.trigger()
-		SPAWN_DBG(25)
+		spawn(25)
 			src.attacking = 0
 
 	CritterDeath()
@@ -196,7 +198,7 @@
 		//src.icon_state += "-dead"
 		src.alive = 0
 		src.anchored = 0
-		src.set_density(0)
+		src.density = 0
 		loot_table.drop()
 		if (dead_change_icon)
 			icon = dead_icon
@@ -583,7 +585,7 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 
 	doOnDeath()
 		var/L = C.loc
-		SPAWN_DBG (delay)
+		spawn (delay)
 			explosion_new(C, L, power)
 			C.loc = null
 			qdel(C)
@@ -623,7 +625,7 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 
 	doOnDeath()
 		var/L = C.loc
-		SPAWN_DBG (delay)
+		spawn (delay)
 			var/datum/reagents/holder = new()
 			holder.my_atom = C
 			holder.add_reagent(reagent, 50)
@@ -684,8 +686,8 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 		..()
 		var/count = 0
 		for (var/mob/M in view(7, C))
-			if (isliving(M))
-				if (!isdead(M))
+			if (istype(M, /mob/living))
+				if (M.stat != 2)
 					count++
 		if (count >= atLeast)
 			trigger()
@@ -1328,10 +1330,10 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 		C.tokenized_message(frenzy_text)
 		C.play_optional_sound(frenzy_sound)
 		C.suspend_ai = 1
-		SPAWN_DBG(frenzy_duration)
+		spawn(frenzy_duration)
 			frenzying = 0
 			C.suspend_ai = 0
-		SPAWN_DBG(0)
+		spawn(0)
 			while(frenzying)
 				var/turf/T = get_turf(atmob)
 				if (!T)
@@ -1342,7 +1344,7 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 				C.play_optional_sound(frenzy_attack_sound)
 				C.dodamage(atmob, attacktype, max(rand(attack_power), rand(attack_power)))
 				if (stunlocks)
-					atmob.changeStatus("weakened", (attack_cooldown / 3 * 2)*10)
+					atmob.weakened += attack_cooldown / 3 * 2
 				sleep(attack_cooldown)
 		return 1
 	change_configuration(var/datum/critterCreator/configurer, var/which)
@@ -1502,10 +1504,6 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 	var/sound/spawn_sound
 	abstract = 0
 
-	New()
-		template = new /obj/critter/domestic_bee
-		stattype = /obj/critter/domestic_bee
-
 	use_ability()
 		var/obj/critter/D = template.clone()
 		C.tokenized_message(spawn_text, D)
@@ -1536,7 +1534,7 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 		..()
 		switch (which)
 			if ("existing")
-				var/ctype = input("Critter type", "Critter type", null) in childrentypesof(/obj/critter) - /obj/critter/custom
+				var/ctype = input("Critter type", "Critter type", null) in typesof(/obj/critter) - list(/obj/critter, /obj/critter/custom)
 				stattype = ctype
 				template = new ctype
 			if ("file")
@@ -1611,7 +1609,7 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 			arcFlash(C, M, curr_W)
 			affected -= M
 			previous += M
-		SPAWN_DBG(0)
+		spawn(0)
 			while (chain_depth > 0)
 				sleep(2)
 				curr_W /= 2
@@ -1669,19 +1667,19 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 "Wendigo King" = "wendigoking", "Zombie" = "zombie", "Zombie (science)" = "scizombie", "Zombie (security)" = "seczombie", "cancel" = "cancel")
 	var/static/list/ability_cache = list()
 	var/static/list/death_cache = list()
-	var/static/list/sound_presets = list("Bang" = 'sound/impact_sounds/Metal_Hit_Heavy_1.ogg', "Beep 1" = 'sound/misc/ancientbot_beep1.ogg', "Beep 2" = 'sound/misc/ancientbot_beep2.ogg', "Beep 3" = 'sound/misc/ancientbot_beep3.ogg', "'Beware coward'" = 'sound/voice/MEbewarecoward.ogg',\
-"Blob Attack (old)" = 'sound/impact_sounds/Slimy_Hit_4.ogg', "Blob Impact" = 'sound/impact_sounds/Slimy_Hit_3.ogg', "Bloody Stab 1" = 'sound/impact_sounds/Flesh_Stab_1.ogg', "Bloody Stab 2" = 'sound/impact_sounds/Flesh_Stab_2.ogg',\
+	var/static/list/sound_presets = list("Bang" = 'sound/effects/bang.ogg', "Beep 1" = 'sound/misc/ancientbot_beep1.ogg', "Beep 2" = 'sound/misc/ancientbot_beep2.ogg', "Beep 3" = 'sound/misc/ancientbot_beep3.ogg', "'Beware coward'" = 'sound/voice/MEbewarecoward.ogg',\
+"Blob Attack (old)" = 'sound/effects/blobattack.ogg', "Blob Impact" = 'sound/effects/attackblob.ogg', "Bloody Stab 1" = 'sound/effects/bloody_stab.ogg', "Bloody Stab 2" = 'sound/effects/bloody_stabOLD.ogg',\
 "Boop 1" = 'sound/machines/whistlebeep.ogg', "Boop 2" = 'sound/machines/whistlealert.ogg', "Boop 3" = 'sound/machines/twobeep.ogg', "Bubbling" = 'sound/effects/bubbles.ogg',\
-"Burp 1" = 'sound/voice/burp.ogg', "Burp 2" = 'sound/voice/burp_alien.ogg', "Buzz 1" = 'sound/misc/ancientbot_buzz1.ogg', "Buzz 2" = 'sound/misc/ancientbot_buzz2.ogg', "Buzz 3" = 'sound/misc/ancientbot_grump.ogg',\
-"Buzz 4" = 'sound/misc/ancientbot_grump2.ogg', "Clunk" = 'sound/impact_sounds/Generic_Click_1.ogg', "Crunch 1" = 'sound/impact_sounds/Flesh_Tear_1.ogg', "Crunch 2" = 'sound/impact_sounds/Flesh_Tear_2.ogg', \
-"Crystal Break" = 'sound/impact_sounds/Crystal_Shatter_1.ogg', "Crystal Impact" = 'sound/impact_sounds/Crystal_Hit_1.ogg', "Crystal Step" = 'sound/impact_sounds/Glass_Shards_Hit_1.ogg', \
-"Ghost 1" = 'sound/effects/ghost.ogg', "Ghost 2" = 'sound/effects/ghost2.ogg', "Ghost 3" = 'sound/effects/ghostbreath.ogg', "Ghost Laugh" = 'sound/effects/ghostlaugh.ogg', "Gibbing" = 'sound/impact_sounds/Flesh_Break_2.ogg',\
+"Burp 1" = 'sound/misc/burp.ogg', "Burp 2" = 'sound/misc/burp_alien.ogg', "Buzz 1" = 'sound/misc/ancientbot_buzz1.ogg', "Buzz 2" = 'sound/misc/ancientbot_buzz2.ogg', "Buzz 3" = 'sound/misc/ancientbot_grump.ogg',\
+"Buzz 4" = 'sound/misc/ancientbot_grump2.ogg', "Clunk" = 'sound/effects/thunk.ogg', "Crunch 1" = 'sound/misc/loudcrunch.ogg', "Crunch 2" = 'sound/misc/loudcrunch2.ogg', \
+"Crystal Break" = 'sound/effects/crystalshatter.ogg', "Crystal Impact" = 'sound/effects/crystalhit.ogg', "Crystal Step" = 'sound/misc/glass_step.ogg', \
+"Ghost 1" = 'sound/effects/ghost.ogg', "Ghost 2" = 'sound/effects/ghost2.ogg', "Ghost 3" = 'sound/effects/ghostbreath.ogg', "Ghost Laugh" = 'sound/effects/ghostlaugh.ogg', "Gibbing" = 'sound/effects/gib.ogg',\
 "Glitch 1" = 'sound/effects/glitchshot.ogg', "Glitch 2" = 'sound/effects/glitchy1.ogg', "Glitch 3" = 'sound/effects/glitchy2.ogg', "Glitch 4" = 'sound/effects/glitchy3.ogg', "Glitch 5" = 'sound/machines/glitch1.ogg',\
-"Glitch 6" = 'sound/machines/glitch2.ogg', "Glitch 7" = 'sound/machines/glitch3.ogg', "Glitch 8" = 'sound/machines/glitch4.ogg', "Glitch 9" = 'sound/machines/glitch5.ogg', "Goose Honk" = 'sound/voice/animal/goose.ogg',\
+"Glitch 6" = 'sound/machines/glitch2.ogg', "Glitch 7" = 'sound/machines/glitch3.ogg', "Glitch 8" = 'sound/machines/glitch4.ogg', "Glitch 9" = 'sound/machines/glitch5.ogg', "Goose Honk" = 'sound/effects/goose.ogg',\
 "Groan 1" = 'sound/voice/Zgroan1.ogg', "Groan 2" = 'sound/voice/Zgroan2.ogg', "Groan 3" = 'sound/voice/Zgroan3.ogg', "Groan 4" = 'sound/voice/Zgroan4.ogg',\
-"Growl" = 'sound/voice/animal/YetiGrowl.ogg', "Hiss" = 'sound/voice/animal/cat_hiss.ogg', "'I hunger'" = 'sound/voice/MEhunger.ogg', "'I live'" = 'sound/voice/MEilive.ogg', "Meow" = 'sound/voice/animal/cat.ogg', "Punch 1" = 'sound/impact_sounds/Generic_Punch_2.ogg', "Punch 2" = 'sound/impact_sounds/Generic_Hit_1.ogg',\
-"Punch 3" = 'sound/impact_sounds/Generic_Punch_1.ogg', "Roar 1" = 'sound/voice/animal/wendigo_roar.ogg', "Roar 2" = 'sound/voice/animal/wendigo_scream.ogg', "Roar 3" = 'sound/voice/MEraaargh.ogg', "Roar (distant)" = 'sound/effects/mag_pandroar.ogg', "Robot gib" = 'sound/impact_sounds/Machinery_Break_1.ogg',\
-"'Run coward'" = 'sound/voice/MEruncoward.ogg', "Shock 1" = 'sound/effects/electric_shock.ogg', "Shock 2" = 'sound/effects/elec_bzzz.ogg', "Shock 3" = 'sound/effects/elec_bigzap.ogg', "Splat" = 'sound/impact_sounds/Slimy_Splat_1.ogg', \
+"Growl" = 'sound/voice/YetiGrowl.ogg', "Hiss" = 'sound/effects/cat_hiss.ogg', "'I hunger'" = 'sound/voice/MEhunger.ogg', "'I live'" = 'sound/voice/MEilive.ogg', "Meow" = 'sound/effects/cat.ogg', "Punch 1" = 'sound/weapons/punch1.ogg', "Punch 2" = 'sound/weapons/genhit1.ogg',\
+"Punch 3" = 'sound/misc/critpunch.ogg', "Roar 1" = 'sound/misc/wendigo_roar.ogg', "Roar 2" = 'sound/misc/wendigo_scream.ogg', "Roar 3" = 'sound/voice/MEraaargh.ogg', "Roar (distant)" = 'sound/effects/mag_pandroar.ogg', "Robot gib" = 'sound/effects/robogib.ogg',\
+"'Run coward'" = 'sound/voice/MEruncoward.ogg', "Shock 1" = 'sound/effects/electric_shock.ogg', "Shock 2" = 'sound/effects/elec_bzzz.ogg', "Shock 3" = 'sound/effects/elec_bigzap.ogg', "Splat" = 'sound/effects/splat.ogg', \
 "Thunder" = 'sound/effects/thunder.ogg')
 
 	New()
@@ -1736,7 +1734,7 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 		return input(usr, "New value for [name]", name, default) in possible
 
 	proc/getTypeExclusive(var/name, var/default, var/parent_type)
-		return input(usr, "New value for [name]", name, default) in childrentypesof(parent_type)
+		return input(usr, "New value for [name]", name, default) in typesof(parent_type) - parent_type
 
 	proc/stripPath(var/typename)
 		var/typetext = "[typename]"
@@ -1748,7 +1746,6 @@ var/global/datum/critterCreatorHolder/critter_creator_controller = new()
 		return copytext(typetext, last)
 
 	Topic(href, href_list)
-		usr_admin_only
 		if (href_list["name"])
 			template.name = getText("name", template.name)
 		else if (href_list["desc"])
@@ -2109,7 +2106,7 @@ td.title { font-size: 1.4em; font-weight: bold; text-align: center; }
 		output += "This round: [clickable_link("roundsave", "Save")] | [clickable_link("roundload", "Load")]<br/>"
 		output += "Into file: [clickable_link("filesave", "Save")] | [clickable_link("fileload", "Load")]</td></tr>"
 		output += "</table></body></html>"
-		M.Browse(output, "window=crcreator;size=800x600")
+		M << browse(output, "window=crcreator;size=800x600")
 
 /client/proc/critter_creator_debug()
 	set name = "Critter Creator (WIP)"

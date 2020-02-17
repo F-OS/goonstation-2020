@@ -1,14 +1,3 @@
-
-/proc/build_qm_categories()
-	QM_CategoryList.Cut()
-	if (!global.qm_supply_cache)
-		message_coders("ZeWaka/QMCategories: QM Supply Cache was not found!")
-	for(var/datum/supply_packs/S in qm_supply_cache )
-		if(S.syndicate || S.hidden) continue //They don't have their own categories anyways.
-		if (S.category)
-			if (!(global.QM_CategoryList.Find(S.category)))
-				global.QM_CategoryList.Insert(1,S.category) //So Misc. is not #1, reverse ordering.
-
 /datum/cdc_contact_analysis
 	var/uid = 0
 	var/time_factor = 0
@@ -70,13 +59,7 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 	var/last_market_update = -INFINITY
 	var/price_list = null
 
-	lr = 1
-	lg = 0.7
-	lb = 0.03
 
-	disposing()
-		radio_controller.remove_object(src, "1435")
-		..()
 
 /obj/machinery/computer/supplycomp/attackby(I as obj, user as mob)
 	return src.attack_hand(user)
@@ -107,7 +90,7 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 		return src.attack_hand(user)
 
 /obj/machinery/computer/supplycomp/attack_hand(var/mob/user as mob)
-	if(!src.allowed(user))
+	if(!src.allowed(user, req_only_one_required))
 		boutput(user, "<span style=\"color:red\">Access Denied.</span>")
 		return
 
@@ -121,66 +104,65 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 	if (src.temp)
 		dat = src.temp
 	else
-		dat += {"
-		<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<br>
+		dat += {"<B>Quartermaster Console</B><HR>
+		<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR>
 		<B>Next Market Shift:</B> [timer]<HR>
-		<A href='?src=\ref[src];viewrequests=1'>View Requests</A><br>
-		<A href='?src=\ref[src];vieworders=1'>View Order History</A><br>
-		<A href='?src=\ref[src];viewmarket=1'>View Shipping Market</A><br><br>
-		<A href='?src=\ref[src];order=1'>Order Items</A><br>"}
+		<A href='?src=\ref[src];viewrequests=1'>View Requests</A><BR>
+		<A href='?src=\ref[src];vieworders=1'>View Order History</A><BR>
+		<A href='?src=\ref[src];viewmarket=1'>View Shipping Market</A><BR><BR>
+		<A href='?src=\ref[src];order=1'>Order Items</A><BR>"}
 
-		if (signal_loss < 75)
-			dat += "<A href='?src=\ref[src];contact_cdc=1'>Contact CDC</a><br>"
+		if (!solar_flare)
+			dat += "<A href='?src=\ref[src];contact_cdc=1'>Contact CDC</a><BR>"
 		else
-			dat += "CDC unavailable due to severe signal interference.<br>"
+			dat += "CDC unavailable during solar interference.<BR>"
 
-		if (shippingmarket.active_traders.len && signal_loss < 75)
-			dat += "<A href='?src=\ref[src];trader_list=1'><B>Call Trader</B> ([shippingmarket.active_traders.len] available)</A><br>"
+		if (shippingmarket.active_traders.len && !solar_flare)
+			dat += "<A href='?src=\ref[src];trader_list=1'><B>Call Trader</B> ([shippingmarket.active_traders.len] available)</A><BR>"
 		else
-			dat += "No Traders in Communications Range<br>"
+			dat += "No Traders in Communications Range<BR>"
 		dat += "<A href='?action=mach_close&window=computer'>Close</A>"
 
-	dat += "<br>"
-	user.Browse(dat, "window=qmComputer_[src];title=Quartermaster Console;size=575x625;")
-	onclose(user, "qmComputer_[src]")
+	user << browse(dat, "window=computer;size=575x600")
+	onclose(user, "computer")
 	return
 
 /obj/machinery/computer/supplycomp/proc/set_cdc()
 	src.temp = "<B>Center for Disease Control communication line</B><HR>"
-	src.temp += "<I>Greetings, [station_name]; how can we help you today?</I><br><br>"
+	src.temp += "<I>Greetings, [station_name]; how can we help you today?</I><BR><BR>"
 
 	if (src.last_cdc_message)
-		src.temp += "[last_cdc_message]<br><br>"
+		src.temp += "[last_cdc_message]<BR><BR>"
 
-	src.temp += "<B>Pathogen analysis services</B><br>"
-	src.temp += "To send us pathogen samples, you can <A href='?src=\ref[src];req_biohazard_crate=1'>requisition a biohazardous materials crate</a> from us for 5 credits.<br>"
+	src.temp += "<B>Pathogen analysis services</B><BR>"
+	src.temp += "To send us pathogen samples, you can <A href='?src=\ref[src];req_biohazard_crate=1'>requisition a biohazardous materials crate</a> from us for 5 credits.<BR>"
 	if (!QM_CDC.current_analysis)
-		src.temp += "Our researchers currently have free capacity to analyze pathogen and blood samples for you.<br>"
+		src.temp += "Our researchers currently have free capacity to analyze pathogen and blood samples for you.<BR>"
 		if (length(QM_CDC.ready_to_analyze))
-			src.temp += "We received your packages and are ready to <A href='?src=\ref[src];cdc_analyze=1'>analyze some samples</A>. It will cost you, but hey, you would like to survive, right?<br>"
+			src.temp += "We received your packages and are ready to <A href='?src=\ref[src];cdc_analyze=1'>analyze some samples</A>. It will cost you, but hey, you would like to survive, right?<BR>"
 		else
-			src.temp += "We have no unanalyzed pathogen samples from your station.<br>"
+			src.temp += "We have no unanalyzed pathogen samples from your station.<BR>"
 	else
 		src.temp += "We're currently analyzing the pathogen sample [QM_CDC.current_analysis.name]. We can <A href='?src=\ref[src];cdc_analyze=1'>analyze something different</A>, if you want."
 		if (QM_CDC.current_analysis.description_available > ticker.round_elapsed_ticks)
-			src.temp += "Here's what we have so far: <br>[QM_CDC.current_analysis.desc]<br>"
+			src.temp += "Here's what we have so far: <BR>[QM_CDC.current_analysis.desc]<BR>"
 			if (QM_CDC.current_analysis.cure_available > ticker.round_elapsed_ticks)
-				src.temp += "We've also discovered a method to synthesize a cure for this pathogen.<br>"
+				src.temp += "We've also discovered a method to synthesize a cure for this pathogen.<BR>"
 				QM_CDC.completed_analysis += QM_CDC.current_analysis
 				QM_CDC.current_analysis = null
 			else
 				var/CA = round((QM_CDC.current_analysis.cure_available - ticker.round_elapsed_ticks) / 600)
-				src.temp += "We're really close to discovering a cure as well. It should be available a few [CA > 0 ? "minutes" : "seconds"].<br>"
+				src.temp += "We're really close to discovering a cure as well. It should be available a few [CA > 0 ? "minutes" : "seconds"].<BR>"
 		else
 			var/DA = round((QM_CDC.current_analysis.description_available - ticker.round_elapsed_ticks) / 600)
-			src.temp += "We cannot tell you anything about this pathogen so far. Check back in [DA > 1 ? "[DA] minutes" : (DA > 0 ? "1 minute" : "a few seconds")].<br>"
-	src.temp += "<br>"
-	src.temp += "<B>Pathogen cure services</B><br>"
+			src.temp += "We cannot tell you anything about this pathogen so far. Check back in [DA > 1 ? "[DA] minutes" : (DA > 0 ? "1 minute" : "a few seconds")].<BR>"
+	src.temp += "<BR>"
+	src.temp += "<B>Pathogen cure services</B><BR>"
 	if (length(QM_CDC.working_on))
 		src.temp += "We are currently working on [QM_CDC.batches_left] batch[QM_CDC.batches_left > 1 ? "es" : null] of cures for the [QM_CDC.working_on.name] pathogen. The crate will be delivered soon."
 	else if (length(QM_CDC.completed_analysis))
-		src.temp += "We have cures ready to be synthesized for [length(QM_CDC.completed_analysis)] pathogen[length(QM_CDC.completed_analysis) > 1 ? "s" : null].<br>"
-		src.temp += "You can requisition in batches. The more batches you order, the less time per batch it takes for us to deliver and the less credits per batch it will cost you.<br>"
+		src.temp += "We have cures ready to be synthesized for [length(QM_CDC.completed_analysis)] pathogen[length(QM_CDC.completed_analysis) > 1 ? "s" : null].<BR>"
+		src.temp += "You can requisition in batches. The more batches you order, the less time per batch it takes for us to deliver and the less credits per batch it will cost you.<BR>"
 		src.temp += "<table style='width:100%; border:none; cell-spacing: 0px'>"
 		for (var/datum/cdc_contact_analysis/analysis in QM_CDC.completed_analysis)
 			var/one_cost = analysis.cure_cost
@@ -189,59 +171,41 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 			src.temp += "<tr><td><b>[analysis.assoc_pathogen.name]</b><td><a href='?src=\ref[src];batch_cure=\ref[analysis];count=1'>1 batch for [one_cost] credits</a></td>td><a href='?src=\ref[src];batch_cure=\ref[analysis];count=5'>5 batches for [five_cost] credits</a></td>td><a href='?src=\ref[src];batch_cure=\ref[analysis];count=10'>10 batches for [ten_cost] credits</a></td></tr>"
 			src.temp += "<tr><td colspan='4' style='font-style:italic'>[analysis.desc]</td></tr>"
 			src.temp += "<tr><td colspan='4'>&nbsp;</td></tr>"
-		src.temp += "</table><br>"
+		src.temp += "</table><BR>"
 	else
-		src.temp += "We have no pathogen samples from your station that we can cure, yet.<br>"
-	src.temp += "<br>"
+		src.temp += "We have no pathogen samples from your station that we can cure, yet.<BR>"
+	src.temp += "<BR>"
 	src.temp += "<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"
 
 /obj/machinery/computer/supplycomp/Topic(href, href_list)
 	if(..())
 		return
 
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 
 	if (href_list["order"])
-		src.temp = {"<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<br><HR>
-		<A href='?src=\ref[src];mainmenu=1'>Main Menu</A><br>
-		<hr>
-		<B>Please select the Supply Package you would like to request:</B><br><br>"}
+		src.temp = {"<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR><HR>
+		<A href='?src=\ref[src];mainmenu=1'>Main Menu</A><BR><BR>
+		<B>Please select the Supply Package you would like to request:</B><BR><BR>
+		<table border=1>"}
 
-		src.temp += {"<style>
-					table {border-collapse: collapse;}
-					th,td {padding: 5px;}
-					.categoryGroup {padding:5px; margin-bottom:8px; border:1px solid black}
-					.categoryGroup .title {display:block; color:white; padding: 2px 5px; margin: -5px -5px 2px -5px;
-																	width: auto;
-																	height: auto; /* MAXIMUM COMPATIBILITY ACHIEVED */
-																	filter: glow(color=black,strength=1);
-																	text-shadow: -1px -1px 0 #000,
-																								1px -1px 0 #000,
-																								-1px 1px 0 #000,
-																								 1px 1px 0 #000;}
-				</style>"}
+		var/counter=0
+		for(var/datum/supply_packs/S in qm_supply_cache )
+			if((S.syndicate && !src.hacked) || S.hidden) continue
+			if(counter++ % 10 == 0) src.temp += "<tr><th>Item<th>Cost<BR>(Credits)<th>Contents"
+			src.temp += "<tr><td><A href='?src=\ref[src];doorder=\ref[S]'><B><U>[S.name]</U></B></A><td>[S.cost]<td>[S.desc]</tr>"
 
-		if (!global.QM_CategoryList)
-			message_coders("ZeWaka/QMCategories: QMcategoryList was not found for [src]!")
-		for (var/foundCategory in global.QM_CategoryList)
-			var/categorycolor = random_color() //I must say, I simply love the colors this generates.
 
-			src.temp += {"<div class='categoryGroup' id='[foundCategory]' style='border-color:[categorycolor]'>
-											<b class='title' style='background:[categorycolor]'>[foundCategory]</b>"}
 
-			src.temp += "<table border=1>"
-			src.temp += "<tr><th>Item</th><th>Cost (Credits)</th><th>Contents</th></tr>"
+			/*
+			src.temp += {"<A href='?src=\ref[src];doorder=\ref[S]'><B><U>[S.name]</U></B></A><BR>
+			<B>Cost:</B> [S.cost] Credits<BR>
+			<B>Contents:</B> [S.desc]<BR><BR>"}
+			*/
 
-			for (var/datum/supply_packs/S in qm_supply_cache) //yes I know what this is doing, feel free to make it more perf-friendly
-				if((S.syndicate && !src.hacked) || S.hidden) continue
-				if (S.category == foundCategory)
-					src.temp += "<tr><td><a href='?src=\ref[src];doorder=\ref[S]'><b><u>[S.name]</u></b></a></td><td>[S.cost]</td><td>[S.desc]</td></tr>"
-				LAGCHECK(LAG_LOW)
-
-			src.temp+="</table></div>"
-
-		src.temp += "<hr><A href='?src=\ref[src];mainmenu=1'>Main Menu</A><br>"
+		src.temp+="</table>"
+		src.temp += "<BR><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"
 
 	if (href_list["doorder"])
 		if(istype(locate(href_list["doorder"]), /datum/supply_order))
@@ -254,63 +218,49 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 				O.object = P
 				O.orderedby = usr.name
 				O.comment = copytext(html_encode(input(usr,"Comment:","Enter comment","")), 1, MAX_MESSAGE_LEN)
-				process_supply_order(O,usr)
-				logTheThing("station", usr, null, "ordered a [P.name] at [log_loc(src)].")
-				supply_history += "[O.object.name] ordered by [O.orderedby] for [P.cost] credits. Comment: [O.comment]<br>"
-				src.temp = {"Thanks for your order.<br>
-							<br><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
-							<br><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
+				process_supply_order(O)
+				supply_history += "[O.object.name] ordered by [O.orderedby] for [P.cost] credits. Comment: [O.comment]<BR>"
+				src.temp = {"Thanks for your order.<BR>
+							<BR><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
+							<BR><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
 			else
-				src.temp = {"Insufficient funds in Shipping Budget.<br>
-							<br><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
-							<br><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
+				src.temp = {"Insufficient funds in Shipping Budget.<BR>
+							<BR><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
+							<BR><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
 		else
 			//Comes from the orderform
 
 			var/datum/supply_order/O = new/datum/supply_order ()
 			var/datum/supply_packs/P = locate(href_list["doorder"])
 			if(P)
-
-				// The order computer has no emagged / other ability to display hidden or syndicate packs.
-				// It follows that someone's being clever if trying to order either of these items
-				if((P.syndicate && !src.hacked) || P.hidden)
-					// Get that jerk
-					if (usr in range(1))
-						//Check that whoever's doing this is nearby - otherwise they could gib any old scrub
-						trigger_anti_cheat(usr, "tried to href exploit order packs on [src]")
-
-					return
-
 				if(wagesystem.shipping_budget >= P.cost)
 					wagesystem.shipping_budget -= P.cost
 					O.object = P
 					O.orderedby = usr.name
 					O.comment = copytext(html_encode(input(usr,"Comment:","Enter comment","")), 1, MAX_MESSAGE_LEN)
-
-					process_supply_order(O,usr)
-					logTheThing("station", usr, null, "ordered a [P.name] at [log_loc(src)].")
-					supply_history += "[O.object.name] ordered by [O.orderedby] for [P.cost] credits. Comment: [O.comment]<br>"
-					src.temp = {"Thanks for your order.<br>
-								<br><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
-								<br><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
+					process_supply_order(O)
+					supply_history += "[O.object.name] ordered by [O.orderedby] for [P.cost] credits. Comment: [O.comment]<BR>"
+					src.temp = {"Thanks for your order.<BR>
+								<BR><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
+								<BR><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
 				else
-					src.temp = {"Insufficient funds in Shipping Budget.<br>
-								<br><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
-								<br><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
+					src.temp = {"Insufficient funds in Shipping Budget.<BR>
+								<BR><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>
+								<BR><A href='?src=\ref[src];order=1'>Back to Order List</A>"}
 
 	else if (href_list["vieworders"])
-		src.temp = "<B>Order History: </B><br><br>"
+		src.temp = "<B>Order History: </B><BR><BR>"
 		for(var/S in supply_history)
 			src.temp += S
-		src.temp += "<br><A href='?src=\ref[src];mainmenu=1'>OK</A>"
+		src.temp += "<BR><A href='?src=\ref[src];mainmenu=1'>OK</A>"
 
 	else if (href_list["viewrequests"])
-		src.temp = "<B>Current Requests: </B><br>"
+		src.temp = "<B>Current Requests: </B><BR>"
 		for(var/datum/supply_order/SO in supply_requestlist)
-			src.temp += "<br>[SO.object.name] requested by [SO.orderedby] from [SO.console_location]. <A href='?src=\ref[src];doorder=\ref[SO]'>Approve</A> <A href='?src=\ref[src];rreq=\ref[SO]'>Remove</A>"
+			src.temp += "<BR>[SO.object.name] requested by [SO.orderedby] from [SO.console_location]. <A href='?src=\ref[src];doorder=\ref[SO]'>Approve</A> <A href='?src=\ref[src];rreq=\ref[SO]'>Remove</A>"
 
-		src.temp += {"<br><A href='?src=\ref[src];clearreq=1'>Clear list</A>
-						<br><A href='?src=\ref[src];mainmenu=1'>OK</A>"}
+		src.temp += {"<BR><A href='?src=\ref[src];clearreq=1'>Clear list</A>
+						<BR><A href='?src=\ref[src];mainmenu=1'>OK</A>"}
 
 	else if (href_list["viewmarket"])
 		src.temp = "<B>Shipping Market Prices</B><HR>"
@@ -322,24 +272,24 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 				var/viewprice = C.price
 				if (C.indemand) viewprice *= shippingmarket.demand_multiplier
 
-				src.price_list += "<br><B>[C.comname]:</B> [viewprice] credits per unit "
+				src.price_list += "<BR><B>[C.comname]:</B> [viewprice] credits per unit "
 				if (C.indemand) src.price_list += " <b>(High Demand!)</b>"
 
 		var/timer = shippingmarket.get_market_timeleft()
-		src.temp += {"[price_list]<br><HR><b>Next Price Shift:</B> [timer]<br>
-					<A href='?src=\ref[src];viewmarket=1'>Refresh</A><br>
+		src.temp += {"[price_list]<BR><HR><b>Next Price Shift:</B> [timer]<BR>
+					<A href='?src=\ref[src];viewmarket=1'>Refresh</A><BR>
 					<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 
 	else if (href_list["contact_cdc"])
-		if (signal_loss >= 75)
-			boutput(usr, "<span style=\"color:red\">Severe signal interference is preventing contact with the CDC.</span>")
+		if (solar_flare)
+			boutput(usr, "<span style=\"color:red\">Solar flare activity is preventing contact with the CDC.</span>")
 			return
 		set_cdc()
 		last_cdc_message = null
 
 	else if (href_list["req_biohazard_crate"])
-		if (signal_loss >= 75)
-			boutput(usr, "<span style=\"color:red\">Severe signal interference is preventing contact with the CDC.</span>")
+		if (solar_flare)
+			boutput(usr, "<span style=\"color:red\">Solar flare activity is preventing contact with the CDC.</span>")
 			return
 		if (ticker.round_elapsed_ticks < QM_CDC.next_crate)
 			last_cdc_message = "<span style=\"color:red; font-style: italic\">We are fresh out of crates right now to send you. Check back in [(QM_CDC.next_crate - ticker.round_elapsed_ticks)] seconds!</span>"
@@ -354,21 +304,21 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 		set_cdc()
 
 	else if (href_list["cdc_analyze"])
-		if (signal_loss >= 75)
-			boutput(usr, "<span style=\"color:red\">Severe signal interference is preventing contact with the CDC.</span>")
+		if (solar_flare)
+			boutput(usr, "<span style=\"color:red\">Solar flare activity is preventing contact with the CDC.</span>")
 			return
 		src.temp = "<B>Center for Disease Control communication line</B><HR>"
-		src.temp += "<i>These are the unanalyzed samples we have from you, [station_name].</i><br><br>"
+		src.temp += "<i>These are the unanalyzed samples we have from you, [station_name].</i><BR><BR>"
 		if (QM_CDC.current_analysis)
-			src.temp += "We are currently researching the sample [QM_CDC.current_analysis.assoc_pathogen.name]. We can start on a new one if you like, but the analysis cost will not be refunded.<br><br>"
-		src.temp += "Analysis costs 1000 credits to begin. Choose a pathogen sample to analyze:<br>"
+			src.temp += "We are currently researching the sample [QM_CDC.current_analysis.assoc_pathogen.name]. We can start on a new one if you like, but the analysis cost will not be refunded.<BR><BR>"
+		src.temp += "Analysis costs 1000 credits to begin. Choose a pathogen sample to analyze:<BR>"
 		for (var/datum/cdc_contact_analysis/C in QM_CDC.ready_to_analyze)
-			src.temp += "<a href='?src=\ref[src];cdc_analyze_me=\ref[C]'>[C.assoc_pathogen.name]</a> ([round(C.time_done / (2 * C.time_factor))]% done)<br>"
-		src.temp += "<br><A href='?src=\ref[src];contact_cdc=1'>Back</A><br><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"
+			src.temp += "<a href='?src=\ref[src];cdc_analyze_me=\ref[C]'>[C.assoc_pathogen.name]</a> ([round(C.time_done / (2 * C.time_factor))]% done)<BR>"
+		src.temp += "<BR><A href='?src=\ref[src];contact_cdc=1'>Back</A><BR><A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"
 
 	else if (href_list["cdc_analyze_me"])
-		if (signal_loss >= 75)
-			boutput(usr, "<span style=\"color:red\">Severe signal interference is preventing contact with the CDC.</span>")
+		if (solar_flare)
+			boutput(usr, "<span style=\"color:red\">Solar flare activity is preventing contact with the CDC.</span>")
 			return
 		if (QM_CDC.last_switch > ticker.round_elapsed_ticks - 300)
 			last_cdc_message = "<span style=\"color:red; font-style: italic\">We just switched projects. Hold on for a bit.</span>"
@@ -397,8 +347,8 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 		set_cdc()
 
 	else if (href_list["batch_cure"])
-		if (signal_loss >= 75)
-			boutput(usr, "<span style=\"color:red\">Severe signal interference is preventing contact with the CDC.</span>")
+		if (solar_flare)
+			boutput(usr, "<span style=\"color:red\">Solar flare activity is preventing contact with the CDC.</span>")
 			return
 		var/datum/cdc_contact_analysis/C = locate(href_list["batch_cure"])
 		if (!(C in QM_CDC.completed_analysis))
@@ -430,17 +380,17 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 		if (!shippingmarket.active_traders.len)
 			boutput(usr, "<span style=\"color:red\">No traders detected in communications range.</span>")
 			return
-		if (signal_loss >= 75)
-			boutput(usr, "<span style=\"color:red\">Severe signal interference is preventing contact with trader vessels.</span>")
+		if (solar_flare)
+			boutput(usr, "<span style=\"color:red\">Solar flare activity is preventing contact with trader vessels.</span>")
 			return
 
-		src.temp = "<b>Traders Detected in Communications Range:</b><br>"
+		src.temp = "<b>Traders Detected in Communications Range:</b><BR>"
 		for (var/datum/trader/T in shippingmarket.active_traders)
 			if (!T.hidden)
-				src.temp += "* <A href='?src=\ref[src];trader=\ref[T]'>[T.name]</A><br>"
+				src.temp += "* <A href='?src=\ref[src];trader=\ref[T]'>[T.name]</A><BR>"
 		var/timer = shippingmarket.get_market_timeleft()
-		src.temp += {"<br><HR><b>Next Market Shift:</B> [timer]<br>
-					<A href='?src=\ref[src];trader_list=1'>Refresh</A><br>
+		src.temp += {"<BR><HR><b>Next Market Shift:</B> [timer]<BR>
+					<A href='?src=\ref[src];trader_list=1'>Refresh</A><BR>
 					<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 
 	else if (href_list["trader"])
@@ -450,20 +400,20 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 		var/timer = shippingmarket.get_market_timeleft()
 
 		src.temp = {"<b><u>[T.name]</u></b><HR>
-					<center><img src="[resource("images/traders/[T.picture]")]"></center><br>
-					<center>\"[T.current_message]\"</center><br><HR><br>
-					<br><HR><b>Next Market Shift:</B> [timer]<br>
-					<A href='?src=\ref[src];trader=\ref[T]'>Refresh</A><br>"}
+					<center><img src="[resource("images/traders/[T.picture]")]"></center><BR>
+					<center>\"[T.current_message]\"</center><BR><HR><BR>
+					<BR><HR><b>Next Market Shift:</B> [timer]<BR>
+					<A href='?src=\ref[src];trader=\ref[T]'>Refresh</A><BR>"}
 
 		if (T.goods_sell.len)
-			src.temp += "<A href='?src=\ref[src];trader_selling=\ref[T]'>Browse Goods for Sale</A> ([T.goods_sell.len] Items)<br>"
+			src.temp += "<A href='?src=\ref[src];trader_selling=\ref[T]'>Browse Goods for Sale</A> ([T.goods_sell.len] Items)<BR>"
 		if (T.goods_buy.len)
-			src.temp += "<A href='?src=\ref[src];trader_buying=\ref[T]'>Browse Wanted Goods</A> ([T.goods_buy.len] Items)<br>"
+			src.temp += "<A href='?src=\ref[src];trader_buying=\ref[T]'>Browse Wanted Goods</A> ([T.goods_buy.len] Items)<BR>"
 		if (T.shopping_cart.len)
-			src.temp += {"<A href='?src=\ref[src];trader_cart=\ref[T]'>View Shopping Cart</A> ([T.shopping_cart.len] Items)<br>
-							<A href='?src=\ref[src];trader_buy_cart=\ref[T]'>Purchase Items in Cart</A><br>"}
+			src.temp += {"<A href='?src=\ref[src];trader_cart=\ref[T]'>View Shopping Cart</A> ([T.shopping_cart.len] Items)<BR>
+							<A href='?src=\ref[src];trader_buy_cart=\ref[T]'>Purchase Items in Cart</A><BR>"}
 
-		src.temp += {"<A href='?src=\ref[src];trader_list=1'>Trader List</A><br>
+		src.temp += {"<A href='?src=\ref[src];trader_list=1'>Trader List</A><BR>
 					<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 
 	else if (href_list["trader_selling"])
@@ -553,10 +503,10 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 
 		if (T.patience <= 0)
 			// whoops, you've pissed them off and now they're going to fuck off
-			src.temp = {"<center><img src="[resource("images/traders/[T.picture]")]"></center><br>
-						<center>\"[pick(T.dialogue_leave)]\"</center><br><br>
-						[T.name] has left. You pushed their patience too far!<br>
-						<br><A href='?src=\ref[src];mainmenu=1'>Ok</A>"}
+			src.temp = {"<center><img src="[resource("images/traders/[T.picture]")]"></center><BR>
+						<center>\"[pick(T.dialogue_leave)]\"</center><BR><BR>
+						[T.name] has left. You pushed their patience too far!<BR>
+						<BR><A href='?src=\ref[src];mainmenu=1'>Ok</A>"}
 			src.updateUsrDialog()
 			T.hidden = 1
 			return
@@ -585,10 +535,10 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 		if (T.patience == 0)
 			// whoops, you've pissed them off and now they're going to fuck off
 			// unless they've got negative patience in which case haggle all you like
-			src.temp = {"<center><img src="[resource("images/traders/[T.picture]")]"></center><br>
-						<center>\"[pick(T.dialogue_leave)]\"</center><br><br>
-						[T.name] has left. You pushed their patience too far!<br>
-						<br><A href='?src=\ref[src];mainmenu=1'>Ok</A>"}
+			src.temp = {"<center><img src="[resource("images/traders/[T.picture]")]"></center><BR>
+						<center>\"[pick(T.dialogue_leave)]\"</center><BR><BR>
+						[T.name] has left. You pushed their patience too far!<BR>
+						<BR><A href='?src=\ref[src];mainmenu=1'>Ok</A>"}
 			src.updateUsrDialog()
 			T.hidden = 1
 			return
@@ -670,14 +620,14 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 
 	else if (href_list["rreq"])
 		supply_requestlist -= locate(href_list["rreq"])
-		src.temp = {"Request removed.<br>
-					<br><A href='?src=\ref[src];viewrequests=1'>OK</A>"}
+		src.temp = {"Request removed.<BR>
+					<BR><A href='?src=\ref[src];viewrequests=1'>OK</A>"}
 
 	else if (href_list["clearreq"])
 		supply_requestlist = null
 		supply_requestlist = new/list()
-		src.temp = {"List cleared.<br>
-					<br><A href='?src=\ref[src];mainmenu=1'>OK</A>"}
+		src.temp = {"List cleared.<BR>
+					<BR><A href='?src=\ref[src];mainmenu=1'>OK</A>"}
 
 	else if (href_list["mainmenu"])
 		src.temp = null
@@ -691,8 +641,8 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 		return
 
 	src.temp = {"<b><u>[T.name]</u></b><HR>
-				<center><img src="[resource("images/traders/[T.picture]")]"></center><br>
-				<center>\"[T.current_message]\"</center><br><HR>"}
+				<center><img src="[resource("images/traders/[T.picture]")]"></center><BR>
+				<center>\"[T.current_message]\"</center><BR><HR>"}
 
 	switch(dialogue)
 		if("cart")
@@ -702,78 +652,78 @@ var/global/datum/cdc_contact_controller/QM_CDC = new()
 				src.temp += "Your order is now being processed!"
 			else
 				var/cart_price = 0
-				src.temp += "<b>You are considering purchase of the following goods:</b><br>"
+				src.temp += "<b>You are considering purchase of the following goods:</b><BR>"
 				for (var/datum/commodity/C in T.shopping_cart)
-					src.temp += "[C.amount] units of [C.comname], [C.price * C.amount] credits <A href='?src=\ref[src];goods_removefromcart=\ref[C];the_trader=\ref[T]'>(Remove)</A><br>"
+					src.temp += "[C.amount] units of [C.comname], [C.price * C.amount] credits <A href='?src=\ref[src];goods_removefromcart=\ref[C];the_trader=\ref[T]'>(Remove)</A><BR>"
 					cart_price += C.price * C.amount
-				src.temp += "<br><b>The total price of this purchase is [cart_price] credits.</b>"
+				src.temp += "<BR><b>The total price of this purchase is [cart_price] credits.</b>"
 			var/timer = shippingmarket.get_market_timeleft()
-			src.temp +=  {"<br><HR>
-						<b>Next Market Shift:</B> [timer]<br>
-						<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<br><br>"}
+			src.temp +=  {"<BR><HR>
+						<b>Next Market Shift:</B> [timer]<BR>
+						<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR><BR>"}
 
 			if (T.shopping_cart.len && !T.currently_selling)
-				src.temp += {"<A href='?src=\ref[src];trader_buy_cart=\ref[T]'>Purchase</A><br>
-							<A href='?src=\ref[src];trader_clr_cart=\ref[T]'>Empty Shopping Cart</A><br>"}
-			//src.temp += "<A href='?src=\ref[src];trader_cart=\ref[T]'>Refresh</A><br>"
-			src.temp += {"<A href='?src=\ref[src];trader=\ref[T]'>Back</A><br>
-						<A href='?src=\ref[src];trader_list=1'>Trader List</A><br>
+				src.temp += {"<A href='?src=\ref[src];trader_buy_cart=\ref[T]'>Purchase</A><BR>
+							<A href='?src=\ref[src];trader_clr_cart=\ref[T]'>Empty Shopping Cart</A><BR>"}
+			//src.temp += "<A href='?src=\ref[src];trader_cart=\ref[T]'>Refresh</A><BR>"
+			src.temp += {"<A href='?src=\ref[src];trader=\ref[T]'>Back</A><BR>
+						<A href='?src=\ref[src];trader_list=1'>Trader List</A><BR>
 						<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 		if("buying")
-			src.temp += "<b>The trader would like to purchase the following goods:</b><br>"
+			src.temp += "<b>The trader would like to purchase the following goods:</b><BR>"
 			for (var/datum/commodity/trader/C in T.goods_buy)
 				if (C.hidden)
 					continue
-				src.temp += "* [C.listed_name]<br>"
+				src.temp += "* [C.listed_name]<BR>"
 				src.temp += " ([C.price] per unit)"
 				if (C.amount >= 0)
 					src.temp += " ([C.amount] units left)"
-				src.temp += " <br><A href='?src=\ref[src];goods_haggle_buy=\ref[C];the_trader=\ref[T]'>(Haggle Price)</A></i><br><br>"
+				src.temp += " <BR><A href='?src=\ref[src];goods_haggle_buy=\ref[C];the_trader=\ref[T]'>(Haggle Price)</A></i><BR><BR>"
 			var/timer = shippingmarket.get_market_timeleft()
 
-			src.temp += {"To sell goods to this trader, label a crate <b>trader</b> with a barcode label and fire it out of the sale mass driver.<br>
+			src.temp += {"To sell goods to this trader, label a crate <b>trader</b> with a barcode label and fire it out of the sale mass driver.<BR>
 						Load no more than 50 items into a crate at once, or the trader's cargo computer may not be able to keep up!
-						<br><HR>"
-						<b>Next Market Shift:</B> [timer]<br>
-						<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<br><br>
-						<A href='?src=\ref[src];trader=\ref[T]'>Back</A><br>
-						<A href='?src=\ref[src];trader_list=1'>Trader List</A><br>
+						<BR><HR>"
+						<b>Next Market Shift:</B> [timer]<BR>
+						<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR><BR>
+						<A href='?src=\ref[src];trader=\ref[T]'>Back</A><BR>
+						<A href='?src=\ref[src];trader_list=1'>Trader List</A><BR>
 						<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 		if("selling")
-			src.temp += "<b>The trader has the following goods for sale:</b><br>"
+			src.temp += "<b>The trader has the following goods for sale:</b><BR>"
 			for (var/datum/commodity/trader/C in T.goods_sell)
 				if (C.hidden)
 					continue
-				src.temp += "* [C.listed_name]<br>"
+				src.temp += "* [C.listed_name]<BR>"
 				src.temp += "([C.price] credits per unit)"
 				if (C.amount >= 0)
 					src.temp += " ([C.amount] units left)"
-				src.temp += " <i><A href='?src=\ref[src];goods_addtocart=\ref[C];the_trader=\ref[T]'>(Add to Cart)</A> <A href='?src=\ref[src];goods_haggle_sell=\ref[C];the_trader=\ref[T]'>(Haggle Price)</A></i><br><br>"
+				src.temp += " <i><A href='?src=\ref[src];goods_addtocart=\ref[C];the_trader=\ref[T]'>(Add to Cart)</A> <A href='?src=\ref[src];goods_haggle_sell=\ref[C];the_trader=\ref[T]'>(Haggle Price)</A></i><BR><BR>"
 
 			var/timer = shippingmarket.get_market_timeleft()
 			src.temp += {"<HR>
-						<b>Next Market Shift:</B> [timer]<br>
-						<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<br><br>
-						<A href='?src=\ref[src];trader=\ref[T]'>Back</A><br>
-						<A href='?src=\ref[src];trader_list=1'>Trader List</A><br>
-						[T.shopping_cart.len ? "<A href='?src=\ref[src];trader_cart=\ref[T]'>View Shopping Cart</A> ([T.shopping_cart.len] Items)<br>" : null]
+						<b>Next Market Shift:</B> [timer]<BR>
+						<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR><BR>
+						<A href='?src=\ref[src];trader=\ref[T]'>Back</A><BR>
+						<A href='?src=\ref[src];trader_list=1'>Trader List</A><BR>
+						[T.shopping_cart.len ? "<A href='?src=\ref[src];trader_cart=\ref[T]'>View Shopping Cart</A> ([T.shopping_cart.len] Items)<BR>" : null]
 						<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 
 /obj/machinery/computer/supplycomp/proc/trader_sanity_check(var/datum/trader/T)
 	if (!T)
-		src.temp = {"Error contacting trader. They may have departed from communications range.<br>
+		src.temp = {"Error contacting trader. They may have departed from communications range.<BR>
 					<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 		return 0
 	if (!istype(T,/datum/trader/))
-		src.temp = {"Error contacting trader. They may have departed from communications range.<br>
+		src.temp = {"Error contacting trader. They may have departed from communications range.<BR>
 					<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 		return 0
 	if (T.hidden)
-		src.temp = {"Error contacting trader. They may have departed from communications range.<br>
+		src.temp = {"Error contacting trader. They may have departed from communications range.<BR>
 					<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 		return 0
-	if (signal_loss >= 75)
-		src.temp = {"Severe signal interference is preventing contact with [T.name].<br>
+	if (solar_flare)
+		src.temp = {"Solar flare activity is preventing contact with [T.name].<BR>
 					<A href='?src=\ref[src];mainmenu=1'>Main Menu</A>"}
 		return 0
 	return 1

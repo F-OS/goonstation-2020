@@ -20,11 +20,11 @@
 
 	proc/sanity_check()
 		if (item_paths.len != item_names.len || item_paths.len != item_amounts.len || item_names.len != item_amounts.len)
-			logTheThing("debug", null, null, "<b>Manufacturer:</b> [src.name]/[src.type] schematic requirement lists not properly configured")
+			logTheThing("debug", null, null, "<b>Manufacturer:</b> [src.name] schematic requirement lists not properly configured")
 			qdel(src)
 			return
 		if (!item_outputs.len)
-			logTheThing("debug", null, null, "<b>Manufacturer:</b> [src.name]/[src.type] schematic output list not properly configured")
+			logTheThing("debug", null, null, "<b>Manufacturer:</b> [src.name] schematic output list not properly configured")
 			qdel(src)
 			return
 
@@ -34,7 +34,7 @@
 			A.name = "[pick(M.text_bad_output_adjective)] [A.name]"
 			//A.quality -= rand(25,50)
 		if (src.apply_material && materials.len > 0)
-			A.setMaterial(getMaterial(materials[1]))
+			A.setMaterial(getCachedMaterial(materials[1]))
 		return 1
 
 /datum/manufacture/mechanics
@@ -60,39 +60,6 @@
 			else
 				qdel(F)
 				return
-
-/******************** Cloner *******************/
-
-/datum/manufacture/mechanics/clonepod
-	name = "cloning pod"
-	item_amounts = list(6,5,4)
-	time = 30
-	create = 1
-	frame_path = /obj/machinery/clonepod
-
-/datum/manufacture/mechanics/clonegrinder
-	name = "enzymatic reclaimer"
-	item_amounts = list(3,3,4)
-	time = 18
-	create = 1
-	frame_path = /obj/machinery/clonegrinder
-
-/datum/manufacture/mechanics/clone_scanner
-	name = "cloning machine scanner"
-	item_amounts = list(5,6,4)
-	time = 30
-	create = 1
-	frame_path = /obj/machinery/clone_scanner
-
-
-/******************** Loafer *******************/
-
-/datum/manufacture/mechanics/loafer
-	name = "loafer (deploy on plating)"
-	item_amounts = list(5,6,4)
-	time = 30
-	create = 1
-	frame_path = /obj/disposalpipe/loafer
 
 /*
 /datum/manufacture/iron
@@ -152,7 +119,7 @@
 	item_paths = list("MET-1","CON-1","CRY-1")
 	item_names = list("Metal","Conductive Material","Crystal")
 	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/device/light/flashlight)
+	item_outputs = list(/obj/item/device/flashlight)
 	time = 5
 	create = 1
 	category = "Tool"
@@ -162,7 +129,7 @@
 	item_paths = list("ALL")
 	item_names = list("Any Material")
 	item_amounts = list(1)
-	item_outputs = list(/obj/item/instrument/vuvuzela)
+	item_outputs = list(/obj/item/vuvuzela)
 	time = 5
 	create = 1
 	category = "Miscellaneous"
@@ -172,7 +139,7 @@
 	item_paths = list("MET-1")
 	item_names = list("Metal")
 	item_amounts = list(1)
-	item_outputs = list(/obj/item/instrument/harmonica)
+	item_outputs = list(/obj/item/harmonica)
 	time = 5
 	create = 1
 	category = "Miscellaneous"
@@ -192,7 +159,7 @@
 	item_paths = list("ALL")
 	item_names = list("Any Material")
 	item_amounts = list(1)
-	item_outputs = list(/obj/item/instrument/bikehorn)
+	item_outputs = list(/obj/item/bikehorn)
 	time = 5
 	create = 1
 	category = "Miscellaneous"
@@ -530,32 +497,12 @@
 	create = 1
 	category = "Machinery"
 
-/datum/manufacture/fluidcanister
-	name = "Fluid Canister"
-	item_paths = list("MET-2")
-	item_names = list("Sturdy Metal")
-	item_amounts = list(15)
-	item_outputs = list(/obj/machinery/fluid_canister)
-	time = 10
-	create = 1
-	category = "Machinery"
-
 //// cogwerks - gas extraction stuff
-
-/datum/manufacture/air_can/large
-	name = "High-Volume Air Canister"
-	item_paths = list("MET-2","molitz","viscerite")
-	item_names = list("Sturdy Metal","Molitz","Viscerite")
-	item_amounts = list(3,10,30)
-	item_outputs = list(/obj/machinery/portable_atmospherics/canister/air/large)
-	time = 100
-	create = 1
-	category = "Machinery"
 
 /datum/manufacture/co2_can
 	name = "CO2 Canister"
-	item_paths = list("MET-2","char")
-	item_names = list("Sturdy Metal","Char")
+	item_paths = list("MET-2","ALL")
+	item_names = list("Sturdy Metal","Char")//Any Material")
 	item_amounts = list(3,10)
 	item_outputs = list(/obj/machinery/portable_atmospherics/canister/carbon_dioxide)
 	time = 100
@@ -564,7 +511,7 @@
 
 /datum/manufacture/o2_can
 	name = "O2 Canister"
-	item_paths = list("MET-2","molitz")
+	item_paths = list("MET-2","ALL")
 	item_names = list("Sturdy Metal","Molitz")
 	item_amounts = list(3,10)
 	item_outputs = list(/obj/machinery/portable_atmospherics/canister/oxygen)
@@ -584,8 +531,8 @@
 
 /datum/manufacture/n2_can
 	name = "N2 Canister"
-	item_paths = list("MET-2","viscerite")
-	item_names = list("Sturdy Metal","Viscerite")
+	item_paths = list("MET-2","cerenkite")
+	item_names = list("Sturdy Metal","Cerenkite")
 	item_amounts = list(3,10)
 	item_outputs = list(/obj/machinery/portable_atmospherics/canister/nitrogen)
 	time = 100
@@ -633,14 +580,14 @@
 		var/min_cond_mat = null
 		var/max_cond_mat = null
 		for (var/mat_id in materials)
-			var/datum/material/cand = getMaterial(mat_id)
+			var/datum/material/cand = getCachedMaterial(mat_id)
 			if (!cand)
 				continue
-			if (cand.getProperty("electrical") < min_cond)
-				min_cond = cand.getProperty("electrical")
+			if (cand.getProperty(PROP_ELECTRICAL) < min_cond)
+				min_cond = cand.getProperty(PROP_ELECTRICAL)
 				min_cond_mat = cand
-			else if (cand.getProperty("electrical") > max_cond)
-				max_cond = cand.getProperty("electrical")
+			else if (cand.getProperty(PROP_ELECTRICAL) > max_cond)
+				max_cond = cand.getProperty(PROP_ELECTRICAL)
 				max_cond_mat = cand
 		coil.setInsulator(min_cond_mat)
 		coil.setConductor(max_cond_mat)
@@ -649,7 +596,7 @@
 /datum/manufacture/RCD
 	name = "Rapid Construction Device"
 	item_paths = list("MET-3","DEN-1","CON-1")
-	item_names = list("Heavy Metal","High Density Crystalline Material","Conductive Material")
+	item_names = list("Heavy Metal","High Density Material","Conductive Material")
 	item_amounts = list(5,1,10)
 	item_outputs = list(/obj/item/rcd)
 	time = 90
@@ -659,7 +606,7 @@
 /datum/manufacture/RCDammo
 	name = "Compressed Matter Cartridge"
 	item_paths = list("DEN-1")
-	item_names = list("High Density Crystalline Material")
+	item_names = list("High Density Material")
 	item_amounts = list(5)
 	item_outputs = list(/obj/item/rcd_ammo)
 	time = 10
@@ -669,7 +616,7 @@
 /datum/manufacture/RCDammolarge
 	name = "Large Compressed Matter Cartridge"
 	item_paths = list("DEN-1")
-	item_names = list("High Density Crystalline Material")
+	item_names = list("High Density Material")
 	item_amounts = list(45)
 	item_outputs = list(/obj/item/rcd_ammo/big)
 	time = 30
@@ -728,26 +675,6 @@
 	create = 1
 	category = "Tool"
 
-/datum/manufacture/surgical_scissors
-	name = "Surgical Scissors"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(1)
-	item_outputs = list(/obj/item/scissors/surgical_scissors)
-	time = 5
-	create = 1
-	category = "Tool"
-
-/datum/manufacture/hemostat
-	name = "Hemostat"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(1)
-	item_outputs = list(/obj/item/hemostat)
-	time = 5
-	create = 1
-	category = "Tool"
-
 /datum/manufacture/surgical_spoon
 	name = "Enucleation Spoon"
 	item_paths = list("MET-1")
@@ -788,16 +715,6 @@
 	create = 1
 	category = "Clothing"
 
-/datum/manufacture/glasses
-	name = "Prescription Glasses"
-	item_paths = list("MET-1","CRY-1")
-	item_names = list("Metal","Crystal")
-	item_amounts = list(1,2)
-	item_outputs = list(/obj/item/clothing/glasses/regular)
-	time = 20
-	create = 1
-	category = "Clothing"
-
 /datum/manufacture/hypospray
 	name = "Hypospray"
 	item_paths = list("MET-1","CON-1","CRY-1")
@@ -817,26 +734,6 @@
 	time = 20
 	create = 1
 	category = "Clothing"
-
-/datum/manufacture/latex_gloves
-	name = "Latex Gloves"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(1)
-	item_outputs = list(/obj/item/clothing/gloves/latex)
-	time = 5
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/body_bag
-	name = "Body Bag"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(3)
-	item_outputs = list(/obj/item/body_bag)
-	time = 15
-	create = 1
-	category = "Tool"
 
 /datum/manufacture/cyberheart
 	name = "Cyberheart"
@@ -858,96 +755,6 @@
 	create = 1
 	category = "Component"
 
-/datum/manufacture/cyberappendix
-	name = "Cyberappendix"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/appendix/cyber)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberpancreas
-	name = "Cyberpancreas"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/pancreas/cyber)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberspleen
-	name = "Cyberspleen"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/spleen/cyber)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberintestines
-	name = "Cyberintestines"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/intestines/cyber)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberstomach
-	name = "Cyberstomach"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/stomach/cyber)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberkidney
-	name = "Cyberkidney"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/kidney/cyber)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberliver
-	name = "Cyberliver"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/liver/cyber)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberlung_left
-	name = "Left Cyberlung"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/lung/cyber/left)
-	time = 15
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cyberlung_right
-	name = "Right Cyberlung"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(1,1,1)
-	item_outputs = list(/obj/item/organ/lung/cyber/right)
-	time = 15
-	create = 1
-	category = "Component"
-
 /datum/manufacture/cybereye
 	name = "Cybereye"
 	item_paths = list("CRY-1","MET-1","CON-1","INS-1")
@@ -964,16 +771,6 @@
 	item_names = list("Crystal","Metal","Conductive Material","Insulative Material")
 	item_amounts = list(3,1,2,1)
 	item_outputs = list(/obj/item/organ/eye/cyber/sunglass)
-	time = 25
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cybereye_sechud
-	name = "Security HUD Cybereye"
-	item_paths = list("CRY-1","MET-1","CON-1","INS-1")
-	item_names = list("Crystal","Metal","Conductive Material","Insulative Material")
-	item_amounts = list(3,1,2,1)
-	item_outputs = list(/obj/item/organ/eye/cyber/sechud)
 	time = 25
 	create = 1
 	category = "Component"
@@ -1025,16 +822,6 @@
 	item_amounts = list(3,1,2,1)
 	item_outputs = list(/obj/item/organ/eye/cyber/camera)
 	time = 25
-	create = 1
-	category = "Component"
-
-/datum/manufacture/cybereye_laser
-	name = "Laser Cybereye"
-	item_paths = list("CRY-1","MET-1","CON-1","INS-1","erebite")
-	item_names = list("Crystal","Metal","Conductive Material","Insulative Material","Erebite")
-	item_amounts = list(3,1,2,1,1)
-	item_outputs = list(/obj/item/organ/eye/cyber/laser)
-	time = 40
 	create = 1
 	category = "Component"
 
@@ -1214,12 +1001,12 @@
 	create = 1
 	category = "Component"
 
-/datum/manufacture/robo_module
-	name = "Blank Cyborg Module"
+/datum/manufacture/robo_stmodule
+	name = "Standard Cyborg Module"
 	item_paths = list("CON-1","ALL")
 	item_names = list("Conductive Material","Any Material")
 	item_amounts = list(2,3)
-	item_outputs = list(/obj/item/robot_module)
+	item_outputs = list(/obj/item/robot_module/standard)
 	time = 40
 	create = 1
 	category = "Component"
@@ -1251,16 +1038,6 @@
 	item_amounts = list(4,4,2)
 	item_outputs = list(/obj/item/cell/cerenkite)
 	time = 45
-	create = 1
-	category = "Component"
-
-/datum/manufacture/core_frame
-	name = "AI Core Frame"
-	item_paths = list("MET-2")
-	item_names = list("Sturdy Metal")
-	item_amounts = list(20)
-	item_outputs = list(/obj/ai_core_frame)
-	time = 50
 	create = 1
 	category = "Component"
 
@@ -1439,7 +1216,7 @@
 /datum/manufacture/robup_efficiency
 	name = "Efficiency Upgrade"
 	item_paths = list("DEN-1","CON-2")
-	item_names = list("High Density Crystalline Matter","High Energy Conductor")
+	item_names = list("High Density Matter","High Energy Conductor")
 	item_amounts = list(3,10)
 	item_outputs = list(/obj/item/roboupgrade/efficiency)
 	time = 120
@@ -1449,7 +1226,7 @@
 /datum/manufacture/robup_repair
 	name = "Self-Repair Upgrade"
 	item_paths = list("DEN-1","MET-3")
-	item_names = list("High Density Crystalline Matter","Dense Metal")
+	item_names = list("High Density Matter","Dense Metal")
 	item_amounts = list(3,10)
 	item_outputs = list(/obj/item/roboupgrade/repair)
 	time = 120
@@ -1459,7 +1236,7 @@
 /datum/manufacture/robup_teleport
 	name = "Teleport Upgrade"
 	item_paths = list("CON-1","DEN-1", "POW-2") //Okay enough roundstart teleportborgs. Fuck.
-	item_names = list("Conductive Material","High Density Crystalline Matter", "Significant Power Source")
+	item_names = list("Conductive Material","High Density Matter", "Significant Power Source")
 	item_amounts = list(10,1, 10)
 	item_outputs = list(/obj/item/roboupgrade/teleport)
 	time = 120
@@ -1468,8 +1245,8 @@
 
 /datum/manufacture/robup_expand
 	name = "Expansion Upgrade"
-	item_paths = list("DEN-3","POW-3")
-	item_names = list("Extraordinarily Dense Crystalline Matter","Extreme Power Source")
+	item_paths = list("DEN-1","POW-1")
+	item_names = list("High Density Matter","Power Source")
 	item_amounts = list(3,1)
 	item_outputs = list(/obj/item/roboupgrade/expand)
 	time = 120
@@ -1526,48 +1303,12 @@
 	create = 1
 	category = "Resource"
 
-
-/datum/manufacture/sbradio
-	name = "Station Bounced Radio"
-	item_paths = list("CON-1","CRY-1")
-	item_names = list("Conductive Material","Crystal")
-	item_amounts = list(2,2)
-	item_outputs = list(/obj/item/device/radio)
-	time = 20
-	create = 1
-	category = "Resource"
-
-
-/datum/manufacture/latejoin
-	name = "Intelligence Formation Chip"
-	item_paths = list("MET-1","CON-1","ALL")
-	item_names = list("Metal","Conductive Material","Any Material")
-	item_amounts = list(6,5,3)
-	item_outputs = list(/obj/item/organ/brain/latejoin)
-	time = 35
-	create = 1
-	category = "Component"
-
-/datum/manufacture/thrusters
-	name = "Alastor Pattern Thrusters "
-	item_paths = list("MET-2")
-	item_names = list("Sturdy Metal")
-	item_amounts = list(50)
-	item_outputs = list(/obj/item/parts/robot_parts/leg/right/thruster,/obj/item/parts/robot_parts/leg/left/thruster)
-	time = 120
-	create = 1
-	category = "Component"
-
-
-
-
-
 // Mining Gear
 
 /datum/manufacture/mining_magnet
 	name = "Mining Magnet Replacement Parts"
 	item_paths = list("DEN-1","MET-3","CON-2")
-	item_names = list("High Density Crystalline Matter","Dense Metal","High Energy Conductor")
+	item_names = list("High Density Matter","Dense Metal","High Energy Conductor")
 	item_amounts = list(5,30,30)
 	item_outputs = list(/obj/item/magnet_parts)
 	time = 120
@@ -1617,7 +1358,7 @@
 /datum/manufacture/powerhammer
 	name = "Power Hammer"
 	item_paths = list("DEN-1","CON-1")
-	item_names = list("High Density Crystalline Matter","Conductive Material")
+	item_names = list("High Density Matter","Conductive Material")
 	item_amounts = list(1,8)
 	item_outputs = list(/obj/item/mining_tool/powerhammer)
 	time = 70
@@ -1647,7 +1388,7 @@
 /datum/manufacture/ore_accumulator
 	name = "Mineral Accumulator"
 	item_paths = list("MET-2","CON-2","DEN-1")
-	item_names = list("Sturdy Metal","High Energy Conductor","High Density Crystalline Matter")
+	item_names = list("Sturdy Metal","High Energy Conductor","High Density Matter")
 	item_amounts = list(25,15,2)
 	item_outputs = list(/obj/machinery/oreaccumulator)
 	time = 120
@@ -1676,8 +1417,8 @@
 
 /datum/manufacture/industrialarmor
 	name = "Industrial Space Armor Set"
-	item_paths = list("MET-3","CON-2","DEN-2")
-	item_names = list("Dense Metal","High Energy Conductor","Very High Density Crystalline Matter")
+	item_paths = list("MET-3","CON-2","DEN-1")
+	item_names = list("Dense Metal","High Energy Conductor","High Density Matter")
 	item_amounts = list(15,7,3)
 	item_outputs = list(/obj/item/clothing/suit/space/industrial,/obj/item/clothing/head/helmet/space/industrial)
 	time = 90
@@ -1690,16 +1431,6 @@
 	item_names = list("Sturdy Metal","High Energy Conductor","Power Source")
 	item_amounts = list(15,7,3)
 	item_outputs = list(/obj/item/clothing/shoes/industrial)
-	time = 40
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/jetpackmkII
-	name = "Jetpack MKII"
-	item_paths = list("MET-2","CON-2","POW-1")
-	item_names = list("Sturdy Metal","High Energy Conductor","Power Source")
-	item_amounts = list(15,10,5)
-	item_outputs = list(/obj/item/tank/jetpack/jetpackmk2)
 	time = 40
 	create = 1
 	category = "Clothing"
@@ -1721,16 +1452,6 @@
 	item_amounts = list(1)
 	item_outputs = list(/obj/item/reagent_containers/patch)
 	time = 5
-	create = 2
-	category = "Resource"
-
-/datum/manufacture/mender
-	name = "Auto Mender"
-	item_paths = list("MET-1","CRY-1")
-	item_names = list("Metal","Crystal")
-	item_amounts = list(3,4)
-	item_outputs = list(/obj/item/reagent_containers/mender)
-	time = 10
 	create = 2
 	category = "Resource"
 
@@ -1837,23 +1558,13 @@
 	create = 1
 	category = "Resource"
 
-/datum/manufacture/orescoop
-	name = "Alloyed Solutions Ore Scoop/Hold"
-	item_paths = list("MET-2","CON-1")
-	item_names = list("Sturdy Metal", "Conductive Material")
-	item_amounts = list(20, 10)
-	item_outputs = list(/obj/item/shipcomponent/secondary_system/orescoop)
-	time = 12
-	create = 1
-	category = "Resource"
-
-/datum/manufacture/communications/mining
-	name = "NT Magnet Link Array"
-	item_paths = list("MET-2","CON-1")
-	item_names = list("Sturdy Metal", "Conductive Material")
-	item_amounts = list(10, 20)
-	item_outputs = list(/obj/item/shipcomponent/communications/mining)
-	time = 12
+/datum/manufacture/shipRCD
+	name = "Duracorp Construction Device"
+	item_paths = list("MET-3","DEN-1","CON-1")
+	item_names = list("Dense Metal","High Density Matter","Conductive Material")
+	item_amounts = list(5,1,10)
+	item_outputs = list(/obj/item/shipcomponent/secondary_system/cargo)
+	time = 90
 	create = 1
 	category = "Resource"
 
@@ -1867,37 +1578,7 @@
 	create = 1
 	category = "Resource"
 
-/datum/manufacture/shipRCD
-	name = "Duracorp Construction Device"
-	item_paths = list("MET-3","DEN-1","CON-1")
-	item_names = list("Dense Metal","High Density Crystalline Matter","Conductive Material")
-	item_amounts = list(5,1,10)
-	item_outputs = list(/obj/item/shipcomponent/secondary_system/cargo)
-	time = 90
-	create = 1
-	category = "Resource"
-
 //  cogwerks - clothing manufacturer datums
-
-/datum/manufacture/backpack
-	name = "Backpack"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(8)
-	item_outputs = list(/obj/item/storage/backpack)
-	time = 10
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/satchel
-	name = "Satchel"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(8)
-	item_outputs = list(/obj/item/storage/backpack/satchel)
-	time = 10
-	create = 1
-	category = "Clothing"
 
 /datum/manufacture/shoes_brown
 	name = "Brown Shoes"
@@ -2079,16 +1760,6 @@
 	create = 1
 	category = "Clothing"
 
-/datum/manufacture/dress_black
-	name = "Fancy Black Dress"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(4)
-	item_outputs = list(/obj/item/clothing/under/suit/dress)
-	time = 5
-	create = 1
-	category = "Clothing"
-
 /datum/manufacture/labcoat
 	name = "Labcoat"
 	item_paths = list("FAB-1")
@@ -2139,46 +1810,6 @@
 	create = 1
 	category = "Clothing"
 
-/datum/manufacture/scrubs_purple
-	name = "Purple Scrubs"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(4)
-	item_outputs = list(/obj/item/clothing/under/scrub/purple)
-	time = 5
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/scrubs_orange
-	name = "Orange Scrubs"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(4)
-	item_outputs = list(/obj/item/clothing/under/scrub/orange)
-	time = 5
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/scrubs_pink
-	name = "Pink Scrubs"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(4)
-	item_outputs = list(/obj/item/clothing/under/scrub/pink)
-	time = 5
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/patient_gown
-	name = "Gown"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(4)
-	item_outputs = list(/obj/item/clothing/under/patient_gown)
-	time = 5
-	create = 1
-	category = "Clothing"
-
 /datum/manufacture/surgical_mask
 	name = "Sterile Mask"
 	item_paths = list("FAB-1")
@@ -2197,36 +1828,6 @@
 	item_outputs = list(/obj/item/clothing/mask/surgical_shield)
 	time = 5
 	create = 1
-	category = "Clothing"
-
-/datum/manufacture/blindfold
-	name = "Blindfold"
-	item_paths = list("FAB-1")
-	item_names = list("Fabric")
-	item_amounts = list(4)
-	item_outputs = list(/obj/item/clothing/glasses/blindfold)
-	time = 5
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/muzzle
-	name = "Muzzle"
-	item_paths = list("FAB-1", "MET-1")
-	item_names = list("Fabric", "Metal")
-	item_amounts = list(4, 2)
-	item_outputs = list(/obj/item/clothing/mask/muzzle)
-	time = 5
-	create = 1
-	category = "Clothing"
-
-/datum/manufacture/hermes
-	name = "Offering to the Fabricator Gods"
-	item_paths = list("MET-3","CON-2","POW-3","DEN-3","FAB-1","INS-1")
-	item_names = list("Dense Metal","High Energy Conductor","Extreme Power Source","Extraordinarily Dense Crystalline Matter","Fabric","Insulative Material")
-	item_amounts = list(30,30,6,1,30,30)
-	item_outputs = list(/obj/item/clothing/shoes/hermes)
-	time = 120 //suspense
-	create = 3 //because a shoe god has to have acolytes
 	category = "Clothing"
 
 /////// pod construction components
@@ -2284,7 +1885,7 @@
 /datum/manufacture/pod/armor_industrial
 	name = "Industrial Pod Armor"
 	item_paths = list("MET-3","CON-2","DEN-1")
-	item_names = list("Dense Metal","High Energy Conductor","High Density Crystalline Matter")
+	item_names = list("Dense Metal","High Energy Conductor","High Density Matter")
 	item_amounts = list(25,10,5)
 	item_outputs = list(/obj/item/pod/armor_industrial)
 	time = 50
@@ -2353,16 +1954,6 @@
 	create = 1
 	category = "Tool"
 
-/datum/manufacture/pod/weapon/mining/drill
-	name = "Rock Drilling Rig"
-	item_paths = list("POW-1","MET-3", "DEN-3")
-	item_names = list("Power Source","Dense Metal", "Extraordinarily Dense Crystalline Matter")
-	item_amounts = list(10,10,20)
-	item_outputs = list(/obj/item/shipcomponent/mainweapon/rockdrills)
-	time = 20
-	create = 1
-	category = "Tool"
-
 /datum/manufacture/pod/weapon/ltlaser
 	name = "Mk.1.5 Light Phasers"
 	item_paths = list("MET-2","CON-1","CRY-1")
@@ -2380,132 +1971,5 @@
 	item_amounts = list(5,10)
 	item_outputs = list(/obj/item/shipcomponent/secondary_system/lock)
 	time = 10
-	create = 1
-	category = "Tool"
-
-
-/******************** HOP *******************/
-
-/datum/manufacture/id_card
-	name = "ID card"
-	item_paths = list("CON-1","CRY-1")
-	item_names = list("Conductive Material","Crystal")
-	item_amounts = list(3,3)
-	item_outputs = list(/obj/item/card/id)
-	time = 5
-	create = 1
-	category = "Resource"
-
-/datum/manufacture/id_card_gold
-	name = "Gold ID card"
-	item_paths = list("REF-1", "CON-2","CRY-1")
-	item_names = list("Reflective Material", "High Energy Conductor","Crystal")
-	item_amounts = list(5,4,3)
-	item_outputs = list(/obj/item/card/id/gold)
-	time = 30
-	create = 1
-	category = "Resource"
-
-/datum/manufacture/implant_access
-	name = "Electronic Access Implant (2 Access Charges)"
-	item_paths = list("CON-1","CRY-1")
-	item_names = list("Conductive Material","Crystal")
-	item_amounts = list(3,3)
-	item_outputs = list(/obj/item/implantcase/access)
-	time = 20
-	create = 1
-	category = "Resource"
-
-/datum/manufacture/implant_access_infinite
-	name = "Electronic Access Implant (Unlimited Charge)"
-	item_paths = list("CON-1","CRY-1")
-	item_names = list("Conductive Material","Crystal")
-	item_amounts = list(9,15)
-	item_outputs = list(/obj/item/implantcase/access/unlimited)
-	time = 60
-	create = 1
-	category = "Resource"
-
-/******************** QM CRATES *******************/
-
-/datum/manufacture/crate
-	name = "Crate"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(5)
-	item_outputs = list(/obj/storage/crate)
-	time = 10
-	create = 1
-	category = "Miscellaneous"
-
-/datum/manufacture/packingcrate
-	name = "Random Packing Crate"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(5)
-	item_outputs = list(/obj/storage/crate/packing)
-	time = 10
-	create = 1
-	category = "Miscellaneous"
-
-/datum/manufacture/pizzabox
-	name = "Pizza Box"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(5)
-	item_outputs = list(/obj/storage/crate/pizza)
-	time = 10
-	create = 1
-	category = "Miscellaneous"
-
-/datum/manufacture/wooden
-	name = "Wooden Crate"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(5)
-	item_outputs = list(/obj/storage/crate/wooden)
-	time = 10
-	create = 1
-	category = "Miscellaneous"
-
-/datum/manufacture/medical
-	name = "Medical Crate"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(5)
-	item_outputs = list(/obj/storage/crate/medical)
-	time = 10
-	create = 1
-	category = "Miscellaneous"
-
-/datum/manufacture/biohazard
-	name = "Biohazard Crate"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(5)
-	item_outputs = list(/obj/storage/crate/biohazard)
-	time = 10
-	create = 1
-	category = "Miscellaneous"
-
-/datum/manufacture/classcrate
-	name = "Class Crate"
-	item_paths = list("MET-1")
-	item_names = list("Metal")
-	item_amounts = list(5)
-	item_outputs = list(/obj/storage/crate/classcrate)
-	time = 10
-	create = 1
-	category = "Miscellaneous"
-
-/******************** GUNS *******************/
-
-/datum/manufacture/alastor
-	name = "Alastor pattern laser rifle"
-	item_paths = list("DEN-1","MET-3","CON-1","CRY-1")
-	item_names = list("High Density Crystalline Matter","Dense Metal","Conductive Material","Crystal")
-	item_amounts = list(1,10,20,20)
-	item_outputs = list(/obj/item/gun/energy/alastor)
-	time = 30
 	create = 1
 	category = "Tool"

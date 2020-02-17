@@ -12,6 +12,7 @@
 	item_state = "black"
 	body_parts_covered = TORSO|LEGS|ARMS
 	protective_temperature = T0C + 50
+	heat_transfer_coefficient = 0.30
 	permeability_coefficient = 0.90
 	flags = FPRINT|TABLEPASS
 	//cogwerks - burn vars
@@ -19,16 +20,12 @@
 	burn_output = 800
 	burn_possible = 1
 	health = 50
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 5)
-		setProperty("heatprot", 5)
-		setProperty("meleeprot", 1)
+	armor_value_melee = 1
+	cold_resistance = 5
+	heat_resistance = 5
 
 /obj/item/clothing/under/New()
 	wear_image_fat = image(wear_image_fat_icon)
-	wear_image_fat.icon_state = icon_state
 	..()
 
 // Experimental composite jumpsuit
@@ -61,14 +58,6 @@
 			src.images += suit_image
 
 		src.color = src.component_colors[1]
-
-
-/obj/item/clothing/under/crafted
-	name = "jumpsuit"
-	desc = "A generic jumpsuit with no rank markings."
-	c_flags = ONESIZEFITSALL
-	icon_state = "white"
-	item_state = "white"
 
 // Colors
 
@@ -181,71 +170,6 @@
 		name = "pink jumpsuit"
 		icon_state = "pink"
 		item_state = "pink"
-//PRIDE
-/obj/item/clothing/under/pride
-	name = "pride jumpsuit"
-	desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the LGBT flag."
-	icon = 'icons/obj/clothing/uniforms/item_js_pride.dmi'
-	wear_image_icon = 'icons/mob/jumpsuits/worn_js_pride.dmi'
-	inhand_image_icon = 'icons/mob/inhand/jumpsuit/hand_js_pride.dmi'
-	icon_state = "gay"
-	item_state = "gay"
-
-	ace
-		name = "ace pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the asexual pride flag."
-		icon_state ="ace"
-		item_state = "ace"
-
-	aro
-		name = "aro pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the aromatic pride flag."
-		icon_state ="aro"
-		item_state = "aro"
-
-	bi
-		name = "bi pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the bisexual pride flag."
-		icon_state ="bi"
-		item_state = "bi"
-
-	inter
-		name = "inter pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the intersex pride flag."
-		icon_state ="inter"
-		item_state = "inter"
-
-	lesb
-		name = "lesb pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the lesbian pride flag."
-		icon_state ="lesb"
-		item_state = "lesb"
-
-	nb
-		name = "nb pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the non-binary pride flag."
-		icon_state ="nb"
-		item_state = "nb"
-
-	pan
-		name = "pan pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the pansexual pride flag."
-		icon_state ="pan"
-		item_state = "pan"
-
-	poly
-		name = "poly pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the polysexual pride flag."
-		icon_state ="poly"
-		item_state = "poly"
-
-	trans
-		name = "trans pride jumpsuit"
-		desc = "A corporate token of inclusivity, made in a sweatshop. It's based off of the transgender pride flag. Wearing this makes you <em>really</em> hate astroterf."
-		icon_state ="trans"
-		item_state = "trans"
-
-
 
 // RANKS
 
@@ -326,16 +250,11 @@
 		icon_state = "hos-dress"
 		item_state = "hos-dress"
 
-	fancy_alt
-		icon_state = "hos-fancy-alt"
-		item_state = "hos-fancy-alt"
-
 /obj/item/clothing/under/misc/head_of_security
 	name = "dirty vest"
 	desc = "This outfit has seen better days."
 	icon_state = "vest"
 	item_state = "vest"
-	c_flags = SLEEVELESS
 
 /obj/item/clothing/under/rank/chief_engineer
 	name = "chief engineer's uniform"
@@ -390,12 +309,6 @@
 	dress
 		icon_state = "med_director-dress"
 		item_state = "med_director-dress"
-
-/obj/item/clothing/under/rank/comm_officer
-	name = "\improper Communication Officer's suit"
-	desc = "They wanted you as their new recruit and they got what they wanted."
-	icon_state = "comm_officer"
-	item_state = "comm_officer"
 
 // Security
 
@@ -565,11 +478,6 @@
 		icon_state = "clown-fancy"
 		item_state = "clown-fancy"
 
-	dress
-		name = "clown dress"
-		icon_state = "clown-dress"
-		item_state = "clown-dress"
-
 /obj/item/clothing/under/misc/vice
 	name = "vice officer's suit"
 	desc = "This thing reeks of weed."
@@ -644,12 +552,6 @@
 		icon_state = "lawyerR"
 		item_state = "lawyerR"
 
-/obj/item/clothing/under/misc/lawyer/red/demonic
-	setupProperties()
-		..()
-		setProperty("rangedprot", 1)
-		setProperty("meleeprot", 6)
-
 /obj/item/clothing/under/misc/syndicate
 	name = "tactical turtleneck"
 	desc = "Non-descript, slightly suspicious civilian clothing."
@@ -670,7 +572,7 @@
 
 /obj/item/clothing/under/misc/chaplain
 	name = "priest's robe"
-	desc = "A catholic robe."
+	desc = "A catholic robe. Keep away from children."
 	icon_state = "catholic"
 	item_state = "catholic"
 
@@ -749,25 +651,6 @@
 		icon_state = "shortsPs"
 		item_state = "shortsPs"
 
-	luchador
-		name = "luchador shorts"
-		desc = "Taken from that strange uncle's trophy cabinet."
-		icon_state = "lucha1"
-		item_state = "lucha1"
-
-		green
-			icon_state = "lucha2"
-			item_state = "lucha2"
-		red
-			icon_state = "lucha3"
-			item_state = "lucha3"
-
-	trashsinglet
-		name = "trash bag singlet"
-		desc = "It's time for the trashman to eat garbage and smash opponents!"
-		icon_state = "literaltrash"
-		item_state = "literaltrash"
-
 	random
 		New()
 			..()
@@ -789,25 +672,25 @@
 		item_state = "jerseyR"
 
 	green
-		name = "green basketball jersey"
+		name = "green Basketball jersey"
 		desc = "A jersey with the Neo-Boston Drunkards away colors."
 		icon_state = "jerseyG"
 		item_state = "jerseyG"
 
 	blue
-		name = "blue basketball jersey"
+		name = "blue Basketball jersey"
 		desc = "A jersey with the Mississippi Singularities away colors."
 		icon_state = "jerseyB"
 		item_state = "jerseyB"
 
 	purple
-		name = "purple basketball jersey"
+		name = "purple Basketball jersey"
 		desc = "A jersey with the Mercury Suns away colors."
 		icon_state = "jerseyP"
 		item_state = "jerseyP"
 
 	black
-		name = "black basketball jersey"
+		name = "black Basketball jersey"
 		desc = "A jersey banned from professional basketball after the Space Jam 2067 tragedy."
 		icon_state = "jerseyB"
 		item_state = "jerseyB"
@@ -818,12 +701,6 @@
 		New()
 			..()
 			src.color = random_saturated_hex_color(1)
-
-	dan
-		name = "basketball jersey"
-		desc = "A jersey worn by Smokin' Sealpups the during the last Space Olympics. It seems to be advertising something."
-		icon_state = "dan_jersey"
-		item_state = "dan_jersey"
 
 /obj/item/clothing/under/swimsuit
 	name = "white swimsuit"
@@ -859,15 +736,6 @@
 		New()
 			..()
 			src.color = random_saturated_hex_color(1)
-
-/obj/item/clothing/under/referee
-	name = "referee uniform"
-	desc = "For when yelling at athletes is your job, not just your hobby."
-	icon = 'icons/obj/clothing/uniforms/item_js_athletic.dmi'
-	wear_image_icon = 'icons/mob/jumpsuits/worn_js_athletic.dmi'
-	inhand_image_icon = 'icons/mob/inhand/jumpsuit/hand_js_athletic.dmi'
-	icon_state = "referee"
-	item_state = "referee"
 
 /obj/item/clothing/under/shirt_pants
 	name = "shirt and pants"
@@ -977,38 +845,6 @@
 		icon_state = "scrub-b"
 		item_state = "darkblue"
 
-	purple
-		icon_state = "scrub-p"
-		item_state = "lightpurple"
-
-		New()
-			..()
-			if(prob(50))
-				src.icon_state = "scrub-pr"
-
-	orange
-		icon_state = "scrub-o"
-		item_state = "orange"
-
-	pink
-		icon_state = "scrub-pk"
-		item_state = "pink"
-
-	flower
-		name = "flower scrubs"
-		desc = "Man, these scrubs look pretty nice."
-		icon_state = "scrub-f"
-		item_state = "lightblue"
-
-/obj/item/clothing/under/patient_gown
-	name = "gown"
-	desc = "A light cloth gown that ties in the back, given to medical patients when undergoing examinations or medical operations."
-	icon = 'icons/obj/clothing/uniforms/item_js_misc.dmi'
-	wear_image_icon = 'icons/mob/jumpsuits/worn_js_misc.dmi'
-	inhand_image_icon = 'icons/mob/inhand/jumpsuit/hand_js.dmi'
-	icon_state = "patient"
-	item_state = "lightblue"
-
 // Towels
 
 /obj/item/clothing/under/towel
@@ -1029,19 +865,16 @@
 	burn_output = 800
 	burn_possible = 1
 	health = 20
+	cold_resistance = 10
 	rand_pos = 0
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 10)
 
 	New()
 		..()
-		src.setMaterial(getMaterial("cotton"), appearance = 0, setname = 0)
+		src.setMaterial(getCachedMaterial("cotton"))
 
 	attack_self(mob/user as mob)
 		add_fingerprint(user)
-		var/choice = input(user, "What do you want to do with [src]?", "Selection") as null|anything in list("Place", "Fold into hat", "Rip up")
+		var/choice = input(user, "What do you want to do with [src]?", "Selection") as null|anything in list("Place", "Rip up")
 		if (!choice)
 			return
 		switch (choice)
@@ -1049,14 +882,6 @@
 				user.drop_item()
 				src.layer = EFFECTS_LAYER_BASE-1
 				return
-
-			if ("Fold into hat")
-				user.show_text("You fold [src] into a hat! Neat.", "blue")
-				user.u_equip(src)
-				user.put_in_hand_or_drop(new /obj/item/clothing/head/towel_hat())
-				qdel(src)
-				return
-
 			if ("Rip up")
 				boutput(user, "You begin ripping up [src].")
 				if (!do_after(user, 30))
@@ -1064,15 +889,14 @@
 					return
 				else
 					for (var/i=3, i>0, i--)
-						var/obj/item/material_piece/cloth/cottonfabric/CF = unpool(/obj/item/material_piece/cloth/cottonfabric)
-						CF.set_loc(get_turf(src))
+						new /obj/item/material_piece/cloth/cottonfabric(get_turf(src))
 					boutput(user, "You rip up [src].")
 					user.u_equip(src)
 					qdel(src)
 					return
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (issnippingtool(W))
+		if (istype(W, /obj/item/wirecutters) || istype(W, /obj/item/scissors))
 			boutput(user, "You begin cutting up [src].")
 			if (!do_after(user, 30))
 				boutput(user, "<span style=\"color:red\">You were interrupted!</span>")
@@ -1113,10 +937,10 @@
 			T.wet = 0
 			dried ++
 		for (var/obj/decal/cleanable/water/W in T)
-			pool(W)
+			qdel(W)
 			dried ++
 		for (var/obj/decal/cleanable/urine/U in T) // ew
-			pool(U)
+			qdel(U)
 			dried ++
 		return dried
 
@@ -1150,7 +974,7 @@
 	item_state = "jetson"
 
 /obj/item/clothing/under/gimmick/princess
-	// https://forums.somethingawful.com/showthread.php?threadid=3502448
+	// http://forums.somethingawful.com/showthread.php?threadid=3502448
 	name = "party princess uniform"
 	desc = "Sparkle sparkle!"
 	icon_state = "princess"
@@ -1250,59 +1074,3 @@
 		name = "massive asshole's hat"
 		desc = "A purple cap with a tetris block on it. It radiates pure malice."
 		icon_state = "waluigi"
-
-
-/obj/item/clothing/under/misc/hitman
-    name = "shirt and tie"
-    desc = "A crisp white button down shirt with a bright red tie."
-    icon_state = "shirt_n_pant-b_tie-r"
-    item_state = "shirt_n_pant-b_tie-r"
-
-/obj/item/clothing/under/gimmick/witchfinder
-    name = "witchfinder general's outfit"
-    desc = "A rather mean looking outfit."
-    icon_state = "witchfinder"
-    item_state = "witchfinder"
-
-/obj/item/clothing/under/gimmick/toga
-    name = "toga"
-    desc = "Toga party! Toga party!"
-    icon_state = "toga"
-    item_state = "toga"
-
-/obj/item/clothing/under/misc/bandshirt
-    var/disturbed = 0
-    name = "band shirt"
-    desc = "Woah, these guys stopped touring in '37. Vintage!"
-    icon_state = "bandshirt"
-    item_state = "bandshirt"
-    icon = 'icons/obj/clothing/uniforms/item_js_misc.dmi'
-    wear_image_icon = 'icons/mob/jumpsuits/worn_js_misc.dmi'
-
-/obj/item/clothing/under/misc/bandshirt/attack_hand(mob/user as mob)
-	if  ( ..() && !disturbed )
-		new /obj/item/clothing/mask/cigarette/dryjoint(get_turf(user))
-		boutput(user, "Something falls out of the shirt as you pick it up!")
-		disturbed = 1
-
-/obj/item/clothing/under/misc/colmob
-    name = "columbian mobster suit"
-    desc = "I'm a political prisoner from Space Cuba and I want my fucking human rights now!"
-    icon_state = "colmob"
-    item_state = "colmob"
-    icon = 'icons/obj/clothing/uniforms/item_js_misc.dmi'
-    wear_image_icon = 'icons/mob/jumpsuits/worn_js_misc.dmi'
-
-/obj/item/clothing/under/misc/rusmob
-    name = "soviet mobster suit"
-    desc = "She Swallows Burning Coals."
-    icon_state = "rusmob"
-    item_state = "rusmob"
-    icon = 'icons/obj/clothing/uniforms/item_js_misc.dmi'
-    wear_image_icon = 'icons/mob/jumpsuits/worn_js_misc.dmi'
-
-/obj/item/clothing/under/gimmick/jester
-    name = "jester's outfit"
-    desc = "Outfit of a not-so-funny-clown."
-    icon_state = "jester"
-    item_state = "jester"

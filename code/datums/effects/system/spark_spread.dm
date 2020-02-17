@@ -4,12 +4,12 @@
 	var/turf/location
 	var/atom/holder
 	var/total_sparks = 0 // To stop it being spammed and lagging!
-	var/list/livesparks = new
-
-///datum/effects/system/spark_spread/disposing()
+	var/list/livesparks = new	
+	
+///datum/effects/system/spark_spread/Del()
 	//pool(src)
 	//no no no no no stop doing this what the fuck man aaaaaaaa -singh
-
+	
 /datum/effects/system/spark_spread/pooled()
 	number = initial(number)
 	cardinals = initial(cardinals)
@@ -32,10 +32,10 @@
 
 /datum/effects/system/spark_spread/proc/attach(atom/atom)
 	holder = atom
-
+	
 /datum/effects/system/spark_spread/proc/detach()
 	holder = null
-
+	
 /datum/effects/system/spark_spread/proc/update()
 	if(!livesparks.len && !holder)
 		pool(src)
@@ -49,41 +49,41 @@
 		var/distance = livesparks[sparks] & 15
 		if(distance)
 			// Only do hotspot for tiles that dont already have sparks on them
-			if(!(locate(/obj/effects/sparks) in get_step(sparks, direction)))
+			if(!locate(/obj/effects/sparks in get_step(sparks, direction)))
 				do_hotspot = 1
-
+				
 			// Move the sparks
 			step(sparks, direction)
 			distance--
-
+			
 			if(do_hotspot)
 				var/turf/T = get_turf(sparks)
 				if(istype(T, /turf))
 					T.hotspot_expose(1000, 100)
-
+			
 			livesparks[sparks] = direction << 4 | distance
 		else
 			// Kill the spark in 20 ticks
-			SPAWN_DBG(20)//ugly fuckin spawn todo fix
-				if (sparks && !sparks.pooled)
+			spawn(20)
+				if (sparks)
 					livesparks -= sparks
 					pool(sparks)
-
+		
 	if(livesparks.len)
-		SPAWN_DBG(5)
+		spawn(5)
 			update()
 
 /datum/effects/system/spark_spread/proc/start()
 	if(istype(holder, /atom/movable))
 		location = get_turf(holder)
-	SPAWN_DBG(0)
+	spawn(0)
 		if(istype(src.location, /turf))
 			src.location.hotspot_expose(1000, 100)
 		// Create sparks
 		for(var/i = 0, i < src.number, i++)
 			if(src.total_sparks > 20)
 				break;
-
+			
 			// Check spawn limits
 			if(!limiter.canISpawn(/obj/effects/sparks))
 				continue
@@ -91,7 +91,7 @@
 			var/obj/effects/sparks/sparks = unpool(/obj/effects/sparks)
 			sparks.set_loc(src.location)
 			src.total_sparks++
-
+			
 			// Set direction and distance to travel
 			var/direction
 			if(src.cardinals)
@@ -100,6 +100,6 @@
 				direction = pick(alldirs)
 			var/distance = rand(1,3)
 			// Store direction and distance to travel as the high quad and low quad of the low byte
-			livesparks[sparks] = direction << 4 | distance
-		SPAWN_DBG(5)
+			livesparks[sparks] = direction << 4 | distance	
+		spawn(5)
 			update()

@@ -10,16 +10,6 @@
 	throwforce = 50
 	health = 4
 	can_flip_bust = 1
-	p_class = 1.5
-	
-	recalcPClass()
-		var/maxPClass = 0
-		for (var/atom/movable/O in contents)
-			if (ishuman(O)) // can't use p_class for human mobs as we need to use the heavier one regardless of whether they're standing/lying down
-				maxPClass = max(maxPClass, 3) //horay magic number
-			else
-				maxPClass = max(maxPClass, O.p_class)
-		p_class = initial(p_class) + maxPClass / 2
 
 /obj/storage/cart/mechcart
 	name = "mechanics cart"

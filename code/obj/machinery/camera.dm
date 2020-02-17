@@ -7,7 +7,7 @@
 	layer = EFFECTS_LAYER_UNDER_1
 	var/c_tag = null
 	var/c_tag_order = 999
-	var/camera_status = 1.0
+	var/status = 1.0
 	anchored = 1.0
 	var/invuln = null
 	var/last_paper = 0
@@ -21,31 +21,6 @@
 	//Here's a list of cameras pointing to this camera for reprocessing purposes
 	var/list/obj/machinery/camera/referrers = list()
 
-	//MBC : Ok so this is a kind of dumb optimization thing. We want to unsubscribe cameras from the machine loop that do not need to process (All wall-mounted stuffs)
-	//		But sometimes a camera is created and then placed inside an object after a certain amount of ticks!!
-	//		We are gonna give cameras a grace period of a few process cycles before they decide they aren't needed. This is PROBABLY FINE!
-	var/unsubscribe_grace_counter = 0
-
-	var/oldx = 0
-	var/oldy = 0
-
-/obj/machinery/camera/process()
-	.=..()
-	if(!isturf(src.loc)) //This will end up removing coverage if camera is inside a thing.
-		var/turf/T = get_turf(src)
-		if(T && (T.x != oldx || T.y != oldy)) //This will end up removing coverage if camera is inside a thing.
-			src.updateCoverage() //MBC : handles moving cameras!
-			oldx = T.x
-			oldy = T.y
-			//boutput(world,"hewwo there : ) ")
-
-		src.updateCoverage() //MBC : handles moving cameras!
-
-	else if (src.type == /obj/machinery/camera) //we actually don't want this check to affect children, so we compare to exact type
-		unsubscribe_grace_counter++
-		if (unsubscribe_grace_counter >= 5)
-			UnsubscribeProcess()
-			unsubscribe_grace_counter = -1
 
 /obj/machinery/camera/television
 	name = "television camera"
@@ -54,71 +29,19 @@
 	icon_state = "television"
 	anchored = 1
 	density = 1
-	var/securedstate = 2
-
-/obj/machinery/camera/television/attackby(obj/item/W as obj, mob/user as mob)
-	..()
-	if (isscrewingtool(W)) //to move them
-		if (securedstate && src.securedstate >= 1)
-			playsound(src.loc, "sound/items/Screwdriver.ogg", 30, 1, -2)
-			actions.start(new/datum/action/bar/icon/cameraSecure(src, securedstate), user)
-		else if (securedstate)
-			boutput(user, "<span style=\"color:red\">You need to secure the floor bolts!</span>")
-	else if (iswrenchingtool(W))
-		if (src.securedstate <= 1)
-			playsound(src.loc, "sound/items/Wrench.ogg", 30, 1, -2)
-			boutput(user, "<span style=\"color:red\">You [securedstate == 1 ? "un" : ""]secure the floor bolts on the [src].</span>")
-			src.securedstate = (securedstate == 1) ? 0 : 1
-
-			if (securedstate == 0)
-				src.anchored = 0
-			else
-				src.anchored = 1
-
-/datum/action/bar/icon/cameraSecure //This is used when you are securing a non-mobile television camera
-	duration = 150
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
-	id = "cameraSecure"
-	icon = 'icons/obj/items.dmi'
-	icon_state = "screwdriver"
-	var/obj/machinery/camera/television/cam
-	var/secstate
-
-	New(Camera, Secstate)
-		cam = Camera
-		secstate = Secstate
-		..()
-
-	onStart()
-		..()
-		for(var/mob/O in AIviewers(owner))
-			O.show_message(text("<span style=\"color:blue\">[] begins [secstate == 2 ? "un" : ""]securing the camera hookups on the [cam].</span>", owner), 1)
-
-	onInterrupt(var/flag)
-		..()
-		boutput(owner, "<span style=\"color:red\">You were interrupted!</span>")
-
-	onEnd()
-		..()
-		owner.visible_message("<span style=\"color:blue\">[owner.name] [secstate == 2 ? "un" : ""]secures the camera hookups on the [cam].</span>")
-		cam.securedstate = (secstate == 2) ? 1 : 2
-		if (cam.securedstate != 2)
-			machines.Remove(cam)
-		else
-			machines.Add(cam)
 
 /obj/machinery/camera/television/mobile
 	name = "mobile television camera"
 	desc = "A bulky mobile camera for wireless broadcasting of live feeds."
 	anchored = 0
 	icon_state = "mobilevision"
-	securedstate = null //No bugginess thank you
 
 /obj/machinery/camera/New()
 	..()
 
 	cameras.Add(src)
-	SPAWN_DBG(10)
+
+	spawn(10)
 		// making life easy for mappers since 2013
 		if (dd_hasprefix(name, "autoname"))
 			var/area/where = get_area(src)
@@ -142,9 +65,6 @@
 						c_tag = "[where.name]"
 
 		addToNetwork()
-		updateCoverage() //Make sure coverage is updated. (must happen in spawn!)
-		add_to_turfs()
-
 
 /obj/machinery/camera/proc/addToNetwork()
 
@@ -172,45 +92,11 @@
 
 
 /obj/machinery/camera/disposing()
-	if (coveredTiles) //ZeWaka: Fix for null.Copy()
-		for(var/turf/O in coveredTiles.Copy()) //Remove all coverage
-			O.removeCameraCoverage(src)
-
-	src.remove_from_turfs() //needs to happen BEFORE the actual deletion or else it fuckks up
-
-
-	if(camnets && camnets[network])
-		camnets[network].Remove(src)
-
-	cameras.Remove(src)
-
-
-	if (c_north)
-		c_north.referrers -= src
-	if (c_east)
-		c_east.referrers -= src
-	if (c_south)
-		c_south.referrers -= src
-	if (c_west)
-		c_west.referrers -= src
-
-	for(var/obj/machinery/camera/C in referrers)
-		if (C.c_north == src)
-			C.c_north = null
-		if (C.c_east == src)
-			C.c_east = null
-		if (C.c_south == src)
-			C.c_south = null
-		if (C.c_west == src)
-			C.c_west = null
-		//C.removeNode(src)
-
-	src.referrers = null
-
 	..()
-
 	dirty_cameras |= referrers
 	camnet_needs_rebuild = 1
+	for(var/obj/machinery/camera/C in referrers) //In case the GC does not have time to remove us from the referring cameras
+		C.removeNode(src)
 
 	//logTheThing("debug", null, null, "<B>SpyGuy/Camnet:</B> Camera destroyed. Camera network needs a rebuild! Number of dirty cameras: [dirty_cameras.len]")
 	//connect_camera_list(referrers)
@@ -225,31 +111,11 @@
 
 /obj/machinery/camera/emp_act()
 	..()
-	if(!istype(src, /obj/machinery/camera/television)) //tv cams were getting messed up
-		src.icon_state = "cameraemp"
+	src.icon_state = "cameraemp"
 	src.network = null                   //Not the best way but it will do. I think.
-	camera_status--
-
-	if (coveredTiles) //ZeWaka: Fix for null.Copy()
-		for(var/turf/O in coveredTiles.Copy()) //Remove all coverage
-			O.removeCameraCoverage(src)
-		src.remove_from_turfs()
-
-
-	SPAWN_DBG(900)
-		camera_status++
+	spawn(900)
 		src.network = initial(src.network)
-		if(!istype(src, /obj/machinery/camera/television))
-			src.icon_state = initial(src.icon_state)
-
-		src.add_to_turfs()
-
-		if (coveredTiles)
-			for(var/turf/O in coveredTiles.Copy())
-				O.addCameraCoverage(src)
-
-		updateCoverage() // (must happen in spawn!)
-
+		src.icon_state = initial(src.icon_state)
 	src.disconnect_viewers()
 	return
 
@@ -259,7 +125,7 @@
 /obj/machinery/camera/attack_ai(var/mob/living/silicon/ai/user as mob)
 	if (!istype(user)) //Other silicon mobs shouldn't try to encroach on the AI's "view through all cameras" schtick.  Mostly because it generates runtime errors.
 		return
-	if (src.network != user.network || !(src.camera_status))
+	if (src.network != user.network || !(src.status))
 		return
 	//if (istype(user, /mob/living/silicon/ai/hologram))
 	//	return
@@ -269,8 +135,8 @@
 // v the fuck is this??? v
 /*/obj/machinery/camera/attack_hand(mob/user as mob)
 	if(user.jew == 1)
-		src.camera_status = !( src.camera_status )
-		if (!( src.camera_status ))
+		src.status = !( src.status )
+		if (!( src.status ))
 			var/message = pick("OY VEY!","Bupkes!","Feh!","What a mishegas!","Schlocky putz!")
 			user.say(message)
 			src.icon_state = "camera1"
@@ -286,16 +152,15 @@
 
 /obj/machinery/camera/proc/disconnect_viewers()
 	for(var/mob/O in mobs)
-		/* Not needed with new AI cam system
-		if (isAI(O))
+		if (istype(O, /mob/living/silicon/ai))
 			var/mob/living/silicon/ai/OAI = O
-			if (OAI && OAI.current == src)
+			if (OAI.current == src)
 				if( OAI.camera_overlay_check(src) )
 					boutput(OAI, "Your regain your connection to the camera.")
 				else
 					boutput(OAI, "Your connection to the camera has been lost.")
-		*/
-		if (istype(O.machine, /obj/machinery/computer/security))
+
+		else if (istype(O.machine, /obj/machinery/computer/security))
 			var/obj/machinery/computer/security/S = O.machine
 			if (S.current == src)
 				O.machine = null
@@ -303,60 +168,57 @@
 				O.set_eye(null)
 				boutput(O, "The screen bursts into static.")
 
-/obj/machinery/camera/attackby(obj/item/W as obj, mob/user as mob)
+/obj/machinery/camera/attackby(obj/W as obj, mob/user as mob)
 	if(istype(W,/obj/item/parts/human_parts)) //dumb easter egg incoming
 		user.visible_message("<span style=\"color:red\">[user] wipes [src] with the bloody end of [W.name]. What the fuck?</span>", "<span style=\"color:red\">You wipe [src] with the bloody end of [W.name]. What the fuck?</span>")
 		return
-	if (issnippingtool(W))
-		src.camera_status = !( src.camera_status )
-		if (!( src.camera_status ))
+	if (istype(W, /obj/item/wirecutters))
+		src.status = !( src.status )
+		if (!( src.status ))
 			user.visible_message("<span style=\"color:red\">[user] has deactivated [src]!</span>", "<span style=\"color:red\">You have deactivated [src].</span>")
 			logTheThing("station", null, null, "[key_name(user)] deactivated a security camera ([showCoords(src.loc.x, src.loc.y, src.loc.z)])")
 			playsound(src.loc, "sound/items/Wirecutter.ogg", 100, 1)
 			src.icon_state = "camera1"
 			add_fingerprint(user)
-			if (coveredTiles) //ZeWaka: Fix for null.Copy()
-				for(var/turf/O in coveredTiles.Copy()) //Remove all coverage
-					O.removeCameraCoverage(src)
-				src.remove_from_turfs()
+
 		else
 			user.visible_message("<span style=\"color:red\">[user] has reactivated [src]!</span>", "<span style=\"color:red\">You have reactivated [src].</span>")
 			playsound(src.loc, "sound/items/Wirecutter.ogg", 100, 1)
 			src.icon_state = "camera"
 			add_fingerprint(user)
-			src.add_to_turfs()
-			if (coveredTiles)
-				for(var/turf/O in coveredTiles.Copy())
-					O.addCameraCoverage(src)
-			spawn()
-				updateCoverage() //(must happen in spawn!)
 		// now disconnect anyone using the camera
 		src.disconnect_viewers()
 	else if (istype(W, /obj/item/paper))
 		if (last_paper && ( (last_paper + 80) >= world.time))
 			return
+
 		last_paper = world.time
 		var/obj/item/paper/X = W
 		boutput(user, "You hold a paper up to the camera ...")
 		for(var/mob/O in mobs)
-			if (isAI(O))
+			if (istype(O, /mob/living/silicon/ai))
 				boutput(O, "[user] holds a paper up to one of your cameras ...")
-				O.Browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", X.name, X.info), text("window=[]", X.name))
+				O << browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", X.name, X.info), text("window=[]", X.name))
 				logTheThing("station", user, O, "holds up a paper to a camera at [log_loc(src)], forcing %target% to read it. <b>Title:</b> [X.name]. <b>Text:</b> [adminscrub(X.info)]")
 			else if (istype(O.machine, /obj/machinery/computer/security))
 				var/obj/machinery/computer/security/S = O.machine
 				if (S.current == src)
 					boutput(O, "[user] holds a paper up to one of the cameras ...")
-					O.Browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", X.name, X.info), text("window=[]", X.name))
+					O << browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", X.name, X.info), text("window=[]", X.name))
 					logTheThing("station", user, O, "holds up a paper to a camera at [log_loc(src)], forcing %target% to read it. <b>Title:</b> [X.name]. <b>Text:</b> [adminscrub(X.info)]")
+
 
 //Return a working camera that can see a given mob
 //or null if none
 /proc/seen_by_camera(var/mob/M)
-	.= 0
-	if (isturf(M.loc))
-		var/turf/T = M.loc
-		.= (T.cameras && T.cameras.len)
+
+	for(var/obj/machinery/camera/C in oview(M))
+		if(C.status)	// check if camera disabled
+			return C
+			break
+
+	return null
+
 
 
 /obj/machinery/camera/motion
@@ -367,17 +229,16 @@
 
 /obj/machinery/camera/motion/process()
 	// motion camera event loop
-	. = ..()
 	if (detectTime > 0)
 		var/elapsed = world.time - detectTime
 		if (elapsed > 300)
 			triggerAlarm()
 	else if (detectTime == -1)
 		for (var/mob/target in motionTargets)
-			if (isdead(target)) lostTarget(target)
+			if (target.stat == 2) lostTarget(target)
 
 /obj/machinery/camera/motion/proc/newTarget(var/mob/target)
-	if (isAI(target)) return 0
+	if (istype(target, /mob/living/silicon/ai)) return 0
 	if (detectTime == 0)
 		detectTime = world.time // start the clock
 	if (!(target in motionTargets))
@@ -393,20 +254,20 @@
 /obj/machinery/camera/motion/proc/cancelAlarm()
 	if (detectTime == -1)
 		for (var/mob/living/silicon/aiPlayer in mobs)
-			if (camera_status) aiPlayer.cancelAlarm("Motion", src.loc.loc)
+			if (status) aiPlayer.cancelAlarm("Motion", src.loc.loc)
 	detectTime = 0
 	return 1
 
 /obj/machinery/camera/motion/proc/triggerAlarm()
 	if (!detectTime) return 0
 	for (var/mob/living/silicon/aiPlayer in mobs)
-		if (camera_status) aiPlayer.triggerAlarm("Motion", src.loc.loc, src)
+		if (status) aiPlayer.triggerAlarm("Motion", src.loc.loc, src)
 	detectTime = -1
 	return 1
 
-/obj/machinery/camera/motion/attackby(obj/item/W as obj, mob/user as mob)
-	if (issnippingtool(W) && locked == 1) return
-	if (isscrewingtool(W))
+/obj/machinery/camera/motion/attackby(W as obj, mob/user as mob)
+	if (istype(W, /obj/item/wirecutters) && locked == 1) return
+	if (istype(W, /obj/item/screwdriver))
 		var/turf/T = user.loc
 		boutput(user, text("<span style=\"color:blue\">[]ing the access hatch... (this is a long process)</span>", (locked) ? "Open" : "Clos"))
 		sleep(100)
@@ -416,8 +277,8 @@
 
 	..() // call the parent to (de|re)activate
 
-	if (issnippingtool(W)) // now handle alarm on/off...
-		if (camera_status) // ok we've just been reconnected... send an alarm!
+	if (istype(W, /obj/item/wirecutters)) // now handle alarm on/off...
+		if (status) // ok we've just been reconnected... send an alarm!
 			detectTime = world.time - 301
 			triggerAlarm()
 		else
@@ -442,7 +303,7 @@
 	camnet_needs_rebuild = 0
 
 /proc/disconnect_camera_network()
-	for(var/obj/machinery/camera/C in cameras)
+	for(var/obj/machinery/camera/C in machines)
 		C.c_north = null
 		C.c_east = null
 		C.c_south = null

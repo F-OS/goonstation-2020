@@ -10,16 +10,8 @@ obj/machinery/computer/general_air_control
 	var/list/sensor_information = list()
 	var/datum/radio_frequency/radio_connection
 
-	lr = 0.6
-	lg = 1
-	lb = 0.1
-
-	disposing()
-		radio_controller.remove_object(src, "[frequency]")
-		..()
-
 	attack_hand(mob/user)
-		user.Browse(return_text(),"window=computer")
+		user << browse(return_text(),"window=computer")
 		user.machine = src
 		onclose(user, "computer")
 
@@ -28,16 +20,15 @@ obj/machinery/computer/general_air_control
 
 		src.updateDialog()
 
-	attackby(obj/item/I as obj, user as mob)
-		if (isscrewingtool(I))
+	attackby(I as obj, user as mob)
+		if(istype(I, /obj/item/screwdriver))
 			playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 			if(do_after(user, 20))
-				if (src.status & BROKEN)
+				if (src.stat & BROKEN)
 					boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 					var/obj/computerframe/A = new /obj/computerframe( src.loc )
 					if(src.material) A.setMaterial(src.material)
-					var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-					G.set_loc(src.loc)
+					new /obj/item/raw_material/shard/glass( src.loc )
 					var/obj/item/circuitboard/air_management/M = new /obj/item/circuitboard/air_management( A )
 					for (var/obj/C in src)
 						C.set_loc(src.loc)
@@ -130,6 +121,7 @@ obj/machinery/computer/general_air_control
 		icon = 'icons/obj/computer.dmi'
 		icon_state = "tank"
 		req_access = list(access_engineering_atmos)
+		req_access_txt = "46"
 
 		var/input_tag
 		var/output_tag
@@ -266,7 +258,7 @@ Max Output Pressure: [output_pressure] kPa<BR>"}
 				var/change = text2num(href_list["adj_pressure"])
 				pressure_setting = min(max(0, pressure_setting + change), 50*ONE_ATMOSPHERE)
 
-			SPAWN_DBG(7)
+			spawn(7)
 				attack_hand(usr)
 
 	fuel_injection
@@ -282,16 +274,15 @@ Max Output Pressure: [output_pressure] kPa<BR>"}
 		var/cutoff_temperature = 2000
 		var/on_temperature = 1200
 
-		attackby(obj/item/I as obj, user as mob)
-			if (isscrewingtool(I))
+		attackby(I as obj, user as mob)
+			if(istype(I, /obj/item/screwdriver))
 				playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 				if(do_after(user, 20))
-					if (src.status & BROKEN)
+					if (src.stat & BROKEN)
 						boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 						var/obj/computerframe/A = new /obj/computerframe( src.loc )
 						if(src.material) A.setMaterial(src.material)
-						var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-						G.set_loc(src.loc)
+						new /obj/item/raw_material/shard/glass( src.loc )
 						var/obj/item/circuitboard/injector_control/M = new /obj/item/circuitboard/injector_control( A )
 						for (var/obj/C in src)
 							C.set_loc(src.loc)
@@ -461,9 +452,9 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 			newsignal.data["address_1"] = signal.data["sender"]
 			newsignal.data["command"] = "reply_alerts"
 			if(priority_alarms.len)
-				newsignal.data["severe_list"] = jointext(priority_alarms, ";")
+				newsignal.data["severe_list"] = dd_list2text(priority_alarms, ";")
 			if(minor_alarms.len)
-				newsignal.data["minor_list"] = jointext(minor_alarms, ";")
+				newsignal.data["minor_list"] = dd_list2text(minor_alarms, ";")
 
 			frequency.post_signal(src, newsignal)
 			return
@@ -474,12 +465,11 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 
 		if(!zone || !severity) return
 
-		priority_alarms -= zone
-		minor_alarms -= zone
-
-		if (severity == "severe")
+		if(severity=="severe")
+			priority_alarms -= zone
 			priority_alarms += zone
-		else if (severity == "minor")
+		else
+			minor_alarms -= zone
 			minor_alarms += zone
 
 	proc
@@ -490,7 +480,7 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 
 
 	attack_hand(mob/user)
-		user.Browse(return_text(),"window=computer")
+		user << browse(return_text(),"window=computer")
 		user.machine = src
 		onclose(user, "computer")
 
@@ -557,7 +547,8 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 	var/obj/machinery/atmospherics/mixer/mixerid
 	var/mixer_information
 	var/id
-	req_access = list(access_engineering_engine, access_tox_storage)
+	req_access = list(access_engineering_engine, access_tox)
+	req_only_one_required = 1
 
 	var/last_change = 0
 	var/message_delay = 600
@@ -565,28 +556,27 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 	var/frequency = 1439
 	var/datum/radio_frequency/radio_connection
 	attack_hand(mob/user)
-		if(status & (BROKEN | NOPOWER))
+		if(stat & (BROKEN | NOPOWER))
 			return
-		user.Browse(return_text(),"window=computer")
+		user << browse(return_text(),"window=computer")
 		user.machine = src
 		onclose(user, "computer")
 
 	process()
 		..()
-		if(status & (BROKEN | NOPOWER))
+		if(stat & (BROKEN | NOPOWER))
 			return
 		src.updateDialog()
 
-	attackby(obj/item/I as obj, user as mob)
-		if (isscrewingtool(I))
+	attackby(I as obj, user as mob)
+		if(istype(I, /obj/item/screwdriver))
 			playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 			if(do_after(user, 20))
-				if (src.status & BROKEN)
+				if (src.stat & BROKEN)
 					boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 					var/obj/computerframe/A = new /obj/computerframe( src.loc )
 					if(src.material) A.setMaterial(src.material)
-					var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-					G.set_loc(src.loc)
+					new /obj/item/raw_material/shard/glass( src.loc )
 					var/obj/item/circuitboard/air_management/M = new /obj/item/circuitboard/air_management( A )
 					for (var/obj/C in src)
 						C.set_loc(src.loc)
@@ -702,7 +692,7 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 			return 0
 		if (!radio_connection)
 			return 0
-		if (!src.allowed(usr))
+		if (!src.allowed(usr, req_only_one_required))
 			boutput(usr, "<span style=\"color:red\">Access denied!</span>")
 			return 0
 
@@ -740,9 +730,9 @@ Rate: <A href='?src=\ref[src];change_vol=-10'>--</A> <A href='?src=\ref[src];cha
 				var/change = input(usr,"Target Pressure (0 - [MAX_PRESSURE]):", "Enter target pressure", pressure) as num
 				if ((get_dist(src, usr) > 1 && !issilicon(usr)) || !isliving(usr) || iswraith(usr) || isintangible(usr))
 					return 0
-				if (usr.getStatusDuration("stunned") > 0 || usr.getStatusDuration("weakened") || usr.getStatusDuration("paralysis") > 0 || !isalive(usr) || usr.restrained())
+				if (usr.stunned > 0 || usr.weakened > 0 || usr.paralysis > 0 || usr.stat != 0 || usr.restrained())
 					return 0
-				if (!src.allowed(usr))
+				if (!src.allowed(usr, req_only_one_required))
 					boutput(usr, "<span style=\"color:red\">Access denied!</span>")
 					return 0
 				if (!isnum(change))

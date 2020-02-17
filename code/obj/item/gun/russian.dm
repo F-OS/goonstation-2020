@@ -33,7 +33,6 @@
 	proc/fire_gun(mob/user as mob)
 		if(src.shotsLeft > 1)
 			src.shotsLeft--
-			playsound(user, "sound/weapons/Gunclick.ogg", 80, 1)
 			for(var/mob/O in AIviewers(user, null))
 				if (O.client)
 					O.show_message("<span style=\"color:red\">[user] points the gun at \his head. Click!</span>", 1, "<span style=\"color:red\">Click!</span>", 2)
@@ -71,7 +70,7 @@
 		if(target.loc != user)
 			if(src.fire_gun(user))
 				user.show_text("That gun DID look a bit dodgy, after all!", "red")
-				user.playsound_local(user, 'sound/musical_instruments/Trombone_Failiure.ogg', 50, 1)
+				user.playsound_local(user, 'sound/misc/trombone.ogg', 50, 1)
 
 	attack_self(mob/user)
 		if(!shotsLeft)

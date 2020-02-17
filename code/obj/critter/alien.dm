@@ -50,11 +50,11 @@
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
 			//if(isalien(C)) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.health < 0) continue
 			if (C.name == src.attacker) src.attack = 1
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -90,17 +90,17 @@
 			C.health -= 10
 			if(C.health <= 0)
 				C.CritterDeath()
-			SPAWN_DBG(15)
+			spawn(15)
 				src.attacking = 0
 			return
 
 		src.visible_message("<span class='combat'><B>[src]</B> claws at [src.target]!</span>")
 		random_brute_damage(src.target, rand(5,10))
-		SPAWN_DBG(10)
+		spawn(10)
 			src.attacking = 0
 
 	ChaseAttack(mob/M)
 		src.visible_message("<span class='combat'><B>[src]</B> jumps at [M]!</span>")
 		if(iscarbon(M))
-			if (prob(60)) M.changeStatus("stunned", rand(10, 50))
+			if (prob(60)) M.stunned += rand(1,5)
 			random_brute_damage(M, rand(2,5))

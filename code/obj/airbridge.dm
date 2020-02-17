@@ -4,16 +4,16 @@
 // - Airbridge test buttons
 // - Dummy turfs
 
-//air bridge controllers of the same id will automatically establish and destroy air bridges between each other if told to.
+//air bridge controlers of the same id will automatically establish and destroy air bridges between each other if told to.
 //air bridges have a width of 3 not including the walls.
-//dont create more than 2 controllers with the same id or stuff will break. And itll be your fault.
+//dont create more than 2 controlers with the same id or stuff will break. And itll be your fault.
 //Also, make sure the bridges can extend in a straight line. Or you're gonna have a really bad time
 
 var/global/list/airbridge_controllers = list()
 
 /* -------------------- Controller -------------------- */
 
-/obj/airbridge_controller
+/obj/airbridge_controler
 	name = "Airbridge Controller"
 	desc = "This is an invisible thing. Yet you can see it. You notice reality unraveling around you."
 	icon = 'icons/misc/mark.dmi'
@@ -26,7 +26,7 @@ var/global/list/airbridge_controllers = list()
 	var/id = "noodles"
 	var/working = 0
 	var/maintaining_bridge = 0
-	var/obj/airbridge_controller/linked = null
+	var/obj/airbridge_controler/linked = null
 
 	var/list/path = new/list()
 	var/list/maintaining_turfs = new/list()
@@ -34,19 +34,12 @@ var/global/list/airbridge_controllers = list()
 	var/primary_controller = 0 // if 1, the bridge extends from this controller to the other one when toggled by an airbridge computer
 	// ONLY SET ONE CONTROLLER TO 1 OR IT'S TOTALLY POINTLESS
 
-	var/is_drawbridge = 0 //asteroid turf instead of space. Different icons
-
-	drawbridge
-		name = "Drawbridge Controller"
-		is_drawbridge = 1
-
 	New()
 		airbridge_controllers += src
 		..()
 
 	proc/get_link()
-		for(var/obj/airbridge_controller/C in world)
-			LAGCHECK(LAG_LOW)
+		for(var/obj/airbridge_controler/C in world)
 			if(C.z == src.z && C.id == src.id && C != src)
 				linked = C
 				break
@@ -73,7 +66,7 @@ var/global/list/airbridge_controllers = list()
 
 		working = 1
 
-		SPAWN_DBG(0)
+		spawn(0)
 			sleep(50)
 
 			for(var/turf/simulated/T in maintaining_turfs)
@@ -91,10 +84,9 @@ var/global/list/airbridge_controllers = list()
 				T.air.trace_gases = null
 				T.air.temperature = T20C
 				T.air.temperature_archived = null
-				LAGCHECK(LAG_LOW)
+				sleep(-1)
 
 			working = 0
-			updateComps()
 
 		return
 
@@ -125,7 +117,7 @@ var/global/list/airbridge_controllers = list()
 		working = 1
 		maintaining_bridge = 1
 
-		SPAWN_DBG(0)
+		spawn(0)
 			path.Cut()
 
 			var/turf/current = src.loc
@@ -142,32 +134,27 @@ var/global/list/airbridge_controllers = list()
 
 			for(var/turf/T in path)
 				var/list/added = list()
-				var/turf/curr = new/turf/simulated/floor/shuttle { fullbright = 1 } (T)
-				if (is_drawbridge) curr.icon = 'icons/turf/drawbridge.dmi'
+				var/turf/curr = new/turf/simulated/shuttle/floor { RL_Ignore = 1 } (T)
 				maintaining_turfs.Add(curr)
 				added.Add(curr)
 
 				for(var/i = 1, i <= tunnel_width, i++)
 
 					if(i == tunnel_width)
-						curr = new/turf/simulated/shuttle/wall { fullbright = 1 } ( get_steps(T, turn(path[T], 90),i) )
-						if (is_drawbridge) curr.icon = 'icons/turf/drawbridge.dmi'
+						curr = new/turf/simulated/shuttle/wall/destroyable { RL_Ignore = 1 } ( get_steps(T, turn(path[T], 90),i) )
 						maintaining_turfs.Add(curr)
 						added.Add(curr)
 
-						curr = new/turf/simulated/shuttle/wall { fullbright = 1 } ( get_steps(T, turn(path[T], -90),i) )
-						if (is_drawbridge) curr.icon = 'icons/turf/drawbridge.dmi'
+						curr = new/turf/simulated/shuttle/wall/destroyable { RL_Ignore = 1 } ( get_steps(T, turn(path[T], -90),i) )
 						maintaining_turfs.Add(curr)
 						added.Add(curr)
 
 					else
-						curr = new/turf/simulated/floor/shuttle { fullbright = 1 } ( get_steps(T, turn(path[T], 90),i) )
-						if (is_drawbridge) curr.icon = 'icons/turf/drawbridge.dmi'
+						curr = new/turf/simulated/shuttle/floor { RL_Ignore = 1 } ( get_steps(T, turn(path[T], 90),i) )
 						maintaining_turfs.Add(curr)
 						added.Add(curr)
 
-						curr = new/turf/simulated/floor/shuttle { fullbright = 1 } ( get_steps(T, turn(path[T], -90),i) )
-						if (is_drawbridge) curr.icon = 'icons/turf/drawbridge.dmi'
+						curr = new/turf/simulated/shuttle/floor { RL_Ignore = 1 } ( get_steps(T, turn(path[T], -90),i) )
 						maintaining_turfs.Add(curr)
 						added.Add(curr)
 
@@ -176,32 +163,25 @@ var/global/list/airbridge_controllers = list()
 					for(var/turf/A in added)
 						var/obj/shuttledummy/D = null
 
-						if (is_drawbridge)
-							if(A.density)
-								D = new/obj/shuttledummy/wall/drawbridge(A)
-							else
-								D = new/obj/shuttledummy/floor/drawbridge(A)
+						if(A.density)
+							D = new/obj/shuttledummy/wall(A)
 						else
-							if(A.density)
-								D = new/obj/shuttledummy/wall(A)
-							else
-								D = new/obj/shuttledummy/floor(A)
+							D = new/obj/shuttledummy/floor(A)
 
 						if(added.Find(A) == added.len)
 							if(D.slide(path[T]))
 								D.layer = 3 // TODO LAYER
-								SPAWN_DBG(20)  qdel(D)
+								spawn(20)  qdel(D)
 						else
-							SPAWN_DBG(0)
+							spawn(0)
 								if(D && D.slide(path[T]))
 									D.layer = 3 // TODO LAYER
-									SPAWN_DBG(20) qdel(D)
+									spawn(20) qdel(D)
 
 				playsound(T, "sound/effects/airbridge_dpl.ogg", 50, 1)
 				sleep(1)
 
 			working = 0
-			updateComps()
 
 		return
 
@@ -220,51 +200,29 @@ var/global/list/airbridge_controllers = list()
 		maintaining_bridge = 0
 		playsound(src.loc, "sound/machines/warning-buzzer.ogg", 50, 1)
 
-		SPAWN_DBG(20)
+		spawn(20)
 			var/list/path_reverse = reverse_list(path)
 
-			if (!is_drawbridge)
-				for(var/turf/T in path_reverse)
-					maintaining_turfs.Add(new/turf/space(T))
-					harmless_smoke_puff(T)
-					for(var/i = 1, i <= tunnel_width, i++)
-						maintaining_turfs.Add(new/turf/space( get_steps(T, turn(path[T], 90),i) ) )
-						//new/obj/effects/harmless_smoke(get_steps(T, turn(path[T], 90),i))
-						maintaining_turfs.Add(new/turf/space( get_steps(T, turn(path[T], -90),i) ) )
-						//new/obj/effects/harmless_smoke(get_steps(T, turn(path[T], -90),i))
+			for(var/turf/T in path_reverse)
+				maintaining_turfs.Add(new/turf/space(T))
+				harmless_smoke_puff(T)
+				for(var/i = 1, i <= tunnel_width, i++)
+					maintaining_turfs.Add(new/turf/space( get_steps(T, turn(path[T], 90),i) ) )
+					//new/obj/effects/harmless_smoke(get_steps(T, turn(path[T], 90),i))
+					maintaining_turfs.Add(new/turf/space( get_steps(T, turn(path[T], -90),i) ) )
+					//new/obj/effects/harmless_smoke(get_steps(T, turn(path[T], -90),i))
 
-					playsound(T, "sound/effects/airbridge_dpl.ogg", 50, 1)
+				playsound(T, "sound/effects/airbridge_dpl.ogg", 50, 1)
 
-					sleep(7)
-			else
-				for(var/turf/T in path_reverse)
-					maintaining_turfs.Add(new/turf/simulated/floor/plating/airless/asteroid(T))
-					harmless_smoke_puff(T)
-					for(var/i = 1, i <= tunnel_width, i++)
-						maintaining_turfs.Add(new/turf/simulated/floor/plating/airless/asteroid( get_steps(T, turn(path[T], 90),i) ) )
-						//new/obj/effects/harmless_smoke(get_steps(T, turn(path[T], 90),i))
-						maintaining_turfs.Add(new/turf/simulated/floor/plating/airless/asteroid( get_steps(T, turn(path[T], -90),i) ) )
-						//new/obj/effects/harmless_smoke(get_steps(T, turn(path[T], -90),i))
-
-					playsound(T, "sound/effects/airbridge_dpl.ogg", 50, 1)
-
-					sleep(7)
+				sleep(7)
 
 			maintaining_turfs.Cut()
 			working = 0
-			updateComps()
 
 		return
 
-	proc/updateComps()
-		for (var/obj/machinery/computer/airbr/C in airbridgeComputers)
-			if (C.primary_controller == src)
-				C.updateDialog()
-
-
 /* -------------------- Computer -------------------- */
 
-var/global/list/airbridgeComputers = list()
 
 /obj/machinery/computer/airbr
 	name = "Airbridge Computer"
@@ -283,24 +241,19 @@ var/global/list/airbridgeComputers = list()
 
 	var/list/links = list()
 
-	var/obj/airbridge_controller/primary_controller = null
+	var/obj/airbridge_controler/primary_controller = null
 
 	var/emergency = 0 // 1 to automatically extend when the emergency shuttle docks
 
 	New()
 		..()
-		airbridgeComputers += src
 		if (src.emergency && emergency_shuttle) // emergency_shuttle is the controller datum
 			emergency_shuttle.airbridges += src
-
-	disposing()
-		airbridgeComputers -= src
-		..()
 
 	proc/get_links()
 		if (!airbridge_controllers.len)
 			return
-		for (var/obj/airbridge_controller/C in airbridge_controllers)//world)
+		for (var/obj/airbridge_controler/C in airbridge_controllers)//world)
 			if (C.id == src.id)
 				links.Add(C)
 				if (C.primary_controller)
@@ -310,19 +263,19 @@ var/global/list/airbridgeComputers = list()
 		..()
 		update_status()
 		if (starts_established && links.len)
-			SPAWN_DBG(10)
+			spawn(10)
 				do_initial_extend()
 		return
 
 	proc/pick_controller()
 		if (istype(src.primary_controller))
 			return src.primary_controller
-		var/obj/airbridge_controller/C = pick(links)
+		var/obj/airbridge_controler/C = pick(links)
 		if (istype(C))
 			return C
 
 	proc/do_initial_extend()
-		var/obj/airbridge_controller/C = src.pick_controller()
+		var/obj/airbridge_controler/C = src.pick_controller()
 		if (!istype(C))
 			return
 
@@ -343,39 +296,34 @@ var/global/list/airbridgeComputers = list()
 		if (!links.len)
 			working = 0
 			starts_established = 0
-			state_str = "ERROR: No controllers found."
+			state_str = "ERROR: No controlers found."
 			return
 
-		var/obj/airbridge_controller/C = src.pick_controller()
+		var/obj/airbridge_controler/C = src.pick_controller()
 		if (!istype(C))
 			return
-
 		working = C.is_working()
 		icon_state = "airbr[working]"
 		state_str = C.get_state_string()
 
-	attack_hand(var/mob/user as mob, params)
-		if (..(user, params))
+	attack_hand(var/mob/user as mob)
+		if (..(user))
 			return
 
 		update_status()
 
 		var/dat = ""
 		dat += "<b>Controller Status:</b><BR>"
-		dat += "[state_str]<BR><BR>"
+		dat += "[state_str]<BR>"
 		dat += "[working ? "Working..." : "Idle..."]<BR><BR>"
 		dat += "<b>Airbridge Control:</b><BR>"
 		dat += "<A href='?src=\ref[src];create=1'>Establish</A><BR>"
 		dat += "<A href='?src=\ref[src];remove=1'>Retract</A><BR>"
 		dat += "<A href='?src=\ref[src];air=1'>Pressurize</A><BR>"
 
-		if (user.client.tooltipHolder)
-			user.client.tooltipHolder.showClickTip(src, list(
-				"params" = params,
-				"title" = src.name,
-				"content" = dat,
-			))
-
+		user.machine = src
+		user << browse("<TITLE>Airbridge Computer</TITLE><BR>[dat]", "window=t_computer;size=400x300")
+		onclose(user, "airbr_computer")
 		return
 
 	proc/ensure_links()
@@ -391,7 +339,7 @@ var/global/list/airbridgeComputers = list()
 	proc/establish_bridge()
 		if (!src.ensure_links())
 			return 0
-		var/obj/airbridge_controller/C = src.pick_controller()
+		var/obj/airbridge_controler/C = src.pick_controller()
 		if (istype(C))
 			C.establish_bridge()
 			return 1
@@ -399,7 +347,7 @@ var/global/list/airbridgeComputers = list()
 	proc/remove_bridge()
 		if (!src.ensure_links())
 			return 0
-		var/obj/airbridge_controller/C = src.pick_controller()
+		var/obj/airbridge_controler/C = src.pick_controller()
 		if (istype(C))
 			C.remove_bridge()
 			return 1
@@ -407,7 +355,7 @@ var/global/list/airbridgeComputers = list()
 	proc/pressurize()
 		if (!src.ensure_links())
 			return 0
-		var/obj/airbridge_controller/C = src.pick_controller()
+		var/obj/airbridge_controler/C = src.pick_controller()
 		if (istype(C))
 			C.pressurize()
 			return 1
@@ -421,53 +369,55 @@ var/global/list/airbridgeComputers = list()
 				if (emergency_shuttle.location != SHUTTLE_LOC_STATION)
 					boutput(usr, "<span style=\"color:red\">The airbridge cannot be deployed while the shuttle is not in position.</span>")
 					return
-			if (!(src.allowed(usr)))
+			if (!(src.allowed(usr, req_only_one_required)))
 				boutput(usr, "<span style=\"color:red\">Access denied.</span>")
 				return
 			if (src.establish_bridge())
 				logTheThing("station", usr, null, "extended the airbridge at [usr.loc.loc] ([showCoords(usr.x, usr.y, usr.z)])")
 
 		else if (href_list["remove"])
-			if (!(src.allowed(usr)))
+			if (!(src.allowed(usr, req_only_one_required)))
 				boutput(usr, "<span style=\"color:red\">Access denied.</span>")
 				return
 			if (src.remove_bridge())
 				logTheThing("station", usr, null, "retracted the airbridge at [usr.loc.loc] ([showCoords(usr.x, usr.y, usr.z)])")
 
 		else if (href_list["air"])
-			if (!(src.allowed(usr)))
+			if (!(src.allowed(usr, req_only_one_required)))
 				boutput(usr, "<span style=\"color:red\">Access denied.</span>")
 				return
 			if (src.pressurize())
 				logTheThing("station", usr, null, "pressurized the airbridge at [usr.loc.loc] ([showCoords(usr.x, usr.y, usr.z)])")
 
 		update_status()
+		usr << browse(null, "window=airbr_computer")
+		//src.updateUsrDialog()
 		src.updateDialog()
 		return
 
 	power_change()
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			icon_state = "airbrbr"
 			light.disable()
 
 		else if(powered())
 			icon_state = "airbr0"
-			status &= ~NOPOWER
+			stat &= ~NOPOWER
 			light.enable()
 		else
-			SPAWN_DBG(rand(0, 15))
+			spawn(rand(0, 15))
 				icon_state = "airbroff"
-				status |= NOPOWER
+				stat |= NOPOWER
 				light.disable()
 	set_broken()
-		if (status & BROKEN) return
+		if (stat & BROKEN) return
 		var/datum/effects/system/harmless_smoke_spread/smoke = new /datum/effects/system/harmless_smoke_spread()
 		smoke.set_up(5, 0, src)
 		smoke.start()
 		icon_state = initial(icon_state)
 		icon_state = "airbrbr"
 		light.disable()
-		status |= BROKEN
+		stat |= BROKEN
 
 /obj/machinery/computer/airbr/emergency_shuttle
 	icon = 'icons/obj/airtunnel.dmi'
@@ -485,7 +435,7 @@ var/global/list/airbridgeComputers = list()
 	anchored = 1.0
 
 	attack_hand(mob/user as mob)
-		for(var/obj/airbridge_controller/C in range(3, src))
+		for(var/obj/airbridge_controler/C in range(3, src))
 			boutput(usr, "<span style=\"color:blue\">[C.toggle_bridge()]</span>")
 			break
 		return
@@ -529,15 +479,9 @@ var/global/list/airbridgeComputers = list()
 	density = 1
 	opacity = 1
 
-	drawbridge
-		icon = 'icons/turf/drawbridge.dmi'
-
 /obj/shuttledummy/floor
 	name = "floor"
 	icon = 'icons/turf/shuttle.dmi'
 	icon_state = "floor"
 	density = 1
 	opacity = 0
-
-	drawbridge
-		icon = 'icons/turf/drawbridge.dmi'

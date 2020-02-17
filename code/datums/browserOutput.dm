@@ -12,17 +12,13 @@ For the main html chat area
 #define CTX_JUMP 64
 #define CTX_GET 128
 
-#define CTX_OBSERVE 256
-#define CTX_GHOSTJUMP 512
-
 //Precaching a bunch of shit
 var/global
 	savefile/iconCache = new /savefile("data/iconCache.sav") //Cache of icons for the browser output
+	chatDebug = file("data/chatDebug.log")
 	cFlagsShitguy = CTX_GIB | CTX_GET
 	cFlagsSa = CTX_BAN | CTX_POPT | CTX_JUMP
 	cFlagsMod = CTX_SMSG | CTX_BOOT | CTX_PM
-
-	cFlagsDead = CTX_OBSERVE | CTX_GHOSTJUMP
 	// Why is this defined this way you ask?
 	// It's because if you define an associative list mapping constants inside strings
 	// like "[LEVEL_MOD]" = FOOBAR_SHITFUCK_FUCKFACE
@@ -39,7 +35,7 @@ var/global
 	3 = LEVEL_SA
 	2 = LEVEL_MOD
 	1 = LEVEL_BABBY
-	*/
+*/
 
 //On client, created on login
 /datum/chatOutput
@@ -73,12 +69,10 @@ var/global
 		load()
 			if (src.owner)
 				//For local-testing fallback
-				if (!cdn)
+				if (!CDN_ENABLED || config.env == "dev")
 					var/list/chatResources = list(
 						"browserassets/js/jquery.min.js",
-						"browserassets/js/errorHandler.js",
-						//"browserassets/js/array.generics.min.js",
-						//"browserassets/js/anchorme.js",
+						"browserassets/js/json2.min.js",
 						"browserassets/js/browserOutput.js",
 						"browserassets/css/fonts/fontawesome-webfont.eot",
 						"browserassets/css/fonts/fontawesome-webfont.svg",
@@ -92,7 +86,7 @@ var/global
 				src.owner << browse(grabResource("html/browserOutput.html"), "window=browseroutput")
 
 				if (src.loadAttempts < 5) //To a max of 5 load attempts
-					SPAWN_DBG(200) //20 seconds
+					spawn(200) //20 seconds
 						if (src.owner && !src.loaded)
 							src.loadAttempts++
 							src.load()
@@ -105,28 +99,21 @@ var/global
 
 		//Called on chat output done-loading by JS.
 		doneLoading(ua)
-			if (src.owner && !src.loaded)
+			if (!src.loaded)
 				src.loaded = 1
 				winset(src.owner, "browseroutput", "is-disabled=false")
-				//if (src.owner.holder)
-				src.loadAdmin()
+				if (src.owner.holder)
+					src.loadAdmin()
 				if (src.messageQueue)
-					for (var/x = 0, x < src.messageQueue.len, x++)
-						boutput(src.owner, src.messageQueue["[x]"]["message"], src.messageQueue["[x]"]["group"])
+					for (var/x = 1, x <= src.messageQueue.len, x++)
+						boutput(src.owner, src.messageQueue[x])
 				src.messageQueue = null
 				if (ua)
-					//For persistent user tracking
-					apiHandler.queryAPI("versions/add", list(
-						"ckey" = src.owner.ckey,
-						"userAgent" = ua,
-						"byondMajor" = src.owner.byond_version,
-						"byondMinor" = src.owner.byond_build
-					))
-
+					ircbot.export("useragent", list("key" = src.owner.key, "useragent" = ua, "bversion" = owner.byond_version)) //For persistent user tracking
 				else
 					src.sendClientData()
 					/* WIRE TODO: Fix this so the CDN dying doesn't break everyone
-					SPAWN_DBG(600) //60 seconds
+					spawn(600) //60 seconds
 						if (!src.cookieSent) //Client has very likely futzed with their local html/js chat file
 							out(src.owner, "<div class='fatalError'>Chat file tampering detected. Closing connection.</div>")
 							del(src.owner)
@@ -134,27 +121,24 @@ var/global
 
 		//Called in update_admins()
 		loadAdmin()
-			var/data = json_encode(list("loadAdminCode" = replacetext(replacetext(grabResource("html/adminOutput.html"), "\n", ""), "\t", "")))
+			var/data = list2json(list("loadAdminCode" = dd_replacetext(dd_replacetext(grabResource("html/adminOutput.html"), "\n", ""), "\t", "")))
 			ehjax.send(src.owner, "browseroutput", url_encode(data))
 
 		//Sends client connection details to the chat to handle and save
 		sendClientData()
-			//Fix for Cannot read null.ckey (how!?)
-			if (!src.owner) return
-
 			//Get dem deets
 			var/list/deets = list("clientData" = list())
 			deets["clientData"]["ckey"] = src.owner.ckey
 			deets["clientData"]["ip"] = src.owner.address
 			deets["clientData"]["compid"] = src.owner.computer_id
-			var/data = json_encode(deets)
+			var/data = list2json(deets)
 			ehjax.send(src.owner, "browseroutput", data)
 
 		//Called by client, sent data to investigate (cookie history so far)
 		analyzeClientData(cookie = "")
 			if (!cookie) return
 			if (cookie != "none")
-				var/list/connData = json_decode(cookie)
+				var/list/connData = json2list(cookie)
 				if (connData && islist(connData) && connData.len > 0 && connData["connData"])
 					src.connectionHistory = connData["connData"] //lol fuck
 					var/list/found = new()
@@ -182,12 +166,6 @@ var/global
 							ircbot.export("admin", ircmsg)
 			src.cookieSent = 1
 
-		getContextFlags()
-			var/ret = src.ctxFlag
-			if(src.owner && istype( src.owner.mob, /mob/dead/observer ))
-				ret |= cFlagsDead
-			return ret
-
 		//Called in New() (/datum/admins)
 		getContextFlag()
 			if (!src.owner.holder) return
@@ -200,7 +178,7 @@ var/global
 
 		//Called by js client on admin command via context menu
 		handleContextMenu(command, target)
-			if (!src.owner.holder && command != "observe" && command != "teleport") return // oopsy i'm so messy heehee
+			if (!src.owner.holder) return
 			var/datum/mind/targetMind = locate(target)
 			var/mob/targetMob
 			if (targetMind)
@@ -230,56 +208,25 @@ var/global
 					src.owner.cmd_admin_gib(targetMob)
 					logTheThing("admin", src.owner, targetMob, "gibbed %target%.")
 				if ("popt")
-					if(src.owner.holder)
-						src.owner.holder.playeropt(targetMob)
-				if ("observe")
-					if (istype(src.owner.mob, /mob/dead/target_observer))
-						src.owner.mob:set_observe_target(targetMob)
-					if(istype(src.owner.mob, /mob/dead/observer))
-						src.owner.mob:insert_observer(targetMob)
-				if ("teleport")
-					if (istype(src.owner.mob, /mob/dead/target_observer))
-						src.owner.mob:stop_observing()
-					if(istype(src.owner.mob, /mob/dead/observer))
-						src.owner.mob.set_loc(get_turf(targetMob))
+					src.owner.holder.playeropt(targetMob)
 
 		//todo
 		changeChatMode(mode)
 			if (!mode) return
-			var/data = json_encode(list("modeChange" = mode))
+			var/data = list2json(list("modeChange" = mode))
 			data = url_encode(data)
 
 			for (var/client/C in clients)
 				ehjax.send(C, "browseroutput", data)
 
-		playMusic(url, volume)
-			if (!url || !volume) return
-			var/data = json_encode(list("playMusic" = url, "volume" = volume / 100))
-			data = url_encode(data)
-
-			ehjax.send(src.owner, "browseroutput", data)
-
-		playDectalk(url, trigger, volume)
-			if (!url || !volume) return
-			var/data = json_encode(list("dectalk" = url, "decTalkTrigger" = trigger, "volume" = volume / 100))
-			data = url_encode(data)
-
-			ehjax.send(src.owner, "browseroutput", data)
-
-		adjustVolumeRaw(volume)
-			var/data = json_encode(list("adjustVolume" = volume))
-			data = url_encode(data)
-
-			ehjax.send(src.owner, "browseroutput", data)
-		adjustVolume(volume)
-			var/data = json_encode(list("adjustVolume" = volume / 100))
-			data = url_encode(data)
-
-			ehjax.send(src.owner, "browseroutput", data)
-
 		//Called by js client every 60 seconds
 		ping()
 			return "pong"
+
+		//Called by js client on js error
+		debug(error)
+			error = "\[[time2text(world.realtime, "YYYY-MM-DD hh:mm:ss")]\] Client: [(src.owner.key ? src.owner.key : src.owner)] triggered JS error: [error]"
+			chatDebug << error
 
 
 //Global chat procs
@@ -292,7 +239,7 @@ var/global
 
 	iconCache[iconKey] << icon
 	var/iconData = iconCache.ExportText(iconKey)
-	var/list/partial = splittext(iconData, "{")
+	var/list/partial = dd_text2list(iconData, "{")
 	return copytext(partial[2], 3, -5)
 
 
@@ -304,7 +251,7 @@ var/global
 
 	if (isicon(obj))
 		baseData = icon2base64(obj)
-		return "<img style=\"position: relative; left: -1px; bottom: -3px;\" class=\"icon misc\" src=\"data:image/png;base64,[baseData]\" />"
+		return "<img class=\"icon misc\" src=\"data:image/png;base64,[baseData]\" />"
 
 	if (obj && obj:icon)
 		//Hash the darn dmi path and state
@@ -315,12 +262,7 @@ var/global
 		iconData = iconCache.ExportText(iconKey)
 		if (iconData)
 			//It does! Ok, parse out the base64
-			var/list/partial = splittext(iconData, "{")
-
-			if (length(partial) < 2)
-				logTheThing("debug", null, null, "Got invalid savefile data for: [obj]")
-				return
-
+			var/list/partial = dd_text2list(iconData, "{")
 			baseData = copytext(partial[2], 3, -5)
 		else
 			//It doesn't exist! Create the icon
@@ -332,25 +274,13 @@ var/global
 
 			baseData = icon2base64(icon, iconKey)
 
-		return "<img style=\"position: relative; left: -1px; bottom: -3px;\" class=\"icon [obj:icon_state]\" src=\"data:image/png;base64,[baseData]\" />"
+		return "<img class=\"icon [obj:icon_state]\" src=\"data:image/png;base64,[baseData]\" />"
 
 //Aliases for bicon
 /proc/bi(obj)
 	bicon(obj)
 
-/proc/boutput(target = 0, message = "", group = "")
-	if (target == world)
-		for (var/client/C in clients)
-			boutput(C, message)
-		return
-
-	//If the target is a list, attempt to send the message to each item in the list
-	//(it's up to the caller to ensure the list contains actual things we can send to)
-	if (islist(target))
-		for (var/T in target)
-			boutput(T, message)
-		return
-
+/proc/boutput(target, message)
 	//Ok so I did my best but I accept that some calls to this will be for shit like sound and images
 	//It stands that we PROBABLY don't want to output those to the browser output so just handle them here
 	if (istype(message, /image) || istype(message, /sound) || istype(target, /savefile))
@@ -363,33 +293,34 @@ var/global
 		if (istext(target)) return
 
 		//Some macros remain in the string even after parsing and fuck up the eventual output
-		message = stripTextMacros(message)
+		if (findtext(message, "\improper"))
+			message = dd_replacetext(message, "\improper", "")
+		if (findtext(message, "\proper"))
+			message = dd_replacetext(message, "\proper", "")
 
 		//Grab us a client if possible
 		var/client/C
-		if (isclient(target))
+		if (istype(target, /client))
 			C = target
-		else if (ismob(target))
+		else if (istype(target, /mob))
 			C = target:client
-		else if (ismind(target) && target:current)
+		else if (istype(target, /datum/mind) && target:current)
 			C = target:current:client
 
 		if (C && C.chatOutput && !C.chatOutput.loaded && C.chatOutput.messageQueue && islist(C.chatOutput.messageQueue))
 			//Client sucks at loading things, put their messages in a queue
-			C.chatOutput.messageQueue["[C.chatOutput.messageQueue.len]"] = list("message" = message, "group" = group)
+			C.chatOutput.messageQueue.Add(message)
 		else
-			target << output(list2params(list(
-				message,
-				group
-			)), "browseroutput:output")
+			target << output(url_encode(message), "browseroutput:output")
 
 //Aliases for boutput
-/proc/bout(target = 0, message = "", group = "")
-	boutput(target, message, group)
-/proc/out(target = 0, message = "", group = "")
-	boutput(target, message, group)
-/proc/bo(target = 0, message = "", group = "")
-	boutput(target, message, group)
+/proc/bout(target, message, banMsg = 0)
+	boutput(target, message, banMsg)
+/proc/out(target, message, banMsg = 0)
+	boutput(target, message, banMsg)
+/proc/bo(target, message, banMsg = 0)
+	boutput(target, message, banMsg)
+
 
 
 /*
@@ -404,16 +335,4 @@ if (findtext(message, "<IMG CLASS=ICON"))
 		newtxt = R.ReplaceNext(message)
 
 	world.log << html_encode(message)
-*/
-
-/*
-/client/verb/reloadChat()
-	set name = "Reload Chat"
-
-	del(src.chatOutput)
-	winset(src, "browseroutput", "is-disabled=true")
-	src.chatOutput = new /datum/chatOutput(src)
-	src.chatOutput.start()
-
-	out(src, "Reloaded chat")
 */

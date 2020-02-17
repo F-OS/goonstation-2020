@@ -20,7 +20,7 @@
 			if (M.client)
 				mobs += M
 		for(var/mob/living/carbon/human/M in mobs)
-			SPAWN_DBG(0)
+			spawn()
 				if(M.client)
 					for(var/obj/item/W in list(M.wear_suit, M.w_uniform, M.r_store, M.l_store, M.wear_id, M.belt,
 					                              M.gloves, M.glasses, M.head, M.ears, M.shoes, M.wear_mask, M.back,

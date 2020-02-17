@@ -44,7 +44,7 @@
 			boutput(H, "<span style=\"color:blue\">Your tinfoil hat protects you from the psyblast!</span>")
 		else
 			boutput(H, "<span style=\"color:red\">You are blasted by psychic energy!</span>")
-			H.changeStatus("paralysis", 70)
+			H.paralysis += 5
 			H.stuttering += 60
 			H.take_brain_damage(20)
 			H.TakeDamage("head", 0, 5)
@@ -57,7 +57,7 @@
 			randomturfs.Add(T)
 		src.set_loc(pick(randomturfs))
 		if (dospark)
-			SPAWN_DBG(0)
+			spawn()
 				var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 				s.set_up(5, 1, src)
 				s.start()
@@ -89,7 +89,7 @@
 			if (C.health < 0) continue
 			if (C.name == src.attacker) src.attack = 1
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -98,7 +98,7 @@
 				playsound(src.loc, "sound/weapons/lasermed.ogg", 100, 1)
 				if (prob(66))
 					C.TakeDamage("chest", 0, rand(3,5))
-					SPAWN_DBG(0)
+					spawn()
 						var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 						s.set_up(3, 1, C)
 						s.start()
@@ -136,7 +136,7 @@
 			if (C.health < 0) continue
 			if (C.name == src.attacker) src.attack = 1
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -146,8 +146,8 @@
 				boutput(C, "<span style=\"color:red\">You feel a horrible pain in your head!</span>")
 				gib_counter = 0
 				if (do_stun)
-					C.changeStatus("stunned", 2 SECONDS)
-				SPAWN_DBG(0)
+					C.stunned += rand(1,2)
+				spawn(0)
 					for (var/i = 0, i <= round(gib_delay / 10), i++)
 						if ((get_dist(src, C) <= max_gib_distance) && src.alive)
 							if (gib_counter == gib_delay)
@@ -184,8 +184,6 @@
 	health = 35
 	aggressive = 1
 	seekrange = 7
-	chase_text = "grabs at"
-
 
 	dead
 		icon_state = "martianW-dead"
@@ -196,27 +194,25 @@
 			icon_state = initial(icon_state)
 
 	ChaseAttack(mob/M)
-		..()
-		if (prob(33)) M.changeStatus("weakened", 3 SECONDS)
-		SPAWN_DBG(25)
+		for(var/mob/O in viewers(src, null))
+			O.show_message("<span style=\"color:red\"><B>[src]</B> grabs at [M]!</span>", 1)
+		if (prob(33)) M.weakened += rand(2,4)
+		spawn(25)
 			if (get_dist(src, M) <= 1)
 				src.visible_message("<span style=\"color:red\"><B>[src]</B> starts strangling [M]!</span>")
 
 	CritterAttack(mob/M)
 		src.attacking = 1
-		if (ishuman(M))
-			var/mob/living/carbon/human/H = M
-			H.was_harmed(src)
 		if (prob(95))
 			if (prob(10))
 				src.visible_message("<span style=\"color:red\"><B>[src]</B> wraps its tentacles around [M]'s neck!</span>")
 			M.take_oxygen_deprivation(2)
-			M.changeStatus("weakened", 1 SECONDS)
+			M.weakened += 1
 		else
 			src.visible_message("<span style=\"color:red\"><B>[src]'s</B> grip slips!</span>")
-			M.delStatus("stunned")
+			M.stunned = 0
 			sleeping = 1
-			SPAWN_DBG(10)
+			spawn(10)
 				for(var/mob/O in hearers(src, null))
 					O.show_message("<span style=\"color:red\"><b>[src]</b> screeches, 'KBWKB WVYPGD!!'</span>", 1)
 			src.task = "thinking"
@@ -277,7 +273,10 @@
 		var/damage = 0
 		damage = round((P.power*P.proj_data.ks_ratio), 1.0)
 
-		if(src.material) src.material.triggerOnBullet(src, src, P)
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 		if(P.proj_data.damage_type == D_KINETIC)
 			if(damage >= 20)

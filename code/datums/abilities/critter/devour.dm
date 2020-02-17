@@ -6,7 +6,7 @@
 	duration = 40
 	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
 	id = "critter_devour"
-	icon = 'icons/mob/critter_ui.dmi'
+	icon = 'icons/mob/critter_ui.dmi' 
 	icon_state = "devour_over"
 	var/mob/living/target
 	var/datum/targetable/critter/devour/devour
@@ -39,12 +39,13 @@
 			logTheThing("combat", ownerMob, target, "devours %target%.")
 			for(var/mob/O in AIviewers(ownerMob))
 				O.show_message("<span style=\"color:red\"><B>[owner] devours [target]!</B></span>", 1)
-			playsound(get_turf(ownerMob), "sound/voice/burp_alien.ogg", 50, 0)
+			playsound(get_turf(ownerMob), pick("sound/misc/burp_alien.ogg"), 50, 0)
 			ownerMob.health = ownerMob.max_health
 			if (target == owner)
 				boutput(owner, "<span class='color:green'>Good. Job.</span>")
-			target.remove()
+			target.ghostize()
 			devour.actionFinishCooldown()
+			qdel(target)
 
 /datum/targetable/critter/devour
 	name = "Devour"
@@ -69,7 +70,7 @@
 			if (!target)
 				boutput(holder.owner, __red("Nothing to devour there."))
 				return 1
-		if (!isliving(target))
+		if (!istype(target, /mob/living))
 			boutput(holder.owner, __red("Invalid target."))
 			return 1
 		if (get_dist(holder.owner, target) > 1)

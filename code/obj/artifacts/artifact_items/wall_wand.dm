@@ -10,7 +10,6 @@
 			return
 		var/datum/artifact/A = src.artifact
 		if (A.activated)
-			user.lastattacked = src
 			var/turf/T = get_turf(target)
 			A.effect_click_tile(src,user,T)
 			src.ArtifactFaultUsed(user)
@@ -61,8 +60,7 @@
 	icon_state = "shieldsparkles"
 	desc = "Some kind of strange energy barrier. You can't get past it."
 	New(var/loc,var/duration,var/wallsprite)
-		..()
 		icon_state = wallsprite
 		if (duration > 0)
-			SPAWN_DBG(duration * 10)
+			spawn(duration * 10)
 				qdel(src)

@@ -1,5 +1,5 @@
 
-/proc/scan_health(var/mob/M as mob, var/verbose_reagent_info = 0, var/disease_detection = 1, var/organ_scan = 0)
+/proc/scan_health(var/mob/M as mob, var/verbose_reagent_info = 0, var/disease_detection = 1)
 	if (!M)
 		return "<span style='color:red'>ERROR: NO SUBJECT DETECTED</span>"
 
@@ -50,45 +50,39 @@
 	var/brute_data = "[brute > 50 ? "<span style='color:red'>" : "[brute_font]"][brute]</span>"
 
 	var/rad_data = null
-	var/nrad_data = null
 	var/blood_data = null
 	var/brain_data = null
-	// var/heart_data = null		//Moving this to organ_data for now. -kyle
+	var/heart_data = null
 	var/reagent_data = null
 	var/pathogen_data = null
 	var/disease_data = null
-	var/organ_data = null
-	var/interesting_data = null
 
 	if (ishuman(M))
 		var/mob/living/carbon/human/H = M
 
 		if (blood_system)
-			H.ensure_bp_list()
-			var/bp_col
-			switch (H.blood_pressure["total"])
-				if (-INFINITY to 374) // very low (90/60)
-					bp_col = "red"
-				if (375 to 414) // low (100/65)
-					bp_col = "#CC7A1D"
-				if (415 to 584) // normal (120/80)
-					bp_col = "#138015"
-				if (585 to 665) // high (140/90)
-					bp_col = "#CC7A1D"
-				if (666 to INFINITY) // very high (160/100)
-					bp_col = "red"
-			if (isdead(H))
-				blood_data = "Blood Pressure: <span style='color:red'>NO PULSE</span>"
-			else
-				blood_data = "Blood Pressure: <span style='color:[bp_col]'>[H.blood_pressure["rendered"]] ([H.blood_pressure["status"]])</span>"
 			if (verbose_reagent_info)
 				if (isvampire(H)) // Added a pair of vampire checks here (Convair880).
-					blood_data += " | Blood level: <span style='color:#138015'>500 units</span>"
+					blood_data = "<span style='color:red'>Blood level: 500 units</span>"
 				else
-					blood_data += " | Blood level: <span style='color:[bp_col]'>[H.blood_pressure["total"]] unit[s_es(H.blood_pressure["total"])]</span>"
-					if (H.bleeding)
-						blood_data += " | Blood loss: <span style='color:red'>[H.bleeding] unit[s_es(H.bleeding)]</span>"
-			else if (!isvampire(H))
+					blood_data = "<span style='color:red'>Blood level: [H.blood_volume] unit[H.blood_volume == 1 ? "" : "s"]</span>"
+				if (H.bleeding)
+					blood_data += " | <span style='color:red'>Blood loss: [H.bleeding] unit[H.bleeding == 1 ? "" : "s"]</span>"
+			else
+				if (isvampire(H))
+					blood_data = "<span style='color:red'>Blood level: NORMAL</span>"
+				else
+					switch (H.blood_volume)
+						if (401 to INFINITY)
+							blood_data = "<span style='color:red'>Blood level: NORMAL</span>"
+						if (251 to 400)
+							blood_data = "<span style='color:red'>Blood level: <B>LOW</B></span>"
+						if (151 to 250)
+							blood_data = "<span style='color:red'>Blood level: <B>VERY LOW</B></span>"
+						if (1 to 150)
+							blood_data = "<span style='color:red'>Blood level: <B>DANGEROUSLY LOW</B></span>"
+						if (-INFINITY to 0)
+							blood_data = "<span style='color:red'>Blood level: <B>NO BLOOD DETECTED</B></span>"
 				switch (H.bleeding)
 					if (1 to 3)
 						blood_data += " | <span style='color:red'><B>Minor bleeding wounds detected</B></span>"
@@ -96,17 +90,13 @@
 						blood_data += " | <span style='color:red'><B>Bleeding wounds detected</B></span>"
 					if (7 to INFINITY)
 						blood_data += " | <span style='color:red'><B>Major bleeding wounds detected</B></span>"
-			if ((H.implant && H.implant.len > 0) || H.chest_item != null)
+			if (H.implant && H.implant.len > 0)
 				var/bad_stuff = 0
 				for (var/obj/item/implant/I in H)
 					if (istype(I, /obj/item/implant/projectile))
 						bad_stuff ++
-				if(H.chest_item != null) // If item is in chest, add one
-					bad_stuff ++
 				if (bad_stuff)
-					blood_data += " | <span style='color:red'><B>Foreign object[s_es(bad_stuff)] detected</B></span>"
-				if(H.chest_item != null) // State that large foreign object is located in chest
-					blood_data += " | <span style=\"color:red\"><B>Sizable foreign object located below sternum</B></span>"
+					blood_data += " | <span style='color:red'><B>Foreign object[bad_stuff == 1 ? "" : "s"] detected</B></span>"
 
 		if (H.pathogens.len)
 			pathogen_data = "<span style='color:red'>Scans indicate the presence of [H.pathogens.len > 1 ? "[H.pathogens.len] " : null]pathogenic bodies.</span>"
@@ -126,56 +116,27 @@
 			else
 				count_part = "[remissive] of them appear"
 			pathogen_data += "<br>&emsp;<span style='color:red'>[count_part] to be in a remissive state.</span>"
-			pathogen_data += "<br><span style='font-weight:bold'>Suggested pathogen suppression therapies: [jointext(therapy, ", ")]."
+			pathogen_data += "<br><span style='font-weight:bold'>Suggested pathogen suppression therapies: [dd_list2text(therapy, ", ")]."
 
-		if (H.get_organ("brain"))
-			if (H.get_brain_damage() >= 100)
-				brain_data = "<span style='color:red'>Subject is braindead.</span>"
-			else if (H.get_brain_damage() >= 60)
-				brain_data = "<span style='color:red'>Severe brain damage detected. Subject likely unable to function well.</span>"
-			else if (H.get_brain_damage() >= 10)
-				brain_data = "<span style='color:red'>Significant brain damage detected. Subject may have had a concussion.</span>"
+		if (H.organHolder)
+			if (H.organHolder.brain)
+				if (H.get_brain_damage() >= 100)
+					brain_data = "<span style='color:red'>Subject is braindead.</span>"
+				else if (H.get_brain_damage() >= 60)
+					brain_data = "<span style='color:red'>Severe brain damage detected. Subject likely unable to function well.</span>"
+				else if (H.get_brain_damage() >= 10)
+					brain_data = "<span style='color:red'>Significant brain damage detected. Subject may have had a concussion.</span>"
+			else
+				brain_data = "<span style='color:red'>Subject has no brain.</span>"
 		else
 			brain_data = "<span style='color:red'>Subject has no brain.</span>"
 
-		// if (!H.get_organ("heart"))
-		// 	heart_data = "<span style='color:red'>Subject has no heart.</span>"
-		if (organ_scan)
-			var/organ_data1 = null
-			var/obfuscate = (disease_detection != 255 ? 1 : 0)		//this is so admin check_health verb see exact numbs, scanners don't. Can remove, not exactly necessary, but thought they might want it.
+		if (H.organHolder && !H.organHolder.heart)
+			heart_data = "<span style='color:red'>Subject has no heart.</span>"
 
-			organ_data1 += organ_health_scan("heart", H, obfuscate)
-			// organ_data1 += organ_health_scan("brain", H, obfuscate) //Might want, might not. will be slightly more accurate than current brain damage scan
+	if (M.radiation)
+		rad_data = "&emsp;<span style='color:red'>Radiation: [round(M.radiation / 10, 0.1)] Gy</span>"
 
-			organ_data1 += organ_health_scan("left_lung", H, obfuscate)
-			organ_data1 += organ_health_scan("right_lung", H, obfuscate)
-
-			organ_data1 += organ_health_scan("left_kidney", H, obfuscate)
-			organ_data1 += organ_health_scan("right_kidney", H, obfuscate)
-			organ_data1 += organ_health_scan("liver", H, obfuscate)
-			organ_data1 += organ_health_scan("stomach", H, obfuscate)
-			organ_data1 += organ_health_scan("intestines", H, obfuscate)
-			organ_data1 += organ_health_scan("spleen", H, obfuscate)
-			organ_data1 += organ_health_scan("pancreas", H, obfuscate)
-			organ_data1 += organ_health_scan("appendix", H, obfuscate)
-
-			//Don't give organ readings for Vamps.
-			if (organ_data1 && !isvampire(H))
-				organ_data = "<span style='color:purple'><b>Internal Injuries:</b></span>"
-				organ_data += organ_data1
-			else
-				organ_data = "<span style='color:purple'><b>Scans indicate organs are in perfect health.</b></span>"
-			//Joke in case there is no organHolder
-			if (!H.organHolder)
-				organ_data = "<span style='color:red'>Subject has no organs. Veeeerrrry curious.</span>"
-
-
-	var/datum/statusEffect/simpledot/radiation/R = M.hasStatus("radiation")
-	var/datum/statusEffect/simpledot/radiation/NR = M.hasStatus("n_radiation")
-	if (R)
-		rad_data = "&emsp;<span style='color:red'>Radiation poisoning: Lv [R.stage]</span>"
-	if (NR)
-		nrad_data = "&emsp;<span style='color:blue'>Neutron Radiation poisoning: Lv [NR.stage]</span>"
 	for (var/datum/ailment_data/A in M.ailments)
 		if (disease_detection >= A.detectability)
 			disease_data += "<br>[A.scan_info()]"
@@ -199,9 +160,6 @@
 		else if (M.get_brain_damage() >= 10)
 			brain_data = "<span style='color:red'>Significant brain damage detected. Subject may have had a concussion.</span>"
 
-	if (M.interesting)
-		interesting_data += "<br><span style='color:blue'>[M.interesting]</span>"
-
 	var/data = "--------------------------------<br>\
 	Analyzing Results for <span style='color:blue'>[M]</span>:<br>\
 	&emsp; Overall Status: [death_state > 1 ? "<span style='color:red'>DEAD</span>" : "[colored_health]% healthy"]<br>\
@@ -209,54 +167,14 @@
 	&emsp; Key: [oxy_font]Suffocation</span>/[tox_font]Toxin</span>/[burn_font]Burns</span>/[brute_font]Brute</span><br>\
 	Body Temperature: [colored_temp]\
 	[rad_data ? "<br>[rad_data]" : null]\
-	[nrad_data ? "<br>[nrad_data]" : null]\
 	[blood_data ? "<br>[blood_data]" : null]\
 	[brain_data ? "<br>[brain_data]" : null]\
-	[organ_data ? "<br>[organ_data]" : null]\
+	[heart_data ? "<br>[heart_data]" : null]\
 	[reagent_data ? "<br>[reagent_data]" : null]\
 	[pathogen_data ? "<br>[pathogen_data]" : null]\
-	[disease_data ? "[disease_data]" : null]\
-	[interesting_data ? "<br><i>Historical analysis:</i><span style='color:blue'> [interesting_data]</span>" : null]\
-	"
+	[disease_data ? "[disease_data]" : null]"
 
 	return data
-
-	//KYLE-NOTE- Maybe use get_organ here. Didn't exist in 2016 when I wrote this.
-//takes string input, for name in organholder.organ_list and checks if the organholder has anything
-//obfuscate, if true then don't show the exact organ health amount. Minor damage, moderate damage, severe damage, critical damage
-/proc/organ_health_scan(var/input, var/mob/living/carbon/human/H, var/obfuscate = 0)
-	var/obj/item/organ/O = H.organHolder.organ_list[input]
-	if (istype(O))
-		var/damage = O.get_damage()
-		if (obfuscate)
-			return obfuscate_organ_health(O)
-		else
-			if (damage > 0)
-				return "<br><span style='color:[damage >= 65 ? "red" : "purple"]'><b>[input]</b> - [O.get_damage()]</span>"
-			else
-				return null
-
-	else
-		return "<br><span style='color:purple'><b>[input]</b> - missing!</span>"
-
-//Using input here because it get's the organs name in an easy and clear way. using name or organ_name in obj/item/organ is not any better really
-/proc/obfuscate_organ_health(var/obj/item/organ/O)
-	if (!O)
-		return null
-	var/damage = O.get_damage()
-
-	if (damage >= O.MAX_DAMAGE)
-		return "<br><span style='color:red'><b>[O.name]</b> - Dead</span>"
-	else if (damage >= O.MAX_DAMAGE*0.9)
-		return "<br><span style='color:red'><b>[O.name]</b> - Critical</span>"
-	else if (damage >= O.MAX_DAMAGE*0.65)
-		return "<br><span style='color:red'><b>[O.name]</b> - Significant</span>"
-	else if (damage >= O.MAX_DAMAGE*0.30)
-		return "<br><span style='color:purple'><b>[O.name]</b> - Moderate</span>"
-	else if (damage > 0)
-		return "<br><span style='color:purple'><b>[O.name]</b> - Minor</span>"
-
-	return null
 
 /proc/update_medical_record(var/mob/living/carbon/human/M)
 	if (!M || !ishuman(M))
@@ -325,19 +243,17 @@
 
 // Should make it easier to maintain the detective's scanner and PDA program (Convair880).
 /proc/scan_forensic(var/atom/A as turf|obj|mob)
-	if (istype(A, /obj/ability_button)) // STOP THAT
-		return
+
 	var/fingerprint_data = null
 	var/blood_data = null
 	var/forensic_data = null
 	var/glove_data = null
 	var/contraband_data = null
-	var/interesting_data = null
 
 	if (!A)
 		return "<span style='color:red'>ERROR: NO SUBJECT DETECTED</span>"
 
-	if (ishuman(A))
+	if (istype(A, /mob/living/carbon/human))
 		var/mob/living/carbon/human/H = A
 
 		if (!isnull(H.gloves))
@@ -377,18 +293,10 @@
 
 		var/list/gear_to_check = list(H.head, H.wear_mask, H.w_uniform, H.wear_suit, H.belt, H.gloves, H.back)
 		for (var/obj/item/check in gear_to_check)
-			if (check)
-				var/list/BC
-				if (check.blood_DNA)
-					BC = params2list(check.blood_DNA)
-					for(var/i in BC)
-						blood_data += "<br><span style='color:blue'>Blood on worn [check.name]:</span> [i]"
-				/*var/trace_blood = check.get_forensic_trace("bDNA")
-				if (trace_blood)
-					BC = params2list(trace_blood)
-					for (var/i in BC)
-						blood_data += "<br><span style='color:blue'>Blood trace on worn [check.name]:</span> [i]"
-				*/
+			if (check && check.blood_DNA)
+				var/list/BC = params2list(check.blood_DNA)
+				for(var/i in BC)
+					blood_data += "<br><span style='color:blue'>Blood on worn [check.name]:</span> [i]"
 
 		if (H.r_hand && H.r_hand.blood_DNA)
 			var/list/BIR = params2list(H.r_hand.blood_DNA)
@@ -402,63 +310,21 @@
 
 	else
 
-		if (istype(A, /obj/item/parts/human_parts))
-			var/obj/item/parts/human_parts/H = A
-			if (H.original_DNA)
-				blood_data += "<br><span style='color:blue'>[H]'s blood DNA:</span> [H.original_DNA]"
-			if (istype(H, /obj/item/parts/human_parts/arm)) // has fringerpints
-				fingerprint_data += "<br><span style='color:blue'>[H]'s fingerprints:</span> [H.original_fprints]"
-
-		else if (istype(A, /obj/item/organ))
-			var/obj/item/organ/O = A
-			if (O.donor_DNA)
-				blood_data += "<br><span style='color:blue'>[O]'s blood DNA:</span> [O.donor_DNA]"
-
-		else if (istype(A, /obj/item/clothing/head/butt))
-			var/obj/item/clothing/head/butt/B = A
-			if (B.donor_DNA)
-				blood_data += "<br><span style='color:blue'>[B]'s blood DNA:</span> [B.donor_DNA]"
-
-		else if (isobj(A) && A.reagents && A.is_open_container() && A.reagents.has_reagent("blood"))
-			var/datum/reagent/blood/B = A.reagents.reagent_list["blood"]
-			if (B && istype(B.data, /datum/bioHolder))
-				var/datum/bioHolder/BH = B.data
-				if (BH.Uid)
-					blood_data += "<br><span style='color:blue'>Blood DNA inside [A]:</span> [BH.Uid]"
-
-		if (A.interesting)
-			if (istype(A, /obj))
-				interesting_data += "<br><span style='color:blue'>[A.interesting]</span>"
-			if (istype(A, /turf))
-				interesting_data += "<br><span style='color:blue'>There seems to be more to [A] than meets the eye.</span>"
-
-//		if (!A.fingerprints)
-			/*var/list/FP = params2list(A.get_forensic_trace("fprints"))
-			if (FP)
-				for (var/i in FP)
-					fingerprint_data += "<br><span style='color:blue'>[i]</span>"
-			else
-				*///fingerprint_data += "<br><span style='color:blue'>Unable to locate any fingerprints.</span>"
-//		else
-		if (A.fingerprints)
+		if (!A.fingerprints)
+			fingerprint_data += "<br><span style='color:blue'>Unable to locate any fingerprints.</span>"
+		else
 			var/list/FP = params2list(A:fingerprints)
 			for(var/i in FP)
 				fingerprint_data += "<br><span style='color:blue'>[i]</span>"
 
-//		if (!A.blood_DNA)
-			/*var/list/DNA = params2list(A.get_forensic_trace("bDNA"))
-			if (DNA)
-				for (var/i in DNA)
-					blood_data += "<br><span style='color:blue'>[i]</span>"
-			else
-				*///blood_data += "<br><span style='color:blue'>Unable to locate any blood traces.</span>"
-//		else
-		if (A.blood_DNA)
+		if(!A.blood_DNA)
+			blood_data += "<br><span style='color:blue'>Unable to locate any blood traces.</span>"
+		else
 			var/list/DNA = params2list(A:blood_DNA)
 			for(var/i in DNA)
 				blood_data += "<br><span style='color:blue'>[i]</span>"
 
-		if (isitem(A))
+		if (istype(A, /obj/item))
 			var/obj/item/I = A
 			if(I.contraband)
 				contraband_data = "<span style='color:red'>(CONTRABAND: LEVEL [I.contraband])</span>"
@@ -504,7 +370,6 @@
 	<i>Isolated blood samples:</i>[blood_data]<br>\
 	[forensic_data ? "<br><i>Additional forensic data:</i>[forensic_data]<br>" : null]\
 	[glove_data ? "<br><i>Material analysis:</i><span style='color:blue'> [glove_data]</span>" : null]\
-	[interesting_data ? "<br><i>Energy signature analysis:</i><span style='color:blue'> [interesting_data]</span>" : null]\
 	"
 
 	return data
@@ -558,7 +423,7 @@
 	pressure = check_me.return_pressure()
 	total_moles = check_me.total_moles()
 
-	//DEBUG_MESSAGE("[A] contains: [pressure] kPa, [total_moles] moles.")
+	//DEBUG("[A] contains: [pressure] kPa, [total_moles] moles.")
 
 	var/data = ""
 

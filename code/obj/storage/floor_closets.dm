@@ -6,9 +6,6 @@
 	icon_closed = "closedf"
 	density = 0
 	soundproofing = 15
-	p_class = 1
-	plane = PLANE_DEFAULT
-	event_handler_flags = USE_CANPASS
 
 	close()
 		var/turf/T = get_turf(src)
@@ -16,7 +13,6 @@
 			src.icon = T.icon
 			src.icon_closed = T.icon_state
 			src.desc = T.desc + " It looks odd."
-			src.plane = T.plane
 		else
 			src.icon = 'icons/obj/large_storage.dmi'
 			src.icon_closed = "closedf"
@@ -27,12 +23,8 @@
 		if (src.welded)
 			return
 		src.icon = 'icons/obj/large_storage.dmi'
-		src.plane = initial(src.plane)
 		..()
 		return
-
-	recalcPClass()
-		p_class = initial(p_class)
 
 	CanPass(atom/movable/mover, turf/target, height=0, air_group=0)
 		return 1
@@ -47,8 +39,7 @@
 			src.icon_closed = T.icon_state
 			src.icon_state = icon_closed
 			src.name = T.name
-			src.plane = T.plane
 		else
-			src.icon = 'icons/obj/large_storage.dmi'
+			src.icon = 'icons/obj/closet.dmi'
 			src.icon_closed = "closedf"
 

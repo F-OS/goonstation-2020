@@ -21,7 +21,7 @@
 	return
 
 /obj/machinery/igniter/process()
-	if (src.on && !(status & NOPOWER) )
+	if (src.on && !(stat & NOPOWER) )
 		var/turf/location = src.loc
 		if (isturf(location))
 			location.hotspot_expose(1000,500,1)
@@ -32,7 +32,7 @@
 	icon_state = "igniter[on]"
 
 /obj/machinery/igniter/power_change()
-	if(!( status & NOPOWER) )
+	if(!( stat & NOPOWER) )
 		icon_state = "igniter[src.on]"
 	else
 		icon_state = "igniter0"
@@ -60,16 +60,16 @@
 
 /obj/machinery/sparker/power_change()
 	if ( powered() && disable == 0 )
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 		icon_state = "[base_state]"
 		light.enable()
 	else
-		status |= ~NOPOWER
+		stat |= ~NOPOWER
 		icon_state = "[base_state]-p"
 		light.disable()
 
 /obj/machinery/sparker/attackby(obj/item/W as obj, mob/user as mob)
-	if (isscrewingtool(W))
+	if (istype(W, /obj/item/screwdriver))
 		add_fingerprint(user)
 		src.disable = !src.disable
 		if (src.disable)
@@ -119,7 +119,7 @@
 
 /obj/machinery/ignition_switch/attack_hand(mob/user as mob)
 
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 	if(active)
 		return
@@ -131,16 +131,14 @@
 
 	for(var/obj/machinery/sparker/M in machines)
 		if (M.id == src.id)
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				M.ignite()
-		LAGCHECK(LAG_MED)
 
 	for(var/obj/machinery/igniter/M in machines)
 		if(M.id == src.id)
 			use_power(50)
 			M.on = !( M.on )
 			M.icon_state = text("igniter[]", M.on)
-		LAGCHECK(LAG_MED)
 
 	sleep(50)
 

@@ -67,7 +67,7 @@
 			return
 
 		// It's okay when the victim expired half-way through the feast, but plain corpses are too cheap.
-		if (isdead(target))
+		if (target.stat == 2)
 			boutput(M, __red("Urgh, this cadaver tasted horrible. Better find some fresh meat."))
 			target.visible_message("<span style=\"color:red\"><B>[M] completely rips [target]'s corpse to pieces!</B></span>")
 			target.gib()
@@ -75,7 +75,7 @@
 			return
 
 		A.locked = 1
-		playsound(M.loc, pick('sound/voice/animal/werewolf_attack1.ogg', 'sound/voice/animal/werewolf_attack2.ogg', 'sound/voice/animal/werewolf_attack3.ogg'), 50, 1)
+		playsound(M.loc, pick('sound/misc/werewolf_attack1.ogg', 'sound/misc/werewolf_attack2.ogg', 'sound/misc/werewolf_attack3.ogg'), 50, 1)
 		M.visible_message("<span style=\"color:red\"><B>[M] lunges at [target]!</b></span>")
 
 	onUpdate()
@@ -133,7 +133,7 @@
 				interrupt(INTERRUPT_ALWAYS)
 				return
 
-			if (!isdead(target) && !(ismonkey(target) || target.bioHolder && target.bioHolder.HasEffect("monkey"))) // Can't farm monkeys.
+			if (target.stat != 2 && !(ismonkey(target) || target.bioHolder && target.bioHolder.HasEffect("monkey"))) // Can't farm monkeys.
 				src.do_we_get_points = 1
 
 		if (complete >= 0.8 && last_complete < 0.8)
@@ -142,7 +142,7 @@
 				interrupt(INTERRUPT_ALWAYS)
 				return
 
-			if (!isdead(target) && !(ismonkey(target) || target.bioHolder && target.bioHolder.HasEffect("monkey")))
+			if (target.stat != 2 && !(ismonkey(target) || target.bioHolder && target.bioHolder.HasEffect("monkey")))
 				src.do_we_get_points = 1
 
 		if (complete >= 0.9 && last_complete < 0.9)
@@ -151,7 +151,7 @@
 				interrupt(INTERRUPT_ALWAYS)
 				return
 
-			if (!isdead(target) && !(ismonkey(target) || target.bioHolder && target.bioHolder.HasEffect("monkey")))
+			if (target.stat != 2 && !(ismonkey(target) || target.bioHolder && target.bioHolder.HasEffect("monkey")))
 				src.do_we_get_points = 1
 
 		last_complete = complete

@@ -5,7 +5,7 @@
 	name = "Venomous Sting"
 	desc = "Transfer some toxins into your target."
 	var/stealthy = 0
-	var/list/venom_ids = list("toxin")
+	var/venom_id = "toxin"
 	var/inject_amount = 25
 	cooldown = 600
 	targeted = 1
@@ -33,28 +33,20 @@
 			holder.owner.visible_message(__red("<b>[holder.owner] stings [target]!</b>"))
 		else
 			holder.owner.show_message(__blue("You stealthily sting [target]."))
-		for(var/venom_id in src.venom_ids)
-			MT.reagents.add_reagent(venom_id, inject_amount)
+		MT.reagents.add_reagent(venom_id, inject_amount)
 
 	ice
 		name = "Freezing Sting"
 		desc = "Transfer some cryostylane into your target."
-		venom_ids = list("cryostylane")
+		venom_id = "cryostylane"
 
 	sedative
 		name = "Sedative Sting"
 		desc = "Transfer some morphine into your target."
-		venom_ids = list("morphine")
+		venom_id = "morphine"
 
 	eggs
 		name = "Plant Eggs"
 		desc = "Inject eggs into your target."
-		venom_ids = list("spidereggs")
+		venom_id = "spidereggs"
 		inject_amount = 6
-
-	fermid
-		name = "Fermid Sting"
-		desc = "Sting a dude with some nasty toxins."
-		venom_ids = list("haloperidol", "atropine")
-		inject_amount = 10
-

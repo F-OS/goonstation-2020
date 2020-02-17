@@ -98,7 +98,7 @@
 	icon_state = "secbot1"
 
 	var/datum/action/bar/bullethell/healthbar //Hack.
-	var/list/dirs = list("NORTH" = NORTH, "SOUTH" = SOUTH, "WEST" = WEST, "EAST" = EAST, "NORTHWEST" = NORTHWEST, "NORTHEAST" = NORTHEAST, "SOUTHWEST" = SOUTHWEST, "SOUTHEAST" = SOUTHEAST)
+
 
 	New()
 		..()
@@ -122,7 +122,7 @@
 			for (var/tk in S)
 				var/tkn = text2num(tk)
 				if (tkn > mt)
-					mt = tkn
+					mt = tkn 
 			mt += pause_between_reset
 			maxticks += mt
 
@@ -162,10 +162,6 @@
 						proj = new E
 					else if (E == "invulnerable")
 						invulnerability = 1
-					else if (E == "RANDSTEP")
-						step(src, src.dirs[pick(src.dirs)])
-					else
-						step(src, src.dirs[E])
 			update_overlays()
 			healthbar.onUpdate()
 			tick_at++
@@ -191,7 +187,7 @@
 				overlay_status = 0
 
 	proc/test()
-		SPAWN_DBG(0)
+		spawn(0)
 			while (!broken)
 				process()
 				sleep(test_sleep_time)
@@ -276,6 +272,7 @@
 	proc/die()
 		qdel(src)
 
+#undef DT_MIXED
 #undef DT_CORR
 #undef DT_BURN
 #undef DT_PIERCE
@@ -285,7 +282,7 @@
 	broken = 0
 	healths = list(0)
 	pause_between_reset = 0
-
+	
 	setup_schedules()
 		var/t = list()
 		for (var/i = 0, i < 15, i++)
@@ -296,7 +293,7 @@
 	broken = 0
 	healths = list(300, 0)
 	pause_between_reset = 0
-
+	
 	setup_schedules()
 		var/t = list()
 		var/t2 = list()
@@ -309,7 +306,7 @@
 	broken = 0
 	healths = list(0)
 	pause_between_reset = 0
-
+	
 	setup_schedules()
 		var/t = list()
 		for (var/i = 0, i < 20, i++)
@@ -324,7 +321,6 @@
 	broken = 0
 	healths = list(0)
 	pause_between_reset = 0
-	live_sleep_time = 1
 	test_sleep_time = 1
 
 	setup_schedules()
@@ -338,34 +334,3 @@
 		for (var/i = 0, i < 5, i++)
 			t["[i+126]"] = list("invulnerable")
 		schedules = list(t)
-
-/obj/bullethell/test5
-	broken = 0
-	healths = list(300, 0)
-	pause_between_reset = 0
-
-	setup_schedules()
-		var/t = list()
-		var/t2 = list()
-		for (var/i = 0, i < 10, i++)
-			if (i % 2 == 0)
-				t["[(i+1)*2]"] = list(i * 6, i * 6 + 60, i * 6 + 120, i * 6 + 180, i * 6 + 240, i * 6 + 300)
-				t2["[i+1]"] = list(i * 6, i * 6 + 60, i * 6 + 120, i * 6 + 180, i * 6 + 240, i * 6 + 300)
-			else
-				t["[(i+1)*2]"] = list(i * 6, i * 6 + 60, i * 6 + 120, i * 6 + 180, i * 6 + 240, i * 6 + 300, "RANDSTEP")
-				t2["[i+1]"] = list(i * 6, i * 6 + 60, i * 6 + 120, i * 6 + 180, i * 6 + 240, i * 6 + 300, "RANDSTEP")
-		schedules = list(t, t2)
-
-/obj/bullethell/test6
-	broken = 0
-	healths = list(300, 0)
-	pause_between_reset = 0
-	proj = new/datum/projectile/laser/light/spiral
-
-	setup_schedules()
-		var/t = list()
-		var/t2 = list()
-		for (var/i = 0, i < 10, i++)
-			t["[i+1]"] = list(i * 9, i * 9 + 90, i * 9 + 180, i * 9 + 270)
-			t2["[i+1]"] = list(i * 6, i * 6 + 60, i * 6 + 120, i * 6 + 180, i * 6 + 240, i * 6 + 300)
-		schedules = list(t, t2)

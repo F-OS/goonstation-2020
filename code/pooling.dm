@@ -4,33 +4,6 @@
 #define UNPOOLINGS 4
 #define EVICTIONS 5
 
-var
-	list/object_pools = list()
-	list/pool_limit_overrides = list(/sound = 300, \
-									/obj/effects/sparks = 1000, \
-									/obj/hotspot = 1000, \
-									/datum/effects/system/spark_spread = 200,
-									/obj/effects/harmless_smoke = 500,
-									/obj/effects/foam = 500,
-									/obj/effects/steam = 500,
-									/obj/effects/bad_smoke = 500,
-									/obj/fluid = 10000, // f u c k (mbc note : drsingh says this is fine.)
-									/obj/fluid/airborne = 10000,
-									/obj/particle = 300,// FUCKING SPARKLES
-									/obj/item/spacecash = 300,
-									/obj/item/paper = 300,
-									/obj/decal/cleanable = 800,
-									/obj/overlay/tile_effect/lighting = 1000) //fine ok its smaller now! //edit : ok actually maybe this matters lets make it biger
-/datum/proc/pooled(var/pooltype)
-	dispose()
-	// If this thing went through the delete queue and was rescued by the pool mechanism, we should reset the qdeled flag.
-	qdeled = 0
-	pooled = 1
-
-/datum/proc/unpooled(var/pooltype)
-	disposed = 0
-	pooled = 0
-
 #ifdef DETAILED_POOL_STATS
 var/global/list/pool_stats = list()
 
@@ -49,7 +22,12 @@ proc/increment_pool_stats(var/type, var/index)
 #endif
 
 proc/get_pool_size_limit(var/type)
-	return pool_limit_overrides[type] || DEFAULT_POOL_SIZE
+	if(!pool_limit_overrides)
+		pool_limit_overrides = list(/sound = 300, \
+									/obj/effects/sparks = 100, \
+									/datum/effects/system/spark_spread = 100)
+	. = pool_limit_overrides[type]
+	if(!.) . = DEFAULT_POOL_SIZE
 
 proc/unpool(var/type=null)
 	if(!type)
@@ -124,7 +102,7 @@ proc/getPoolingJson()
 		json += ",{path:'[type]',count:[count],hits:[L[POOL_HIT_COUNT]],misses:[L[POOL_MISS_COUNT]],poolings:[L[POOLINGS]],unpoolings:[L[UNPOOLINGS]],evictions:[L[EVICTIONS]]}"
 	json += "]"
 
-	//usr.Browse(json, "window=teststuff")
+	//usr << browse(json, "window=teststuff")
 	return json
 
 #endif

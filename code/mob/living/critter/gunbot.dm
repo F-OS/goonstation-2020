@@ -20,20 +20,20 @@
 
 	death(var/gibbed)
 		if (!gibbed)
-			playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
-			make_cleanable(/obj/decal/cleanable/oil,src.loc)
+			playsound(src.loc, "sound/effects/splat.ogg", 100, 1)
+			new /obj/decal/cleanable/oil(src.loc)
 			ghostize()
 			qdel(src)
 		else
-			playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
-			make_cleanable(/obj/decal/cleanable/oil,src.loc)
+			playsound(src.loc, "sound/effects/splat.ogg", 100, 1)
+			new /obj/decal/cleanable/oil(src.loc)
 			..()
 
 	specific_emotes(var/act, var/param = null, var/voluntary = 0)
 		switch (act)
 			if ("scream")
 				if (src.emote_check(voluntary, 50))
-					playsound(get_turf(src), "sound/voice/screams/robot_scream.ogg" , 80, 1)
+					playsound(get_turf(src), "sound/voice/robot_scream.ogg" , 80, 1)
 					return "<b>[src]</b> screams!"
 		return null
 

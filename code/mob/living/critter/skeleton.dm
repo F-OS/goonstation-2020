@@ -8,9 +8,8 @@
 
 	for (var/i = 1, i <= 4, i++)
 		var/PT = /obj/item/material_piece/bone
-		var/obj/item/material_piece/bone/P = unpool(PT)
-		P.set_loc(T)
-		SPAWN_DBG(0)
+		var/obj/item/material_piece/bone/P = new PT(T)
+		spawn(0)
 			for (var/k = 1, k <= 3, k++)
 			P.streak(dirlist[i])
 		produce += P
@@ -18,8 +17,7 @@
 	var/extra = rand(2,4)
 	for (var/i = 1, i <= extra, i++)
 		var/PT = /obj/item/material_piece/bone
-		var/obj/item/material_piece/bone/P  = unpool(PT)
-		P.set_loc(T)
+		var/obj/item/material_piece/bone/P = new PT(T)
 		P.streak(alldirs)
 		produce += P
 
@@ -70,11 +68,9 @@
 	setup_hands()
 		..()
 		var/datum/handHolder/HH = hands[1]
-		HH.icon = 'icons/mob/hud_human.dmi'
 		HH.icon_state = "handl"
 
 		HH = hands[2]
-		HH.icon = 'icons/mob/hud_human.dmi'
 		HH.name = "right hand"
 		HH.suffix = "-R"
 		HH.icon_state = "handr"

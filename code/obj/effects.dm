@@ -4,6 +4,9 @@ defined, then set up when it is created with New(). Then this same system can ju
 it needs to create more trails.A beaker could have a steam_trail_follow system set up, then the steam
 would spawn and follow the beaker, even if it is carried or thrown.
 */
+#define TOUCH 1
+#define INGEST 2
+
 /obj/effects
 	name = "effects"
 	icon = 'icons/effects/effects.dmi'
@@ -14,21 +17,3 @@ would spawn and follow the beaker, even if it is carried or thrown.
 	pooled()
 		..()
 		color = initial(color)
-
-	track_blood()
-		src.tracked_blood = null
-		return
-
-	attackby()
-	attack_hand()
-	hitby()
-	reagent_act()
-	bullet_act()
-	ex_act()
-	blob_act()
-	meteorhit()
-	damage_heat()
-	damage_corrosive()
-	damage_piercing()
-	damage_slashing()
-	damage_blunt()

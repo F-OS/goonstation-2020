@@ -9,30 +9,16 @@
 	icon_state = "armor"
 	item_state = "armor"
 	body_parts_covered = TORSO|LEGS|ARMS
-
-	setupProperties()
-		..()
-		setProperty("coldprot", 10)
-		setProperty("meleeprot", 6)
-		setProperty("rangedprot", 1)
-
-	onMaterialChanged()
-		return
+	armor_value_bullet = 2
+	armor_value_melee = 6
 
 /obj/item/clothing/suit/armor/vest
 	name = "armor vest"
-	desc = "An armored vest that protects against some damage. Contains carbon fibres."
+	desc = "An armored vest that protects against some damage."
 	icon_state = "armorvest"
-	uses_multiple_icon_states = 1
 	item_state = "armorvest"
 	body_parts_covered = TORSO
 	c_flags = ONESIZEFITSALL
-	bloodoverlayimage = SUITBLOOD_ARMOR
-
-	New()
-		..()
-		src.setMaterial(getMaterial("carbonfibre"), appearance = 0, setname = 0)
-		return .
 
 	attackby(obj/item/W as obj, mob/user as mob)
 		if (istype(W, /obj/item/assembly/anal_ignite))
@@ -60,26 +46,15 @@
 			..()
 			return
 
-	attack_self(mob/user as mob)
-		user.show_text("You change the armor vest's style.")
-		if (src.icon_state == "armorvest")
-			src.icon_state = "armorvest-old"
-		else if (src.icon_state == "armorvest-old")
-			src.icon_state = "armorvest-light"
-		else
-			src.icon_state = "armorvest"
-
 // Added support for old-style grenades and pipe bombs. Also a bit of code streamlining (Convair880).
 /obj/item/clothing/suit/armor/suicide_bomb
 	name = "suicide bomb vest"
 	desc = "A makeshift mechanical vest set to trigger a payload when the user dies."
 	icon_state = "bombvest0"
-	uses_multiple_icon_states = 1
 	item_state = "armorvest"
 	flags = FPRINT | TABLEPASS | CONDUCT | NOSPLASH
 	c_flags = ONESIZEFITSALL
 	body_parts_covered = TORSO
-	bloodoverlayimage = SUITBLOOD_ARMOR
 
 	var/obj/item/clothing/suit/armor/vest/part_vest = null
 	var/obj/item/assembly/anal_ignite/part_igniter = null // Just for show. Doesn't do anything here or in the igniter code.
@@ -92,7 +67,7 @@
 
 	New()
 		..()
-		SPAWN_DBG (5)
+		spawn (5)
 			if (src && !src.part_vest)
 				src.part_vest = new /obj/item/clothing/suit/armor/vest(src)
 			if (src && !src.part_igniter)
@@ -168,7 +143,7 @@
 				user.show_text("There's already a payload attached.", "red")
 				return
 
-		else if (iswrenchingtool(W))
+		else if (istype(W, /obj/item/wrench))
 			if (src.grenade)
 				user.show_text("You detach [src.grenade].", "blue")
 				src.grenade.set_loc(get_turf(src))
@@ -221,7 +196,7 @@
 			return
 		if (!src.grenade && !src.grenade_old && !src.pipebomb && !src.beaker)
 			return
-		if (!isdead(wearer) || (wearer.suiciding && prob(60))) // Don't abuse suiciding.
+		if (wearer.stat != 2 || (wearer.suiciding && prob(60))) // Don't abuse suiciding.
 			wearer.visible_message("<span style=\"color:red\"><b>[wearer]'s suicide bomb vest clicks softly, but nothing happens.</b></span>")
 			return
 
@@ -265,42 +240,16 @@
 	desc = "A suit of protective formal armor made for the station's captain."
 	icon_state = "caparmor"
 	item_state = "caparmor"
-	setupProperties()
-		..()
-		setProperty("meleeprot", 7)
-		setProperty("rangedprot", 1.5)
-
-	attack_self(mob/user as mob) //Azungar was here and added some of his own styles to this thing.
-		user.show_text("You change the armor's style.")
-		if (src.icon_state == "caparmor")
-			src.icon_state = "caparmor-alt"
-			src.item_state = "caparmor-alt"
-
-		else
-			src.icon_state = "caparmor"
-			src.item_state = "caparmor"
-
-
-/obj/item/clothing/suit/armor/hopcoat
-	name = "Head of Personnel's naval coat"
-	desc = "A rather well armored coat tailored in a traditional naval fashion."
-	icon_state = "hopcoat"
-	item_state = "hopcoat"
-
-	setupProperties()
-		..()
-		setProperty("meleeprot", 6)
-		setProperty("rangedprot", 1.5)
+	armor_value_bullet = 2.5
+	armor_value_melee = 8
 
 /obj/item/clothing/suit/armor/centcomm
 	name = "administrator's armor"
 	desc = "A suit of protective formal armor. It is made specifically for NanoTrasen commanders."
 	icon_state = "centcom"
 	item_state = "centcom"
-	setupProperties()
-		..()
-		setProperty("meleeprot", 7)
-		setProperty("rangedprot", 1.5)
+	armor_value_bullet = 2.5
+	armor_value_melee = 8
 
 	red
 		icon_state = "centcom-red"
@@ -311,10 +260,8 @@
 	desc = "A heavily armored suit that protects against moderate damage."
 	icon_state = "heavy"
 	item_state = "heavy"
-	setupProperties()
-		..()
-		setProperty("meleeprot", 12)
-		setProperty("rangedprot", 3)
+	armor_value_bullet = 2.5
+	armor_value_melee = 7
 
 /obj/item/clothing/suit/armor/death_commando
 	name = "death commando armor"
@@ -374,10 +321,8 @@
 	item_state = "nt2armor"
 	body_parts_covered = TORSO
 	c_flags = ONESIZEFITSALL
-	setupProperties()
-		..()
-		setProperty("meleeprot", 8)
-		setProperty("rangedprot", 1.5)
+	armor_value_bullet = 2.5
+	armor_value_melee = 8
 
 /obj/item/clothing/suit/armor/EOD
 	name = "bomb disposal suit"
@@ -385,18 +330,5 @@
 	icon_state = "eod"
 	item_state = "eod"
 	w_class = 3
-	setupProperties()
-		..()
-		setProperty("meleeprot", 9)
-		setProperty("rangedprot", 2)
-
-/obj/item/clothing/suit/armor/hoscape
-	name = "head of securitys cape"
-	desc = "A rather dashing cape."
-	icon_state = "hos-cape"
-	item_state = "hos-cape"
-
-	setupProperties()
-		..()
-		setProperty("meleeprot", 7)
-		setProperty("rangedprot", 1.5)
+	armor_value_bullet = 3
+	armor_value_melee = 9

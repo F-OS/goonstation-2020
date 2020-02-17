@@ -1,111 +1,4 @@
 // hey look at me I'm changing a file
-// again, again, again
-
-// How 2 use: run /proc/test_disposal_system via Advanced ProcCall
-// locate the X and Y where normally disposed stuff should end up (usually the last bit of conveyor belt in front of the crusher door
-// wait and see what comes up!
-/proc/test_disposal_system(var/expected_x, var/expected_y, var/sleep_time = 600, var/include_mail = 1)
-	if (!usr && (isnull(expected_x) || isnull(expected_y)))
-		return
-	if (isnull(expected_x))
-		expected_x = input(usr,"Please enter X coordinate") as null|num
-		if (isnull(expected_x))
-			return
-	if (isnull(expected_y))
-		expected_y = input(usr,"Please enter Y coordinate") as null|num
-		if (isnull(expected_y))
-			return
-
-	var/list/dummy_list = list()
-	for (var/obj/machinery/disposal/D in world)
-		if (D.z != 1)
-			break
-		/*
-		if (D.type != text2path(test_path))
-			continue
-		*/
-		var/obj/item/disposal_test_dummy/TD
-		// Mail chute test
-		if(istype(D, /obj/machinery/disposal/mail))
-			if(include_mail)
-				var/obj/machinery/disposal/mail/mail_chute = D
-
-				mail_chute.Topic("?rescan=1", params2list("rescan=1"))
-				SPAWN_DBG(20)
-					for(var/dest in mail_chute.destinations)
-						var/obj/item/disposal_test_dummy/mail_test/MD = new /obj/item/disposal_test_dummy/mail_test(mail_chute, sleep_time)
-						MD.source_disposal = mail_chute
-						MD.destination_tag = dest
-						mail_chute.destination_tag = dest
-						//dummy_list.Add(MD)
-						mail_chute.flush()
-
-		else
-			//Regular chute
-			TD = new /obj/item/disposal_test_dummy(D)
-			TD.expected_x = expected_x
-			TD.expected_y = expected_y
-			dummy_list.Add(TD)
-			TD.source_disposal = D
-			SPAWN_DBG(0)
-				D.flush()
-
-	message_coders("test_disposal_system() sleeping [sleep_time] and spawned [dummy_list.len] dummies")
-	sleep(sleep_time)
-
-	var/successes = 0
-	for (var/obj/item/disposal_test_dummy/TD in dummy_list)
-		if (!TD.report_fail())
-			successes ++
-
-		qdel(TD)
-
-	message_coders("Disposal test completed with [successes] successes")
-
-/obj/item/disposal_test_dummy
-	icon = 'icons/misc/bird.dmi'
-	icon_state = "bhooty"
-	name = "wtf"
-	var/obj/machinery/disposal/source_disposal = null
-	var/expected_x = 0
-	var/expected_y = 0
-
-
-	New(var/atom/loc, var/TTL=0)
-		..(loc)
-		if(TTL)
-			SPAWN_DBG(TTL)
-				die()
-
-	proc/report_fail()
-		if(src.x != expected_x || src.y != expected_y)
-			message_coders("test dummy misrouted at [log_loc(src)][src.source_disposal ? " from [log_loc(src.source_disposal)]" : " (source disposal destroyed)"]")
-			return 1
-
-		return 0
-
-	proc/die()
-		report_fail()
-		qdel(src)
-
-/obj/item/disposal_test_dummy/mail_test
-	var/obj/machinery/disposal/mail/destination_disposal = null
-	var/destination_tag = null
-	var/success = 0
-
-/obj/item/disposal_test_dummy/mail_test/pipe_eject()
-	destination_disposal = locate(/obj/machinery/disposal/mail) in src.loc
-	if(destination_disposal && destination_disposal.mail_tag == destination_tag)
-		success = 1
-	SPAWN_DBG(50)
-		die()
-	..()
-
-/obj/item/disposal_test_dummy/mail_test/report_fail()
-	if(!success)
-		message_coders("mail dummy misrouted at [log_loc(src)] from [log_loc(source_disposal)], destination: [destination_tag], reached: [log_loc(destination_disposal)]")
-		return 1
-	return 0
 
 /* ._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._. */
 /*-=-=-=-=-=-=-=-=-=-=-=-=-ADMIN-STUFF-=-=-=-=-=-=-=-=-=-=-=-=-*/
@@ -133,319 +26,1185 @@
 	requires_power = 0
 	sound_environment = 4
 
-/proc/report_times()
-	DEBUG_MESSAGE("[world.time]")
-	DEBUG_MESSAGE(time2text(world.realtime, "DDD MMM DD hh:mm:ss"))
-	DEBUG_MESSAGE(time2text(world.timeofday, "DDD MMM DD hh:mm:ss"))
+var/global/debug_messages = 0
+var/global/narrator_mode = 0
+var/global/disable_next_click = 0
+
+/client/proc/toggle_next_click()
+	set name = "Toggle next_click"
+	set desc = "Removes most click delay. Don't know what this is? Probably shouldn't touch it."
+	set category = "Toggles (Server)"
+	admin_only
+
+	disable_next_click = !(disable_next_click)
+	logTheThing("admin", usr, null, "toggled next_click [disable_next_click ? "off" : "on"].")
+	logTheThing("diary", usr, null, "toggled next_click [disable_next_click ? "off" : "on"].", "admin")
+	message_admins("[key_name(usr)] toggled next_click [disable_next_click ? "off" : "on"]")
+
+/client/proc/debug_messages()
+	set desc = "Toggle debug messages."
+	set name = "HDM" // debug ur haines
+	set hidden = 1
+	admin_only
+
+	debug_messages = !(debug_messages)
+	logTheThing("admin", usr, null, "toggled debug messages [debug_messages ? "on" : "off"].")
+	logTheThing("diary", usr, null, "toggled debug messages [debug_messages ? "on" : "off"].", "admin")
+	message_admins("[key_name(usr)] toggled debug messages [debug_messages ? "on" : "off"]")
+
+/client/proc/narrator_mode()
+	set name = "Narrator Mode"
+	set desc = "Toggle narrator mode on or off."
+	admin_only
+
+	narrator_mode = !(narrator_mode)
+
+	logTheThing("admin", usr, null, "toggled narrator mode [narrator_mode ? "on" : "off"].")
+	logTheThing("diary", usr, null, "toggled narrator mode [narrator_mode ? "on" : "off"].", "admin")
+	message_admins("[key_name(usr)] toggled narrator mode [narrator_mode ? "on" : "off"]")
 
 /* ._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._. */
-/*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-GUM-=-=-=-=-=-=-=-=-=-=-=-=-=-=-*/
+/*-=-=-=-=-=-=-=-=-=-=-=-=-GHOST-DRONE-=-=-=-=-=-=-=-=-=-=-=-=-*/
 /* '~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~' */
 
-/obj/item/clothing/mask/bubblegum
-	name = "bubblegum"
-	desc = "Some chewable gum. You can blow bubbles with it!"
-	icon_state = "anime"	// todo: decent sprites
-	var/mob/chewer = null
-	var/chew_size = 0.2		// unit amount transferred when gum is chewed
-	var/spam_flag = 0		// counts down from spam_timer after each time the chew message is shown
-	var/spam_timer = 8		// time used to determine how long spam_flag is active
-	var/initial_reagent = null
+/obj/machinery/ghost_catcher
+	name = "ghost catcher"
+	desc = "it catches ghosts!! read the name gosh I shouldn't have to explain everything to you"
+	anchored = 1
+	density = 1
+	icon = 'icons/mob/ghost_drone.dmi'
+	icon_state = "ghostcatcher0"
+	mats = 0
+	var/id = "ghostdrone"
+
+	Crossed(atom/movable/O)
+		if (!istype(O, /mob/dead/observer))
+			return ..()
+		var/mob/dead/observer/G = O
+		if (available_ghostdrones.len)
+			G.visible_message("[src] scoops up [G]!",\
+			"You feel yourself being torn away from the afterlife and into [src]!")
+			droneize(G, 1)
+		else
+			G.show_text("There are currently no empty drones available for use, please wait for another to be built.", "red")
+			return ..()
+
+	process()
+		..()
+		if (available_ghostdrones.len)
+			src.icon_state = "ghostcatcher1"
+			var/list/ghost_candidates = list()
+			for (var/mob/dead/observer/O in get_turf(src))
+				if (assess_ghostdrone_eligibility(O))
+					ghost_candidates += O
+			if (ghost_candidates.len)
+				var/mob/dead/observer/O = pick(ghost_candidates)
+				if (O)
+					O.visible_message("[src] scoops up [O]!",\
+					"You feel yourself being torn away from the afterlife and into [src]!")
+					droneize(O, 1)
+		else
+			src.icon_state = "ghostcatcher0"
+
+/proc/assess_ghostdrone_eligibility(var/mob/dead/observer/G)
+	if (!istype(G))
+		return 0
+	if (!G.client)
+		return 0
+	if (G.mind && G.mind.dnr)
+		return 0
+	return 1
+
+#define GHOSTDRONE_BUILD_INTERVAL 3000
+var/global/ghostdrone_factory_working = 0
+var/global/last_ghostdrone_build_time = 0
+var/global/list/available_ghostdrones = list()
+
+/obj/machinery/ghostdrone_factory
+	name = "drone factory"
+	desc = "A slightly mysterious looking factory that spits out weird looking drones every so often. Why not."
+	anchored = 1
+	density = 0
+	icon = 'icons/mob/ghost_drone.dmi'
+	icon_state = "factory10"
+	layer = 5 // above mobs hopefully
+	mats = 0
+	var/factory_section = 1 // can be 1 to 3
+	var/id = "ghostdrone" // the belts through the factory should be set to the same as the factory pieces so they can control them
+	var/obj/item/ghostdrone_assembly/current_assembly = null
+	var/list/conveyors = list()
+	var/working = 0 // are we currently doing something to a drone piece?
+	var/work_time = 50 // how long do_work()'s animation and sound effect loop runs
+	var/worked_time = 0 // how long the current work cycle has run
 
 	New()
 		..()
-		if (!src.reagents && src.initial_reagent)
-			var/datum/reagents/R = new /datum/reagents(5)
-			src.reagents = R
-			R.my_atom = src
-			src.reagents.add_reagent(src.initial_reagent, 5)
+		src.icon_state = "factory[src.factory_section][src.working]"
+		spawn(10)
+			src.update_conveyors()
 
-	equipped(var/mob/user, var/slot)
-		if (slot == "mask" && istype(user))
-			src.chewer = user
-			if (!(src in processing_items))
-				processing_items.Add(src)
-			if (src.reagents && !src.reagents.total_volume)
-				user.show_text("Looks like [src] has lost its flavor, darn.")
-		return ..()
+	proc/update_conveyors()
+		if (src.conveyors.len)
+			for (var/obj/machinery/conveyor/C in src.conveyors)
+				if (C.id != src.id)
+					src.conveyors -= C
+		for (var/obj/machinery/conveyor/C in machines)
+			if (C.id == src.id)
+				if (C in src.conveyors)
+					continue
+				src.conveyors += C
 
-	unequipped(var/mob/user)
-		src.chewer = null
-		src.spam_flag = 0
-		processing_items.Remove(src)
-		return ..()
+	disposing()
+		..()
+		if (src.current_assembly)
+			pool(src.current_assembly)
+		if (src.conveyors.len)
+			src.conveyors.len = 0
+
+	Cross(atom/movable/O)
+		if (!istype(O, /obj/item/ghostdrone_assembly))
+			return ..()
+		if (src.current_assembly) // we're full
+			return 0 // thou shall not pass
+		else // we're not full
+			return 1 // thou shall pass
+
+	Crossed(atom/movable/O)
+		if (src.factory_section == 1 || !istype(O, /obj/item/ghostdrone_assembly))
+			return ..()
+		var/obj/item/ghostdrone_assembly/G = O
+		if (G.stage != (src.factory_section - 1) || src.current_assembly)
+			return ..()
+		src.start_work(G)
 
 	process()
-		DEBUG_MESSAGE("[src] processing: chewer [chewer], spam_flag [spam_flag]")
-		if (istype(src.chewer) && src.loc == src.chewer && src.chewer.wear_mask == src)
-			if (!src.spam_flag && prob(33))
-				src.chewer.visible_message("<span style='color:#888888;font-size:80%'>[src.chewer] chews [his_or_her(src.chewer)] [src.name].</span>")
-				src.spam_flag = src.spam_timer
-				if (src.reagents && src.reagents.total_volume)
-					src.reagents.reaction(src.chewer, INGEST, chew_size)
-					SPAWN_DBG (0)
-						if (src && src.reagents && src.chewer && src.chewer.reagents)
-							src.reagents.trans_to(src.chewer, min(reagents.total_volume, chew_size))
-			else if (src.spam_flag)
-				src.spam_flag--
-		else
-			src.chewer = null
-			src.spam_flag = 0
-			processing_items.Remove(src)
+		..()
+		if (working && src.current_assembly)
+			worked_time ++
+			if (work_time - worked_time <= 0)
+				src.stop_work()
+				return
+
+			if (prob(40))
+				src.shake(rand(4,6))
+				playsound(get_turf(src), pick("sound/effects/zhit.ogg", "sound/effects/bang.ogg"), 30, 1, -3)
+			if (prob(40))
+				var/list/sound_list = pick(ghostly_sounds, sounds_engine, sounds_enginegrump, sounds_sparks)
+				if (!sound_list.len)
+					return
+				var/chosen_sound = pick(sound_list)
+				if (!chosen_sound)
+					return
+				playsound(get_turf(src), chosen_sound, rand(20,40), 1)
+
+		else if (!ghostdrone_factory_working)
+			if (src.factory_section == 1)
+				if (!ticker) // game ain't started
+					return
+				if (world.timeofday >= (last_ghostdrone_build_time + GHOSTDRONE_BUILD_INTERVAL))
+					src.start_work()
+			else
+				var/obj/item/ghostdrone_assembly/G = locate() in get_turf(src)
+				if (G && G.stage == (src.factory_section - 1))
+					src.start_work(G)
+
+	proc/start_work(var/obj/item/ghostdrone_assembly/G)
+		var/emptySpot = 0
+		for (var/obj/machinery/drone_recharger/factory/C in machines)
+			if (!C.occupant)
+				emptySpot = 1
+				break
+		if (!emptySpot)
 			return
 
-/obj/item/clothing/mask/bubblegum/test
-	initial_reagent = "styptic_powder"
+		if (G && !src.current_assembly && G.stage == (src.factory_section - 1))
+			src.visible_message("[src] scoops up [G]!")
+			G.set_loc(src)
+			src.current_assembly = G
+			src.working = 1
+			src.icon_state = "factory[src.factory_section]1"
+
+		else if (src.factory_section == 1 && !ghostdrone_factory_working && !src.current_assembly)
+			src.current_assembly = unpool(/obj/item/ghostdrone_assembly)
+			if (!src.current_assembly)
+				src.current_assembly = new(src)
+			src.current_assembly.set_loc(src)
+			ghostdrone_factory_working = src.current_assembly // if something happens to the assembly, for whatever, reason this should become null, I guess?
+			src.working = 1
+			src.icon_state = "factory[src.factory_section]1"
+			last_ghostdrone_build_time = world.timeofday
+
+		if (!src.current_assembly)
+			src.working = 0
+			src.icon_state = "factory[src.factory_section]0"
+			return
+
+		for (var/obj/machinery/conveyor/C in src.conveyors)
+			C.operating = 0
+			C.setdir()
+
+	proc/stop_work()
+		src.worked_time = 0
+		src.working = 0
+		src.icon_state = "factory[src.factory_section]0"
+
+		if (src.current_assembly)
+			src.current_assembly.stage = src.factory_section
+			src.current_assembly.icon_state = "drone-stage[src.factory_section]"
+			src.current_assembly.set_loc(get_turf(src))
+			playsound(get_turf(src), "sound/machines/warning-buzzer.ogg", 50, 1)
+			src.visible_message("[src] ejects [src.current_assembly]!")
+			src.current_assembly = null
+
+		for (var/obj/machinery/conveyor/C in src.conveyors)
+			C.operating = 1
+			C.setdir()
+
+	proc/shake(var/amt = 5)
+		var/orig_x = src.pixel_x
+		var/orig_y = src.pixel_y
+		for (amt, amt>0, amt--)
+			src.pixel_x = rand(-2,2)
+			src.pixel_y = rand(-2,2)
+			sleep(1)
+		src.pixel_x = orig_x
+		src.pixel_y = orig_y
+		return 1
+
+/obj/machinery/ghostdrone_factory/part2
+	icon_state = "factory20"
+	factory_section = 2
+
+/obj/machinery/ghostdrone_factory/part3
+	icon_state = "factory30"
+	factory_section = 3
+
+/obj/item/ghostdrone_assembly
+	name = "drone assembly"
+	desc = "an incomplete floaty robot"
+	icon = 'icons/mob/ghost_drone.dmi'
+	icon_state = "drone-stage1"
+	mats = 0
+	var/stage = 1
+
+	pooled()
+		..()
+		if (ghostdrone_factory_working == src)
+			ghostdrone_factory_working = 0
+		stage = 1
+
+	unpooled()
+		..()
+		src.icon_state = "drone-stage[src.stage]"
 
 /* ._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._. */
-/*-=-=-=-=-=-=-=-=-=-=-=-=-=-=BIRDS=-=-=-=-=-=-=-=-=-=-=-=-=-=-*/
+/*-=-=-=-=-=-=-=-=-=-=-=-=-=-DESTINY-=-=-=-=-=-=-=-=-=-=-=-=-=-*/
 /* '~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~' */
 
-/obj/item/feather
-	name = "feather"
-	icon = 'icons/obj/items.dmi'
-	icon_state = "feather"
-	w_class = 1
-	p_class = 1
-	burn_point = 220
-	burn_output = 300
-	burn_possible = 1
-	rand_pos = 1
+var/global/list/valid_target_arrival_pads = list()
 
-var/list/parrot_species = list("eclectus" = /datum/species_info/parrot/eclectus,
-	"eclectusf" = /datum/species_info/parrot/eclectus/female,
-	"agrey" = /datum/species_info/parrot/grey,
-	"bcaique" = /datum/species_info/parrot/caique,
-	"wcaique" = /datum/species_info/parrot/caique/white,
-	"gbudge" = /datum/species_info/parrot/budgie,
-	"bbudge" = /datum/species_info/parrot/budgie/blue,
-	"bgbudge" = /datum/species_info/parrot/budgie/bluegreen,
-	"tiel" = /datum/species_info/parrot/cockatiel,
-	"wtiel" = /datum/species_info/parrot/cockatiel/white,
-	"luttiel" = /datum/species_info/parrot/cockatiel/lutino,
-	"blutiel" = /datum/species_info/parrot/cockatiel/face,
-	"too" = /datum/species_info/parrot/cockatoo,
-	"utoo" = /datum/species_info/parrot/cockatoo/umbrella,
-	"mtoo" = /datum/species_info/parrot/cockatoo/mitchells,
-	"toucan" = /datum/species_info/parrot/toucan,
-	"kbtoucan" = /datum/species_info/parrot/toucan/keel,
-	"smacaw" = /datum/species_info/parrot/macaw,
-	"bmacaw" = /datum/species_info/parrot/macaw/bluegold,
-	"mmacaw" = /datum/species_info/parrot/macaw/military,
-	"hmacaw" = /datum/species_info/parrot/macaw/hyacinth,
-	"love" = /datum/species_info/parrot/lovebird,
-	"lovey" = /datum/species_info/parrot/lovebird/pfyellow,
-	"lovem" = /datum/species_info/parrot/lovebird/masked,
-	"loveb" = /datum/species_info/parrot/lovebird/masked/blue,
-	"lovef" = /datum/species_info/parrot/lovebird/fischer,
-	"kea" = /datum/species_info/parrot/kea)
+/proc/get_random_station_turf()
+	var/list/areas = get_areas(/area/station)
+	if (!areas.len)
+		return
+	var/area/A = pick(areas)
+	if (!A)
+		return
+	var/list/turfs = get_area_turfs(A, 1)
+	if (!turfs.len)
+		return
+	var/turf/T = pick(turfs)
+	if (!T)
+		return
+	return T
 
-var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/ikea,
-	"space" = /datum/species_info/parrot/space)
+/obj/dummy_pad
+	name = "teleport pad"
+	icon = 'icons/obj/stationobjs.dmi'
+	icon_state = "pad0"
+	anchored = 1
+	density = 0
 
-/datum/species_info // this can totally be used for more than just parrots, totally
-	var/name = "critter"
-	var/desc = "Something."
-	var/species = "critter"
+	New()
+		..()
+		valid_target_arrival_pads += src
 
-/datum/species_info/parrot
-	name = "space parrot" // ....................................... obj|mob
-	desc = "A spacefaring species of parrot." // ................... obj|mob
-	species = "parrot" // .......................................... obj|mob
-	var/list/subspecies = null // .................................. obj|mob
-	var/icon = 'icons/misc/bird.dmi' // ............................ obj|mob
-	var/gender = PLURAL // ............................................. mob
-	var/learned_words = null // .................................... obj ...
-	var/learned_phrases = null // .................................. obj ...
-	var/learn_words_chance = 33 // ................................. obj ...
-	var/learn_phrase_chance = 10 // ................................ obj ...
-	var/learn_words_max = 64 // .................................... obj ...
-	var/learn_phrase_max = 32 // ................................... obj ...
-	var/chatter_chance = 2 // ...................................... obj ...
-	var/find_treasure_chance = 2 // ................................ obj ...
-	var/destroys_treasure = 0 // ................................... obj ...
-	var/sells_furniture = 0 // ..................................... obj ...
-	var/hops = 0 // ................................................ obj|mob
-	var/pixel_x = 0 // ............................................. obj|mob
-	var/hat_offset_y = -5 // ....................................... obj|mob
-	var/hat_offset_x = 0 // ........................................ obj|mob
-	var/feather_color = "#ba1418" // ................................obj|mob
+/obj/arrivals_pad
+	name = "teleport pad"
+	desc = "Click me to teleport to the station!"
+	icon = 'icons/obj/stationobjs.dmi'
+	icon_state = "pad0"
+	anchored = 1
+	density = 0
+	var/HTML = null
+	var/obj/dummy_pad/target_pad = null
+	var/emergency = 0 // turned on if there's nothing in valid_target_arrival_pads or it isn't a list
 
-/datum/species_info/parrot/eclectus
-	name = "space eclectus"
-	desc = "A spacefaring species of <i>eclectus roratus</i>."
-	species = "eclectus"
-	subspecies = list(/datum/species_info/parrot/eclectus,
-					  /datum/species_info/parrot/eclectus/female)
-	gender = MALE
-	feather_color = "#338e1c;#167ee7;#ba1418"
-/datum/species_info/parrot/eclectus/female
-	species = "eclectusf"
-	gender = FEMALE
-	feather_color = "#ba1418;#167ee7"
+	Topic(href, href_list[])
+		if (..() || !usr)
+			return
 
-/datum/species_info/parrot/grey
-	name = "space grey"
-	desc = "A spacefaring species of <i>psittacus erithacus</i>."
-	species = "agrey"
-	feather_color = "#7c7c7c;#ba1418"
+		if (href_list["set_target"])
+			var/obj/dummy_pad/D = locate(href_list["set_target"])
+			if (!istype(D))
+				return
+			src.target_pad = D
+			src.display_window(usr)
+			return
 
-/datum/species_info/parrot/caique
-	name = "space caique"
-	desc = "A spacefaring species of <i>pionites melanocephalus</i>."
-	species = "bcaique"
-	subspecies = list(/datum/species_info/parrot/caique,
-					  /datum/species_info/parrot/caique/white)
-	hops = 1
-	hat_offset_y = -6
-	feather_color = "#338e1c;#eeaf00;#ee7500;#ffffff;#444444"
-/datum/species_info/parrot/caique/white
-	desc = "A spacefaring species of <i>pionites leucogaster</i>."
-	species = "wcaique"
-	feather_color = "#338e1c;#eeaf00;#ee7500;#ffffff"
+		else if (href_list["teleport"])
+			if (usr.loc != get_turf(src))
+				boutput(usr, "<span style='color:red'>You have to be standing on [src] to teleport!</span>")
+				return
+			if (!src.target_pad && !src.emergency)
+				boutput(usr, "<span style='color:red'>No target specified to teleport to!</span>")
+				return
+			else if (src.emergency)
+				//teleport to somewhere (hopefully with air?)
+				var/turf/T = get_random_station_turf()
+				if (!istype(T) || T.z != 1)
+					for (var/i=3, i>0, i--)
+						T = get_random_station_turf()
+						if (istype(T) && T.z == 1)
+							break
+				if (T)
+					if (get_turf(usr) != get_turf(src))
+						boutput(usr, "<span style='color:red'>You have to be standing on [src] to teleport!</span>")
+						return
+					src.teleport_user(usr, T)
+				return
+			else if (src.target_pad && alert(usr, "Teleport to [target_pad.x],[target_pad.y],[target_pad.x] in [get_area(target_pad)]?", "Confirmation", "Yes", "No") == "Yes")
+				if (get_turf(usr) != get_turf(src))
+					boutput(usr, "<span style='color:red'>You have to be standing on [src] to teleport!</span>")
+					return
+				src.teleport_user(usr, get_turf(target_pad))
+				return
 
-/datum/species_info/parrot/budgie
-	name = "space budgerigar"
-	desc = "A spacefaring species of <i>melopsittacus undulatus</i>."
-	species = "gbudge"
-	subspecies = list(/datum/species_info/parrot/budgie,
-					  /datum/species_info/parrot/budgie/blue,
-					  /datum/species_info/parrot/budgie/bluegreen)
-	hat_offset_y = -6
-	feather_color = "#25e300;#dbe300;#0a54af"
-/datum/species_info/parrot/budgie/blue
-	species = "bbudge"
-	feather_color = "#2ea6e3;#ffffff;#0a54af"
-/datum/species_info/parrot/budgie/bluegreen
-	species = "bgbudge"
-	feather_color = "#61e3df;#e3db51;#0a54af"
+	proc/teleport_user(var/mob/user, var/turf/target)
+		if (!user || !target)
+			return
+		if (!isturf(target))
+			target = get_turf(target)
+		showswirl(target)
+		leaveresidual(target)
+		showswirl(get_turf(src))
+		leaveresidual(get_turf(src))
+		boutput(usr, "<span style='color:green'>Now teleporting to [target.x],[target.y],[target.x] in [get_area(target)].</span>")
+		user.set_loc(target)
+		user << browse(null, "window=[src]")
+		if (map_setting == "DESTINY")
+			if (user.mind && user.mind.assigned_role)
+				for (var/obj/machinery/computer/announcement/A in machines)
+					if (!A.stat && A.announces_arrivals)
+						A.announce_arrival(user.real_name, user.mind.assigned_role)
 
-/datum/species_info/parrot/cockatiel
-	name = "space cockatiel"
-	desc = "A spacefaring species of <i>nymphicus hollandicus</i>."
-	species = "tiel"
-	subspecies = list(/datum/species_info/parrot/cockatiel,
-					  /datum/species_info/parrot/cockatiel/white,
-					  /datum/species_info/parrot/cockatiel/lutino,
-					  /datum/species_info/parrot/cockatiel/face)
-	hat_offset_y = -6
-	feather_color = "#959595;#f2e193;#e34f2d;#ffffff"
-/datum/species_info/parrot/cockatiel/white
-	species = "wtiel"
-	feather_color = "#ffffff"
-/datum/species_info/parrot/cockatiel/lutino
-	species = "luttiel"
-	feather_color = "#ffffff;#f2e193;#e34f2d"
-/datum/species_info/parrot/cockatiel/face
-	species = "blutiel"
-	feather_color = "#959595;#ffffff"
+	proc/generate_html()
+		HTML = ""
+		if (!islist(valid_target_arrival_pads) || !valid_target_arrival_pads.len)
+			src.emergency = 1
+			HTML += "<center><span style='color:red;font-weight:bold'>ERROR: EMERGENCY MODE (No valid targets available)</span></center>"
+			HTML += "<center><a href='?src=\ref[src];teleport=1'>\[Emergency Teleport\]</a></center>"
+		else
+			src.emergency = 0
+			HTML += "<b>TARGET</b>:<br>"
+			if (target_pad)
+				HTML += "[target_pad.x],[target_pad.y],[target_pad.x] in [get_area(target_pad)]<br>"
+				HTML += "<b>Scan Results</b>:<br>[scan_atmospheric(get_turf(target_pad), 0, 1)]<br>"
+				HTML += "<a href='?src=\ref[src];teleport=1'>\[Teleport\]</a><hr>"
+			else
+				HTML += "<span style='color:red'>No Target Specified</span><hr>"
+			HTML += "<b>Available Targets</b>:<br>"
+			for (var/obj/dummy_pad/D in valid_target_arrival_pads)
+				HTML += "<br>[D.x],[D.y],[D.z] in [get_area(D)]: <a href='?src=\ref[src];set_target=\ref[D]'>\[Select\]</a>"
 
-/datum/species_info/parrot/cockatoo
-	name = "space cockatoo"
-	desc = "A spacefaring species of <i>cacatua galerita</i>."
-	species = "too"
-	subspecies = list(/datum/species_info/parrot/cockatoo,
-					  /datum/species_info/parrot/cockatoo/umbrella,
-					  /datum/species_info/parrot/cockatoo/mitchells)
-	hat_offset_y = -4
-	feather_color = "#ffffff;#ffe777"
-/datum/species_info/parrot/cockatoo/umbrella
-	desc = "A spacefaring species of <i>cacatua alba</i>."
-	species = "utoo"
-	feather_color = "#ffffff"
-/datum/species_info/parrot/cockatoo/mitchells
-	desc = "A spacefaring species of <i>lophochroa leadbeateri</i>."
-	species = "mtoo"
-	feather_color = "#ffffff;#f0c8d2;#ff4740;#dfc962"
+	proc/display_window(var/mob/user)
+		if (!user)
+			return
+		src.generate_html()
+		user << browse(src.HTML, "window=[src];size=400x480")
 
-/datum/species_info/parrot/toucan
-	name = "space toucan"
-	desc = "A spacefaring species of <i>ramphastos toco</i>."
-	species = "toucan"
-	subspecies = list(/datum/species_info/parrot/toucan,
-					  /datum/species_info/parrot/toucan/keel)
-	hat_offset_y = -4
-	feather_color = "#4d4d4d;#ffffff;#a2171b"
-/datum/species_info/parrot/toucan/keel
-	desc = "A spacefaring species of <i>ramphastos sulfuratus</i>."
-	species = "kbtoucan"
-	feather_color = "#4d4d4d;#ffffff;#a2171b;#e8c600"
+	attack_hand(mob/user)
+		src.display_window(user)
 
-/datum/species_info/parrot/macaw
-	name = "space macaw"
-	desc = "A spacefaring species of <i>ara macao</i>."
-	species = "smacaw"
-	subspecies = list(/datum/species_info/parrot/macaw,
-					  /datum/species_info/parrot/macaw/bluegold,
-					  /datum/species_info/parrot/macaw/military,
-					  /datum/species_info/parrot/macaw/hyacinth)
-	icon = 'icons/misc/bigcritter.dmi' // macaws are big oafs
-	pixel_x = -16
-	hat_offset_y = -3
-	hat_offset_x = 16
-	feather_color = "#df0f14;#eeaf00;#412eab;#409611"
-/datum/species_info/parrot/macaw/bluegold
-	desc = "A spacefaring species of <i>ara ararauna</i>."
-	species = "bmacaw"
-	feather_color = "#0e70e7;#f5c403;#019b26"
-/datum/species_info/parrot/macaw/military
-	desc = "A spacefaring species of <i>ara militaris</i>."
-	species = "mmacaw"
-	feather_color = "#3d9f2b;#e8b900;#1699f8;#bd3030"
-/datum/species_info/parrot/macaw/hyacinth
-	desc = "A spacefaring species of <i>anodorhynchus hyacinthinus</i>."
-	species = "hmacaw"
-	feather_color = "#383d9c"
+	attackby(obj/item/W, mob/user)
+		src.display_window(user)
 
-/datum/species_info/parrot/lovebird
-	name = "space lovebird"
-	desc = "A spacefaring species of <i>agapornis roseicollis</i>."
-	species = "love"
-	subspecies = list(/datum/species_info/parrot/lovebird,
-					  /datum/species_info/parrot/lovebird/pfyellow,
-					  /datum/species_info/parrot/lovebird/masked,
-					  /datum/species_info/parrot/lovebird/masked/blue,
-					  /datum/species_info/parrot/lovebird/fischer)
-	hat_offset_y = -6
-	feather_color = "#68b128;#3991e3;#ea7865;#e33b2a"
-/datum/species_info/parrot/lovebird/pfyellow
-	species = "lovey"
-	feather_color = "#deba2a;#3991e3;#ea7865;#e33b2a"
-/datum/species_info/parrot/lovebird/masked
-	desc = "A spacefaring species of <i>agapornis personatus</i>."
-	species = "lovem"
-	feather_color = "#deba2a;#68b128;#297806;#383838"
-/datum/species_info/parrot/lovebird/masked/blue
-	species = "loveb"
-	feather_color = "#ffffff;#80a5d4;#22668e;#383838"
-/datum/species_info/parrot/lovebird/fischer
-	desc = "A spacefaring species of <i>agapornis fischeri</i>."
-	species = "lovef"
-	feather_color = "#65ab26;#deba2a;#e5883d;#d0490f;#3991e3"
+/client/proc/cmd_rp_rules()
+	set name = "RP Rules"
+	set category = "Commands"
 
-/datum/species_info/parrot/kea
-	name = "space kea"
-	desc = "A spacefaring species of <i>nestor notabillis</i>, also known as the 'space mountain parrot,' originating from Space Zealand."
-	species = "kea"
-	find_treasure_chance = 15
-	destroys_treasure = 1
-	feather_color = "#bfba95;#505929;#ff7742;#565151"
-/datum/species_info/parrot/kea/ikea
-	name = "space ikea"
-	desc = "You can buy a variety of flat-packed furniture from the space ikea, if you have enough space kronor."
-	species = "ikea"
-	learned_words = list("Välkommen","Hej","Hejsan","Hallå","Hej då","Varsågod","Hur mår du","Tack så mycket","Kom igen","Ha en bra dag")
-	learned_phrases = list("Välkommen!","Hej!","Hejsan!","Hallå!","Hej då!","Varsågod!","Hur mår du?","Tack så mycket!","Kom igen!","Ha en bra dag!")
-	learn_words_chance = 0
-	learn_phrase_chance = 0
-	chatter_chance = 10
-	destroys_treasure = 0
-	sells_furniture = 1
+	src.Browse( {"<center><h2>Goonstation RP Server Guidelines and Rules - Test Drive Edition</h2></center><hr>
+	Welcome to the NSS Destiny! Now, since as this server is intended for roleplay, there are some guidelines, rules and tips to make your time fun for everyone!<hr>
+	<ul style='list-style-type:disc'>
+		<li>Roleplay and have fun!
+			<ul style='list-style-type:circle'>
+				<li>Try to have fun with other players too, and try not to be too much of a jerk if you're not a traitor. Accidents may happen, but do not intentionally damage or destroy the station as a non-traitor, the game should be fun for all!</li>
+				<li>In the end, we want people to get into character and just try to have fun pretending to be a farty spaceman on a weird ship. This won't be "no silliness allowed" or anything, you don't have to have a believable irl person as a character. Just try to play along with things and have fun interacting and talking to the people around you, create some drama, instead of trying to figure out how to most efficiently win the round, or whatever. If someone is clearly an antag, threatening the ship with a bomb, play along with them instead of trying to immediately beat their face in. Things like that.</li>
+			</ul>
+		</li>
+		<li>If you are a traitor, you make the fun!
+			<ul style='list-style-type:circle'>
+				<li>Treat your role as an interesting challenge and not an excuse to destroy other peoples' game experience. Your actions should make the game more fun, more exciting and more enjoyable for everyone, don't try to go on a homicidal rampage unless your objectives require you to do so! Try a fun new gimmick, or ask one of the admins!</li>
+				<li>You should try to have a plan for something that will be fun for you and your victims. At the very least, interaction between antags and non-antags should be more than a c-saber being applied to the face repeatedly! Some of the objectives already come with added gimmick ideas/suggestions, try using them!</li>
+			</ul>
+		</li>
+		<li>Don't be an awful person.
+			<ul style='list-style-type:circle'>
+				<li>Hate speech, bigoted language, discrimination, harassment, or sexual content such as, but not limited to ERP and sexual assault will not be tolerated at all and may be considered grounds for immediate banning.</li>
+				<li>We're all here to have a good time! Going out of your way to seriously negatively impact or end the round for someone with little to no justification is against the rules. Legitimate conflicts where people get upset do happen however, these conflicts should escalate properly and retribution must be proportionate, roleplaying someone with a mental illness is not a legitimate reason.</li>
+			</ul>
+		</li>
+		<li>Remember that this game relies on trickery, sneakiness, and some suspension of disbelief.
+			<ul style='list-style-type:circle'>
+				<li>Do not cheat by using multiple accounts or by coordinating with other players through out-of-game communication means</li>
+			</ul>
+		</li>
+		<li>Play out your role believably.
+			<ul style='list-style-type:circle'>
+				<li>Don't exploit glitches, out-of-character (OOC) knowledge, or knowledge of the game system to give your character advantages that they would not possess otherwise (e.g: a Security Guard probably knows basic first aid, but they wouldn't know how to perform advanced surgery, etc.) you will be expected to try and do your jobs, This won't be so strict that, if a botanist wanders out of hydroponics, they'll get in trouble for being out-of-character, or anything like that. Just that you should be trying to play a character to some degree, and trying to stick to doing what you were presumably on the ship to do.</li>
+				<li>Chain-of-command and security are important. The head of your department is your boss and they can fire you, security officers can arrest you for stealing or breaking into places. The preference would be that unless they're doing something unreasonable, such as spacing you for writing on the walls, you shouldn't freak out over being punished for doing something that would, in reality, get you fired or arrested.</li>
+				<li><b><i>When you aren't a traitor, you should respect the chain of command, respect Security, and avoid vigilantism!</i></b></li>
+			</ul>
+		</li>
+		<li>Keep IC and OOC separate.
+			<ul style='list-style-type:circle'>
+				<li>Do not use the OOC channel to spoil IC (In character) events, like the identity of a traitor/changeling. Likewise, do not treat IC chat like OOC (saying things like ((this round sucks)) over radio, etc)</li>
+			</ul>
+		</li>
+		<li>Listen to the administrators.
+			<ul style='list-style-type:circle'>
+				<li>If an admin asks you to explain your actions or asks you to stop doing something, you probably ought to do so. If you think someone is breaking the rules or ruining the game for everyone else somehow, use the <b>ADMINHELP</b> verb to give us a shout. If you just want tips on how to play the game, try <b>MENTORHELP</b>. Do not log out when an admin is speaking with you.</li>
+			</ul>
+		</li>
+		<li>Real life takes precedence!
+			<ul style='list-style-type:circle'>
+				<li>If you are the AI or a head position and have to log off, PLEASE adminhelp a quick message. You do not need to wait for a response, but it really helps to know as it can seriously hamstring the station if you just disappear or go AFK.</li>
+			</ul>
+		</li>
+	</ul>"}, "window=rprules;title=RP+Rules;fade_in=1" )
 
-/datum/species_info/parrot/space
-	desc = "A parrot, from space. In space. Made of space? A space parrot."
-	species = "space"
-	feather_color = "#151628"
+/obj/item/paper/book/space_law
+	name = "Space Law"
+	desc = "A book explaining the laws of space. Well, this section of space, at least."
+	icon_state = "book7"
+	info = {"<center><h2>Frontier Justice on the NSS Destiny: A Treatise on Space Law</h2></center>
+	<h3>A Brief Summary of Space Law</h3><hr>
+	As a Security Officer, the zeroth Space Law that you should probably always obey is to use your common sense. If it is a crime in real life, then it is a crime in this video game. Remember to use your best judgement when arresting criminals, and don't get discouraged if they complain.<br><br>
+	For certain crimes, the accused's intent is important. The difference between Assault and Attempted Murder can be very hard to ascertain, and, when in doubt, you should default to the less serious crime. It is important to note though, that Assault and Attempted Murder are mutually exclusive. You cannot be charged with Assault and Attempted Murder from the same crime as the intent of each is different. Likewise, 'Assault With a Deadly Weapon' and 'Assaulting an Officer' are also crimes that exclude others. Pay careful attention to the requirements of each law and select the one that best fits the crime when deciding sentence.<br><br>
+	Security roles and their superiors can read the Miranda warning to suspects by using the Recite Miranda Rights verb or *miranda emote. The wording is also customizable via Set Miranda Rights.<br><br>
+	Additionally: It is <b><i>highly illegal</i></b> for Nanotrasen personnel to make use of Syndicate devices. Do not use traitor gear as a non-traitor, even to apprehend traitors.<hr>
+	Here's a guideline for how you should probably treat suspects by each particular crime.
+	<h4>Minor Crimes:</h4>
+	<i>No suspect may be sentenced for more than five minutes in the Brig for Minor Crimes. Minor Crime sentences are not cumulative (e.g: max five minutes for committing multiple Minor Crimes).</i>
+	<ul style='list-style-type:disc'>
+		<li>Assault
+			<ul style='list-style-type:circle'>
+				<li>To use physical force against someone without the apparent intent to kill them.</li>
+			</ul>
+		</li>
+		<li>Theft
+			<ul style='list-style-type:circle'>
+				<li>To take items from areas one does not have access to or to take items belonging to others or the ship as a whole.</li>
+			</ul>
+		</li>
+		<li>Fraud</li>
+		<li>Breaking and Entering
+			<ul style='list-style-type:circle'>
+				<li>To deliberately damage the ship without malicious intent.</li>
+				<li>To be in an area which a person does not have access to. This counts for general areas of the ship, and trespass in restricted areas is a more serious crime.</li>
+			</ul>
+		</li>
+		<li>Resisting Arrest
+			<ul style='list-style-type:circle'>
+				<li>To not cooperate with an officer who attempts a proper arrest.</li>
+			</ul>
+		</li>
+		<li>Escaping from the Brig
+			<ul style='list-style-type:circle'>
+				<li>To escape from a brig cell, or custody.</li>
+			</ul>
+		</li>
+		<li>Assisting or Abetting Criminals
+			<ul style='list-style-type:circle'>
+				<li>To act as, or knowingly aid, an enemy of Nanotrasen.</li>
+			</ul>
+		</li>
+		<li>Drug Possession
+			<ul style='list-style-type:circle'>
+				<li>To possess space drugs or other narcotics by unauthorized personnel.</li>
+			</ul>
+		</li>
+		<li>Narcotics Distribution
+			<ul style='list-style-type:circle'>
+				<li>To distribute narcotics and other controlled substances.</li>
+			</ul>
+		</li>
+	</ul>
+	<h4>Major Crime:</h4>
+	<i>For Major Crimes, a suspect may be sentenced for more than five minutes, but no more than fifteen. Like above, multiple Major Crime sentences are not cumulative.</i><br>
+	<ul style='list-style-type:disc'>
+		<li>Murder
+			<ul style='list-style-type:circle'>
+				<li>To maliciously kill someone.</li>
+				<li><b><i>Unauthorised executions are classed as Murder.</i></b></li>
+			</ul>
+		</li>
+		<li>Manslaughter
+			<ul style='list-style-type:circle'>
+				<li>To unintentionally kill someone through negligent, but not malicious, actions.</li>
+				<li>Intent is important. Accidental deaths caused by negligent actions, such as creating workplace hazards (e.g. gas leaks), tampering with equipment, excessive force, and confinement in unsafe conditions are examples of Manslaughter.</li>
+			</ul>
+		</li>
+		<li>Sabotage
+			<ul style='list-style-type:circle'>
+				<li>To engage in maliciously destructive actions, seriously threatening crew or ship.</li>
+				<li>Bombing, arson, releasing viruses, deliberately exposing areas to space, physically destroying machinery or electrifying doors all count as Grand Sabotage.</li>
+			</ul>
+		</li>
+		<li>Enemy of Nanotrasen
+			<ul style='list-style-type:circle'>
+				<li>To act as, or knowingly aid, an enemy of Nanotrasen.</li>
+			</ul>
+		</li>
+		<li>Creating a Workplace Hazard
+			<ul style='list-style-type:circle'>
+				<li>To endanger the crew or ship through negligent or irresponsible, but not deliberately malicious, actions.</li>
+				<li>Possession of Explosives</li>
+			</ul>
+		</li>
+	</ul>
+	<i>Suspects guilty of committing Major Crimes might also be sentenced to death, or perma-brigging, under specific circumstances listed below.</i><br>
+	Execution, permabrigging, poisoning, or anything else resulting in death or massive frustration requires:
+	<ol type="1">
+		<li>Solid evidence of a major crime</li>
+		<li>Permission of the following Heads:
+			<ol type="i">
+				<li>the Head of Security</li>
+				<li>the Captain</li>
+				<li>the Head of Personnel</li>
+			</ol>
+		</li>
+	</ol>
+	Please note that the ruling of the HoS supercedes that of the Captain in criminal matters, and likewise, the Captain with the HoP. Execution should only be used in grievous circumstances.<bt>
+	<b><i>The execution of criminals without Command authority, or evidence, is tantamount to murder.</i></b>
+	<h3>Standard Security Operating Practice</h3><hr>
+	As a Security Officer, you are expected to practice a modicum of due process in detaining, searching, and arresting people. Suspects still have rights, and treating people like scum will usually just turn into more crime and bring about a swift end to your existence. Never use lethal force when nonlethal force will do!<br>
+	<ul style='list-style-type:disc'>
+		<li>Detain the suspect with minimum force.</li>
+		<li>Handcuff the suspect and restrain them by pulling them. If their crime requires a brig time, bring them into the office, preferably via Port-a-Brig.</li>
+		<li>In the brig, tell them you're going to search them before doing so. Empty their pockets and remove their backpack. Look through everything. Be sure to open containers inside containers, such as boxes inside backpacks. Be sure to replace all items in the containers when you're done. <b><i>Don't strip them in the hallways!</i></b></li>
+		<li>If you need to brig them you can feed them into the little chute next to the brig. Remember to set the timer!</li>
+		<li>Confiscate any contraband and/or stolen items, as well as any tools that may be used for future crimes, these need to be placed in a proper evidence locker, or crate and should not be left on the brig floor, or used for personal use, if stolen, return the items to their rightful owners.</li>
+		<li>Update their security record if needed.</li>
+	</ul>
+	"}
+
+/obj/machinery/shield_generator
+	name = "shield generator"
+	desc = "Some kinda thing what generates a big ol' shield around everything."
+	//icon = 'icons/obj/meteor_shield.dmi'
+	icon = 'icons/obj/32x96.dmi'
+	icon_state = "shieldgen0"
+	anchored = 1
+	density = 1
+	bound_height = 96
+	var/obj/machinery/power/data_terminal/link = null
+	var/net_id = null
+	var/list/shields = list()
+	var/active = 0
+	var/image/image_active = null
+	var/image/image_shower_dir = null
+	//var/last_noise_time = 0
+	//var/last_noise_length = 0
+	//var/sound_loop_interrupt = 0
+	var/sound_startup = 'sound/machines/shieldgen_startup.ogg' // 40
+	//var/sound_loop = 'sound/machines/shieldgen_mainloop.ogg' // 75
+	var/sound_shutoff = 'sound/machines/shieldgen_shutoff.ogg' // 35
+
+	New()
+		..()
+		src.update_icon()
+		spawn(6)
+			if (!src.link)
+				var/turf/T = get_turf(src)
+				var/obj/machinery/power/data_terminal/test_link = locate() in T
+				if (test_link && !test_link.is_valid_master(test_link.master))
+					src.link = test_link
+					src.link.master = src
+			src.net_id = generate_net_id(src)
+
+	proc/update_icon()
+		if (stat & (NOPOWER|BROKEN))
+			src.icon_state = "shieldgen0"
+			src.UpdateOverlays(null, "top_lights")
+			src.UpdateOverlays(null, "meteor_dir1")
+			src.UpdateOverlays(null, "meteor_dir2")
+			src.UpdateOverlays(null, "meteor_dir3")
+			src.UpdateOverlays(null, "meteor_dir4")
+			return
+
+		if (src.active)
+			src.icon_state = "shieldgen-anim"
+			if (!src.image_active)
+				src.image_active = image(src.icon, "shield-top_anim")
+			src.UpdateOverlays(src.image_active, "top_lights")
+		else
+			src.icon_state = "shieldgen1"
+			src.UpdateOverlays(null, "top_lights")
+
+		if (meteor_shower_active)
+			if (!src.image_shower_dir)
+				src.image_shower_dir = image(src.icon, "shield-D[meteor_shower_active]")
+			src.image_shower_dir.icon_state = "shield-D[meteor_shower_active]"
+			src.UpdateOverlays(src.image_shower_dir, "meteor_dir[meteor_shower_active]")
+		else
+			src.UpdateOverlays(null, "meteor_dir1")
+			src.UpdateOverlays(null, "meteor_dir2")
+			src.UpdateOverlays(null, "meteor_dir3")
+			src.UpdateOverlays(null, "meteor_dir4")
+
+	process()
+		//src.update_icon()
+		if (stat & BROKEN)
+			src.deactivate()
+			return
+		..()
+		if (stat & NOPOWER)
+			src.deactivate()
+			return
+		src.use_power(250)
+		if (src.shields.len)
+			src.use_power(5*src.shields.len)
+/*
+	proc/sound_loop()
+		if (sound_loop_interrupt)
+			sound_loop_interrupt = 0
+			return
+		if (active && (last_noise_time + last_noise_length <= ticker.round_elapsed_ticks))
+			playsound(src.loc, src.sound_loop, 30)
+			src.last_noise_length = 75
+			src.last_noise_time = ticker.round_elapsed_ticks
+		sleep(2)
+		src.sound_loop()
+*/
+	disposing()
+		src.remove_shield()
+		src.link = null
+		src.image_active = null
+		src.image_shower_dir = null
+		..()
+
+	receive_signal(datum/signal/signal)
+		if (stat & (NOPOWER|BROKEN) || !src.link)
+			return
+		if (!signal || !src.net_id || signal.encryption)
+			return
+
+		if (signal.transmission_method != TRANSMISSION_WIRE) //No radio for us thanks
+			return
+
+		var/target = signal.data["sender"]
+
+		//They don't need to target us specifically to ping us.
+		//Otherwise, ff they aren't addressing us, ignore them
+		if (signal.data["address_1"] != src.net_id)
+			if ((signal.data["address_1"] == "ping") && signal.data["sender"])
+				spawn(5) //Send a reply for those curious jerks
+					src.post_status(target, "command", "ping_reply", "device", "PNET_SHIELD_GEN", "netid", src.net_id)
+			return
+
+		var/sigcommand = lowertext(signal.data["command"])
+		if (!sigcommand || !signal.data["sender"])
+			return
+
+		switch (sigcommand)
+			if ("activate")
+				if (src.active)
+					src.post_reply("SGEN_ACT", target)
+					return
+				src.activate()
+				src.post_reply("SGEN_ACTVD", target)
+
+			if ("deactivate")
+				if (!src.active)
+					src.post_reply("SGEN_NACT", target)
+					return
+				src.deactivate()
+				src.post_reply("SGEN_DACTVD", target)
+
+	// for testing atm
+	attack_hand(mob/user as mob)
+		user.show_text("You flip the switch on [src].")
+		if (src.active)
+			src.deactivate()
+		else
+			src.activate()
+		message_admins("<span style=\"color:blue\">[key_name(user)] [src.active ? "activated" : "deactivated"] shields</span>")
+		logTheThing("station", null, null, "[key_name(user)] [src.active ? "activated" : "deactivated"] shields")
+
+	proc/post_status(var/target_id, var/key, var/value, var/key2, var/value2, var/key3, var/value3)
+		if (!src.link || !target_id)
+			return
+
+		var/datum/signal/signal = get_free_signal()
+		signal.source = src
+		signal.transmission_method = TRANSMISSION_WIRE
+		signal.data[key] = value
+		if (key2)
+			signal.data[key2] = value2
+		if (key3)
+			signal.data[key3] = value3
+
+		signal.data["address_1"] = target_id
+		signal.data["sender"] = src.net_id
+
+		src.link.post_signal(src, signal)
+
+	proc/post_reply(error_text, target_id)
+		if (!error_text || !target_id)
+			return
+		spawn(3)
+			src.post_status(target_id, "command", "device_reply", "status", error_text)
+		return
+
+	proc/create_shield()
+		var/area/shield_loc = locate(/area/station/shield_zone)
+		for (var/turf/T in shield_loc)
+			if (!(locate(/obj/forcefield/meteorshield) in T))
+				var/obj/forcefield/meteorshield/MS = new /obj/forcefield/meteorshield(T)
+				MS.deployer = src
+				src.shields += MS
+
+	proc/remove_shield()
+		for (var/obj/forcefield/meteorshield/MS in src.shields)
+			MS.deployer = null
+			src.shields -= MS
+			qdel(MS)
+
+	proc/activate()
+		if (src.active)
+			return
+		src.active = 1
+		src.create_shield()
+		src.update_icon()
+		playsound(src.loc, src.sound_startup, 75)
+		//src.last_noise_length = 40
+		//src.last_noise_time = ticker.round_elapsed_ticks
+		//src.sound_loop_interrupt = 0
+		//src.sound_loop()
+
+	proc/deactivate()
+		if (!src.active)
+			return
+		src.active = 0
+		src.remove_shield()
+		src.update_icon()
+		playsound(src.loc, src.sound_shutoff, 75)
+		//src.last_noise_length = 0
+		//src.last_noise_time = ticker.round_elapsed_ticks
+		//src.sound_loop_interrupt = 1
+
+/obj/machinery/computer3/generic/shield_control
+	name = "shield control computer"
+	icon_state = "engine"
+	base_icon_state = "engine"
+	setup_drive_size = 48
+
+	setup_starting_peripheral1 = /obj/item/peripheral/network/powernet_card
+	//setup_starting_peripheral2 = /obj/item/peripheral/network/radio/locked/pda
+	setup_starting_program = /datum/computer/file/terminal_program/shield_control
+
+/datum/computer/file/terminal_program/shield_control
+	name = "ShieldControl"
+	size = 10
+	req_access = list(access_engineering_engine)
+	var/tmp/authenticated = null //Are we currently logged in?
+	var/datum/computer/file/user_data/account = null
+	var/obj/item/peripheral/network/powernet_card/pnet_card = null
+	var/tmp/gen_net_id = null //The net id of our linked generator
+	var/tmp/reply_wait = -1 //How long do we wait for replies? -1 is not waiting.
+
+	var/setup_acc_filepath = "/logs/sysusr"//Where do we look for login data?
+
+	initialize()
+		src.authenticated = null
+		src.master.temp = null
+		if (!src.find_access_file()) //Find the account information, as it's essentially a ~digital ID card~
+			src.print_text("<b>Error:</b> Cannot locate user file.  Quitting...")
+			src.master.unload_program(src) //Oh no, couldn't find the file.
+			return
+
+		src.pnet_card = locate() in src.master.peripherals
+		if (!pnet_card || !istype(src.pnet_card))
+			src.pnet_card = null
+			src.print_text("<b>Warning:</b> No network adapter detected.")
+
+		if (!src.check_access(src.account.access))
+			src.print_text("User [src.account.registered] does not have needed access credentials.<br>Quitting...")
+			src.master.unload_program(src)
+			return
+
+		src.reply_wait = -1
+		src.authenticated = src.account.registered
+
+		var/intro_text = {"<b>ShieldControl</b>
+		<br>Emergency Defense Shield System
+		<br><b>Commands:</b>
+		<br>(Link) to link with a shield generator.
+		<br>(Activate) to activate shields.
+		<br>(Deactivate) to deactivate shields.
+		<br>(Clear) to clear the screen.
+		<br>(Quit) to exit ShieldControl."}
+		src.print_text(intro_text)
+
+	input_text(text)
+		if (..())
+			return
+
+		var/list/command_list = parse_string(text)
+		var/command = command_list[1]
+		command_list -= command_list[1] //Remove the command we are now processing.
+
+		switch (lowertext(command))
+
+			if ("link")
+				if (!src.pnet_card) //can't do this ~fancy network stuff~ without a network card.
+					src.print_text("<b>Error:</b> Network card required.")
+					src.master.add_fingerprint(usr)
+					return
+
+				src.print_text("Now scanning for shield generator...")
+				src.detect_generator()
+
+			if ("activate")
+				if (!src.pnet_card)
+					src.print_text("<b>Error:</b> Network card required.")
+					src.master.add_fingerprint(usr)
+					return
+
+				if (!src.gen_net_id)
+					src.detect_generator()
+					sleep(8)
+					if (!src.gen_net_id)
+						src.print_text("<b>Error:</b> Unable to detect generator.  Please check network cabling.")
+						return
+				else
+					src.print_text("Transmitting activation request...")
+					generate_signal(gen_net_id, "command", "activate")
+
+			if ("deactivate")
+				if (!src.pnet_card)
+					src.print_text("<b>Error:</b> Network card required.")
+					src.master.add_fingerprint(usr)
+					return
+
+				if (!src.gen_net_id)
+					src.detect_generator()
+					sleep(8)
+					if (!src.gen_net_id)
+						src.print_text("<b>Error:</b> Unable to detect generator.  Please check network cabling.")
+						return
+				else
+					src.print_text("Transmitting deactivation request...")
+					generate_signal(gen_net_id, "command", "deactivate")
+
+			if ("help")
+				var/help_text = {"<br><b>ShieldControl</b>
+				<br>Emergency Defense Shield System
+				<br><b>Commands:</b>
+				<br>(Link) to link with a shield generator.
+				<br>(Activate) to activate shields.
+				<br>(Deactivate) to deactivate shields.
+				<br>(Clear) to clear the screen.
+				<br>(Quit) to exit ShieldControl."}
+				src.print_text(help_text)
+
+			if ("clear")
+				src.master.temp = null
+				src.master.temp_add = "Workspace cleared.<br>"
+
+			if ("quit")
+				src.master.temp = ""
+				print_text("Now quitting...")
+				src.master.unload_program(src)
+				return
+
+			else
+				print_text("Unknown command : \"[copytext(strip_html(command), 1, 16)]\"")
+
+		src.master.add_fingerprint(usr)
+		src.master.updateUsrDialog()
+		return
+
+	process()
+		if (..())
+			return
+
+		if (src.reply_wait > 0)
+			src.reply_wait--
+			if (src.reply_wait == 0)
+				src.print_text("Timed out on generator. Please rescan and retry.")
+				src.gen_net_id = null
+
+	receive_command(obj/source, command, datum/signal/signal)
+		if ((..()) || (!signal))
+			return
+
+		//If we don't have a generator net_id to use, set one.
+		switch (signal.data["command"])
+			if ("ping_reply")
+				if (src.gen_net_id)
+					return
+				if ((signal.data["device"] != "PNET_SHIELD_GEN") || !signal.data["netid"])
+					return
+
+				src.gen_net_id = signal.data["netid"]
+				src.print_text("Shield generator detected.")
+
+			if ("device_reply")
+				if (!src.gen_net_id || signal.data["sender"] != src.gen_net_id)
+					return
+
+				src.reply_wait = -1
+
+				switch (lowertext(signal.data["status"]))
+					if ("sgen_act")
+						src.print_text("<b>Alert:</b> Shield generator is already active.")
+
+					if ("sgen_nact")
+						src.print_text("<b>Alert:</b> Shield generator is already inactive.")
+
+					if ("sgen_actvd")
+						src.print_text("<b>Alert:</b> Shield generator activated.")
+						if (master && master.current_user)
+							message_admins("<span style=\"color:blue\">[key_name(master.current_user)] activated shields</span>")
+							logTheThing("station", null, null, "[key_name(master.current_user)] activated shields")
+
+					if ("sgen_dactvd")
+						src.print_text("<b>Alert:</b> Shield generator deactivated.")
+						if (master && master.current_user)
+							message_admins("<span style=\"color:blue\">[key_name(master.current_user)] deactivated shields</span>")
+							logTheThing("station", null, null, "[key_name(master.current_user)] deactivated shields")
+				return
+		return
+
+	proc/find_access_file() //Look for the whimsical account_data file
+		var/datum/computer/folder/accdir = src.holder.root
+		if (src.master.host_program) //Check where the OS is, preferably.
+			accdir = src.master.host_program.holder.root
+
+		var/datum/computer/file/user_data/target = parse_file_directory(setup_acc_filepath, accdir)
+		if (target && istype(target))
+			src.account = target
+			return 1
+
+		return 0
+
+	proc/detect_generator() //Send out a ping signal to find a comm dish.
+		if (!src.pnet_card)
+			return //The card is kinda crucial for this.
+
+		var/datum/signal/newsignal = get_free_signal()
+		//newsignal.encryption = "\ref[src.pnet_card]"
+
+		src.gen_net_id = null
+		src.reply_wait = -1
+		src.peripheral_command("ping", newsignal, "\ref[src.pnet_card]")
+
+	proc/generate_signal(var/target_id, var/key, var/value, var/key2, var/value2, var/key3, var/value3)
+		if (!src.pnet_card || !gen_net_id)
+			return
+
+		var/datum/signal/signal = get_free_signal()
+		//signal.encryption = "\ref[src.pnet_card]"
+		signal.data["address_1"] = target_id
+		signal.data[key] = value
+		if (key2)
+			signal.data[key2] = value2
+		if (key3)
+			signal.data[key3] = value3
+
+		src.reply_wait = 5
+		src.peripheral_command("transmit", signal, "\ref[src.pnet_card]")
+
+/area/station/shield_zone
+	icon_state = "shield_zone"
+
+/area/station/aviary
+	name = "Aviary"
+	icon_state = "aviary"
+	sound_environment = 15
+
+/area/station/medical/medbay/cloner
+	name = "Cloning"
+	icon_state = "cloner"
+
+/area/station/medical/medbay/pharmacy
+	name = "Pharmacy"
+	icon_state = "chem"
+
+/area/station/medical/medbay/treatment1
+	name = "Treatment Room 1"
+	icon_state = "treat1"
+
+/area/station/medical/medbay/treatment2
+	name = "Treatment Room 2"
+	icon_state = "treat2"
+
+/area/station/bridge/captain
+	name = "Captain's Office"
+	icon_state = "CAPN"
+
+/area/station/bridge/hos
+	name = "Head of Personnel's Office"
+	icon_state = "HOP"
+
+/area/station/crew_quarters/hos
+	name = "Head of Security's Quarters"
+	icon_state = "HOS"
+	sound_environment = 4
+
+/area/station/crew_quarters/md
+	name = "Medical Director's Quarters"
+	icon_state = "MD"
+	sound_environment = 4
+
+/area/station/crew_quarters/ce
+	name = "Chief Engineer's Quarters"
+	icon_state = "CE"
+	sound_environment = 4
+
+/area/station/engine/engineering/ce
+	name = "Chief Engineer's Office"
+	icon_state = "CE"
+
+/area/station/crew_quarters/quarters_fore
+	name = "Fore Crew Quarters"
+	icon_state = "crewquarters"
+	sound_environment = 3
+
+/area/station/crew_quarters/quarters_port
+	name = "Port Crew Quarters"
+	icon_state = "crewquarters"
+	sound_environment = 3
+
+/area/station/crew_quarters/quarters_star
+	name = "Starboard Crew Quarters"
+	icon_state = "crewquarters"
+	sound_environment = 3
+
+/area/station/crew_quarters/lounge
+	name = "Crew Lounge"
+	icon_state = "crew_lounge"
+	sound_environment = 2
+
+/area/station/crew_quarters/lounge_port
+	name = "Port Crew Lounge"
+	icon_state = "crew_lounge"
+	sound_environment = 2
+
+/area/station/crew_quarters/lounge_starboard
+	name = "Starboard Crew Lounge"
+	icon_state = "crew_lounge"
+	sound_environment = 2
+
+/area/station/mining
+	name = "Mining"
+	icon_state = "mining"
+	sound_environment = 10
+
+/area/station/mining/refinery
+	name = "Mining Refinery"
+	icon_state = "miningg"
+
+/area/station/mining/magnet
+	name = "Mining Magnet Control Room"
+	icon_state = "miningp"
+
+/*
+/obj/airlock_door
+	icon = 'icons/obj/doors/destiny.dmi'
+	icon_state = "gen-left"
+	density = 0
+	opacity = 0
+	var/obj/machinery/door/door = null
+
+	attackby(obj/item/W, mob/M)
+		if (src.door)
+			src.door.attackby(W, M)
+
+	attack_hand(mob/M)
+		if (src.door)
+			src.door.attack_hand(M)
+
+	attack_ai(mob/user)
+		if (src.door)
+			src.door.attack_ai(user)
+
+/obj/machinery/door/airlock/gannets
+	icon = 'icons/obj/doors/destiny.dmi'
+	icon_state = "track"
+	var/obj/airlock_door/d_left = null
+	var/d_left_state = "gen-left"
+	var/obj/airlock_door/d_right = null
+	var/d_right_state = "right"
+
+	New()
+		..()
+		src.d_right = new(src.loc)
+		src.d_right.icon_state = src.d_right_state
+		src.d_right.door = src
+		// make left after right so it's on top
+		src.d_left = new(src.loc)
+		src.d_left.icon_state = src.d_left_state
+		src.d_left.door = src
+
+	update_icon()
+		src.icon_state = "track"
+		return
+/*
+		if (density)
+			if (locked)
+				icon_state = "[icon_base]_locked"
+			else
+				icon_state = "[icon_base]_closed"
+			if (p_open)
+				if (!src.panel_image)
+					src.panel_image = image(src.icon, src.panel_icon_state)
+				src.UpdateOverlays(src.panel_image, "panel")
+			else
+				src.UpdateOverlays(null, "panel")
+			if (welded)
+				if (!src.welded_image)
+					src.welded_image = image(src.icon, src.welded_icon_state)
+				src.UpdateOverlays(src.welded_image, "weld")
+			else
+				src.UpdateOverlays(null, "weld")
+		else
+			src.UpdateOverlays(null, "panel")
+			src.UpdateOverlays(null, "weld")
+			icon_state = "[icon_base]_open"
+		return
+*/
+	play_animation(animation)
+		switch (animation)
+			if ("opening")
+				animate(src.d_left, time = src.operation_time, pixel_x = -18, easing = BACK_EASING)
+				animate(src.d_right, time = src.operation_time, pixel_x = 18, easing = BACK_EASING)
+			if ("closing")
+				animate(src.d_left, time = src.operation_time, pixel_x = 0, easing = ELASTIC_EASING)
+				animate(src.d_right, time = src.operation_time, pixel_x = 0, easing = ELASTIC_EASING)
+			if ("spark")
+				flick("[d_left_state]_spark", d_left)
+				flick("[d_right_state]_spark", d_right)
+			if ("deny")
+				flick("[d_left_state]_deny", d_left)
+				flick("[d_right_state]_deny", d_right)
+		return
+*/
+// TODO:
+// - mailputt
+// - mailputt pickup port
 
 /* ._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._. */
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=PAINTBALL=-=-=-=-=-=-=-=-=-=-=-=-=-*/
@@ -473,7 +1232,7 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 	dissipation_delay = 0
 	ks_ratio = 1.0
 	sname = "red"
-	shot_sound = 'sound/impact_sounds/Generic_Stab_1.ogg'
+	shot_sound = 'sound/weapons/Genhit.ogg'
 	shot_number = 1
 	damage_type = D_KINETIC
 	hit_type = DAMAGE_BLUNT
@@ -505,282 +1264,14 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 				src.icon_state = src.icon_empty
 		return
 */
-
 /* ._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._. */
-/*-=-=-=-=-=-=-=-=-=-=-=-=-+GAMBLING+=-=-=-=-=-=-=-=-=-=-=-=-=-*/
+/*-=-=-=-=-=-=-=-=-=-=-=-=-=BLACKJACK=-=-=-=-=-=-=-=-=-=-=-=-=-*/
 /* '~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~' */
-
-/obj/item/dice/coin/poker_chip
-	name = "poker chip"
-	real_name = "poker chip"
-	desc = "Place your bets!"
-	icon = 'icons/obj/gambling.dmi'
-	icon_state = "chip"
-	color = "#484857" // black
-	var/pip_color = "#FFFFFF" // only set to other colors by white 50c chips atm but may as well make it a var because ~variety~
-	var/image/image_pip = null
-	var/value = 1
-	force = 2.0
-	throwforce = 2.0
-	throw_speed = 1
-	throw_range = 8
-	w_class = 1.0
-	amount = 1
-	max_stack = 20
-
-	New()
-		..()
-		src.update_stack_appearance()
-
-	UpdateName()
-		src.name = "[src.amount > 1 ? "[src.amount] " : null][name_prefix(null, 1)][src.value]-credit [src.real_name][s_es(src.amount)][name_suffix(null, 1)]"
-
-	update_stack_appearance()
-		src.UpdateName()
-		if (src.amount <= 1)
-			src.icon_state = "chip"
-			ENSURE_IMAGE(src.image_pip, src.icon, "chip-pip")
-		else
-			src.icon_state = "chip_stk[src.amount <= 7 ? src.amount : 7]"
-			ENSURE_IMAGE(src.image_pip, src.icon, "chip_stk[src.amount <= 7 ? src.amount : 7]-pip")
-		src.image_pip.color = src.pip_color
-		src.image_pip.appearance_flags |= RESET_COLOR
-		src.UpdateOverlays(src.image_pip, "pip")
-
-	before_stack(atom/movable/O as obj, mob/user as mob)
-		user.visible_message("<span style='color:blue'>[user] is stacking [src.real_name]s!</span>")
-
-	after_stack(atom/movable/O as obj, mob/user as mob, var/added)
-		boutput(user, "<span style='color:blue'>You finish stacking [src.real_name]s.</span>")
-
-	failed_stack(atom/movable/O as obj, mob/user as mob, var/added)
-		boutput(user, "<span style='color:red'>You need another stack!</span>")
-
-	attackby(var/obj/item/I as obj, mob/user as mob)
-		if (istype(I, /obj/item/dice/coin/poker_chip) && src.amount < src.max_stack)
-			user.visible_message("<span style='color:blue'>[user] stacks some [src.real_name]s.</span>")
-			src.stack_item(I)
-		else
-			..(I, user)
-
-	attack_hand(mob/user as mob)
-		if ((user.l_hand == src || user.r_hand == src) && user.equipped() != src)
-			var/amt = src.amount == 2 ? 1 : round(input("How many [src.real_name]s do you want to take from the stack?") as null|num)
-			if (amt && src.loc == user && !user.equipped())
-				if (amt > src.amount || amt < 1)
-					boutput(user, "<span style='color:red'>You wish!</span>")
-					return
-				src.change_stack_amount(0 - amt)
-				var/obj/item/dice/coin/poker_chip/P = new src.type(user.loc)
-				P.attack_hand(user)
-		else
-			..(user)
-
-/obj/item/dice/coin/poker_chip/v5
-	color = "#DC0E18" // red
-	value = 5
-
-/obj/item/dice/coin/poker_chip/v10
-	color = "#30BA67" // green
-	value = 10
-
-/obj/item/dice/coin/poker_chip/v25
-	color = "#3153CE" // blue
-	value = 25
-
-/obj/item/dice/coin/poker_chip/v50
-	color = "#FFFFFF" // white
-	pip_color = "#3153CE" // blue
-	value = 50
-
-/obj/item/dice/coin/poker_chip/v100
-	color = "#FF7BD2" // pink
-	value = 100
-
-/obj/item/dice/coin/poker_chip/v250
-	color = "#E78B2E" // orange
-	value = 250
-
-/obj/item/dice/coin/poker_chip/v500
-	color = "#BE3ED6" // purple
-	value = 500
-
-/obj/item/dice/coin/poker_chip/v1000
-	color = "#4BE1DD" // aqua
-	value = 1000
-
-/*
-                    +---------------+
-                    ¦m  S N A K E   ¦
-+---h---------c-----+-------e-------+-------------------+
-¦ 0 ¦ 3 ¦ 6 ¦ 9 ¦12 ¦15 ¦18 ¦21 ¦24 ¦27 ¦30 ¦33 ¦36 ¦2f1¦
-¦ 0 ¦---+-b-+---+---d---+---+---+---+---+---+---+---+---¦
-¦---¦ 2 ¦ 5 ¦ 8 ¦11 ¦14 ¦17 ¦20 ¦23 ¦26 ¦29 ¦32 ¦35 ¦2:1¦
-¦   g---+---+---+---+---+---+---+---+---+---+---+---+---¦
-¦ 0 ¦a1 ¦ 4 ¦ 7 ¦10 ¦13 ¦16 ¦19 ¦22 ¦25 ¦28 ¦31 ¦34 ¦2:1¦
-+---+---------------+---------------+---------------+---+
-    ¦    1st 12     ¦ i  2nd 12     ¦    3rd 12     ¦
-    ¦---------------+---------------+---------------¦
-    ¦j LOW  ¦ EVEN k¦l RED  ¦ BLACK ¦  ODD  ¦ HIGH  ¦
-    +-----------------------------------------------+
-- a: Straight-Up --- a bet on one number, example is 1
-- b: Split --------- a bet on two numbers next to each other, example is 6+5
-- c: Street -------- a bet on three numbers in a line, example is 9+8+7
-- d: Square -------- a bet on four numbers that meet at a corner, example is 12+15+11+14
-- e: Double Street - a bet on six numbers in two lines next to each other, example is 16 to 21
-- f: Column -------- a bet on an entire row of numbers, example is 3+6+9+...+36
-- g: Trio ---------- a bet on three numbers, one of which must be either 0 or 00, example is 0+2+1
-- h: Top Line ------ a bet on 0+00+3+2+1
-- i: Dozen --------- a bet on one of the three sets of dozens, example is 13 to 24
-- j: High or Low --- a bet on numbers 1 to 18 (Low) or 19 to 36 (High)
-- k: Even or Odd --- a bet on even numbers or odd numbers (I probably shouldn't need to explain this one)
-- l: Red or Black -- a bet on numbers of either color (same as above)
-- m: Snake --------- a bet on a specific set of numbers: 1+5+9+12+14+16+19+23+27+30+32+34, named because the numbers make a winding pattern on the board
-*/
-/*
-/obj/roulette_table_w // half with the wheel itself
-	name = "roulette wheel"
-	desc = "A table with a roulette wheel and a little ball."
-	icon = 'icons/obj/gambling.dmi'
-	icon_state = "roulette_w0"
-	anchored = 1
-	density = 1
-	var/obj/roulette_table_e/partner = null
-	var/running = 0
-	var/run_time = 40
-	var/last_result = null
-
-	New()
-		..()
-		var/turf/T = get_step(src, EAST)
-		src.partner = locate() in T
-		if (!src.partner)
-			src.partner = new(T)
-		if (src.partner)
-			src.partner.partner = src
-
-	disposing()
-		if (src.partner)
-			src.partner.partner = null
-			src.partner = null
-		..()
-
-	attack_hand(mob/user)
-		src.spin(user)
-
-	proc/spin(mob/user)
-		set waitfor = 0
-		if (src.running)
-			if (user)
-				user.show_text("[src] is already spinning, be patient!","red")
-			return
-		if (user)
-			src.visible_message("[user] spins [src]!")
-		else
-			src.visible_message("[src] starts spinning!")
-		src.running = 1
-		var/real_run_time = rand(max(src.run_time - 10, 1), (src.run_time + 10))
-		sleep(real_run_time)
-		src.last_result = rand(1,38) // 1-36 are regular numbers to land on, 37 and 38 are 0 and 00 respectively
-		src.visible_message("[src] lands on [src.last_result > 37 ? "00" : src.last_result > 36 ? "0" : src.last_result]!")
-		if (istype(src.partner))
-			src.partner.process_bets(src.last_result)
-		src.running = 0
-
-/obj/roulette_table_e // half with the betting area
-	name = "roulette layout"
-	desc = "A table with a roulette layout, used for placing bets."
-	icon = 'icons/obj/gambling.dmi'
-	icon_state = "roulette_e"
-	anchored = 1
-	density = 1
-	var/obj/roulette_table_w/partner = null
-	var/list/bets = null
-
-	New()
-		..()
-		var/turf/T = get_step(src, WEST)
-		src.partner = locate() in T
-		if (!src.partner)
-			src.partner = new(T)
-		if (src.partner)
-			src.partner.partner = src
-
-	disposing()
-		if (src.partner)
-			src.partner.partner = null
-			src.partner = null
-		..()
-
-	proc/process_bets(var/result)
-		if (!result || !islist(src.bets))
-			return
-		var/is_zero = result > 36 ? 1 : 0
-		var/is_red = nums_red.Find("[result]") ? 1 : 0
-		var/is_odd = result%2 ? 1 : 0
-		var/is_low = result < 19 ? 1 : 0
-		var/is_snake = nums_snake.Find("[result]") ? 1 : 0
-		for (var/bet in src.bets)
-			LAGCHECK(LAG_HIGH)
-			if (!islist(bet))
-				src.bets.Remove(bet)
-				continue
-			var/winnings = src.check_win(bet, result, is_zero, is_red, is_odd, is_low, is_snake)
-			if (winnings)
-				src.give_winnings(bet, winnings)
-			src.bets.Remove(bet)
-
-	proc/check_win(var/list/bet, var/result, var/is_zero, var/is_red, var/is_odd, var/is_low, var/is_snake)
-		if (!islist(bet))
-			return 0
-		var/mob/owner = bet["owner"]
-		var/amt = bet["value"]
-		if (!istype(owner) || !amt)
-			return 0
-		switch(bet["style"])
-			if ("str8_up") // straight-up
-				if (result == text2num(bet["positions"]))
-					return (amt * 35) + amt // 35:1
-
-			if ("split")
-				var/list/positions = params2list(bet["positions"])
-				if (islist(positions) && positions.Find("[result]"))
-					return (amt * 17) + amt // 17:1
-
-			if ("street")
-				var/position = text2num(bet["positions"])
-				if (result == position || result == position+1 || result == position+2)
-					return (amt * 11) + amt // 11:1
-
-			if ("square")
-				var/list/positions = params2list(bet["positions"])
-				if (islist(positions) && positions.Find("[result]"))
-					return (amt * 8) + amt // 8:1
-
-			if ("dbl_strt") // double street
-			if ("column")
-			if ("trio")
-			if ("top_line")
-			if ("dozen")
-			if ("high_low")
-			if ("even_odd")
-			if ("color")
-			if ("snake")
-		return 0
-
-	proc/give_winnings(var/list/bet, var/amt)
-*/
-
-
-/datum/roulette_holder
-	var/list/nums_red = list("1","3","5","7","9","12","14","16","18","19","21","23","25","27","30","32","34","36")
-	var/list/nums_black = list("2","4","6","8","10","11","13","15","17","20","22","24","26","28","29","31","33","35")
-	var/list/nums_snake = list("1","5","9","12","14","16","19","23","27","30","32","34")
 /*
 /obj/submachine/blackjack
 	name = "blackjack machine"
 	desc = "Gambling for the antisocial."
-	icon = 'icons/obj/gambling.dmi'
+	icon = 'icons/obj/objects.dmi'
 	icon_state = "BJ1"
 	anchored = 1
 	density = 1
@@ -860,7 +1351,7 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			randomize_look(src)
 			src.equip_if_possible(new /obj/item/clothing/shoes/black(src), slot_shoes)
 			src.equip_if_possible(new /obj/item/clothing/under/rank/bartender(src), slot_w_uniform)
@@ -874,7 +1365,7 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 			var/my_mutation = pick("accent_elvis", "stutter", "accent_chav", "accent_swedish", "accent_tommy", "unintelligable", "slurring")
 			src.bioHolder.AddEffect(my_mutation)
 
-	was_harmed(var/mob/M as mob, var/obj/item/weapon = 0, var/special = 0)
+	was_harmed(var/mob/M as mob, var/obj/item/weapon as obj)
 		src.protect_from(M, null, weapon)
 
 	proc/protect_from(var/mob/M as mob, var/mob/customer as mob, var/obj/item/weapon as obj)
@@ -902,21 +1393,21 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 			if (!customer || customer == src) // they're doing shit to us
 				src.im_mad += 50 // we're double mad
 
-		SPAWN_DBG(rand(10, 30))
+		spawn(rand(10, 30))
 			src.yell_at(M, customer)
 
 	proc/yell_at(var/mob/M as mob, var/mob/customer as mob) // blatantly stolen from NPC assistants and then hacked up
 		if (!M)
 			return
-		var/target_name = M.name
+		var/tmp/target_name = M.name
 		var/area/current_loc = get_area(src)
-		var/where_I_am = "here"
+		var/tmp/where_I_am = "here"
 		if (copytext(current_loc.name, 1, 6) == "Diner")
 			where_I_am = "my bar"
-		var/complaint
+		var/tmp/complaint
 		if (src.im_mad < 100)
-			var/insult = pick("fucker", "fuckhead", "shithead", "shitface", "shitass", "asshole")
-			var/targ = pick("", ", [target_name]", ", [insult]", ", you [insult]")
+			var/tmp/insult = pick("fucker", "fuckhead", "shithead", "shitface", "shitass", "asshole")
+			var/tmp/targ = pick("", ", [target_name]", ", [insult]", ", you [insult]")
 			complaint = pick("Hey[targ]!", "Knock it off[targ]!", "What d'you think you're doing[targ]?", "Fuck off[targ]!", "Go fuck yourself[targ]!", "Cut that shit out[targ]!")
 
 			if (customer && (customer != src)  && prob(10))
@@ -942,18 +1433,18 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 		if (!M)
 			return 0
 
-		var/target_name = M.name
+		var/tmp/target_name = M.name
 		var/area/current_loc = get_area(src)
-		var/where_I_am = "here"
+		var/tmp/where_I_am = "here"
 		if (copytext(current_loc.name, 1, 6) == "Diner")
 			where_I_am = "my bar"
 
 		if (M.health <= 10)
-			var/insult = pick("fucker", "fuckhead", "shithead", "shitface", "shitass", "asshole")
-			var/targ = pick("", ", [target_name]", ", [insult]", ", you [insult]")
-			var/punct = pick(".", "!")
+			var/tmp/insult = pick("fucker", "fuckhead", "shithead", "shitface", "shitass", "asshole")
+			var/tmp/targ = pick("", ", [target_name]", ", [insult]", ", you [insult]")
+			var/tmp/punct = pick(".", "!")
 
-			var/kicked_their_ass = pick("Damn right, you stay down[targ][punct]",\
+			var/tmp/kicked_their_ass = pick("Damn right, you stay down[targ][punct]",\
 			"Try it again[targ], and next time you'll be hurting even more[punct]",\
 			"Goddamn [insult][punct]")
 			src.say(kicked_their_ass)
@@ -966,7 +1457,7 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 			return 1
 
 		else if (src.health <= 10)
-			var/kicked_my_ass = pick("Get away from me!",\
+			var/tmp/kicked_my_ass = pick("Get away from me!",\
 			"I give, leave me [pick("", "the hell ", "the fuck ")]alone!",\
 			"Fuck, stop!",\
 			"No more!",\
@@ -981,10 +1472,10 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 			return 1
 
 		else if (get_dist(src, M) >= 5)
-			var/insult = pick("fucker", "fuckhead", "shithead", "shitface", "shitass", "asshole")
-			var/targ = pick("", ", [target_name]", ", [insult]", ", you [insult]")
+			var/tmp/insult = pick("fucker", "fuckhead", "shithead", "shitface", "shitass", "asshole")
+			var/tmp/targ = pick("", ", [target_name]", ", [insult]", ", you [insult]")
 
-			var/got_away = pick("Yeah, get the fuck outta [where_I_am][targ]!",\
+			var/tmp/got_away = pick("Yeah, get the fuck outta [where_I_am][targ]!",\
 			"Don't [pick("bother coming back", "[pick("", "ever ")]show your [pick("", "ugly ", "stupid ")][pick("face", "mug")] in [where_I_am] again")]",\
 			"If I ever catch you in [where_I_am] again, you[pick("'ll regret it", "'ll be diggin' your own grave", "'d best stop by that fancy cloner you fuckers got, first", " won't be leaving in one piece")]!")
 			src.say(got_away)
@@ -1076,461 +1567,20 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 		..()
 */
 /* ._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._. */
-/*-=-=-=-=-=-=-=-=-=-=-=-+SAILOR MOON+-=-=-=-=-=-=-=-=-=-=-=-=-*/
-/* '~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~' */
-
-// it was inevitable the minute I sprited those damned sailor moon costumes. this was bound to happen eventually. hooray for gimmick items that are gunna be used like one time I guess
-/obj/item/clothing/under/gimmick/sailormoon
-	name = "magical sailor uniform"
-	desc = "I don't think they'd allow this kind of outfit in most navies."
-	icon_state = "sailormoon"
-	item_state = "sailormoon"
-
-/obj/item/clothing/head/sailormoon
-	name = "hair clips"
-	desc = "Shiny red hair clips to keep your hair in a very specific style and are about useless for anything else."
-	icon_state = "sailormoon"
-
-/obj/item/clothing/glasses/sailormoon
-	name = "tiara"
-	desc = "A golden tiara with a pretty red gem on it."
-	icon_state = "sailormoon"
-	throwforce = 15
-	throw_range = 10
-	throw_speed = 1
-	throw_return = 1
-	throw_spin = 0
-
-	throw_begin(atom/target) // all stolen from the boomerang heh
-		icon_state = "sailormoon1"
-		playsound(src.loc, "swoosh", 50, 1)
-		if (usr)
-			usr.say("MOON TIARA ACTION!")
-		return ..(target)
-
-	throw_impact(atom/hit_atom)
-		icon_state = "sailormoon"
-		if (hit_atom == usr)
-			if (ishuman(usr))
-				var/mob/living/carbon/human/usagi = usr
-				if (!usagi.equip_if_possible(src, usagi.slot_glasses))
-					usagi.put_in_hand_or_drop(src)
-			else
-				src.attack_hand(usr)
-			return
-		return ..(hit_atom)
-
-/obj/item/clothing/gloves/sailormoon
-	name = "gloves"
-	desc = "Long white gloves with red bands on them."
-	icon_state = "sailormoon"
-
-/obj/item/clothing/shoes/sailormoon
-	name = "boots"
-	desc = "Nice red high-heeled boots."
-	icon_state = "sailormoon"
-
-/obj/item/sailormoon_brooch
-	name = "transformation brooch"
-	desc = "A little golden brooch that makes you feel compelled to yell silly things."
-	icon = 'icons/obj/junk.dmi'
-	icon_state = "moonbrooch"
-	w_class = 1.0
-	var/activated = 0
-
-	verb/moon_prism_power()
-		set category = "Local"
-		set src in usr
-
-		usr.show_text("WIP feature!")
-		if (src.activated)
-			return
-		if (ishuman(usr))
-			var/mob/living/carbon/human/usagi = usr
-			usagi.say("MOON PRISM POWER, MAKE UP!")
-			src.activated = 1
-			for (var/i = 0, i < 4, i++)
-				usagi.dir = turn(usagi.dir, -90)
-				sleep(2)
-			usagi.sailormoon_reshape()
-			var/obj/critter/cat/luna = new /obj/critter/cat (usagi.loc)
-			luna.name = "Luna"
-			luna.desc = "A cat with a little crescent moon on her forehead."
-			luna.cattype = 3
-			luna.icon_state = "cat3"
-			usagi.u_equip(src)
-			qdel(src)
-		return
-
-/obj/item/sailormoon_wand
-	name = "moon stick"
-	desc = "Why is it called a moon stick? Well, it's a stick with a crescent moon at the end. Moon, stick. There you go."
-	icon = 'icons/obj/junk.dmi'
-	icon_state = "moonstick"
-	inhand_image_icon = 'icons/mob/inhand/hand_general.dmi'
-	item_state = "moonstick"
-	flags = FPRINT | TABLEPASS | ONBELT
-	force = 2.0
-	w_class = 2.0
-	throwforce = 2.0
-	throw_speed = 3
-	throw_range = 5
-	stamina_damage = 3
-	stamina_cost = 3
-	stamina_crit_chance = 15
-	abilities = list(/obj/ability_button/sailormoon_heal)
-
-/obj/ability_button/sailormoon_heal
-	name = "Moon Healing Escalation"
-	icon_state = "shieldceon"
-	cooldown = 100
-
-	ability_allowed()
-		if (!the_mob || the_mob.stat || the_mob.getStatusDuration("paralysis"))
-			boutput(the_mob, "<span style='color:red'>You are incapacitated.</span>")
-			return 0
-
-		if (ishuman(the_mob))
-			var/mob/living/carbon/human/usagi = the_mob
-			if (!(istype(usagi.w_uniform, /obj/item/clothing/under/gimmick/sailormoon)))
-				boutput(the_mob, "<span style='color:red'>Your clothes don't feel magical enough to use this.</span>")
-				return 0
-			if (!usagi.find_in_hand(the_item))
-				boutput(the_mob, "<span style='color:red'>You have to be holding [the_item] to use this.</span>")
-				return 0
-
-		if (!..())
-			return 0
-
-		return 1
-
-	execute_ability()
-		the_mob.say("MOON HEALING ESCALATION!")
-		for (var/mob/living/L in range(4, the_mob))
-			L.HealDamage("All", 50, 50)
-			L.updatehealth()
-			blink(get_turf(L))
-		icon_state = "shieldceoff"
-		return 1
-
-	on_cooldown()
-		..()
-		icon_state = "shieldceon"
-
-/mob/living/carbon/human/proc/sailormoon_reshape() // stolen from Spy's tommyize stuff
-	var/datum/appearanceHolder/AH = new
-	AH.gender = "female"
-	AH.customization_first = "Sailor Moon"
-	AH.customization_first_color = "#FFD700"
-	AH.owner = src
-	AH.parentHolder = src.bioHolder
-
-	src.gender = "female"
-	src.real_name = "Sailor Moon"
-
-	for (var/obj/item/clothing/O in src)
-		src.u_equip(O)
-		if (O)
-			O.set_loc(src.loc)
-			O.dropped(src)
-			O.layer = initial(O.layer)
-
-	src.equip_if_possible(new /obj/item/clothing/under/gimmick/sailormoon (src), slot_w_uniform)
-	src.equip_if_possible(new /obj/item/clothing/glasses/sailormoon (src), slot_glasses)
-	src.equip_if_possible(new /obj/item/clothing/gloves/sailormoon (src), slot_gloves)
-	src.equip_if_possible(new /obj/item/clothing/shoes/sailormoon (src), slot_shoes)
-	src.equip_if_possible(new /obj/item/clothing/head/sailormoon (src), slot_head)
-	src.equip_if_possible(new /obj/item/sailormoon_wand (src), slot_in_backpack)
-
-	if (src.bioHolder)
-		src.bioHolder.mobAppearance = AH
-	SPAWN_DBG(10)
-		src.bioHolder.mobAppearance.UpdateMob()
-
-/* ._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._. */
 /*-=-=-=-=-=-=-=-=-=-=-=-=-+MISCSTUFF+-=-=-=-=-=-=-=-=-=-=-=-=-*/
 /* '~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~' */
-
-/obj/item/null_scalpel // really stupid gimmick thing I tried to make ages ago that never worked.  We have the sprite for it, so why not make it now?
-	name = "null scalpel"
-	desc = "This looks weird and dangerous."
-	icon = 'icons/obj/surgery.dmi'
-	icon_state = "null_scalpel"
-	inhand_image_icon = 'icons/mob/inhand/hand_medical.dmi'
-	item_state = "scalpel"
-	flags = FPRINT | TABLEPASS | CONDUCT | ONBELT
-	tool_flags = TOOL_CUTTING
-	hit_type = DAMAGE_CUT
-	hitsound = 'sound/impact_sounds/Flesh_Cut_1.ogg'
-	force = 3.0
-	w_class = 1.0
-	throwforce = 5.0
-	throw_speed = 3
-	throw_range = 5
-	stamina_damage = 5
-	stamina_cost = 5
-	stamina_crit_chance = 35
-
-	attack(mob/living/carbon/M as mob, mob/user as mob)
-		if (!ismob(M) || !M.contents.len)
-			return ..()
-		var/atom/movable/AM = pick(M.contents)
-		if (!AM)
-			return ..()
-		user.visible_message("<span style='color:red'><b>[user] somehow cuts [AM] out of [M] with [src]!</b></span>")
-		playsound(get_turf(M), src.hitsound, 50, 1)
-		if (istype(AM, /obj/item))
-			user.u_equip(AM)
-		AM.set_loc(get_turf(M))
-		logTheThing("combat", user, M, "uses a null scalpel ([src]) on [M] and removes their [AM.name] at [log_loc(user)].")
-		return
-
-	custom_suicide = 1
-	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
-		user.visible_message("<span style='color:red'><b>[user] slashes [his_or_her(user)] own throat with [src]!</b></span>")
-		blood_slash(user, 25)
-		playsound(user.loc, src.hitsound, 50, 1)
-		user.TakeDamage("head", 150, 0)
-		user.updatehealth()
-		SPAWN_DBG(500)
-			if (user && !isdead(user))
-				user.suiciding = 0
-		return 1
-
-/obj/item/gun/bling_blaster
-	name = "fancy bling blaster"
-	desc = "A big old gun with a slot on the side of it to insert cash. It seems to be made of gold, but isn't gold pretty soft? Is this safe?"
-	icon_state = "bling_blaster"
-	mat_changename = 0
-	mat_changedesc = 0
-	mat_appearances_to_ignore = list("gold") // we already look fine ty
-	var/last_shot = 0
-	var/shot_delay = 15
-	var/cash_amt = 1000
-	var/cash_max = 1000
-	var/shot_cost = 100
-	var/possible_bling_common = list(/obj/item/spacecash,/obj/item/spacecash/five,/obj/item/spacecash/ten)
-	var/possible_bling_uncommon = list(/obj/item/spacecash/hundred,/obj/item/coin)
-	var/possible_bling_rare = list(/obj/item/raw_material/gemstone,/obj/item/raw_material/gold)
-
-	New()
-		..()
-		src.setMaterial(getMaterial("gold"))
-
-	shoot(var/target,var/start,var/mob/user,var/POX,var/POY)
-		if (!istype(target, /turf) || !istype(start, /turf))
-			return
-		if (target == user.loc || target == loc)
-			return
-
-		if ((last_shot + shot_delay) <= world.time)
-			if (cash_amt <= 0)
-				boutput(user, "<span style='color:green'>\The [src] beeps, \"I ain't got enough cash for that!\"</span>")
-				return
-
-			last_shot = world.time
-
-			var/turf/T = get_turf(src)
-			var/chosen_bling// = pick(60;/obj/item/spacecash,20;/obj/item/coin,10;/obj/item/raw_material/gemstone,10;/obj/item/raw_material/gold)
-			if (islist(src.possible_bling_rare) && prob(10))
-				chosen_bling = pick(src.possible_bling_rare)
-			else if (islist(src.possible_bling_uncommon) && prob(20))
-				chosen_bling = pick(src.possible_bling_uncommon)
-			else if (islist(src.possible_bling_common))
-				chosen_bling = pick(src.possible_bling_common)
-			else
-				chosen_bling = /obj/item/spacecash
-			var/obj/item/bling = unpool(chosen_bling)
-			bling.set_loc(T)
-			bling.throwforce = 8
-			src.cash_amt = max(src.cash_amt-src.shot_cost, 0)
-			SPAWN_DBG(15)
-				if (bling)
-					bling.throwforce = 1
-			bling.throw_at(target, 8, 2)
-			playsound(T, "sound/effects/bamf.ogg", 40, 1)
-			user.visible_message("<span style='color:green'><b>[user]</b> blasts some bling at [target]!</span>")
-
-	attackby(var/obj/item/spacecash/C as obj, mob/user as mob)
-		if (!istype(C))
-			return ..()
-		if (C.amount <= 0) // how??
-			boutput(user, "<span style='color:green'>\The [src] beeps, \"Your cash is trash! It ain't worth jack, mack!\"<br>[C] promptly vanishes in a puff of logic.</span>")
-			user.u_equip(C)
-			pool(C)
-			return
-		if (src.cash_amt >= src.cash_max)
-			boutput(user, "<span style='color:green'>\The [src] beeps, \"I ain't need no more money, honey!\"</span>")
-			return
-		var/max_accept = (src.cash_max - src.cash_amt)
-		if (C.amount > max_accept)
-			C.amount -= max_accept
-			C.update_stack_appearance()
-			src.cash_amt = src.cash_max
-		else
-			src.cash_amt += C.amount
-			user.u_equip(C)
-			pool(C)
-		boutput(user, "<span style='color:green'>\The [src] beeps, \"That's the good stuff!\"</span>")
-
-/obj/item/gun/bling_blaster/cheapo
-	name = "bling blaster"
-	possible_bling_rare = null
-
-/obj/item/pen/crayon/lipstick // every time I think I've made the stupidest path I could, there's nowhere to go from here, I surpass my own expectations
-	name = "lipstick"
-	desc = "A tube of wax, oil and pigment that is intended to be used to color a person's lips."
-	icon = 'icons/obj/items.dmi'
-	icon_state = "spacelipstick0"
-	color = null
-	font_color = "#FF0000"
-	font = "Dancing Script, cursive"
-	webfont = "Dancing Script"
-	uses_handwriting = 1
-	var/open = 0
-	var/image/image_stick = null
-
-	New()
-		..()
-		src.choose_random_color()
-
-	proc/choose_random_color()
-		if (prob(5)) // small chance to be a non-red/pink tone
-			//src.font_color = random_saturated_hex_color()
-			src.font_color = HSVtoRGB(hsv(AngleToHue(rand(0,360)), rand(180,255), rand(180,255)))
-		else // generate reddish HSV
-			src.font_color = HSVtoRGB(hsv(AngleToHue(rand(310,360)), rand(180,255), rand(180,255)))
-		src.color_name = hex2color_name(src.font_color)
-		src.name = "[src.color_name] lipstick"
-		src.update_icon()
-
-	proc/update_icon()
-		src.icon_state = "spacelipstick[src.open]"
-		if (src.open)
-			ENSURE_IMAGE(src.image_stick, src.icon, "spacelipstick")
-			src.image_stick.color = src.font_color
-			src.UpdateOverlays(src.image_stick, "stick")
-		else
-			src.UpdateOverlays(null, "stick")
-
-	attack_self(var/mob/user)
-		src.open = !src.open
-		src.update_icon()
-
-	attack(mob/M as mob, mob/user as mob)
-		if (ishuman(M))
-			var/mob/living/carbon/human/H = M
-			if (H.makeup == 2) // it's messed up
-				user.show_text("Gurl, [H == user ? "you" : H] a hot mess right now. That all needs to be cleaned up first.", "red")
-				return
-			else
-				actions.start(new /datum/action/bar/icon/apply_makeup(M, src, M == user ? 40 : 60), user)
-		else
-			return ..()
-
-/datum/action/bar/icon/apply_makeup // yee
-	duration = 40
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED | INTERRUPT_ACTION
-	id = "apply_makeup"
-	icon = 'icons/obj/items.dmi'
-	icon_state = "spacelipstick1"
-	var/mob/living/carbon/human/target
-	var/obj/item/pen/crayon/lipstick/makeup
-
-	New(ntarg, nmake, ndur)
-		target = ntarg
-		makeup = nmake
-		duration = ndur
-		..()
-
-	onUpdate()
-		..()
-		if (get_dist(owner, target) > 1 || target == null || owner == null || makeup == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-		var/mob/ownerMob = owner
-		if (makeup != ownerMob.equipped())
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onStart()
-		..()
-		if (get_dist(owner, target) > 1 || target == null || owner == null || makeup == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-		var/mob/ownerMob = owner
-		if (makeup != ownerMob.equipped())
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-		for (var/mob/O in AIviewers(owner))
-			O.show_message("[owner] begins applying [makeup] to [owner == target ? "[him_or_her(owner)]self" : target]!", 1)
-
-	onInterrupt(var/flag)
-		..()
-		if (prob(owner == target ? 50 : 60))
-			target.makeup = 2
-			target.makeup_color = makeup.font_color
-			target.update_body()
-			for (var/mob/O in AIviewers(owner))
-				O.show_message("<span style='color:red'>[owner] messes up [owner == target ? "[his_or_her(owner)]" : "[target]'s"] makeup!</span>", 1)
-
-	onEnd()
-		..()
-		var/mob/ownerMob = owner
-		if (owner && ownerMob && target && makeup && makeup == ownerMob.equipped() && get_dist(owner, target) <= 1)
-			target.makeup = 1
-			target.makeup_color = makeup.font_color
-			target.update_body()
-			for (var/mob/O in AIviewers(ownerMob))
-				O.show_message("[owner] applies [makeup] to [target ]!", 1)
-
-/turf/unsimulated/floor/seabed
-	name = "seabed"
-	icon = 'icons/turf/outdoors.dmi'
-	icon_state = "sand"
-
-	New()
-		..()
-		src.dir = pick(cardinal)
-
-//wrongend's bang! gun
-/obj/item/bang_gun
-	name = "revolver"
-	icon_state = "revolver"
-	desc = "There are 7 bullets left! Each shot will currently use 1 bullets!"
-	flags = FPRINT | TABLEPASS | EXTRADELAY
-	var/bangfired = 0 // Checks if the gun has been fired before or not. If it's been fired, no more firing for you
-	var/description = "A bang flag pops out of the barrel!" // Used to fuck you and also decide what description is used for the fire text
-	icon = 'icons/obj/gun.dmi'
-	inhand_image_icon = 'icons/mob/inhand/hand_weapons.dmi'
-	item_state = "gun"
-
-	pixelaction(atom/target, params, mob/user, reach)
-		if(reach || src.bangfired)
-			..()
-		else
-			src.bangfired = 1
-			if(user)
-				user.visible_message("<span style=\"color:red\"><span style='color:red'>[user] fires [src][target ? " at [target]" : null]! [description]</span>")
-			playsound(get_turf(user), "sound/musical_instruments/Trombone_Failiure.ogg", 50, 1)
-			icon_state = "bangflag[icon_state]"
-			return
-
-/obj/item/bang_gun/ak47
-	name = "ak-477"
-	icon_state = "ak47"
-	desc = "There are 30 bullets left! Each shot will currently use 3 bullets!"
-	description = "A bang flag unfurls out of the barrel!"
-
-/obj/item/bang_gun/hunting_rifle
-	name = "Old Hunting Rifle"
-	icon_state = "hunting_rifle"
-	desc = "There are 4 bullets left! Each shot will currently use 1 bullet!"
-	description = "A bang flag unfurls out of the barrel!"
-
+/*
+datum/reagent/medical/heparin
+	name = "heparin"
+	id = "heparin"
+	description = "An anticoagulant used in heart surgeries, and in the treatment of thrombosis."
+	reagent_state = LIQUID
+	fluid_r = 252
+	fluid_g = 252
+	fluid_b = 224
+	transparency = 80
+	depletion_rate = 0.2
+*/
 /*
 /obj/item // if I accidentally commit this uncommented PLEASE KILL ME tia <3
 	var/adj1 = 1
@@ -1562,10 +1612,79 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 	var/num2 = num2hex(hex2num(hexnum) - 554040)
 */
 
+/turf/simulated/floor/plating/random
+	New()
+		..()
+		if (prob(20))
+			src.icon_state = pick("panelscorched", "platingdmg1", "platingdmg2", "platingdmg3")
+		if (prob(10))
+			new /obj/decal/cleanable/dirt(src)
+		else if (prob(2))
+			var/obj/C = pick(/obj/decal/cleanable/paper, /obj/decal/cleanable/fungus, /obj/decal/cleanable/dirt, /obj/decal/cleanable/ash,\
+			/obj/decal/cleanable/molten_item, /obj/decal/cleanable/machine_debris, /obj/decal/cleanable/oil, /obj/decal/cleanable/rust)
+			new C (src)
+		else if ((locate(/obj) in src) && prob(3))
+			var/obj/C = pick(/obj/item/cable_coil/cut/small, /obj/item/brick, /obj/item/cigbutt, /obj/item/scrap, /obj/item/raw_material/scrap_metal,\
+			/obj/item/spacecash, /obj/item/tile/steel, /obj/item/weldingtool, /obj/item/screwdriver, /obj/item/wrench, /obj/item/wirecutters, /obj/item/crowbar)
+			new C (src)
+		else if (prob(1) && prob(2)) // really rare. not "three space things spawn on destiny during first test with just prob(1)" rare.
+			var/obj/C = pick(/obj/item/space_thing, /obj/item/sticker/gold_star, /obj/item/sticker/banana, /obj/item/sticker/heart,\
+			/obj/item/reagent_containers/vending/bag/random, /obj/item/reagent_containers/vending/vial/random, /obj/item/clothing/mask/cigarette/random)
+			new C (src)
+		return
+
+/turf/simulated/floor/plating/airless/random
+	New()
+		..()
+		if (prob(20))
+			src.icon_state = pick("panelscorched", "platingdmg1", "platingdmg2", "platingdmg3")
+
+/turf/simulated/floor/grass/random
+	name = "grass"
+	icon_state = "grass1"
+	var/list/random_icons = list("grass1", "grass2", "grass3", "grass4")
+	New()
+		..()
+		src.icon_state = pick(random_icons)
+
 /turf/simulated/tempstuff
 	name = "floor"
 	icon = 'icons/misc/HaineSpriteDump.dmi'
 	icon_state = "gooberything_small"
+
+/obj/item/postit_stack
+	name = "stack of sticky notes"
+	desc = "A little stack of notepaper that you can stick to things."
+	icon = 'icons/obj/writing.dmi'
+	icon_state = "postit_stack"
+	force = 1
+	throwforce = 1
+	w_class = 1
+	amount = 10
+	burn_point = 220
+	burn_output = 200
+	burn_possible = 1
+	health = 2
+
+	afterattack(var/atom/A as mob|obj|turf, var/mob/user as mob)
+		if (!A)
+			return
+		if (isarea(A))
+			return
+		if (src.amount < 0)
+			qdel(src)
+			return
+		var/turf/T = get_turf(A)
+		var/obj/decal/cleanable/writing/postit/P = new (T)
+		user.visible_message("<b>[user]</b> sticks a sticky note to [T].",\
+		"You stick a sticky note to [T].")
+		var/obj/item/pen/pen = user.find_type_in_hand(/obj/item/pen)
+		if (pen)
+			P.attackby(pen, user)
+		src.amount --
+		if (src.amount < 0)
+			qdel(src)
+			return
 
 /obj/item/blessed_ball_bearing
 	name = "blessed ball bearing" // fill claymores with them for all your nazi-vampire-protection needs
@@ -1618,13 +1737,6 @@ var/list/special_parrot_species = list("ikea" = /datum/species_info/parrot/kea/i
 	stamina_damage = 40
 	stamina_cost = 30
 	stamina_crit_chance = 10
-
-/obj/item/destiny_model
-	name = "NSS Destiny model"
-	desc = "A little model of the NSS Destiny. How spiffy!"
-	icon = 'icons/misc/HaineSpriteDump.dmi'
-	icon_state = "destiny"
-	w_class = 1
 
 /obj/test_knife_switch_switch
 	name = "knife switch switch"
@@ -1731,10 +1843,10 @@ Now, his life is in my fist! NOW, HIS LIFE IS IN MY FIST!
 	set name = "Throw"
 	set desc = "Spin a grabbed opponent around and throw them."
 
-	SPAWN_DBG(0)
+	spawn(0)
 
 		if(!src.stat && !src.transforming && M)
-			if(src.getStatusDuration("paralysis") || src.getStatusDuration("weakened") || src.stunned > 0)
+			if(src.paralysis > 0 || src.weakened > 0 || src.stunned > 0)
 				boutput(src, "You can't do that while incapacitated!")
 				return
 
@@ -1748,7 +1860,7 @@ Now, his life is in my fist! NOW, HIS LIFE IS IN MY FIST!
 					if(!G)
 						boutput(src, "You must be grabbing someone for this to work!")
 						return
-					if(isliving(G.affecting))
+					if(istype(G.affecting, /mob/living))
 						src.verbs += /mob/proc/kali_ma_placeholder
 						src.verbs -= /mob/proc/kali_ma
 						src.say("Bali Mangthi Kali Ma.")
@@ -1756,8 +1868,8 @@ Now, his life is in my fist! NOW, HIS LIFE IS IN MY FIST!
 						var/mob/living/H = G.affecting
 						if(H.lying)
 							H.lying = 0
-							H.delStatus("paralysis")
-							H.delStatus("weakened")
+							H.paralysis = 0
+							H.weakened = 0
 							H.set_clothing_icon_dirty()
 						H.transforming = 1
 						src.transforming = 1
@@ -1786,7 +1898,7 @@ Now, his life is in my fist! NOW, HIS LIFE IS IN MY FIST!
 						sleep(20)
 						src.say("Kali Ma...")
 						sleep(20)
-						if (ishuman(H))
+						if (istype(H,/mob/living/carbon/human/))
 							var/mob/living/carbon/human/HU = H
 							src.visible_message("<span style=\"color:red\"><B>[src] shoves \his hand into [H]'s chest!</B></span>")
 							src.say("Kali ma, shakthi deh!")
@@ -1795,19 +1907,19 @@ Now, his life is in my fist! NOW, HIS LIFE IS IN MY FIST!
 								HU.contract_disease(/datum/ailment/disease/noheart,null,null,1)
 								var/obj/item/organ/heart/heart = new /obj/item/organ/heart(src.loc)
 								heart.donor = HU
-								playsound(src.loc, "sound/impact_sounds/Flesh_Tear_2.ogg", 75)
+								playsound(src.loc, "sound/misc/loudcrunch2.ogg", 75)
 								HU.emote("scream")
 								sleep(20)
 								src.say("Ab, uski jan meri mutti me hai! AB, USKI JAN MERI MUTTI ME HAI!")
 							else
-								playsound(src.loc, "sound/impact_sounds/Flesh_Tear_2.ogg", 75)
+								playsound(src.loc, "sound/misc/loudcrunch2.ogg", 75)
 								HU.emote("scream")
 								src.visible_message("<span style=\"color:red\"><B>[src] finds no heart in [H]'s chest! [src] looks kinda [pick(</span>"embarassed", "miffed", "annoyed", "confused", "baffled")]!</B>")
 								sleep(20)
 							HU.stunned += 10
 							HU.weakened += 12
 							var/turf/target = get_edge_target_turf(src, src.dir)
-							SPAWN_DBG(0)
+							spawn(0)
 								playsound(src.loc, "swing_hit", 40, 1)
 								src.visible_message("<span style=\"color:red\"><B>[src] casually tosses [H] away!</B></span>")
 								HU.throw_at(target, 10, 2)
@@ -1816,7 +1928,7 @@ Now, his life is in my fist! NOW, HIS LIFE IS IN MY FIST!
 							HU.transforming = 0
 
 						var/cooldown = max(100,(300-src.jitteriness))
-						SPAWN_DBG(cooldown)
+						spawn(cooldown)
 							src.verbs -= /mob/proc/kali_ma_placeholder
 							if (istype(src:w_uniform, /obj/item/clothing/under/mola_ram))
 								src.verbs += /mob/proc/kali_ma
@@ -1934,7 +2046,7 @@ Now, his life is in my fist! NOW, HIS LIFE IS IN MY FIST!
 	on_mob_life(var/mob/M)
 		if(!M) M = holder.my_atom
 		M.drowsyness = max(M.drowsyness-15, 0)
-		if(M.getStatusDuration("paralysis")) M.paralysis-=3
+		if(M.paralysis) M.paralysis-=3
 		if(M.stunned) M.stunned-=3
 		if(M.weakened) M.weakened-=3
 		if(M.sleeping) M.sleeping = 0
@@ -2025,7 +2137,7 @@ Overdoses cause hyperthermia and a marked elevation of blood pressure, which can
 /*-=-=-=-=-=-=-=-=-=-=-=-MEDICALPROBLEMS-=-=-=-=-=-=-=-=-=-=-=-*/
 /* '~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~'-._.-'~' */
 /*
-From Ali0en's thread here: https://forum.ss13.co/showthread.php?tid=4332
+From Ali0en's thread here: http://forum.ss13.co/viewtopic.php?f=6&t=4732
 note: I'm gunna dump a bunch more info than needed in here so it's gunna SOUND like I want to simulate all of these to hell and back
 I don't though, simplification of this stuff is important for goonstation, I just like having the info around because I'm a mild medical nerd (fyi (I kno u r shoked))
 

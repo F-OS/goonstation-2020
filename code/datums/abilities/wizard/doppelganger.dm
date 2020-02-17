@@ -6,9 +6,6 @@
 	cooldown = 300
 	requires_robes = 1
 	restricted_area_check = 1
-	voice_grim = "sound/voice/wizard/DopplegangerGrim.ogg"
-	voice_fem = "sound/voice/wizard/DopplegangerFem.ogg"
-	voice_other = "sound/voice/wizard/DopplegangerLoud.ogg"
 
 	cast()
 		if(!holder)
@@ -25,7 +22,7 @@
 		P.name = holder.owner.name
 		P.icon = holder.owner.icon
 		P.icon_state = holder.owner.icon_state
-		P.set_density(1)
+		P.density = 1
 		P.desc = "Wait ... that's not [P.name]!!!"
 
 		var/obj/dummy/spell_doppel/D = new/obj/dummy/spell_doppel()
@@ -35,7 +32,7 @@
 			P.overlays += I
 
 		holder.owner.say("GIN EMUS") // ^-- No speech bubble.
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/DopplegangerLoud.ogg", 50, 0, -1)
 
 		var/turf/curr_turf = get_turf(holder.owner)
 
@@ -45,12 +42,12 @@
 		holder.owner.set_loc(D)
 
 		if(!ground)
-			SPAWN_DBG(0)
+			spawn(0)
 				while(P)
 					step(P, the_dir)
 					sleep(2)
 
-		SPAWN_DBG(100)
+		spawn(100)
 			holder.owner.set_loc(D.loc)
 			qdel(D)
 			qdel(P)
@@ -94,4 +91,4 @@
 			src.x--
 
 	src.can_move = 0
-	SPAWN_DBG(2) src.can_move = 1
+	spawn(2) src.can_move = 1

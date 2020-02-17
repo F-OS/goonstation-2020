@@ -32,7 +32,7 @@
 	effect_touch(var/obj/O,var/mob/living/user)
 		if (..())
 			return
-		if (!iscarbon(user))
+		if (!istype(user,/mob/living/carbon/))
 			return
 		if (user.bioHolder && ready)
 			var/turf/T = get_turf(O)
@@ -40,6 +40,6 @@
 			user.bioHolder.AddEffect(power_granted,0,power_time)
 			if (recharge_time > 0)
 				ready = 0
-				SPAWN_DBG(recharge_time)
+				spawn(recharge_time)
 					T.visible_message("<b>[O]</b> begins to glow again.")
 					ready = 1

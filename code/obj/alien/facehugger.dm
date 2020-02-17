@@ -51,8 +51,6 @@
 	examine()
 		set src in view()
 		..()
-		if(src.hiddenFrom && hiddenFrom.Find(usr.client)) //invislist
-			return
 		if(!alive)
 			boutput(usr, text("<span style=\"color:red\"><B>the alien is not moving</B></span>"))
 		else if (src.health > 15)
@@ -121,7 +119,7 @@
 			src.target = AM
 			set_attack()
 		else if(ismob(AM))
-			SPAWN_DBG(0)
+			spawn(0)
 				var/turf/T = get_turf(src)
 				AM:set_loc(T)
 
@@ -207,7 +205,7 @@
 			for (var/mob/living/carbon/C in range(viewrange-2,src.loc))
 				if (isalien(C) || C.alien_egg_flag || !can_see(src,C,viewrange))
 					continue
-				if(C:stunned || C:getStatusDuration("paralysis") || C:weakened)
+				if(C:stunned || C:paralysis || C:weakened)
 					target = C
 					break
 				if(C:health < last_health)
@@ -243,7 +241,7 @@
 						return
 					else
 						set_null()
-						SPAWN_DBG(cycle_pause) src.process()
+						spawn(cycle_pause) src.process()
 						return
 
 				step_towards(src,get_step_towards2(src , target))
@@ -253,7 +251,7 @@
 					path_attack(target)
 					if(!path_target)
 						set_null()
-						SPAWN_DBG(cycle_pause) src.process()
+						spawn(cycle_pause) src.process()
 						return
 				else
 					var/turf/next = path_target[1]
@@ -274,10 +272,10 @@
 			if(frustration >= 35) set_null()
 
 		if(quick_move)
-			SPAWN_DBG(1)
+			spawn(1)
 				src.process()
 		else
-			SPAWN_DBG(cycle_pause)
+			spawn(cycle_pause)
 				src.process()
 
 	proc/idle()
@@ -287,7 +285,7 @@
 
 		if(locate(/obj/alien/weeds) in src.loc && health < maxhealth)
 			health++
-			SPAWN_DBG(cycle_pause) idle()
+			spawn(cycle_pause) idle()
 			return
 
 		if(!path_idle || !path_idle.len)
@@ -300,7 +298,7 @@
 					if(!path_idle)
 						trg_idle = null
 						set_idle()
-						SPAWN_DBG(cycle_pause) src.idle()
+						spawn(cycle_pause) src.idle()
 						return
 			else
 				var/obj/alien/weeds/W = null
@@ -319,11 +317,11 @@
 					path_idle(W)
 					if(!path_idle)
 						trg_idle = null
-						SPAWN_DBG(cycle_pause) src.idle()
+						spawn(cycle_pause) src.idle()
 						return
 				else
 					for(var/mob/living/carbon/alien/humanoid/H in range(1,src))
-						SPAWN_DBG(cycle_pause) src.idle()
+						spawn(cycle_pause) src.idle()
 						return
 					step(src,pick(cardinal))
 
@@ -349,7 +347,7 @@
 					path_idle(trg_idle)
 
 				if(!path_idle)
-					SPAWN_DBG(cycle_pause) src.idle()
+					spawn(cycle_pause) src.idle()
 					return
 				else
 					next = path_idle[1]
@@ -358,10 +356,10 @@
 					quick_move = 1
 
 		if(quick_move)
-			SPAWN_DBG(1)
+			spawn(1)
 				idle()
 		else
-			SPAWN_DBG(cycle_pause)
+			spawn(cycle_pause)
 				idle()
 
 	proc/path_idle(var/atom/trg)
@@ -375,7 +373,7 @@
 	proc/death()
 		if(!alive) return
 		src.alive = 0
-		set_density(0)
+		density = 0
 		icon_state = "facehugger_l"
 		set_null()
 		for(var/mob/O in hearers(src, null))

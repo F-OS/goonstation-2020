@@ -17,7 +17,7 @@
 		switch (act)
 			if ("scream")
 				if (src.emote_check(voluntary, 50))
-					playsound(get_turf(src), "sound/voice/animal/wendigo_roar.ogg", 80, 1)
+					playsound(get_turf(src), "sound/misc/wendigo_roar.ogg", 80, 1)
 					return "<b><span style='color:red'>[src] howls!</span></b>"
 		return null
 
@@ -35,13 +35,11 @@
 	setup_hands()
 		..()
 		var/datum/handHolder/HH = hands[1]
-		HH.icon = 'icons/mob/hud_human.dmi'
 		HH.limb = new /datum/limb/wendigo
 		HH.icon_state = "handl"				// the icon state of the hand UI background
 		HH.limb_name = "left wendigo arm"
 
 		HH = hands[2]
-		HH.icon = 'icons/mob/hud_human.dmi'
 		HH.limb = new /datum/limb/wendigo
 		HH.name = "right hand"
 		HH.suffix = "-R"

@@ -70,12 +70,12 @@
 	var/obj/overlay/O = new /obj/overlay( sourceloc )
 	var/obj/overlay/O2 = new /obj/overlay( sourceloc )
 	O.name = "green liquid"
-	O.set_density(0)
+	O.density = 0
 	O.anchored = 1
 	O.icon = 'icons/effects/effects.dmi'
 	O.icon_state = "greenshatter"
 	O2.name = "broken bits of glass"
-	O2.set_density(0)
+	O2.density = 0
 	O2.anchored = 1
 	O2.icon = 'icons/obj/objects.dmi'
 	O2.icon_state = "shards"
@@ -108,7 +108,7 @@
 				M.weakened += 5
 				M.contract_disease(src.contained,null,null,1)
 			if(2)
-				SPAWN_DBG(200)
+				spawn(200)
 					M.contract_disease(src.contained,null,null,1)
 	return
 
@@ -122,12 +122,12 @@
 	var/obj/overlay/O2 = new /obj/overlay( sourceloc )
 
 	O.name = "green liquid"
-	O.set_density(0)
+	O.density = 0
 	O.anchored = 1
 	O.icon = 'icons/effects/effects.dmi'
 	O.icon_state = "blueshatter"
 	O2.name = "broken bits of glass"
-	O2.set_density(0)
+	O2.density = 0
 	O2.anchored = 1
 	O2.icon = 'icons/obj/objects.dmi'
 	O2.icon_state = "shards"
@@ -151,12 +151,12 @@
 	var/obj/overlay/O2 = new /obj/overlay( sourceloc )
 
 	O.name = "green liquid"
-	O.set_density(0)
+	O.density = 0
 	O.anchored = 1
 	O.icon = 'icons/effects/effects.dmi'
 	O.icon_state = "blueshatter"
 	O2.name = "broken bits of glass"
-	O2.set_density(0)
+	O2.density = 0
 	O2.anchored = 1
 	O2.icon = 'icons/obj/objects.dmi'
 	O2.icon_state = "shards"
@@ -187,12 +187,12 @@
 /proc/liquify(var/mob/H, time = 150)
 
 	if(H.stat) return
-	SPAWN_DBG(0)
+	spawn(0)
 		var/mobloc = get_turf(H.loc)
 		var/obj/dummy/liquid/holder = new /obj/dummy/liquid( mobloc )
 		var/atom/movable/overlay/animation = new /atom/movable/overlay( mobloc )
 		animation.name = "water"
-		animation.set_density(0)
+		animation.density = 0
 		animation.anchored = 1
 		animation.icon = 'icons/mob/mob.dmi'
 		animation.icon_state = "liquify"
@@ -203,20 +203,20 @@
 		sleep(4)
 		H.set_loc(holder)
 		H.canmove = 1
-		SPAWN_DBG(0)
+		spawn(0)
 			var/i
 			for(i=0, i<10, i++)
-				SPAWN_DBG(0)
+				spawn(0)
 					var/obj/effects/water/water1 = new /obj/effects/water( mobloc )
 					var/direction = pick(alldirs)
 					water1.name = "water"
-					water1.set_density(0)
+					water1.density = 0
 					water1.icon = 'icons/effects/water.dmi'
 					water1.icon_state = "extinguish"
 					for(i=0, i<pick(1,2,3), i++)
 						sleep(5)
 						step(water1,direction)
-					SPAWN_DBG(20)
+					spawn(20)
 						qdel(water1)
 
 		sleep(time)
@@ -225,7 +225,7 @@
 		animation.set_loc(mobloc)
 		var/b
 		for(b=0, b<10, b++)
-			SPAWN_DBG(0)
+			spawn(0)
 				var/turf = mobloc
 				var/direction = pick(alldirs)
 				var/c
@@ -273,7 +273,7 @@
 			src.y--
 			src.x--
 	src.canmove = 0
-	SPAWN_DBG(20) canmove = 1
+	spawn(20) canmove = 1
 
 /obj/dummy/liquid/ex_act(blah)
 	return

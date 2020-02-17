@@ -1,5 +1,15 @@
 // Magnet Stuff
 
+/area/station/quartermaster/magnet
+	name = "Magnet Control Room"
+	icon_state = "green"
+	sound_environment = 10
+
+/area/station/quartermaster/refinery
+	name = "Refinery"
+	icon_state = "green"
+	sound_environment = 10
+
 /obj/machinery/magnet_chassis
 	name = "magnet chassis"
 	desc = "A strong metal rig designed to hold and link up magnet apparatus with other technology."
@@ -12,7 +22,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			src.update_dir()
 			for (var/obj/machinery/mining_magnet/MM in range(1,src))
 				linked_magnet = MM
@@ -132,7 +142,7 @@
 	proc/check_for_unacceptable_content()
 		var/turf/origin = get_turf(src)
 		for (var/turf/T in block(locate(origin.x - 1, origin.y - 1, origin.z), locate(origin.x + width, origin.y + height, origin.z)))
-			var/mob/M = locate() in T //living
+			var/mob/living/M = locate() in T
 			if (M)
 				return 1
 			var/obj/machinery/vehicle/V = locate() in T
@@ -220,7 +230,7 @@
 		if (istype(W, /obj/item/raw_material/plasmastone) && !loaded)
 			loaded = 1
 			boutput(user, "<span style=\"color:blue\">You charge the magnetizer with the plasmastone.</span>")
-			pool(W)
+			qdel(W)
 
 	afterattack(atom/target as mob|obj|turf|area, mob/user as mob)
 		if (!magnet)
@@ -290,7 +300,7 @@
 	var/image/active_overlay = null
 	var/list/damage_overlays = list()
 	var/sound_activate = 'sound/machines/ArtifactAnc1.ogg'
-	var/sound_destroyed = 'sound/impact_sounds/Machinery_Break_1.ogg'
+	var/sound_destroyed = 'sound/effects/robogib.ogg'
 	var/obj/machinery/power/apc/mining_apc = null
 
 	proc/get_magnetic_center()
@@ -335,7 +345,7 @@
 					last_delay = world.time + auto_delay
 					return
 				else
-					SPAWN_DBG(0)
+					spawn
 						pull_new_source()
 
 		proc/get_encounter(var/rarity_mod)
@@ -350,7 +360,7 @@
 
 			for (var/obj/forcefield/mining/M in wall_bits)
 				M.opacity = 1
-				M.set_density(1)
+				M.density = 1
 				M.invisibility = 0
 
 			active = 1
@@ -385,7 +395,7 @@
 
 			for (var/obj/forcefield/mining/M in wall_bits)
 				M.opacity = 0
-				M.set_density(0)
+				M.density = 0
 				M.invisibility = 101
 
 			src.updateUsrDialog()
@@ -403,7 +413,7 @@
 		damage_overlays += image(src.icon, "damage-2")
 		damage_overlays += image(src.icon, "damage-3")
 		damage_overlays += image(src.icon, "damage-4")
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/obj/machinery/magnet_chassis/MC in range(1,src))
 				linked_chassis = MC
 				MC.linked_magnet = src
@@ -422,7 +432,7 @@
 				last_delay = world.time + auto_delay
 				return
 			else
-				SPAWN_DBG(0) //Did you know that if you sleep directly in process() you are the old lady at the mall who only pays in quarters.
+				spawn(0) //Did you know that if you sleep directly in process() you are the old lady at the mall who only pays in quarters.
 					//Do not be quarter lady.
 					pull_new_source()
 
@@ -505,12 +515,13 @@
 			if (W.force)
 				var/damage = W.force
 				damage /= 3
-				if (user.is_hulk())
-					damage *= 4
-				if (iscarbon(user))
+				if (istype(user,/mob/living/carbon/))
 					var/mob/living/carbon/C = user
-					if (C.bioHolder && C.bioHolder.HasEffect("strong"))
-						damage *= 2
+					if (C.bioHolder)
+						if (C.bioHolder.HasEffect("hulk"))
+							damage *= 4
+						if (C.bioHolder.HasEffect("strong"))
+							damage *= 2
 				if (damage >= 10)
 					src.damage(damage)
 
@@ -552,17 +563,17 @@
 		switch(picker)
 			if (1)
 				src.visible_message("<b>[src] makes a loud bang! That didn't sound too good...</b>")
-				playsound(src.loc, "sound/impact_sounds/Generic_Hit_Heavy_1.ogg", 50, 1)
+				playsound(src.loc, "sound/misc/meteorimpact.ogg", 50, 1)
 				src.damage(rand(5,10))
 			if (2)
 				if (istype(mining_apc))
 					mining_apc.visible_message("<b>Magnetic feedback causes [mining_apc] to go haywire!</b>")
 					mining_apc.zapStuff()
 
-	proc/pull_new_source(var/selectable_encounter_id = null)
+	proc/pull_new_source()
 		for (var/obj/forcefield/mining/M in mining_controls.magnet_shields)
 			M.opacity = 1
-			M.set_density(1)
+			M.density = 1
 			M.invisibility = 0
 
 		active = 1
@@ -578,9 +589,8 @@
 			if (!(O.type in mining_controls.magnet_do_not_erase))
 				qdel(O)
 		for (var/turf/simulated/T in mining_controls.magnet_area.contents)
-			if (!istype(T,/turf/simulated/floor/airless/plating/catwalk/))
-				T.ReplaceWithSpace()
-				//qdel(T)
+			if (!istype(T,/turf/simulated/floor/plating/airless/catwalk/))
+				qdel(T)
 		for (var/turf/space/S in mining_controls.magnet_area.contents)
 			S.overlays = list()
 
@@ -593,28 +603,8 @@
 			do_malfunction()
 		sleep(sleep_time)
 
-		var/datum/mining_encounter/MC
-
-		if(selectable_encounter_id != null)
-			if(mining_controls.mining_encounters_selectable.Find(selectable_encounter_id))
-				MC = mining_controls.mining_encounters_selectable[selectable_encounter_id]
-				mining_controls.remove_selectable_encounter(selectable_encounter_id)
-			else
-				boutput(usr, "Uh oh, something's gotten really fucked up with the magnet system. Please report this to a coder! (ERROR: INVALID ENCOUNTER)")
-				MC = mining_controls.select_encounter(rarity_mod)
-		else
-			MC = mining_controls.select_encounter(rarity_mod)
-
-		if(MC)
-			MC.generate(null)
-		else
-			for (var/obj/forcefield/mining/M in mining_controls.magnet_shields)
-				M.opacity = 0
-				M.set_density(0)
-				M.invisibility = 1
-			active = 0
-			boutput(usr, "Uh oh, something's gotten really fucked up with the magnet system. Please report this to a coder! (ERROR: NO ENCOUNTER)")
-			return
+		var/datum/mining_encounter/MC = mining_controls.select_encounter(rarity_mod)
+		MC.generate(null)
 
 		sleep(sleep_time)
 		if (malfunctioning && prob(20))
@@ -625,7 +615,7 @@
 
 		for (var/obj/forcefield/mining/M in mining_controls.magnet_shields)
 			M.opacity = 0
-			M.set_density(0)
+			M.density = 0
 			M.invisibility = 101
 
 		src.updateUsrDialog()
@@ -666,16 +656,10 @@
 			if (src.last_used > world.time)
 				if (src.cooldown_override)
 					dat += "<A href='?src=\ref[src];activate_magnet=1'>Activate Magnet</A> (On Cooldown!)<BR>"
-					if(mining_controls.mining_encounters_selectable.len > 0)
-						dat += "<A href='?src=\ref[src];show_selectable=1'>Activate telescope location</A>  (On Cooldown!)<BR>"
 				else
 					dat += "Magnet Cooling Down<BR>"
 			else
 				dat += "<A href='?src=\ref[src];activate_magnet=1'>Activate Magnet</A><BR>"
-				if(mining_controls.mining_encounters_selectable.len > 0)
-					dat += "<A href='?src=\ref[src];show_selectable=1'>Activate telescope location</A><BR>"
-
-
 			dat += "<A href='?src=\ref[src];geo_scan=1'>Scan Mining Area</A><BR>"
 
 		var/auto_mode = "Enable Automatic Mode"
@@ -688,12 +672,12 @@
 			override_text = "Disable Cooldown Override"
 		dat += "<A href='?src=\ref[src];override_cooldown=1'>[override_text]</A><BR>"
 		dat += "<BR><A href='?action=mach_close&window=computer'>Close</A>"
-		usr.Browse(dat, "window=computer;size=300x400")
+		usr << browse(dat, "window=computer;size=300x400")
 		onclose(usr, "computer")
 		return null
 
 	Topic(href, href_list)
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			boutput(usr, "<span style='color:red'>That machine is not powered.</span>")
 			return 1
 		if(usr.restrained() || usr.lying || usr.stat)
@@ -701,7 +685,7 @@
 			return 1
 
 		var/rangecheck = 0
-		if (issilicon(usr))
+		if (istype(usr, /mob/living/silicon))
 			rangecheck = 1
 		if (istype(usr.loc,/obj/machinery/vehicle/))
 			var/obj/machinery/vehicle/V = usr.loc
@@ -721,36 +705,6 @@
 			src.updateUsrDialog()
 			return
 
-		else if (href_list["back"])
-			src.generate_interface(usr)
-
-		else if (href_list["show_selectable"])
-			if (ticker.mode && !istype(ticker.mode, /datum/game_mode/construction) && !istype(mining_controls.magnet_area))
-				boutput(usr, "Uh oh, something's gotten really fucked up with the magnet system. Please report this to a coder!")
-				return
-
-			var/html = ""
-			for(var/X in mining_controls.mining_encounters_selectable)
-				var/datum/mining_encounter/E = mining_controls.mining_encounters_selectable[X]
-				if(istype(E))
-					html += "<A href='?src=\ref[src];activate_selectable=[X]'>[E.name]</A><BR>"
-
-			html += "<BR><A href='?src=\ref[src];back=1'>Back</A><BR>"
-			usr.Browse(html, "window=computer;size=300x400")
-			onclose(usr, "computer")
-			return
-
-		else if (href_list["activate_selectable"])
-			if (ticker.mode && !istype(ticker.mode, /datum/game_mode/construction) && !istype(mining_controls.magnet_area))
-				boutput(usr, "Uh oh, something's gotten really fucked up with the magnet system. Please report this to a coder!")
-				return
-
-			if (src.check_for_unacceptable_content())
-				src.visible_message("<b>[src.name]</b> states, \"Safety lock engaged. Please remove all personnel and vehicles from the magnet area.\"")
-			else
-				SPAWN_DBG (0)
-					if (src) src.pull_new_source(href_list["activate_selectable"])
-
 		else if (href_list["activate_magnet"])
 			if (ticker.mode && !istype(ticker.mode, /datum/game_mode/construction) && !istype(mining_controls.magnet_area))
 				boutput(usr, "Uh oh, something's gotten really fucked up with the magnet system. Please report this to a coder!")
@@ -759,15 +713,15 @@
 			if (src.check_for_unacceptable_content())
 				src.visible_message("<b>[src.name]</b> states, \"Safety lock engaged. Please remove all personnel and vehicles from the magnet area.\"")
 			else
-				SPAWN_DBG (0)
+				spawn (0)
 					if (src) src.pull_new_source()
 
 		else if (href_list["override_cooldown"])
-			if (!ishuman(usr))
+			if (!istype(usr,/mob/living/carbon/human/))
 				boutput(usr, "<span style=\"color:red\">AI and robotic personnel may not access the override.</span>")
 			else
 				var/mob/living/carbon/human/H = usr
-				if(!src.allowed(H))
+				if(!src.allowed(H, req_only_one_required))
 					boutput(usr, "<span style=\"color:red\">Access denied. Please contact the Chief Engineer or Captain to access the override.</span>")
 				else
 					src.cooldown_override = !src.cooldown_override
@@ -798,20 +752,19 @@
 
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			src.connection_scan()
 
-	attackby(obj/item/I as obj, mob/user as mob)
-		if (isscrewingtool(I))
+	attackby(obj/I as obj, mob/user as mob)
+		if (istype(I, /obj/item/screwdriver))
 			playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 			if (do_after(user, 20))
-				if (src.status & BROKEN)
+				if (src.stat & BROKEN)
 					user.show_text("The broken glass falls out.", "blue")
 					var/obj/computerframe/A = new /obj/computerframe(src.loc)
 					if (src.material)
 						A.setMaterial(src.material)
-					var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-					G.set_loc(src.loc)
+					new /obj/item/raw_material/shard/glass(src.loc)
 					var/obj/item/circuitboard/mining_magnet/M = new /obj/item/circuitboard/mining_magnet(A)
 					for (var/obj/C in src)
 						C.set_loc(src.loc)
@@ -858,7 +811,7 @@
 			//dat += "<BR><a href='?src=\ref[src];unlink=1'>Disconnect Terminal from Magnet</a>"
 
 			dat += "<BR><A href='?action=mach_close&window=computer'>Close</A>"
-			user.Browse(dat, "window=computer;size=300x400")
+			user << browse(dat, "window=computer;size=300x400")
 			onclose(user, "computer")
 		return
 
@@ -866,7 +819,7 @@
 		if(..())
 			return
 
-		if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+		if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 			usr.machine = src
 
 		src.add_fingerprint(usr)
@@ -913,15 +866,8 @@
 	desc = "A free-floating mineral deposit from space."
 	icon = 'icons/turf/asteroid.dmi'
 	icon_state = "ast1"
-	plane = PLANE_FLOOR
 	var/stone_color = "#CCCCCC"
-
-#ifdef UNDERWATER_MAP
-	var/hardness = 1
-#else
 	var/hardness = 0
-#endif
-
 	var/weakened = 0
 	var/amount = 2
 	var/invincible = 0
@@ -930,32 +876,7 @@
 	var/datum/ore/ore = null
 	var/datum/ore/event/event = null
 	var/list/space_overlays = list()
-
-	//NEW VARS
-	var/mining_health = 120
-	var/mining_max_health = 120
-	var/mining_toughness = 1 //Incoming damage divided by this unless tool has power enough to overcome.
-
-#ifdef UNDERWATER_MAP
-	fullbright = 0
-	luminosity = 1
-#else
-	fullbright = 1
-#endif
-
-	trench
-		name = "cavern wall"
-		desc = "A cavern wall, possibly flowing with mineral deposits."
-		space_overlays()
-			return
-		build_icon()
-			return
-
-	dark
-		fullbright = 0
-
-	lighted
-		fullbright = 1
+	RL_Ignore = 1
 
 	ice
 		name = "comet chunk"
@@ -969,84 +890,6 @@
 		stone_color = "#575A5E"
 		default_ore = null
 		hardness = 10
-
-
-// cogwerks - adding some new wall types for cometmap and whatever else
-
-	comet
-		fullbright = 0
-		name = "regolith"
-		desc = "It's dusty and cold."
-		stone_color = "#95A1AF"
-		icon_state = "comet"
-		hardness = 1
-		default_ore = /obj/item/raw_material/rock
-
-		// varied layers
-
-		ice
-			name = "comet ice"
-			icon_state = "comet_ice"
-			stone_color = "#D1E6FF"
-			default_ore = /obj/item/raw_material/ice
-			hardness = 2
-
-		ice_dense
-			name = "dense ice"
-			desc = "A compressed layer of comet ice."
-			icon_state = "comet_ice_dense"
-			stone_color = "#2070CC"
-			default_ore = /obj/item/raw_material/ice
-			hardness = 5
-			quality = 15
-			amount = 6
-
-		ice_char
-			name = "dark regolith"
-			icon_state = "comet_char"
-			desc = "An inky-black assortment of carbon-rich dust and ice."
-			stone_color = "#111111"
-			default_ore = /obj/item/raw_material/char
-
-		glassy
-			name = "blasted regolith"
-			desc = "This stuff has been blasted and fused by stellar radiation and impacts."
-			icon_state = "comet_glassy"
-			stone_color = "#111111"
-			default_ore = /obj/item/raw_material/molitz
-			hardness = 4
-
-		copper
-			name = "metallic rock"
-			desc = "Rich in soft metals."
-			icon_state = "comet_copper"
-			stone_color = "#553333"
-			default_ore = /obj/item/raw_material/pharosium
-
-		iron
-			name = "ferrous rock"
-			desc = "Dense metallic rock."
-			icon_state = "comet_iron"
-			stone_color = "#333333"
-			default_ore = /obj/item/raw_material/mauxite
-			hardness = 8
-
-		plasma
-			name = "plasma ice"
-			desc = "Concentrated plasma trapped in dense ice."
-			icon_state = "comet_plasma"
-			default_ore = /obj/item/raw_material/plasmastone
-			hardness = 5
-
-		radioactive
-			name = "radioactive metal"
-			desc = "There's a hazardous amount of radioactive material in this metallic layer."
-			icon_state = "comet_radioactive"
-			stone_color = "#114444"
-			default_ore = /obj/item/raw_material/cerenkite
-			hardness = 10
-
-
 
 	New(var/loc,var/do_overlays_now = 1)
 		src.icon_state = pick("ast1","ast2","ast3")
@@ -1077,7 +920,7 @@
 	get_desc(dist)
 		if (dist > 1)
 			return
-		if (ishuman(usr))
+		if (istype(usr, /mob/living/carbon/human))
 			if (usr.bioHolder && usr.bioHolder.HasEffect("training_miner"))
 				if (istype (src.ore,/datum/ore/))
 					var/datum/ore/O = src.ore
@@ -1088,26 +931,18 @@
 					. += "<br><span style=\"color:red\">There's something not quite right here...</span>"
 
 	attack_hand(var/mob/user as mob)
-		if(ishuman(user))
+		if(istype(user,/mob/living/carbon/human))
 			var/mob/living/carbon/human/H = user
 			if (istype(H.gloves, /obj/item/clothing/gloves/concussive))
 				var/obj/item/clothing/gloves/concussive/C = H.gloves
 				src.dig_asteroid(user,C.tool)
 				return
-			else if (H.is_hulk())
+			else if (H.bioHolder && H.bioHolder.HasEffect("hulk"))
 				H.visible_message("<span style=\"color:red\"><b>[H.name] punches [src] with great strength!</span>")
-				playsound(H.loc, "sound/impact_sounds/Generic_Hit_Heavy_1.ogg", 100, 1)
+				playsound(H.loc, "sound/misc/meteorimpact.ogg", 100, 1)
 				src.damage_asteroid(3)
 				return
 		..()
-
-// XXXXX SHIT IS HERE zamujasa HONK FARTRIUM
-
-	Bumped(var/atom/A) //This is a bit hacky, sorry. Better than duplicating all the code.
-		if(isliving(A))
-			var/mob/living/L = A
-			L.click(src, list(), null, null)
-			return
 
 	attackby(obj/item/W as obj, mob/user as mob)
 		if(istype(W,/obj/item/mining_tool/))
@@ -1139,32 +974,6 @@
 			boutput(user, "<span style=\"color:red\">You hit the [src.name] with [W], but nothing happens!</span>")
 		return
 
-	proc/change_health(var/amount=0)
-		if(amount != 0)
-			if(amount < 0)
-				//Add conditional check for tool strengthh
-				amount /= mining_toughness
-
-			mining_health += amount
-			if(mining_health <= 0)
-				destroy_asteroid()
-			else
-				update_damage_overlay()
-		return
-
-	proc/update_damage_overlay()
-		var/health_prc = (mining_health / mining_max_health)
-
-		if(health_prc >= 1)
-			UpdateOverlays(null, "damage")
-		else if(health_prc > 0.66 && health_prc < 1)
-			setTexture("damage1", BLEND_MULTIPLY, "damage")
-		else if(health_prc > 0.33 && health_prc < 0.66)
-			setTexture("damage2", BLEND_MULTIPLY, "damage")
-		else if(health_prc < 0.33)
-			setTexture("damage3", BLEND_MULTIPLY, "damage")
-		return
-
 	proc/build_icon(var/wipe_overlays = 0)
 		if (wipe_overlays)
 			src.overlays = list()
@@ -1175,14 +984,14 @@
 
 	proc/space_overlays()
 		for (var/turf/space/A in orange(src,1))
-			var/image/edge_overlay = image('icons/turf/asteroid.dmi', "edge[get_dir(A,src)]")
+			var/image/edge_overlay = image('icons/turf/asteroid.dmi', "edge[GetOppositeDirection(get_dir(src,A))]")
 			edge_overlay.layer = src.layer + 1
 			edge_overlay.color = src.stone_color
 			A.overlays += edge_overlay
 			src.space_overlays += edge_overlay
 
 	proc/dig_asteroid(var/mob/living/user, var/obj/item/mining_tool/tool)
-		if (!user || !tool || !istype(src)) return
+		if (!user || !tool) return
 
 		var/datum/ore/event/E = src.event
 
@@ -1195,7 +1004,7 @@
 			src.weaken_asteroid()
 
 		var/strength = tool.dig_strength
-		if (iscarbon(user))
+		if (istype(user,/mob/living/carbon/))
 			var/mob/living/carbon/C = user
 			if (C.bioHolder && C.bioHolder.HasOneOfTheseEffects("strong","hulk"))
 				strength++
@@ -1204,9 +1013,6 @@
 
 		if (E)
 			E.onHit(src)
-
-		if (src.ore)
-			src.ore.onHit(src)
 		//user.visible_message("<span style=\"color:red\">[user.name] strikes [src] with [tool].</span>")
 
 		var/dig_chance = 100
@@ -1241,14 +1047,11 @@
 			src.hardness = 0
 		src.overlays += image('icons/turf/asteroid.dmi', "weakened")
 
-	proc/damage_asteroid(var/power,var/allow_zero = 0)
+	proc/damage_asteroid(var/power)
 		// use this for stuff that arent mining tools but still attack asteroids
-		if (!isnum(power) || (power <= 0 && !allow_zero))
+		if (!isnum(power) || power <= 0)
 			return
-		var/difference = ((src.hardness < 1) ? round(src.hardness) : src.hardness) - power //If less than 1, round to 0
-
-		if (src.ore)
-			src.ore.onHit(src)
+		var/difference = src.hardness - power
 
 		if (difference <= 0)
 			destroy_asteroid()
@@ -1258,7 +1061,7 @@
 
 		return
 
-	proc/destroy_asteroid(var/dropOre=1)
+	proc/destroy_asteroid()
 		var/datum/ore/O = src.ore
 		var/datum/ore/event/E = src.event
 		if (src.invincible)
@@ -1268,14 +1071,12 @@
 				src.visible_message("<span style=\"color:red\">[E.excavation_string]</span>")
 			E.onExcavate(src)
 		var/ore_to_create = src.default_ore
-		if (ispath(ore_to_create) && dropOre)
+		if (ispath(ore_to_create))
 			if (O)
 				ore_to_create = O.output
-				O.onExcavate(src)
 			var/makeores
 			for(makeores = src.amount, makeores > 0, makeores--)
-				var/obj/item/raw_material/MAT = unpool(ore_to_create)
-				MAT.set_loc(src)
+				var/obj/item/raw_material/MAT = new ore_to_create(src)
 
 				if(MAT.material)
 					if(MAT.material.quality != 0) //If it's 0 then that's probably the default, so let's use the asteroids quality only if it's higher. That way materials that have a quality by default will not occur at any quality less than the set one. And materials that do not have a quality by default, use the asteroids quality instead.
@@ -1287,28 +1088,21 @@
 						MAT.quality = src.quality
 
 				MAT.name = getOreQualityName(MAT.quality) + " [MAT.name]"
+				score_oremined += 1
 		if(!icon_old)
 			icon_old = icon_state
-
+		var/turf/simulated/floor/plating/airless/asteroid/W
+		var/old_dir = dir
 		var/new_color = src.stone_color
-		src.RL_SetOpacity(0)
-		src.ReplaceWith(/turf/simulated/floor/plating/airless/asteroid)
-		src.stone_color = new_color
-		src.opacity = 0
-		src.levelupdate()
-
-		for (var/turf/simulated/floor/plating/airless/asteroid/A in range(src,1))
+		W = new /turf/simulated/floor/plating/airless/asteroid(locate(src.x, src.y, src.z))
+		W.stone_color = new_color
+		W.dir = old_dir
+		W.opacity = 1
+		W.RL_SetOpacity(0)
+		W.levelupdate()
+		for (var/turf/simulated/floor/plating/airless/asteroid/A in range(W,1))
 			A.update_icon()
-#ifdef UNDERWATER_MAP
-		if (current_state == GAME_STATE_PLAYING)
-			hotspot_controller.disturb_turf(src)
-
-		//mbc : fix bug where lighting persists after rock destroyd
-		RL_Cleanup() //Cleans up/mostly removes the lighting.
-		RL_UpdateLight() //Then applies the proper lighting.
-#endif
-
-		return src
+		return W
 
 	proc/set_event(var/datum/ore/event/E)
 		if (!istype(E))
@@ -1339,39 +1133,14 @@
 	name = "asteroid"
 	icon = 'icons/turf/asteroid.dmi'
 	icon_state = "astfloor1"
-	plane = PLANE_FLOOR //Try to get the edge overlays to work with shadowing. I dare ya.
-	oxygen = 0.001
-	nitrogen = 0.001
+	oxygen = 0.01
+	nitrogen = 0.01
 	temperature = TCMB
-	step_material = "step_plating"
-	step_priority = STEP_PRIORITY_MED
+	luminosity = 1
+	RL_Ignore = 1
 	var/sprite_variation = 1
 	var/stone_color = null
 	var/image/coloration_overlay = null
-	var/list/space_overlays = list()
-
-#ifdef UNDERWATER_MAP
-	fullbright = 0
-	luminosity = 3
-#else
-	luminosity = 1
-	fullbright = 1
-#endif
-
-	dark
-		fullbright = 0
-		luminosity = 0
-
-	lighted
-		fullbright = 1
-
-	noborders
-		update_icon()
-			return
-		apply_edge_overlay()
-			return
-		space_overlays()
-			return
 
 	New()
 		..()
@@ -1379,8 +1148,6 @@
 		icon_state = "astfloor" + "[sprite_variation]"
 		coloration_overlay = image(src.icon,"color_overlay")
 		coloration_overlay.blend_mode = 4
-		update_icon()
-		space_overlays()
 
 	ex_act(severity)
 		return
@@ -1394,43 +1161,22 @@
 	proc/weaken_asteroid()
 		return
 
-	attackby(obj/item/W as obj, mob/user as mob)
-		if(ispryingtool(W))
-			src.ReplaceWithSpace()
-
 	update_icon()
 		src.overlays = list()
 		if (!coloration_overlay)
 			coloration_overlay = image(src.icon, "color_overlay")
 		coloration_overlay.color = src.stone_color
 		src.overlays += coloration_overlay
-		SPAWN_DBG(1)
-			if (istype(src)) //Wire note: just roll with this ok
-				for (var/turf/simulated/wall/asteroid/A in orange(src,1))
-					src.apply_edge_overlay(get_dir(src, A))
-				for (var/turf/space/A in orange(src,1))
-					src.apply_edge_overlay(get_dir(src, A))
+		for (var/turf/simulated/wall/asteroid/A in orange(src,1))
+			src.apply_edge_overlay(get_dir(src, A))
+		for (var/turf/space/A in orange(src,1))
+			src.apply_edge_overlay(get_dir(src, A))
 
-				#ifdef UNDERWATER_MAP //FUCK THIS SHIT. NO FULLBRIGHT ON THE MINING LEVEL, I DONT CARE.
-				if (z == AST_ZLEVEL) return
-				#endif
-				if (fullbright)
-					src.overlays += /image/fullbright //Fixes perma-darkness
-
-	proc/apply_edge_overlay(var/thedir) //For overlays ON THE FLOOR TILE
+	proc/apply_edge_overlay(var/thedir)
 		var/image/dig_overlay = image('icons/turf/asteroid.dmi', "edge[thedir]")
 		dig_overlay.color = src.stone_color
-		//dig_overlay.layer = src.layer + 1
+		dig_overlay.layer = src.layer + 1
 		src.overlays += dig_overlay
-
-	proc/space_overlays() //For overlays ON THE SPACE TILE
-		for (var/turf/space/A in orange(src,1))
-			var/image/edge_overlay = image('icons/turf/asteroid.dmi', "edge[get_dir(A,src)]")
-			//edge_overlay.layer = src.layer + 1
-			edge_overlay.color = src.stone_color
-			A.overlays += edge_overlay
-			src.space_overlays += edge_overlay
-
 
 // Tool Defines
 
@@ -1441,7 +1187,7 @@
 	icon_state = "pickaxe"
 	inhand_image_icon = 'icons/mob/inhand/hand_tools.dmi'
 	item_state = "pick"
-	w_class = 3
+	w_class = 2
 	flags = ONBELT
 	force = 7
 	var/dig_strength = 1
@@ -1450,8 +1196,8 @@
 	var/status = 0
 	var/weakener = 0
 	var/image/powered_overlay = null
-	var/sound/hitsound_charged = 'sound/impact_sounds/Stone_Cut_1.ogg'
-	var/sound/hitsound_uncharged = 'sound/impact_sounds/Stone_Cut_1.ogg'
+	var/sound/hitsound_charged = 'sound/effects/pickaxe.ogg'
+	var/sound/hitsound_uncharged = 'sound/effects/pickaxe.ogg'
 	module_research = list("tools" = 3, "engineering" = 1, "mining" = 1)
 
 	// Seems like a basic bit of user feedback to me (Convair880).
@@ -1475,25 +1221,16 @@
 			T.visible_message("<span style=\"color:red\">[src] runs out of charge and powers down!</span>")
 		return 1
 
-	proc/charge(var/amount)
-		//Support for recharge stations. Increment uses by one until we reach max.
-		src.charges = src.charges + 1 > src.maximum_charges ? src.maximum_charges : src.charges + 1
-
-		//Return if we are finished charging or not to the recharger
-		return src.charges < src.maximum_charges
-
 	proc/power_up()
 		src.status = 1
 		if (powered_overlay)
 			src.overlays += powered_overlay
-			signal_event("icon_updated")
 		return
 
 	proc/power_down()
 		src.status = 0
 		if (powered_overlay)
 			src.overlays = null
-			signal_event("icon_updated")
 		return
 
 obj/item/clothing/gloves/concussive
@@ -1511,8 +1248,8 @@ obj/item/clothing/gloves/concussive
 		T.name = src.name
 		T.desc = src.desc
 		T.dig_strength = 4
-		T.hitsound_charged = 'sound/impact_sounds/Metal_Hit_Heavy_1.ogg'
-		T.hitsound_uncharged = 'sound/impact_sounds/Metal_Hit_Heavy_1.ogg'
+		T.hitsound_charged = 'sound/effects/bang.ogg'
+		T.hitsound_uncharged = 'sound/effects/bang.ogg'
 
 /obj/item/mining_tool/power_pick
 	name = "power pick"
@@ -1521,10 +1258,11 @@ obj/item/clothing/gloves/concussive
 	icon_state = "powerpick"
 	item_state = "ppick"
 	flags = ONBELT
+	w_class = 2
 	dig_strength = 2
 	maximum_charges = 50
-	hitsound_charged = 'sound/impact_sounds/Metal_Hit_Heavy_1.ogg'
-	hitsound_uncharged = 'sound/impact_sounds/Stone_Cut_1.ogg'
+	hitsound_charged = 'sound/effects/bang.ogg'
+	hitsound_uncharged = 'sound/effects/pickaxe.ogg'
 	module_research = list("tools" = 5, "engineering" = 2, "mining" = 3)
 
 	New()
@@ -1538,15 +1276,13 @@ obj/item/clothing/gloves/concussive
 			if (!src.status)
 				boutput(user, "<span style=\"color:blue\">You power up [src].</span>")
 				src.power_up()
-				playsound(user.loc, "sound/items/miningtool_on.ogg", 50, 1)
 			else
 				boutput(user, "<span style=\"color:blue\">You power down [src].</span>")
 				src.power_down()
-				playsound(user.loc, "sound/items/miningtool_off.ogg", 50, 1)
 		else
 			boutput(user, "<span style=\"color:red\">No charge left in [src].</span>")
 
-	afterattack(target as mob, mob/user as mob)
+	attack(target as mob, mob/user as mob)
 		if(src.status)
 			src.process_charges(1)
 		..()
@@ -1579,6 +1315,7 @@ obj/item/clothing/gloves/concussive
 	icon_state = "lasdrill"
 	inhand_image_icon = 'icons/mob/inhand/hand_tools.dmi'
 	item_state = "drill"
+	w_class = 2
 	flags = ONBELT
 	force = 10
 	mats = 4
@@ -1594,11 +1331,12 @@ obj/item/clothing/gloves/concussive
 	icon_state = "powerhammer"
 	inhand_image_icon = 'icons/mob/inhand/hand_tools.dmi'
 	item_state = "hammer"
+	w_class = 2
 	maximum_charges = 30
-	force = 9
+	force = 10
 	dig_strength = 3
-	hitsound_charged = 'sound/impact_sounds/Metal_Hit_Heavy_1.ogg'
-	hitsound_uncharged = 'sound/impact_sounds/Stone_Cut_1.ogg'
+	hitsound_charged = 'sound/effects/bang.ogg'
+	hitsound_uncharged = 'sound/effects/pickaxe.ogg'
 	module_research = list("tools" = 5, "engineering" = 1, "mining" = 5)
 
 	New()
@@ -1609,95 +1347,31 @@ obj/item/clothing/gloves/concussive
 
 	power_up()
 		..()
-		src.force = 20
+		src.force = 10
 		dig_strength = 3
 		weakener = 1
-		src.setItemSpecial(/datum/item_special/slam)
 
 	power_down()
 		..()
-		src.force = 9
+		src.force = 20
 		dig_strength = 1
 		weakener = 0
-		src.setItemSpecial(/datum/item_special/simple)
 
 	attack_self(var/mob/user as mob)
 		if (src.process_charges(0))
 			if (!src.status)
 				boutput(user, "<span style=\"color:blue\">You power up [src].</span>")
 				src.power_up()
-				playsound(user.loc, "sound/items/miningtool_on.ogg", 50, 1)
 			else
 				boutput(user, "<span style=\"color:blue\">You power down [src].</span>")
 				src.power_down()
-				playsound(user.loc, "sound/items/miningtool_off.ogg", 50, 1)
 		else
 			boutput(user, "<span style=\"color:red\">No charge left in [src].</span>")
 
-	afterattack(target as mob, mob/user as mob)
+	attack(target as mob, mob/user as mob)
 		..()
 		if (src.status)
 			src.process_charges(1)
-
-	borg
-		process_charges(var/use)
-			var/mob/living/silicon/robot/R = usr
-			if (istype(R))
-				if (R.cell.charge > use * 200)
-					R.cell.use(200 * use)
-					return 1
-				return 0
-			else
-				. = ..()
-
-/obj/item/mining_tool/power_shovel
-	name = "power shovel"
-	desc = "The final word in digging."
-	icon = 'icons/obj/sealab_power.dmi'
-	icon_state = "powershovel"
-	inhand_image_icon = 'icons/mob/inhand/hand_tools.dmi'
-	item_state = "powershovel"
-	flags = ONBELT
-	dig_strength = 0
-	maximum_charges = 50
-	hitsound_charged = 'sound/impact_sounds/Metal_Hit_Heavy_1.ogg'
-	hitsound_uncharged = 'sound/impact_sounds/Stone_Cut_1.ogg'
-	module_research = list("tools" = 5, "engineering" = 2, "mining" = 3)
-
-	New()
-		..()
-		src.setItemSpecial(/datum/item_special/swipe)
-		powered_overlay = image('icons/obj/sealab_power.dmi', "ps-glow")
-		charges = maximum_charges
-		src.power_up()
-
-	attack_self(var/mob/user as mob)
-		if (src.process_charges(0))
-			if (!src.status)
-				boutput(user, "<span style=\"color:blue\">You power up [src].</span>")
-				src.power_up()
-				playsound(user.loc, "sound/items/miningtool_on.ogg", 50, 1)
-			else
-				boutput(user, "<span style=\"color:blue\">You power down [src].</span>")
-				src.power_down()
-				playsound(user.loc, "sound/items/miningtool_off.ogg", 50, 1)
-		else
-			boutput(user, "<span style=\"color:red\">No charge left in [src].</span>")
-
-	afterattack(target as mob, mob/user as mob)
-		if(src.status)
-			src.process_charges(1)
-		..()
-
-	power_up()
-		..()
-		src.force = 8
-		src.dig_strength = 0
-
-	power_down()
-		..()
-		src.force = 4
-		src.dig_strength = 0
 
 	borg
 		process_charges(var/use)
@@ -1748,7 +1422,7 @@ obj/item/clothing/gloves/concussive
 					else
 						boutput(user, "<span style=\"color:red\">Huh? How does this thing work?!</span>")
 					logTheThing("combat", user, null, "accidentally triggers [src] (clumsy bioeffect) at [log_loc(user)].")
-					SPAWN_DBG(5)
+					spawn(5)
 						concussive_blast()
 						qdel (src)
 						return
@@ -1768,7 +1442,7 @@ obj/item/clothing/gloves/concussive
 						var/t = (isturf(target) ? target : target.loc)
 						step_towards(src, t)
 
-						SPAWN_DBG( src.det_time )
+						spawn( src.det_time )
 							concussive_blast()
 							if(target)
 								if(istype(target,/obj/machinery))
@@ -1824,10 +1498,10 @@ obj/item/clothing/gloves/concussive
 				A.damage_asteroid(2)
 
 		for(var/mob/living/carbon/C in range(src.expl_flash, src))
-			if (!isdead(C) && C.client) shake_camera(C, 3, 2)
+			if (C.stat != 2 && C.client) shake_camera(C, 3, 2)
 			if(get_dist(src,C) <= src.expl_light)
-				C.changeStatus("stunned", 80)
-				C.changeStatus("weakened", 10 SECONDS)
+				C.stunned += 8
+				C.weakened += 10
 				C.stuttering += 15
 				boutput(C, "<span style=\"color:red\">The concussive blast knocks you off your feet!</span>")
 			if(get_dist(src,C) <= src.expl_heavy)
@@ -1839,8 +1513,8 @@ obj/item/clothing/gloves/concussive
 	desc = "A device for teleporting crated goods."
 	icon = 'icons/obj/mining.dmi'
 	icon_state = "cargotele"
-	var/charges = 8
-	var/maximum_charges = 8
+	var/charges = 10
+	var/maximum_charges = 10.0
 	var/robocharge = 250
 	var/target = null
 	w_class = 2
@@ -1871,13 +1545,6 @@ obj/item/clothing/gloves/concussive
 			boutput(usr, "Target set to [T.loc].")
 			//blammo! works!
 			src.target = T
-
-	proc/charge(var/amount)
-		//Support for recharge stations. Increment uses by one until we reach max.
-		src.charges = src.charges + 1 > src.maximum_charges ? src.maximum_charges : src.charges + 1
-
-		//Return if we are finished charging or not to the recharger
-		return src.charges < src.maximum_charges
 
 	proc/cargoteleport(var/obj/T, var/mob/user)
 		if (!src.target)
@@ -1925,7 +1592,7 @@ obj/item/clothing/gloves/concussive
 			var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 			s.set_up(5, 1, src)
 			s.start()
-			if (isrobot(user))
+			if (istype(user,/mob/living/silicon/robot))
 				var/mob/living/silicon/robot/R = user
 				R.cell.charge -= src.robocharge
 			else
@@ -1939,13 +1606,10 @@ obj/item/clothing/gloves/concussive
 		return
 
 /obj/item/cargotele/traitor
-	charges = 14
-	maximum_charges = 14
 	var/list/possible_targets = list()
 
 	New()
 		for(var/turf/T in world) //hate to do this but it's only once per spawn vOv
-			LAGCHECK(LAG_LOW)
 			if(istype(T,/turf/space) && T.z != 1 && !isrestrictedz(T.z))
 				possible_targets += T
 
@@ -2039,25 +1703,8 @@ obj/item/clothing/gloves/concussive
 	if(!user || !T || !decalicon) return
 	var/image/O = image('icons/obj/mining.dmi',T,decalicon,AREA_LAYER+1)
 	user << O
-	SPAWN_DBG(1200)
-		if (user && user.client)
-			user.client.images -= O
-			user.client.screen -= O
-		qdel (O)
-		O = null
-
-///// MINER TRAITOR ITEM /////
-
-/obj/item/device/chargehacker
-	name = "geological scanner"
-	desc = "The scanner doesn't look right somehow."
-	icon = 'icons/obj/mining.dmi'
-	icon_state = "minanal"
-	flags = ONBELT
-	w_class = 1.0
-
-	attack_self(var/mob/user as mob)
-		boutput(user, "The screen is clearly painted on. When you press Scan, a short metal spike extends from the top and sparks brightly before retracting again.")
+	spawn(1200)
+		del O
 
 /obj/machinery/oreaccumulator
 	name = "mineral accumulator"
@@ -2085,8 +1732,7 @@ obj/item/clothing/gloves/concussive
 				var/obj/item/cell/PCEL = src.cell
 				user.put_in_hand_or_drop(PCEL)
 				boutput(user, "You remove [cell].")
-				if (PCEL) //ZeWaka: fix for null.updateicon
-					PCEL.updateicon()
+				PCEL.updateicon()
 
 				src.cell = null
 			else if (action == "Change the destination")
@@ -2186,8 +1832,6 @@ var/global/list/cargopads = list()
 	icon = 'icons/obj/objects.dmi'
 	icon_state = "cargopad"
 	anchored = 1
-	plane = PLANE_FLOOR
-	mats = 10 //I don't see the harm in re-adding this. -ZeWaka
 	var/active = 1
 
 	podbay
@@ -2208,10 +1852,6 @@ var/global/list/cargopads = list()
 		name = "Mining Outpost Pad"
 	qm
 		name = "QM Pad"
-	qm2
-		name = "QM Pad 2"
-	researchoutpost
-		name = "Research Outpost Pad"
 
 	New()
 		..()
@@ -2330,7 +1970,7 @@ var/global/list/cargopads = list()
 		if (severity == 1.0)
 			if (prob(8))
 				src.opacity = 0
-				src.set_density(0)
+				src.density = 0
 				src.icon_state = "ancient-b"
 				return
 		else return
@@ -2339,8 +1979,6 @@ var/global/list/cargopads = list()
 	name = "strange surface"
 	desc = "A strange jet black metal floor. There are odd lines carved into it."
 	icon_state = "ancient"
-	step_material = "step_plating"
-	step_priority = STEP_PRIORITY_MED
 
 	attackby(obj/item/W as obj, mob/user as mob)
 		boutput(usr, "<span class='combat'>You attack [src] with [W] but fail to even make a dent!</span>")
@@ -2348,3 +1986,131 @@ var/global/list/cargopads = list()
 
 	ex_act(severity)
 		return
+
+// mining related critters
+
+/obj/critter/rockworm
+	name = "rock worm"
+	desc = "Tough lithovoric worms."
+	icon_state = "rockworm"
+	density = 0
+	health = 80
+	aggressive = 1
+	defensive = 0
+	wanderer = 1
+	opensdoors = 0
+	atkcarbon = 0
+	atksilicon = 0
+	firevuln = 0.1
+	brutevuln = 1
+	angertext = "hisses at"
+	butcherable = 1
+	var/eaten = 0
+
+	seek_target()
+		src.anchored = 0
+		for (var/obj/item/raw_material/C in view(src.seekrange,src))
+			if (src.target)
+				src.task = "chasing"
+				break
+			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
+			src.attack = 1
+			if (src.attack)
+				src.target = C
+				src.oldtarget_name = C.name
+				src.visible_message("<span style=\"color:red\"><b>[src]</b> sees [C.name]!</span>")
+				src.task = "chasing"
+				break
+			else
+				continue
+
+	CritterAttack(mob/M)
+		src.attacking = 1
+
+		if(istype(M, /obj/item/raw_material/))
+			src.visible_message("<span style=\"color:red\"><b>[src]</b> hungrily eats [src.target]!</span>")
+			playsound(src.loc, "sound/items/eatfood.ogg", 30, 1, -2)
+			qdel(src.target)
+			src.eaten++
+			src.target = null
+			src.task = "thinking"
+
+		src.attacking = 0
+		return
+
+	CritterDeath()
+		if (!alive) return
+		src.alive = 0
+		src.target = null
+		src.task = "dead"
+		density = 0
+		src.icon_state = "rockworm-dead"
+		walk_to(src,0)
+		if (eaten >= 10)
+			src.visible_message("<b>[src]</b> vomits something up and dies!")
+		else
+			src.visible_message("<b>[src]</b> dies!")
+		var/countstones = 0
+		while (src.eaten)
+			countstones++
+			if (countstones == 10)
+				var/pickgem = rand(1,3)
+				switch(pickgem)
+					if(1) new /obj/item/raw_material/gemstone(src.loc)
+					if(2) new /obj/item/raw_material/uqill(src.loc)
+					if(3) new /obj/item/raw_material/fibrilith(src.loc)
+				countstones = 0
+			src.eaten--
+
+/obj/critter/fermid
+	name = "fermid"
+	desc = "Extremely hostile asteroid-dwelling bugs. Best to avoid them wherever possible."
+	icon_state = "fermid"
+	density = 1
+	health = 25
+	aggressive = 1
+	defensive = 1
+	wanderer = 1
+	opensdoors = 0
+	atkcarbon = 1
+	atksilicon = 1
+	firevuln = 0.1
+	brutevuln = 1
+	angertext = "viciously clacks its mandibles at"
+	butcherable = 1
+
+	CritterAttack(mob/M)
+		if(ismob(M))
+			src.attacking = 1
+			if (prob(10) && M.reagents)
+				src.visible_message("<span style=\"color:red\"><B>[src]</B> grabs and stings [src.target]!</span>")
+				M.reagents.add_reagent("haloperidol", 10)
+				M.reagents.add_reagent("atropine", 10)
+			else
+				src.visible_message("<span style=\"color:red\"><B>[src]</B> bites [src.target]!</span>")
+				random_brute_damage(src.target, rand(1,4))
+			spawn(8)
+				src.attacking = 0
+
+	ChaseAttack(mob/M)
+		if (prob(20))
+			src.visible_message("<span style=\"color:red\"><B>[src]</B> dives on [M]!</span>")
+			playsound(src.loc, pick("sound/weapons/thudswoosh.ogg"), 50, 0)
+			M.weakened += rand(2,4)
+			M.stunned += rand(1,3)
+			random_brute_damage(M, rand(2,5))
+		else src.visible_message("<span style=\"color:red\"><B>[src]</B> dives at [M], but misses!</span>")
+
+
+///// MINER TRAITOR ITEM /////
+
+/obj/item/device/chargehacker
+	name = "geological scanner"
+	desc = "The scanner doesn't look right somehow."
+	icon = 'icons/obj/mining.dmi'
+	icon_state = "minanal"
+	flags = ONBELT
+	w_class = 1.0
+
+	attack_self(var/mob/user as mob)
+		boutput(user, "The screen is clearly painted on. When you press Scan, a short metal spike extends from the top and sparks brightly before retracting again.")

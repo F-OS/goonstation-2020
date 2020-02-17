@@ -4,19 +4,19 @@
 
 	generate_miscreant_objectives(var/datum/mind/crewMind)
 		set background = 1
-#ifdef RP_MODE // no really don't make any on destiny thanks
-		return
-#else
+
+		if (map_setting == "DESTINY") // no really don't make any on destiny thanks
+			return
 		//Requirements for individual objectives: 1) You have a mind (this eliminates 90% of our playerbase ~heh~)
 												//2) You are not a traitor
 		if (!crewMind)
 			return
 		if (!crewMind.current || !crewMind.objectives || crewMind.objectives.len || crewMind.special_role || (crewMind.assigned_role == "MODE"))
 			return
-		if (crewMind.current && (isdead(crewMind.current) || isobserver(crewMind.current) || issilicon(crewMind.current) || isintangible(crewMind.current)))
+		if (crewMind.current && (crewMind.current.stat == 2 || isobserver(crewMind.current) || issilicon(crewMind.current) || isintangible(crewMind.current)))
 			return
 
-		var/list/objectiveTypes = childrentypesof(/datum/objective/miscreant)
+		var/list/objectiveTypes = typesof(/datum/objective/miscreant) - /datum/objective/miscreant
 		if (!objectiveTypes.len)
 			return
 
@@ -41,9 +41,17 @@
 		miscreants += crewMind
 
 		return
-#endif
 
 /datum/objective/miscreant
+
+	protest
+		explanation_text = "Try to incite a protest or riot."
+
+	damage
+		explanation_text = "Cause as much property damage as possible without killing anyone."
+
+	troll
+		explanation_text = "Try to get as many people as possible out for your blood."
 
 	whiny
 		explanation_text = "Complain incessantly about every minor issue you can find."
@@ -54,6 +62,12 @@
 	bailout
 		explanation_text = "Whenever someone gets arrested, try to bribe, blackmail or convince security to let them go."
 
+	vigilante
+		explanation_text = "Whenever someone gets arrested, try to bribe, blackmail or convince security to execute them."
+
+	murder
+		explanation_text = "Without touching or harming them, annoy someone so much that they murder you."
+
 	heirlooms
 		explanation_text = "Steal as many crew members' trinkets and heirlooms as possible."
 
@@ -63,9 +77,17 @@
 	litterbug
 		explanation_text = "Make a huge mess wherever you go."
 
+	stalk
+		explanation_text = "Single out a crew member and stalk them everywhere."
+
+	incompetent
+		explanation_text = "Be as useless and incompetent as possible without getting killed."
+
 	bureaucracy
 		explanation_text = "Enforce as much unwieldy bureaucracy as possible."
 
+	access
+		explanation_text = "Make as much of the station as possible accessible to the public."
 
 	paranoid
 		explanation_text = "Construct an impenetrable fortress for yourself on the station."
@@ -73,49 +95,17 @@
 	creepy
 		explanation_text = "Sneak around looking as suspicious as possible without actually doing anything illegal."
 
+	strike
+		explanation_text = "Try to convince your department to go on strike and refuse to do any work."
+
 	graft
 		explanation_text = "See how much money you can amass by charging pointless fees, soliciting bribes or embezzling money from other crewmembers."
+
+	steal_and_sell
+		explanation_text = "Steal things from crew members and attempt to auction them off for profit."
 
 	construction
 		explanation_text = "Perform obnoxious construction and renovation projects. Insist that you're just doing your job."
 
-	museum
-		explanation_text = "Found and curate a museum."
-
-	noise
-		explanation_text = "Make as much noise as possible."
-
-	bonsai
-		explanation_text = "Destroy the Captain's prized bonsai tree."
-
-	reassign
-		explanation_text = "Try to convince as many crew members as possible to reassign to your department."
-
-	party
-		explanation_text = "Single out a crew member and throw them a surprise party."
-
-	mascot
-		explanation_text = "Go on a campaign to establish a station mascot."
-
-	business
-		explanation_text = "Establish a business and attempt to convince the command staff and security to recognize the legitimacy of your emerging enterprise."
-
-	pester
-		explanation_text = "Pester people until they let you into their department, then walk away."
-
-	identity
-		explanation_text = "Frequently change your appearance and identity."
-
-	names
-		explanation_text = "Call people by the wrong names, and insist that you're correct."
-
-	petition
-		explanation_text = "Start a petition for a cause you believe in."
-
-	sacrifice
-		explanation_text = "Sacrifice yourself to save someone who isn't in danger."
-
-	spy
-		explanation_text = "Become an inter-galactic spy and refer to everyday objects as 'gadgets'."
 
 #endif

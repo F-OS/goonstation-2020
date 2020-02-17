@@ -11,13 +11,10 @@
 	power_usage = 50
 
 /obj/machinery/cell_charger/attackby(obj/item/W, mob/user)
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		return
 
 	if(istype(W, /obj/item/cell))
-		if(istype(W, /obj/item/cell/potato)) //kubius potato battery: no recharging by such conventional means
-			boutput(user, "The charger is incompatible with the cell.")
-			return
 		if(charging)
 			boutput(user, "There is already a cell in the charger.")
 			return
@@ -32,7 +29,7 @@
 /obj/machinery/cell_charger/proc/updateicon()
 	icon_state = "ccharger[charging ? 1 : 0]"
 
-	if(charging && !(status & (BROKEN|NOPOWER)) )
+	if(charging && !(stat & (BROKEN|NOPOWER)) )
 
 		var/newlevel = 	round( charging.percent() * 4.0 / 99 )
 		//boutput(world, "nl: [newlevel]")
@@ -49,7 +46,7 @@
 /obj/machinery/cell_charger/attack_hand(mob/user)
 	add_fingerprint(user)
 
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		return
 
 	if(charging)
@@ -65,7 +62,7 @@
 		updateicon()
 
 /obj/machinery/cell_charger/process()
-	if (status & BROKEN)
+	if (stat & BROKEN)
 		return
 	if (charging)
 		power_usage = 50 + src.chargerate / CELLRATE
@@ -73,7 +70,7 @@
 		power_usage = 50
 	..()
 	//boutput(world, "ccpt [charging] [stat]")
-	if(!charging || (status & NOPOWER) )
+	if(!charging || (stat & NOPOWER) )
 		src.updateicon()
 		return
 

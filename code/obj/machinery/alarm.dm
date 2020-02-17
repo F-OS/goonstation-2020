@@ -16,14 +16,8 @@
 
 	var/datum/gas_mixture/environment
 	var/safe
-	/*var/panic_mode = 0 */
+	var/panic_mode = 0
 	var/e_gas = 0
-	var/last_safe = 2
-
-	disposing()
-		radio_controller.remove_object(src, alarm_frequency)
-		radio_controller.remove_object(src, control_frequency)
-		..()
 
 /obj/machinery/alarm/New()
 	..()
@@ -37,12 +31,12 @@
 
 /obj/machinery/alarm/process()
 	src.updateDialog()
-	/*
+
 	if (panic_mode > 0)
 		panic_mode--
 		if(panic_mode <= 0)
 			unpanic()
-	*/
+
 	if (src.skipprocess)
 		src.skipprocess--
 		return
@@ -50,7 +44,7 @@
 	var/turf/location = src.loc
 	safe = 2
 
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		icon_state = "alarmp"
 		return
 
@@ -109,18 +103,13 @@
 
 	src.icon_state = "alarm[!safe]"
 
-	if(safe == 2)
-		src.skipprocess = 2
-
-	if(alarm_frequency && last_safe != safe)
+	if(safe == 2) src.skipprocess = 1
+	else if(alarm_frequency)
 		post_alert(safe)
-		last_safe = safe
 
 	return
 
 /obj/machinery/alarm/proc/post_alert(alert_level)
-
-	LAGCHECK(LAG_LOW)
 
 	var/datum/radio_frequency/frequency = radio_controller.return_frequency(alarm_frequency)
 
@@ -132,27 +121,24 @@
 	alert_signal.data["zone"] = alarm_zone
 	alert_signal.data["type"] = "Atmospheric"
 
-	switch (alert_level)
-		if (0)
-			alert_signal.data["alert"] = "severe"
-		if (1)
-			alert_signal.data["alert"] = "minor"
-		if (2)
-			alert_signal.data["alert"] = "reset"
+	if(alert_level==0)
+		alert_signal.data["alert"] = "severe"
+	else
+		alert_signal.data["alert"] = "minor"
 
 	frequency.post_signal(src, alert_signal)
 
-/obj/machinery/alarm/attackby(var/obj/item/W as obj, user as mob)
-	if (issnippingtool(W))
-		status ^= BROKEN
+/obj/machinery/alarm/attackby(W as obj, user as mob)
+	if (istype(W, /obj/item/wirecutters))
+		stat ^= BROKEN
 		src.add_fingerprint(user)
-		src.visible_message("<span style=\"color:red\">[user] has [(status & BROKEN) ? "de" : "re"]activated [src]!</span>")
+		src.visible_message("<span style=\"color:red\">[user] has [(stat & BROKEN) ? "de" : "re"]activated [src]!</span>")
 		return
 	if (istype(W, /obj/item/card/id) || (istype(W, /obj/item/device/pda2) && W:ID_card))
-		if (status & (BROKEN|NOPOWER))
+		if (stat & (BROKEN|NOPOWER))
 			boutput(user, "<span style=\"color:red\">The local air monitor has no power!</span>")
 			return
-		if (src.allowed(usr))
+		if (src.allowed(usr, req_only_one_required))
 //			locked = !locked
 //			boutput(user, "You [ locked ? "lock" : "unlock"] the local air monitor.")
 			boutput(user, "<span style=\"color:red\">Error: No atmospheric pipe network detected.</span>") // <-- dumb workaround until atmos processing is better
@@ -163,17 +149,17 @@
 	return ..()
 
 /obj/machinery/alarm/attack_hand(mob/user)
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
-	user.Browse(return_text(user),"window=atmos")
+	user << browse(return_text(user),"window=atmos")
 	user.machine = src
 	onclose(user, "atmos")
 
 /obj/machinery/alarm/proc/return_text(mob/user)
 	if ( (get_dist(src, user) > 1 ))
-		if (!issilicon(user))
+		if (!istype(user, /mob/living/silicon))
 			user.machine = null
-			user.Browse(null, "window=atmos")
+			user << browse(null, "window=atmos")
 		return
 
 
@@ -261,12 +247,12 @@
 
 		if(e_gas)
 			output += "<FONT color = 'red'>WARNING: Local override engaged, air supply is limited!</FONT><BR>"
-	/*
+
 	if(panic_mode > 0)
 		var/seconds = panic_mode % 60
 		var/minutes = (panic_mode - seconds)/60
 		output += "<FONT color = 'red'>WARNING: Scrubbers on panic siphon for next [minutes]:[seconds]!</FONT><BR>"
-	*/
+
 	output += "<BR>"
 
 	output += "Environment Status: "
@@ -283,24 +269,24 @@
 
 	output += "<BR><HR>"
 
-	/*output += "<TT>"
-	if(locked && (!issilicon(user)))
+	output += "<TT>"
+	if(locked && (!istype(user, /mob/living/silicon)))
 		output += "<I><FONT color = 'gray'>No atmospheric pipe network detected.<BR>Control functions unavailable.</FONT></I>"
 	else
-		if(!issilicon(user))
+		if(!istype(user, /mob/living/silicon))
 			output += "<I>Swipe card to lock interface.</I><BR><BR>"
 		output += "<A href='?src=\ref[src];toggle_override=1'>Toggle Local Override</A><BR>"
 		if(panic_mode > 0)
 			output += "<A href='?src=\ref[src];unpanic=1'>Cancel Panic Siphon</A><BR>"
 		else
 			output += "<A href='?src=\ref[src];panic=1'>Engage Two-Minute Panic Siphon</A> - <FONT color = 'red'>WARNING: Pressure may temporarily drop below safe levels!</FONT><BR>"
-		output += "</TT>" */
+		output += "</TT>"
 	return output
 
 /obj/machinery/alarm/Topic(href, href_list)
 	if(..())
 		return
-	/*
+
 	if(href_list["toggle_override"])
 		var/datum/radio_frequency/frequency = radio_controller.return_frequency(control_frequency)
 
@@ -323,16 +309,16 @@
 		panic(120)
 
 	if(href_list["unpanic"])
-		unpanic()  */
+		unpanic()
 
 	src.add_fingerprint(usr)
 
 /obj/machinery/alarm/power_change()
 	if(powered(ENVIRON))
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
-		status |= NOPOWER
-/*
+		stat |= NOPOWER
+
 /obj/machinery/alarm/proc/panic(var/time)
 	var/datum/radio_frequency/frequency = radio_controller.return_frequency(control_frequency)
 
@@ -377,4 +363,5 @@
 	signal.data["tag"] = id
 	signal.data["command"] = "end_purge"
 
-	frequency.post_signal(src, signal) */
+	frequency.post_signal(src, signal)
+

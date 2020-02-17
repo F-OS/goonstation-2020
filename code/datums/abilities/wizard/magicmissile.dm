@@ -6,9 +6,6 @@
 	cooldown = 200
 	requires_robes = 1
 	offensive = 1
-	voice_grim = "sound/voice/wizard/MagicMissileGrim.ogg"
-	voice_fem = "sound/voice/wizard/MagicMissileFem.ogg"
-	voice_other = "sound/voice/wizard/MagicMissileLoud.ogg"
 
 	cast()
 		if(!holder)
@@ -17,38 +14,37 @@
 		var/mob_limit = 6
 
 		for(var/mob/living/M as mob in oview())
-			if(isdead(M)) continue
+			if(M.stat == 2) continue
 			mob_count++
 		if(!mob_count)
 			boutput(holder.owner, "Noone is in range!")
 			return 1 // cast failed
 
 		holder.owner.say("ICEE BEEYEM")
-		..()
-
+		playsound(holder.owner.loc, "sound/voice/wizard/MagicMissileLoud.ogg", 50, 0, -1)
 		if(!holder.owner.wizard_spellpower())
 			boutput(holder.owner, "<span style=\"color:red\">Your spell is weak without a staff to focus it!</span>")
 
 		for (var/mob/living/M as mob in oview())
-			if (isdead(M)) continue
+			if (M.stat == 2) continue
 			if (ishuman(M))
-				if (M.traitHolder.hasTrait("training_chaplain"))
+				if (M.bioHolder.HasEffect("training_chaplain"))
 					boutput(holder.owner, "<span style=\"color:red\">[M] has divine protection! The spell refuses to target \him!</span>")
 					continue
-			if (iswizard(M))
+			if (iswizard(M) && M.wizard_spellpower())
 				boutput(holder.owner, "<span style=\"color:red\">[M] has arcane protection! The spell refuses to target \him!</span>")
 				continue
 
 			playsound(holder.owner.loc, "sound/effects/mag_magmislaunch.ogg", 25, 1, -1)
 			if ((!holder.owner.wizard_spellpower() && mob_count2 >= 1) || (mob_count2 >= mob_limit)) break
 			mob_count2++
-			SPAWN_DBG(0)
+			spawn(0)
 				var/obj/overlay/A = new /obj/overlay(holder.owner.loc)
 				A.icon_state = "magicm"
 				A.icon = 'icons/obj/wizard.dmi'
 				A.name = "a magic missile"
 				A.anchored = 0
-				A.set_density(0)
+				A.density = 0
 				A.layer = EFFECTS_LAYER_1
 				A.flags |= TABLEPASS
 				//A.sd_SetLuminosity(3)
@@ -60,14 +56,13 @@
 					B.icon = 'icons/obj/wizard.dmi'
 					B.name = "trail"
 					B.anchored = 1
-					B.set_density(0)
+					B.density = 0
 					B.layer = EFFECTS_LAYER_BASE
-					SPAWN_DBG(5)
+					spawn(5)
 						qdel(B)
 					step_to(A,M,0)
 					if (get_dist(A,M) == 0)
-						M.changeStatus("weakened", (5 - (min(mob_count2,4)))*10)
-						M.force_laydown_standup()
+						M.weakened += (5 - (min(mob_count2,4)))
 						boutput(M, text("<span style=\"color:blue\">The magic missile SLAMS into you!</span>"))
 						M.visible_message("<span style=\"color:red\">[M] is struck by a magic missile!</span>")
 						playsound(M.loc, "sound/effects/mag_magmisimpact.ogg", 25, 1, -1)

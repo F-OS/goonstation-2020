@@ -87,7 +87,7 @@ proc/check_compid_list(var/client/C)
 						cid_test[C.ckey] = C.computer_id
 						cid_tested += C.ckey
 						msg += " Executing automatic test."
-						SPAWN_DBG(10)
+						spawn(10)
 							del(C) //RIP
 					message_admins("[key_name(C)][msg]")
 					logTheThing("admin", C, null, msg)
@@ -138,7 +138,7 @@ proc/do_computerid_test(var/client/C)
 		banData["ip"] = C.address
 		banData["reason"] = "Using a modified dreamseeker client."
 		banData["mins"] = 0
-		addBan(banData)
+		addBan(1, banData)
 
 
 proc/view_client_compid_list(mob/user, var/C)
@@ -147,7 +147,7 @@ proc/view_client_compid_list(mob/user, var/C)
 
 	var/list/datum/compid_info/cid_list = null
 	var/ckey = ""
-	if(isclient(C))
+	if(istype(C, /client))
 		var/client/CL = C
 		cid_list = CL.compid_info_list
 		ckey = CL.ckey
@@ -201,4 +201,4 @@ proc/view_client_compid_list(mob/user, var/C)
 				</body>
 			</html>"}
 
-	user.Browse(dat, "window=compid_info_view")
+	user << browse(dat, "window=compid_info_view")

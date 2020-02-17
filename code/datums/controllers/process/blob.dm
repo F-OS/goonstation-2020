@@ -3,12 +3,14 @@ datum/controller/process/blob
 	var/list/blobs = list()
 
 	var/tmp/list/detailed_count
+	var/tmp/datum/updateQueue/blobUpdateQueue
 
 	setup()
 		name = "Blob"
 		schedule_interval = 31 // 3.1 seconds
 
 		detailed_count = new
+		blobUpdateQueue = new
 
 	doWork()
 

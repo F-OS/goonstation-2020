@@ -2,14 +2,14 @@
 	name = "Clowncar Race track - Entry"
 	icon_state = "green"
 	luminosity = 1
-	force_fullbright = 1
+	RL_Lighting = 0
 	requires_power = 0
 
 /area/sim/racing_track
 	name = "Clowncar Race track"
 	icon_state = "yellow"
 	luminosity = 1
-	force_fullbright = 1
+	RL_Lighting = 0
 	requires_power = 0
 
 /obj/racing_boosterstrip
@@ -19,22 +19,12 @@
 	anchored = 1
 	density = 0
 	opacity = 0
-	event_handler_flags = USE_HASENTERED
 
 	HasEntered(atom/A)
 		if(istype(A,/obj/racing_clowncar))
 			playsound(A, "sound/mksounds/boost.ogg",30, 0)
 			step(A,src.dir)
-
-			var/obj/racing_clowncar/R = A
-			R.speed = R.base_speed - R.turbo
-			R.drive(R.dir, R.speed)
-			R.overlays += image('icons/mob/robots.dmi', "up-speed")
-			SPAWN_DBG(15)
-				R.speed = R.base_speed
-				if (R.driving) R.drive(R.dir, 2)
-				R.overlays -= image('icons/mob/robots.dmi', "up-speed")
-
+			spawn(1) step(A,src.dir)
 
 /obj/racing_powerup_spawner
 	name = "PowerUpSpawner"
@@ -43,28 +33,15 @@
 	density = 0
 	opacity = 0
 	invisibility = 101
-	var/spawn_time = 0
-	var/wait = 0
 
 	New()
-		processing_items += src
 		spawnit()
-		..()
-
-	disposing()
-		processing_items -= src
-		..()
-
-	proc/process()
-		if (world.time > spawn_time + wait)
-			spawnit()
-		..()
+		return
 
 	proc/spawnit()
 		if(!(locate(/obj/racing_powerupbox) in src.loc))
 			new/obj/racing_powerupbox(src.loc)
-		wait = 150 + rand(50, 400)
-		spawn_time = world.time
+		spawn(150 + rand(50, 400)) spawnit()
 
 /obj/racing_butt/
 	name = "butt"
@@ -79,7 +56,7 @@
 		src.set_loc(spawnloc)
 		src.dir = spawndir
 		source_car = sourcecar
-		SPAWN_DBG(75)
+		spawn(75)
 			playsound(src, "sound/mksounds/itemdestroy.ogg",45, 0)
 			qdel(src)
 		move_process()
@@ -92,10 +69,8 @@
 			qdel(src)
 
 	proc/move_process()
-		if (src.qdeled || src.pooled)
-			return
 		step(src,dir)
-		SPAWN_DBG(1) move_process()
+		spawn(1) move_process()
 
 /obj/super_racing_butt/
 	name = "superbutt"
@@ -110,7 +85,7 @@
 		src.set_loc(spawnloc)
 		src.dir = spawndir
 		source_car = sourcecar
-		SPAWN_DBG(75)
+		spawn(75)
 			playsound(src, "sound/mksounds/itemdestroy.ogg",45, 0)
 			qdel(src)
 		move_process()
@@ -123,9 +98,6 @@
 			qdel(src)
 
 	proc/move_process()
-		if (src.qdeled || src.pooled)
-			return
-
 		var/atom/target = null
 
 		for(var/obj/racing_clowncar/C in view(2,src))
@@ -135,10 +107,10 @@
 
 		if(target)
 			step_towards(src,target)
-			SPAWN_DBG(1) move_process()
+			spawn(1) move_process()
 		else
 			step(src, src.dir)
-			SPAWN_DBG(1) move_process()
+			spawn(1) move_process()
 
 /obj/racing_trap_banana/
 	name = "banana peel"
@@ -148,24 +120,10 @@
 	density = 0
 	opacity = 0
 	var/delete = 1
-	event_handler_flags = USE_HASENTERED
-	var/spawn_time = 0
 
 	New()
 		..()
-		spawn_time = world.time
-		if (delete)
-			processing_items += src
-
-	disposing()
-		if (delete)
-			processing_items -= src
-		..()
-
-	proc/process()
-		if (world.time > spawn_time + 4500)
-			qdel(src)
-		..()
+		if(delete) spawn(4500)	qdel(src)
 
 	HasEntered(atom/A)
 		if(istype(A,/obj/racing_clowncar))
@@ -182,7 +140,6 @@
 	anchored = 1
 	density = 0
 	opacity = 0
-	event_handler_flags = USE_HASENTERED
 
 	HasEntered(atom/A)
 		if(istype(A,/obj/racing_clowncar))
@@ -198,15 +155,8 @@
 	anchored = 1
 	layer = HUD_LAYER
 	screen_loc = "NORTH,WEST"
-	var/obj/racing_clowncar/owner
-
-	disposing()
-		owner = null
-		..()
 
 	Click()
-		if (owner.powerup == src)
-			owner.powerup = null
 		qdel(src)
 		return
 
@@ -311,7 +261,22 @@
 
 		playsound(R, "sound/mksounds/boost.ogg",33, 0)
 
-		R.boost()
+		R.speed = R.base_speed - R.turbo
+		R.drive(R.dir, R.speed)
+
+		if(istype(src,/obj/racing_clowncar))
+			R.icon_state = "clowncar_boost"
+			spawn(50)
+				R.speed = R.base_speed
+				if (R.driving) R.drive(R.dir, R.speed)
+				R.icon_state = "clowncar"
+
+		else
+			R.overlays += icon('icons/mob/robots.dmi', "up-speed")
+			spawn(50)
+				R.speed = R.base_speed
+				if (R.driving) R.drive(R.dir, 2)
+				R.overlays -= icon('icons/mob/robots.dmi', "up-speed")
 		qdel(source)
 		return
 
@@ -335,7 +300,23 @@
 		playsound(R, "sound/mksounds/invin10sec.ogg",33, 0,0) // 33
 
 		R.super = 1
-		R.boost()
+		R.speed = R.base_speed - R.turbo
+		R.drive(R.dir, 1)
+
+		if(istype(src,/obj/racing_clowncar))
+			R.icon_state = "clowncar_super"
+			spawn(40)
+				R.super = 0
+				R.speed = R.base_speed
+				if (R.driving) R.drive(R.dir, 2)
+				R.icon_state = "clowncar"
+		else
+			R.overlays += image('icons/misc/racing.dmi',"kart_super")
+			spawn(40)
+				R.overlays -= image('icons/misc/racing.dmi',"kart_super")
+				R.super = 0
+				R.speed = R.base_speed
+				if (R.driving) R.drive(R.dir, 2)
 		qdel(source)
 		return
 
@@ -365,13 +346,12 @@
 	New()
 
 	proc/random_powerup()
-		var/list/powerups = childrentypesof(/obj/powerup/)
+		var/list/powerups = (typesof(/obj/powerup/) - /obj/powerup)
 		if(!powerups.len) return
 
 		playsound(src, "sound/mksounds/gotitem.ogg",33, 0)
 
-		for(var/obj/powerup/OLD in src)
-			qdel(OLD)
+		for(var/obj/powerup/OLD in src) qdel(OLD)
 
 		var/picked = pick(powerups)
 		var/obj/powerup/P = new picked(src)
@@ -385,7 +365,7 @@
 	verb/enter()
 		set src in oview(1)
 		set category = "Local"
-		if(!ishuman(usr)) return
+		if(!istype(usr,/mob/living/carbon/human)) return
 
 		if(driver)
 			boutput(usr, "<span style=\"color:red\">Car already occupied by [driver.name].</span>")
@@ -405,7 +385,7 @@
 	verb/exit()
 		set src in oview(1)
 		set category = "Local"
-		if(!ishuman(usr) || usr != driver) return
+		if(!istype(usr,/mob/living/carbon/human) || usr != driver) return
 
 		stop()
 
@@ -421,42 +401,24 @@
 	proc/spin(var/magnitude)
 		if(super) return
 		cant_control = 1
-		set_density(0)
+		density = 0
 		dir_original = src.dir
-		var/image/out_of_control = image('icons/misc/racing.dmi',"broken")
+		var/icon/out_of_control = icon('icons/misc/racing.dmi',"broken")
 		src.overlays += out_of_control
 
 		playsound(src, "sound/mksounds/cpuspin.ogg",33, 0)
 
-		SPAWN_DBG(magnitude+1)
+		spawn(magnitude+1)
 			cant_control = 0
 			dir_original = 0
-			set_density(1)
+			density = 1
 			src.overlays -= out_of_control
 
-		SPAWN_DBG(0)
+		spawn(0)
 			for(var/i=0, i<magnitude, i++)
 				src.dir = turn(src.dir, 90)
 				sleep(1)
 		return
-
-	proc/boost()
-		speed = base_speed - turbo
-		drive(dir, speed)
-
-//		if(istype(src,/obj/racing_clowncar)) //what the fuck? src is a power up, why would it be a clown car
-		icon_state = "clowncar_boost"
-		SPAWN_DBG(50)
-			speed = base_speed
-			if (driving) drive(dir, speed)
-			icon_state = "clowncar"
-
-//		else
-//			R.overlays += image('icons/mob/robots.dmi', "up-speed")
-//			SPAWN_DBG(50)
-//				R.speed = R.base_speed
-//				if (R.driving) R.drive(R.dir, 2)
-//				R.overlays -= image('icons/mob/robots.dmi', "up-speed")
 
 	proc/drive(var/direction, var/speed)
 		dir = direction
@@ -509,8 +471,7 @@
 		..()
 		returndir = dir
 		if(returnpoint)
-			for (var/obj/landmark/A in landmarks)//world)
-				LAGCHECK(LAG_LOW)
+			for (var/obj/landmark/A in world)
 				if (A.name == returnpoint)
 					returnloc = A.loc
 					return
@@ -519,7 +480,7 @@
 	enter()
 		set src in oview(1)
 		set category = "Local"
-		if(!ishuman(usr)) return
+		if(!istype(usr,/mob/living/carbon/human)) return
 
 		if(driver)
 			boutput(usr, "<span style=\"color:red\">Car already occupied by [driver.name].</span>")
@@ -542,7 +503,7 @@
 	exit()
 		set src in oview(1)
 		set category = "Local"
-		if(!ishuman(usr) || usr != driver) return
+		if(!istype(usr,/mob/living/carbon/human) || usr != driver) return
 		reset()
 
 	proc/reset()

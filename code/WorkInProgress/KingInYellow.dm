@@ -1,14 +1,15 @@
+
 /obj/item/clothing/mask/pallid
 	name = "The Pallid Mask"
 	desc = "..."
 	icon_state = "pallid_mask"
 
 /proc/get_oov_tile(var/atom) //Get a tile that is *just* outside the view of a given atom.
-	var/list/viewl = oview(10, atom)
+	var/list/viewl = oview(7, atom)
 	for(var/atom/A in viewl) //List of visible turfs.
 		if(!isturf(A)) viewl -= A
 
-	var/list/rangel = orange(10, atom)
+	var/list/rangel = orange(7, atom)
 	for(var/atom/A2 in rangel) //List of all turfs.
 		if(!isturf(A2)) rangel -= A2
 
@@ -40,7 +41,7 @@
 			loc = location
 			effect = image('icons/effects/effects.dmi', src, "ykingvanish", 4)
 			trg << effect
-			SPAWN_DBG(3)	qdel(src)
+			spawn(3)	qdel(src)
 		else	qdel(src)
 
 
@@ -60,7 +61,7 @@
 		showimg = image('icons/misc/critter.dmi', src, "kingyellow", 3)
 		target << showimg
 		src.dir = get_dir(src, target)
-		SPAWN_DBG(5) update()
+		spawn(5) update()
 
 	attackby(obj/item/W as obj, mob/user as mob)
 		vanish()
@@ -73,11 +74,11 @@
 		if(!(src in view(7, target)) && (world.time - created) > 40) vanish()
 		if(get_dist(src,target) <= 2) vanish()
 		src.dir = get_dir(src, target)
-		SPAWN_DBG(5) update()
+		spawn(5) update()
 
 	proc/vanish()
 		new/obj/kingyellow_vanish(src.loc, target)
-		SPAWN_DBG(3)	qdel(src)
+		spawn(3)	qdel(src)
 
 /obj/item/book_kinginyellow
 	name = "\"The King In Yellow\""
@@ -101,7 +102,7 @@
 			if(oovTile != null && curr_phantom == null)
 				curr_phantom = new/obj/kingyellow_phantom(oovTile, L)
 
-		SPAWN_DBG(30) work()
+		spawn(30) work()
 		return
 
 	examine()
@@ -132,26 +133,20 @@
 		else
 			boutput(usr, "This ancient data storage medium appears to contain data used for entertainment purposes.")
 
-	custom_suicide = 1
-	suicide_distance = 0
-	suicide(var/mob/living/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
-		if (istype(user))
+	suicide(var/mob/user as mob)
+		if (ishuman(user))
+			var/mob/living/carbon/human/H = user
 			if (!farting_allowed)
 				return 0
-			if (src.loc == user)
-				user.u_equip(src)
-				src.layer = initial(src.layer)
-				src.set_loc(user.loc)
-				return farty_doom(user)
+			user.visible_message("<span style=\"color:red\">[user] farts on [src].<br><b>A mysterious force sucks [user] into the Book!!</b></span>")
+			user.u_equip(src)
+			src.layer = initial(src.layer)
+			src.set_loc(user.loc)
+			if (user.gender == MALE)
+				playsound(get_turf(user), "sound/voice/male_fallscream.ogg", 100, 0, 0, H.get_age_pitch())
+			else
+				playsound(get_turf(user), "sound/voice/female_fallscream.ogg", 100, 0, 0, H.get_age_pitch())
+			user.implode()
+			return 1
 		else
 			return 0
-
-	proc/farty_doom(var/mob/living/victim)
-		if(istype(victim) && victim.loc == src.loc)
-			victim.visible_message("<span style='color:red'>[victim] farts on [src].<br><b>A mysterious force sucks [victim] into the Book!!</b></span>")
-			victim.emote("scream")
-			victim.implode()
-			return 1
-		return 0

@@ -27,7 +27,7 @@
 		charger.transforming = 1
 		charger.canmove = 0
 		charger.loc = O
-		O.dir = angle_to_dir(O.angle)
+		O.dir = angleToDir(O.angle)
 		O.name = charger.name
 		O.icon = null
 		O.overlays += charger
@@ -40,7 +40,7 @@
 		var/obj/overlay/dummy = new(get_turf(O))
 		dummy.mouse_opacity = 0
 		dummy.name = null
-		dummy.set_density(0)
+		dummy.density = 0
 		dummy.anchored = 1
 		dummy.opacity = 0
 		dummy.icon = null
@@ -50,7 +50,7 @@
 		dummy.pixel_y = O.pixel_y
 		dummy.dir = O.dir
 		animate(dummy, alpha=0, time=3)
-		SPAWN_DBG(3)
+		spawn(3)
 			qdel(dummy)
 
 	on_hit(atom/hit, angle, var/obj/projectile/O)
@@ -59,40 +59,40 @@
 		if (isturf(hit))
 			hit.visible_message(__red("[charger] slams into [hit]!"), "You hear something slam!")
 			boutput(charger, __red("You slam into [hit]! Ouch!"))
-			charger.changeStatus("stunned", 3 SECONDS)
-			playsound(get_turf(hit), "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+			charger.stunned = max(charger.stunned, 3)
+			playsound(get_turf(hit), "sound/weapons/genhit1.ogg", 50, 1, -1)
 		else if (isobj(hit))
 			var/obj/H = hit
 			if (H.anchored)
 				hit.visible_message(__red("[charger] slams into [hit]!"), "You hear something slam!")
 				boutput(charger, __red("You slam into [hit]! Ouch!"))
-				charger.changeStatus("stunned", 3 SECONDS)
-				playsound(get_turf(hit), "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+				charger.stunned = max(charger.stunned, 3)
+				playsound(get_turf(hit), "sound/weapons/genhit1.ogg", 50, 1, -1)
 			else
 				hit.visible_message(__red("[charger] slams into [hit]!"), "You hear something slam!")
-				playsound(get_turf(hit), "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+				playsound(get_turf(hit), "sound/weapons/genhit1.ogg", 50, 1, -1)
 				boutput(charger, __red("You slam into [hit]!"))
-				var/kbdir = angle_to_dir(angle)
+				var/kbdir = angleToDir(angle)
 				step(H, kbdir, 2)
 				if (prob(10))
-					SPAWN_DBG(2)
+					spawn(2)
 						step(H, kbdir, 2)
 		else if (ismob(hit))
 			var/mob/M = hit
-			playsound(get_turf(hit), "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+			playsound(get_turf(hit), "sound/weapons/genhit1.ogg", 50, 1, -1)
 			hit.visible_message(__red("[charger] slams into [hit]!"), "You hear something slam!")
 			boutput(charger, __red("You slam into [hit]!"))
 			boutput(M, __red("<b>[charger] slams into you!</b>"))
 			logTheThing("combat", charger, M, "slams %target%.")
-			var/kbdir = angle_to_dir(angle)
+			var/kbdir = angleToDir(angle)
 			step(M, kbdir, 2)
-			M.changeStatus("weakened", 4 SECONDS)
+			M.weakened = max(M.weakened, 4)
 
 	on_end(var/obj/projectile/O)
 		var/keys = ""
 		for (var/dp in O.special_data)
 			keys = "[keys][dp], "
-		var/mob/charger = O.special_data["charger"] //can somehow get a null value???
+		var/mob/charger = O.special_data["charger"]
 		charger.transforming = 0
 		charger.canmove = 1
 		charger.loc = get_turf(O)
@@ -103,7 +103,6 @@
 /datum/targetable/critter/slam
 	name = "Slam"
 	desc = "Charge over a short distance, until you hit a mob or an object. Knocks down mobs."
-	icon_state = "slam"
 	cooldown = 100
 	targeted = 1
 	target_anything = 1

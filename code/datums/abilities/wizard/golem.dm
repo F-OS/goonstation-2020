@@ -7,9 +7,6 @@
 	requires_robes = 1
 	offensive = 1
 	cooldown_staff = 1
-	voice_grim = "sound/voice/wizard/GolemGrim.ogg"
-	voice_fem = "sound/voice/wizard/GolemFem.ogg"
-	voice_other = "sound/voice/wizard/GolemLoud.ogg"
 
 	cast()
 		if(!holder)
@@ -47,7 +44,7 @@
 
 
 		holder.owner.say("CLAE MASHON")
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/GolemLoud.ogg", 50, 0, -1)
 
 		var/obj/critter/golem/TheGolem
 		if (istype(AnItem, /obj/item/reagent_containers/food/snacks/ingredient/egg/bee))

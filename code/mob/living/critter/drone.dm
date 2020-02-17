@@ -60,7 +60,7 @@
 			return
 		dying = 1
 		overlays += image('icons/obj/ship.dmi', "dying-overlay")
-		SPAWN_DBG(20)
+		spawn(20)
 			ghostize()
 			var/turf/L = get_turf(src)
 			for (var/T in loot_table)
@@ -100,8 +100,6 @@
 
 	examine()
 		..()
-		if(src.hiddenFrom && hiddenFrom.Find(usr.client)) //invislist
-			return
 		var/perc = get_health_percentage()
 		switch(perc)
 			if(75 to 100)

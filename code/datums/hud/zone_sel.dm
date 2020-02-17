@@ -9,7 +9,7 @@
 	var/obj/screen/hud/r_leg
 	var/obj/screen/hud/selection
 
-	var/slocation = ui_zone_sel
+	var/slocation = "CENTER+4, SOUTH"
 
 	var/selecting = "chest"
 
@@ -20,15 +20,13 @@
 		master = M
 		if (sloc)
 			slocation = sloc
-		SPAWN_DBG(0)
+		spawn(0)
 			if (istype(I))
 				icon_hud = I
 			else
 				var/icon/hud_style = hud_style_selection[get_hud_style(master)]
 				if (isicon(hud_style))
 					icon_hud = hud_style
-			if (master.client && master.client.tg_layout)
-				slocation = tg_ui_zone_sel
 
 			background = create_screen("background", "Zone Selection", src.icon_hud, "zone_sel", src.slocation, HUD_LAYER)
 			head = create_screen("head", "Target Head", src.icon_hud, "sel-head", src.slocation, HUD_LAYER+1)
@@ -38,10 +36,6 @@
 			l_leg = create_screen("l_leg", "Target Left Leg", src.icon_hud, "sel-l_leg", src.slocation, HUD_LAYER+1)
 			r_leg = create_screen("r_leg", "Target Right Leg", src.icon_hud, "sel-r_leg", src.slocation, HUD_LAYER+1)
 			selection = create_screen("selection", "Current Target ([capitalize(zone_sel2name[src.selecting])])", src.icon_hud, src.selecting, src.slocation, HUD_LAYER+2)
-
-	clear_master()
-		master = null
-		..()
 
 	clicked(id, mob/user, list/params)
 		if (!id || id == "background" || id == "selection")

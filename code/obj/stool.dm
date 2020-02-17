@@ -1,17 +1,3 @@
-// CONTENTS:
-// - Stools
-// - Benches
-// - Beds
-// - Chairs
-// - Syndicate Chairs (will trip you up)
-// - Folded Chairs
-// - Comfy Chairs
-// - Shuttle Chairs
-// - Wheelchairs
-// - Wooden Chairs
-// - Pews
-// - Office Chairs
-// - Electric Chairs
 
 /* ================================================ */
 /* -------------------- Stools -------------------- */
@@ -19,117 +5,71 @@
 
 /obj/stool
 	name = "stool"
-	desc = "A four-legged padded stool for crewmembers to relax on."
 	icon = 'icons/obj/chairs.dmi'
 	icon_state = "stool"
-	flags = FPRINT | FLUID_SUBMERGE
+	flags = FPRINT
 	throwforce = 10
 	pressure_resistance = 3*ONE_ATMOSPHERE
+	desc = "A four-legged padded stool for crewmembers to relax on."
 	var/allow_unbuckle = 1
 	var/mob/living/buckled_guy = null
 	var/deconstructable = 1
-	var/securable = 0
-	var/list/scoot_sounds = null
-	var/parts_type = /obj/item/furniture_parts/stool
-
-	New()
-		if (!src.anchored && src.securable) // we're able to toggle between being secured to the floor or not, and we started unsecured
-			src.p_class = 2 // so make us easy to move
-		..()
 
 	ex_act(severity)
 		switch(severity)
-			if (1)
+			if(1)
 				qdel(src)
 				return
-			if (2)
+			if(2)
 				if (prob(50))
-					if (src.deconstructable)
-						src.deconstruct()
-					else
-						qdel(src)
+					qdel(src)
 					return
-			if (3)
+			if(3)
 				if (prob(5))
-					if (src.deconstructable)
-						src.deconstruct()
-					else
-						qdel(src)
+					qdel(src)
 					return
 			else
 		return
 
 	blob_act(var/power)
-		if (prob(power * 2.5))
-			var/obj/item/I = unpool(/obj/item/raw_material/scrap_metal)
-			I.set_loc(get_turf(src))
-
+		if(prob(power * 2.5))
+			var/obj/item/I = new /obj/item/raw_material/scrap_metal(get_turf(src))
 			if (src.material)
 				I.setMaterial(src.material)
 			else
-				var/datum/material/M = getMaterial("steel")
+				var/datum/material/M = getCachedMaterial("steel")
 				I.setMaterial(M)
 			qdel(src)
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (iswrenchingtool(W) && src.deconstructable)
-			actions.start(new /datum/action/bar/icon/furniture_deconstruct(src, W, 30), user)
-			return
-		else if (isscrewingtool(W) && src.securable)
-			src.toggle_secure(user)
-			return
-		//grabsmash
-		else if (istype(W, /obj/item/grab))
+		if (istype(W, /obj/item/wrench) && src.deconstructable)
+			playsound(src.loc, "sound/items/Ratchet.ogg", 50, 1)
+			var/atom/C = new /obj/item/sheet(src.loc)
+			if (src.material)
+				C.setMaterial(src.material)
+			else
+				var/datum/material/M = getCachedMaterial("steel")
+				C.setMaterial(M)
+			//SN src = null
+			qdel(src)
+	//grabsmash
+		else if (istype(W, /obj/item/grab/))
 			var/obj/item/grab/G = W
-			if (!grab_smash(G, user))
+			if  (!grab_smash(G, user))
 				return ..(W, user)
 			else return
-		else
-			return ..()
+		return
 
 	proc/buckle_in(mob/living/to_buckle, var/stand = 0) //Handles the actual buckling in
-		to_buckle.setStatus("buckled", duration = null)
 		return
 
 	proc/unbuckle() //Ditto but for unbuckling
 		return
 
-	proc/toggle_secure(mob/user as mob)
-		if (user)
-			user.visible_message("<b>[user]</b> [src.anchored ? "loosens" : "tightens"] the castors of [src].[istype(src.loc, /turf/space) ? " It doesn't do much, though, since [src] is in space and all." : null]")
-		playsound(get_turf(src), "sound/items/Screwdriver.ogg", 100, 1)
-		src.anchored = !(src.anchored)
-		src.p_class = src.anchored ? initial(src.p_class) : 2
-		return
-
-	proc/deconstruct()
-		if (!src.deconstructable)
-			return
-		if (ispath(src.parts_type))
-			var/obj/item/furniture_parts/P = new src.parts_type(src.loc)
-			if (P && src.material)
-				P.setMaterial(src.material)
-		else
-			playsound(src.loc, "sound/items/Ratchet.ogg", 50, 1)
-			var/obj/item/sheet/S = new (src.loc)
-			if (src.material)
-				S.setMaterial(src.material)
-			else
-				var/datum/material/M = getMaterial("steel")
-				S.setMaterial(M)
-		qdel(src)
-		return
-
-	Move()
-		. = ..()
-		if (. && islist(scoot_sounds) && scoot_sounds.len && prob(75))
-			playsound( get_turf(src), pick( scoot_sounds ), 50, 1 )
-
 /obj/stool/bar
 	name = "bar stool"
 	icon_state = "bar-stool"
 	desc = "Like a stool, but in a bar."
-	parts_type = /obj/item/furniture_parts/stool/bar
 
 /* ================================================= */
 /* -------------------- Benches -------------------- */
@@ -143,13 +83,12 @@
 	anchored = 1
 	var/auto = 0
 	var/auto_path = null
-	parts_type = /obj/item/furniture_parts/bench
 
 	New()
-		..()
-		SPAWN_DBG(0)
-			if (src.auto && ispath(src.auto_path))
+		if (src.auto)
+			spawn(1)
 				src.set_up(1)
+		..()
 
 	proc/set_up(var/setup_others = 0)
 		if (!src.auto || !ispath(src.auto_path))
@@ -161,19 +100,9 @@
 				dirs |= dir
 		icon_state = num2text(dirs)
 		if (setup_others)
-			for (var/obj/stool/bench/B in orange(1,src))
+			for (var/obj/stool/bench/B in orange(1))
 				if (istype(B, src.auto_path))
 					B.set_up()
-
-	deconstruct()
-		if (!src.deconstructable)
-			return
-		var/oldloc = src.loc
-		..()
-		for (var/obj/stool/bench/B in orange(1,oldloc))
-			if (B.auto)
-				B.set_up()
-		return
 
 /obj/stool/bench/auto
 	auto = 1
@@ -183,7 +112,6 @@
 
 /obj/stool/bench/red
 	icon = 'icons/obj/bench_red.dmi'
-	parts_type = /obj/item/furniture_parts/bench/red
 
 /obj/stool/bench/red/auto
 	auto = 1
@@ -193,7 +121,6 @@
 
 /obj/stool/bench/blue
 	icon = 'icons/obj/bench_blue.dmi'
-	parts_type = /obj/item/furniture_parts/bench/blue
 
 /obj/stool/bench/blue/auto
 	auto = 1
@@ -203,7 +130,6 @@
 
 /obj/stool/bench/green
 	icon = 'icons/obj/bench_green.dmi'
-	parts_type = /obj/item/furniture_parts/bench/green
 
 /obj/stool/bench/green/auto
 	auto = 1
@@ -213,27 +139,10 @@
 
 /obj/stool/bench/yellow
 	icon = 'icons/obj/bench_yellow.dmi'
-	parts_type = /obj/item/furniture_parts/bench/yellow
 
 /obj/stool/bench/yellow/auto
 	auto = 1
 	auto_path = /obj/stool/bench/yellow/auto
-
-/* ---------- Wooden ---------- */
-
-/obj/stool/bench/wooden
-	icon = 'icons/obj/bench_wood.dmi'
-	parts_type = /obj/item/furniture_parts/bench/wooden
-
-/obj/stool/bench/wooden/auto
-	auto = 1
-	auto_path = /obj/stool/bench/wooden/auto
-
-/* ---------- Sauna ---------- */
-
-/obj/stool/bench/sauna
-	icon = 'icons/obj/chairs.dmi'
-	icon_state = "saunabench"
 
 /* ============================================== */
 /* -------------------- Beds -------------------- */
@@ -246,40 +155,65 @@
 	anchored = 1
 	var/security = 0
 	var/obj/item/clothing/suit/bedsheet/Sheet = null
-	parts_type = /obj/item/furniture_parts/bed
 
 	brig
 		name = "brig cell bed"
 		desc = "It doesn't look very comfortable. Fortunately there's no way to be buckled to it."
 		security = 1
-		parts_type = null
 
 	moveable
 		name = "roller bed"
 		desc = "A solid metal frame with some padding on it, useful for sleeping on. This one has little wheels on it, neat!"
 		anchored = 0
-		securable = 1
 		icon_state = "rollerbed"
-		parts_type = /obj/item/furniture_parts/bed/roller
-		scoot_sounds = list( 'sound/misc/chair/office/scoot1.ogg', 'sound/misc/chair/office/scoot2.ogg', 'sound/misc/chair/office/scoot3.ogg', 'sound/misc/chair/office/scoot4.ogg', 'sound/misc/chair/office/scoot5.ogg' )
+
+		attackby(obj/item/W as obj, mob/user as mob)
+			..()
+			if (istype(W, /obj/item/screwdriver))
+				if (src.anchored)
+					playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
+					if (do_after(user, 30))
+						user.show_text("You unscrew [src] from the floor.", "blue")
+						src.anchored = 0
+						return
+				else
+					var/turf/T = get_turf(src)
+					if (istype(T, /turf/space))
+						user.show_text("What exactly are you gunna secure [src] to?", "red")
+						return
+					else
+						playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
+						if (do_after(user, 30))
+							user.show_text("You secure [src] to [T].", "blue")
+							src.anchored = 1
+							return
 
 	Move()
-		. = ..()
-		if (. && src.buckled_guy)
+		..()
+		if (src.buckled_guy)
 			var/mob/living/carbon/C = src.buckled_guy
 			C.buckled = null
 			C.Move(src.loc)
 			C.buckled = src
 
 	attackby(obj/item/W as obj, mob/user as mob)
+		..()
 		if (istype(W, /obj/item/clothing/suit/bedsheet))
 			src.tuck_sheet(W, user)
 			return
-		if (iswrenchingtool(W) && !src.deconstructable)
-			boutput(user, "<span style='color:red'>You briefly ponder how to go about disassembling a featureless slab using a wrench. You quickly give up.</span>")
-			return
-		else
-			return ..()
+		if (istype(W, /obj/item/wrench))
+			if (src.security)
+				boutput(user, "<span style=\"color:red\">You briefly ponder how to go about disassembling a featureless slab using a wrench. You quickly give up.</span>")
+			else
+				playsound(src.loc, "sound/items/Ratchet.ogg", 50, 1)
+				var/obj/item/sheet/C = new /obj/item/sheet( src.loc )
+				if (src.material)
+					C.setMaterial(src.material)
+				else
+					var/datum/material/M = getCachedMaterial("steel")
+					C.setMaterial(M)
+				qdel(src)
+		return
 
 	attack_hand(mob/user as mob)
 		..()
@@ -302,7 +236,7 @@
 		if (get_dist(src, user) > 1)
 			user.show_text("[src] is too far away!", "red")
 			return
-		if ((!(iscarbon(C)) || C.loc != src.loc || user.restrained() || user.stat || user.getStatusDuration("paralysis") || user.getStatusDuration("stunned") || user.getStatusDuration("weakened") ))
+		if ((!(iscarbon(C)) || C.loc != src.loc || user.restrained() || user.stat))
 			return
 
 		if (C == user)
@@ -310,10 +244,6 @@
 		else
 			user.visible_message("<span style=\"color:blue\"><b>[C]</b> is buckled in by [user].</span>", "<span style=\"color:blue\">You buckle in [C].</span>")
 		buckle_in(C)
-		if (isdead(C) && C != user && emergency_shuttle && emergency_shuttle.location == SHUTTLE_LOC_STATION) // 1 should be SHUTTLE_LOC_STATION
-			var/area/shuttle/escape/station/A = get_area(C)
-			if (istype(A))
-				user.unlock_medal("Leave no man behind!", 1)
 		src.add_fingerprint(user)
 
 	proc/unbuckle_mob(var/mob/M as mob, var/mob/user as mob)
@@ -338,15 +268,12 @@
 		to_buckle.set_loc(src.loc)
 
 		to_buckle.set_clothing_icon_dirty()
-		playsound(get_turf(src), "sound/misc/belt_click.ogg", 50, 1)
-		to_buckle.setStatus("buckled", duration = null)
 
 	unbuckle()
 		if(src.buckled_guy)
 			buckled_guy.anchored = 0
 			buckled_guy.buckled = null
 			src.buckled_guy = null
-			playsound(get_turf(src), "sound/misc/belt_click.ogg", 50, 1)
 
 	proc/tuck_sheet(var/obj/item/clothing/suit/bedsheet/newSheet as obj, var/mob/user as mob)
 		if (!newSheet || newSheet.cape || (src.Sheet == newSheet && newSheet.loc == src.loc)) // if we weren't provided a new bedsheet, the new bedsheet we got is tied into a cape, or the new bedsheet is actually the one we already have and is still in the same place as us...
@@ -452,7 +379,7 @@
 		if (!istype(user))
 			return
 
-		if (isdead(user))
+		if (user.stat == 2)
 			boutput(user, "<span style=\"color:red\">Some would say that death is already the big sleep.</span>")
 			return
 
@@ -462,9 +389,6 @@
 
 		user.asleep = 1
 		user.resting = 1
-		if (ishuman(user))
-			var/mob/living/carbon/human/H = user
-			H.hud.update_resting()
 		return
 
 /* ================================================ */
@@ -473,19 +397,14 @@
 
 /obj/stool/chair
 	name = "chair"
-	desc = "A four-legged metal chair, rigid and slightly uncomfortable. Helpful when you don't want to use your legs at the moment."
 	icon_state = "chair"
 	var/comfort_value = 3
 	var/buckledIn = 0
 	var/status = 0
 	var/rotatable = 1
 	var/foldable = 1
-	var/climbable = 1
-	var/buckle_move_delay = 6 // this should have been a var somepotato WHY WASN'T IT A VAR
-	securable = 1
 	anchored = 1
-	scoot_sounds = list( 'sound/misc/chair/normal/scoot1.ogg', 'sound/misc/chair/normal/scoot2.ogg', 'sound/misc/chair/normal/scoot3.ogg', 'sound/misc/chair/normal/scoot4.ogg', 'sound/misc/chair/normal/scoot5.ogg' )
-	parts_type = null
+	desc = "A four-legged metal chair, rigid and slightly uncomfortable. Helpful when you don't want to use your legs at the moment."
 
 	moveable
 		anchored = 0
@@ -499,32 +418,19 @@
 		return
 
 	Move()
-		. = ..()
-		if (.)
-			if (src.dir == NORTH)
-				src.layer = FLY_LAYER+1
-			else
-				src.layer = OBJ_LAYER
-
-			if (src.buckled_guy)
-				var/mob/living/carbon/C = src.buckled_guy
-				C.buckled = null
-				C.Move(src.loc)
-				C.buckled = src
-
-	toggle_secure(mob/user as mob)
-		if (istype(get_turf(src), /turf/space))
-			if (user)
-				user.show_text("What exactly are you gunna secure [src] to?", "red")
-			return
-		if (user)
-			user.visible_message("<b>[user]</b> [src.anchored ? "unscrews [src] from" : "secures [src] to"] the floor.")
-		playsound(get_turf(src), "sound/items/Screwdriver.ogg", 100, 1)
-		src.anchored = !(src.anchored)
-		src.p_class = src.anchored ? initial(src.p_class) : 2
-		return
+		..()
+		if (src.dir == NORTH)
+			src.layer = FLY_LAYER+1
+		else
+			src.layer = OBJ_LAYER
+		if (src.buckled_guy)
+			var/mob/living/carbon/C = src.buckled_guy
+			C.buckled = null
+			C.Move(src.loc)
+			C.buckled = src
 
 	attackby(obj/item/W as obj, mob/user as mob)
+		..()
 		if (istype(W, /obj/item/assembly/shock_kit))
 			var/obj/stool/chair/e_chair/E = new /obj/stool/chair/e_chair(src.loc)
 			if (src.material)
@@ -539,8 +445,7 @@
 			//SN src = null
 			qdel(src)
 			return
-		else
-			return ..()
+		return
 
 	attack_hand(mob/user as mob)
 		if (!ishuman(user)) return
@@ -550,11 +455,11 @@
 
 			if (ishuman(M))
 				chump = M
-			if (!chump || !chump.on_chair)// == 1)
+			if (!chump || !chump.on_chair == 1)
 				chump = null
-			if (H.on_chair)// == 1)
+			if (H.on_chair == 1)
 				if (M == user)
-					user.visible_message("<span style=\"color:blue\"><b>[M]</b> steps off [H.on_chair].</span>", "<span style=\"color:blue\">You step off [src].</span>")
+					user.visible_message("<span style=\"color:blue\"><b>[M]</b> steps off [src].</span>", "<span style=\"color:blue\">You step off [src].</span>")
 					src.add_fingerprint(user)
 					unbuckle()
 					return
@@ -579,8 +484,8 @@
 				chump.visible_message("<span style=\"color:red\"><b>[chump.name] falls off of [src]!</b></span>")
 				chump.on_chair = 0
 				chump.pixel_y = 0
-				chump.changeStatus("weakened", 1 SECONDS)
-				chump.changeStatus("stunned", 2 SECONDS)
+				chump.weakened++
+				chump.stunned+=2
 				random_brute_damage(chump, 15)
 				playsound(chump.loc, "swing_hit", 50, 1)
 
@@ -589,8 +494,6 @@
 				C.setMaterial(src.material)
 			if (src.icon_state)
 				C.c_color = src.icon_state
-				C.icon_state = "folded_[src.icon_state]"
-				C.item_state = C.icon_state
 
 			qdel(src)
 		return
@@ -604,21 +507,14 @@
 			return
 		if (M == usr)
 			if (usr.a_intent == INTENT_GRAB)
-				if(climbable)
-					user.visible_message("<span style=\"color:blue\"><b>[M]</b> climbs up on [src]!</span>", "<span style=\"color:blue\">You climb up on [src].</span>")
-					buckle_in(M, 1)
-				else
-					boutput(user, "<span style=\"color:red\">[src] isn't climbable.</span>")
+				user.visible_message("<span style=\"color:blue\"><b>[M]</b> climbs up on [src]!</span>", "<span style=\"color:blue\">You climb up on [src].</span>")
+				buckle_in(M, 1)
 			else
 				user.visible_message("<span style=\"color:blue\"><b>[M]</b> buckles in!</span>", "<span style=\"color:blue\">You buckle yourself in.</span>")
 				buckle_in(M)
 		else
 			user.visible_message("<span style=\"color:blue\"><b>[M]</b> is buckled in by [user].</span>", "<span style=\"color:blue\">You buckle in [M].</span>")
 			buckle_in(M)
-			if (isdead(M) && M != user && emergency_shuttle && emergency_shuttle.location == SHUTTLE_LOC_STATION) // 1 should be SHUTTLE_LOC_STATION
-				var/area/shuttle/escape/station/A = get_area(M)
-				if (istype(A))
-					user.unlock_medal("Leave no man behind!", 1)
 		return
 
 	buckle_in(mob/living/to_buckle, var/stand = 0)
@@ -631,10 +527,9 @@
 				to_buckle.pixel_y = 10
 				if (src.anchored)
 					to_buckle.anchored = 1
-				H.on_chair = src
+				H.on_chair = 1
 				to_buckle.buckled = src
 				src.buckled_guy = to_buckle
-				to_buckle.setStatus("buckled", duration = null)
 		else
 			if (src.anchored)
 				to_buckle.anchored = 1
@@ -642,9 +537,6 @@
 			src.buckled_guy = to_buckle
 			to_buckle.set_loc(src.loc)
 			src.buckledIn = 1
-			to_buckle.setStatus("buckled", duration = null)
-		playsound(get_turf(src), "sound/misc/belt_click.ogg", 50, 1)
-
 
 	unbuckle()
 		if(!src.buckled_guy) return
@@ -652,22 +544,21 @@
 		var/mob/living/M = src.buckled_guy
 		var/mob/living/carbon/human/H = src.buckled_guy
 
-		if (istype(H) && H.on_chair)// == 1)
+		if (istype(H) && H.on_chair == 1)
 			M.pixel_y = 0
 			M.anchored = 0
 			M.buckled = null
 			src.buckled_guy = null
-			SPAWN_DBG (5)
+			spawn (5)
 				H.on_chair = 0
 				src.buckledIn = 0
 		else if ((M.buckled))
 			M.anchored = 0
 			M.buckled = null
 			src.buckled_guy = null
-			SPAWN_DBG (5)
+			spawn (5)
 				src.buckledIn = 0
 
-		playsound(get_turf(src), "sound/misc/belt_click.ogg", 50, 1)
 
 	ex_act(severity)
 		for (var/mob/M in src.loc)
@@ -704,18 +595,6 @@
 		..()
 		return
 
-	Click(location,control,params)
-		var/lpm = params2list(params)
-		if(istype(usr, /mob/dead/observer) && !lpm["ctrl"] && !lpm["shift"] && !lpm["alt"])
-			rotate()
-
-#ifdef HALLOWEEN
-			if (istype(usr.abilityHolder, /datum/abilityHolder/ghost_observer))
-				var/datum/abilityHolder/ghost_observer/GH = usr.abilityHolder
-				GH.change_points(3)
-#endif
-		else return ..()
-
 	verb/rotate()
 		set name = "Rotate"
 		set category = "Local"
@@ -751,12 +630,11 @@
 /obj/stool/chair/syndicate
 	desc = "That chair is giving off some bad vibes."
 	comfort_value = -5
-	event_handler_flags = USE_PROXIMITY | USE_FLUID_ENTER
 
 	HasProximity(atom/movable/AM as mob|obj)
 		if (ishuman(AM) && prob(40))
-			src.visible_message("<span style=\"color:red\">[src] trips [AM]!</span>", "<span style=\"color:red\">You hear someone fall.</span>")
-			AM:changeStatus("weakened", 2 SECONDS)
+			src.visible_message("<span style=\"color:red\">[src] trips [AM]!</span>", "<span style=\"color:red\">You hear someone fall</span>")
+			AM:weakened += 2
 		return
 
 /* ======================================================= */
@@ -766,47 +644,38 @@
 /obj/item/chair/folded
 	name = "chair"
 	desc = "A folded chair. Good for smashing noggin-shaped things."
-	icon = 'icons/obj/chairs.dmi'
+	icon = 'icons/obj/items.dmi'
 	icon_state = "folded_chair"
 	item_state = "folded_chair"
 	w_class = 4.0
 	throwforce = 10
 	flags = FPRINT | TABLEPASS | CONDUCT
-	force = 5
 	stamina_damage = 45
 	stamina_cost = 40
 	stamina_crit_chance = 10
 	var/c_color = null
 
-	New()
-		..()
-		src.setItemSpecial(/datum/item_special/swipe)
-
 /obj/item/chair/folded/attack_self(mob/user as mob)
-	if(cant_drop == 1)
-		boutput(user, "You can't unfold the [src] when its attached to your arm!")
-		return
-	else
-		var/obj/stool/chair/C = new/obj/stool/chair(user.loc)
-		if (src.material)
-			C.setMaterial(src.material)
-		if (src.c_color)
-			C.icon_state = src.c_color
-		C.dir = user.dir
-		boutput(user, "You unfold [C].")
-		user.drop_item()
-		qdel(src)
-		return
+	var/obj/stool/chair/C = new/obj/stool/chair(user.loc)
+	if (src.material)
+		C.setMaterial(src.material)
+	if (src.c_color)
+		C.icon_state = src.c_color
+	C.dir = user.dir
+	boutput(user, "You unfold [C].")
+	user.drop_item()
+	qdel(src)
+	return
 
 /obj/item/chair/folded/attack(atom/target, mob/user as mob)
 	var/mob/living/carbon/human/H = user
 	var/mob/living/M = target
 	if (ishuman(target))
 		if (iswrestler(H))
-			M.changeStatus("stunned", 4 SECONDS)
+			M.stunned += 4
 			H.emote("scream")
-		//M.TakeDamage("chest", 5, 0) //what???? we have 'force' var
-		//M.updatehealth()
+		M.TakeDamage("chest", 5, 0)
+		M.updatehealth()
 		playsound(src.loc, pick(sounds_punch), 100, 1)
 	..()
 
@@ -816,15 +685,14 @@
 
 /obj/stool/chair/comfy
 	name = "comfy brown chair"
-	desc = "This advanced seat commands authority and respect. Everyone is super envious of whoever sits in this chair."
+	desc = "This advanced seat commands authority and respect. Everyone is super jealous of whoever sits in this chair."
 	icon_state = "chair_comfy"
 	comfort_value = 7
 	foldable = 0
-	deconstructable = 1
+	deconstructable = 0
 //	var/atom/movable/overlay/overl = null
 	var/image/arm_image = null
 	var/arm_icon_state = "arm"
-	parts_type = /obj/item/furniture_parts/comfy_chair
 
 	New()
 		..()
@@ -864,31 +732,21 @@
 		name = "comfy blue chair"
 		icon_state = "chair_comfy-blue"
 		arm_icon_state = "arm-blue"
-		parts_type = /obj/item/furniture_parts/comfy_chair/blue
 
 	red
 		name = "comfy red chair"
 		icon_state = "chair_comfy-red"
 		arm_icon_state = "arm-red"
-		parts_type = /obj/item/furniture_parts/comfy_chair/red
 
 	green
 		name = "comfy green chair"
 		icon_state = "chair_comfy-green"
 		arm_icon_state = "arm-green"
-		parts_type = /obj/item/furniture_parts/comfy_chair/green
-
-	yellow
-		name = "comfy yellow chair"
-		icon_state = "chair_comfy-yellow"
-		arm_icon_state = "arm-yellow"
-		parts_type = /obj/item/furniture_parts/comfy_chair/yellow
 
 	purple
 		name = "comfy purple chair"
 		icon_state = "chair_comfy-purple"
 		arm_icon_state = "arm-purple"
-		parts_type = /obj/item/furniture_parts/comfy_chair/purple
 
 /* ======================================================== */
 /* -------------------- Shuttle Chairs -------------------- */
@@ -900,8 +758,6 @@
 	icon_state = "shuttle_chair"
 	arm_icon_state = "shuttle_chair-arm"
 	comfort_value = 5
-	deconstructable = 0
-	parts_type = null
 
 	red
 		icon_state = "shuttle_chair-red"
@@ -909,75 +765,6 @@
 		icon_state = "shuttle_chair-brown"
 	green
 		icon_state = "shuttle_chair-green"
-
-/* ===================================================== */
-/* -------------------- Wheelchairs -------------------- */
-/* ===================================================== */
-
-/obj/stool/chair/comfy/wheelchair
-	name = "wheelchair"
-	desc = "It's a chair that has wheels attached to it. Do I really have to explain this to you? Can you not figure this out on your own? Wheelchair. Wheel, chair. Chair that has wheels."
-	icon_state = "wheelchair"
-	arm_icon_state = "arm-wheelchair"
-	anchored = 0
-	comfort_value = 3
-	buckle_move_delay = 1
-	p_class = 2
-	scoot_sounds = list("sound/misc/chair/office/scoot1.ogg", "sound/misc/chair/office/scoot2.ogg", "sound/misc/chair/office/scoot3.ogg", "sound/misc/chair/office/scoot4.ogg", "sound/misc/chair/office/scoot5.ogg")
-	var/lying = 0 // didja get knocked over? fall down some stairs?
-	parts_type = /obj/item/furniture_parts/wheelchair
-	mat_appearances_to_ignore = list("steel")
-	mats = 15
-
-	New()
-		..()
-		if (src.lying)
-			animate_rest(src, !src.lying)
-			src.p_class = initial(src.p_class) + src.lying // 2 while standing, 3 while lying
-
-	update_icon()
-		ENSURE_IMAGE(src.arm_image, src.icon, src.arm_icon_state)
-		src.arm_image.layer = FLY_LAYER+1
-		src.UpdateOverlays(src.arm_image, "arm")
-
-	proc/fall_over(var/turf/T)
-		if (src.lying)
-			return
-		if (src.buckled_guy)
-			var/mob/living/M = src.buckled_guy
-			src.unbuckle()
-			if (M && !src.buckled_guy)
-				M.visible_message("<span style='color:red'>[M] is tossed out of [src] as it tips [T ? "while rolling over [T]" : "over"]!</span>",\
-				"<span style='color:red'>You're tossed out of [src] as it tips [T ? "while rolling over [T]" : "over"]!</span>")
-				var/turf/target = get_edge_target_turf(src, src.dir)
-				M.throw_at(target, 5, 1)
-				M.changeStatus("stunned", 80)
-				M.changeStatus("weakened", 5 SECONDS)
-			else
-				src.visible_message("<span style='color:red'>[src] tips [T ? "as it rolls over [T]" : "over"]!</span>")
-		else
-			src.visible_message("<span style='color:red'>[src] tips [T ? "as it rolls over [T]" : "over"]!</span>")
-		src.lying = 1
-		animate_rest(src, !src.lying)
-		src.p_class = initial(src.p_class) + src.lying // 2 while standing, 3 while lying
-		src.scoot_sounds = list("sound/misc/chair/normal/scoot1.ogg", "sound/misc/chair/normal/scoot2.ogg", "sound/misc/chair/normal/scoot3.ogg", "sound/misc/chair/normal/scoot4.ogg", "sound/misc/chair/normal/scoot5.ogg")
-
-	attack_hand(mob/user as mob)
-		if (src.lying)
-			user.visible_message("[user] sets [src] back on its wheels.",\
-			"You set [src] back on its wheels.")
-			src.lying = 0
-			animate_rest(src, !src.lying)
-			src.p_class = initial(src.p_class) + src.lying // 2 while standing, 3 while lying
-			src.scoot_sounds = scoot_sounds = list("sound/misc/chair/office/scoot1.ogg", "sound/misc/chair/office/scoot2.ogg", "sound/misc/chair/office/scoot3.ogg", "sound/misc/chair/office/scoot4.ogg", "sound/misc/chair/office/scoot5.ogg")
-			return
-		else
-			return ..()
-
-	buckle_in(mob/living/to_buckle, var/stand = 0)
-		if (src.lying)
-			return
-		..()
 
 /* ======================================================= */
 /* -------------------- Wooden Chairs -------------------- */
@@ -989,63 +776,7 @@
 	comfort_value = 3
 	foldable = 0
 	anchored = 0
-	//deconstructable = 0
-	parts_type = /obj/item/furniture_parts/wood_chair
-
-/* ============================================== */
-/* -------------------- Pews -------------------- */
-/* ============================================== */
-
-/obj/stool/chair/pew // pew pew
-	name = "pew"
-	desc = "It's like a bench, but more holy. No, not <i>holey</i>, <b>holy</b>. Like, godly, divine. That kinda thing.<br>Okay, it's actually kind of holey, too, now that you look at it closer."
-	icon_state = "pew"
-	anchored = 1
-	rotatable = 0
-	foldable = 0
-	comfort_value = 2
 	deconstructable = 0
-	securable = 0
-	parts_type = /obj/item/furniture_parts/bench/pew
-	var/image/arm_image = null
-	var/arm_icon_state = null
-
-	New()
-		src.verbs -= /obj/stool/chair/verb/rotate
-		..()
-		if (arm_icon_state)
-			src.update_icon()
-
-	proc/update_icon()
-		if (src.dir == NORTH)
-			src.layer = FLY_LAYER+1
-		else
-			src.layer = OBJ_LAYER
-			if ((src.dir == WEST || src.dir == EAST) && !src.arm_image)
-				src.arm_image = image(src.icon, src.arm_icon_state)
-				src.arm_image.layer = FLY_LAYER+1
-				src.UpdateOverlays(src.arm_image, "arm")
-
-	left
-		icon_state = "pewL"
-	center
-		icon_state = "pewC"
-	right
-		icon_state = "pewR"
-
-/obj/stool/chair/pew/fancy
-	icon_state = "fpew"
-	arm_icon_state = "arm-fpew"
-
-	left
-		icon_state = "fpewL"
-		arm_icon_state = "arm-fpewL"
-	center
-		icon_state = "fpewC"
-		arm_icon_state = null
-	right
-		icon_state = "fpewR"
-		arm_icon_state = "arm-fpewR"
 
 /* ================================================= */
 /* -------------------- Couches -------------------- */
@@ -1060,71 +791,22 @@
 	var/damaged = 0
 	comfort_value = 5
 	deconstructable = 0
-	securable = 0
-	var/max_uses = 0 // The maximum amount of time one can try to look under the cushions for items.
-	var/spawn_chance = 0 // How likely is this couch to spawn something?
-	var/last_use = 0 // To prevent spam.
-	var/time_between_uses = 400 // The default time between uses.
-	var/list/items = list (/obj/item/device/light/zippo,
-	/obj/item/wrench,
-	/obj/item/bananapeel,
-	/obj/item/reagent_containers/food/snacks/lollipop/random_medical,
-	/obj/item/spacecash/random/small,
-	/obj/item/spacecash/random/tourist,
-	/obj/item/spacecash/buttcoin)
 
 	New()
-		src.verbs -= /obj/stool/chair/verb/rotate
 		..()
-		max_uses = rand(0, 2) // Losing things in a couch is hard.
-		spawn_chance = rand(1, 20)
+		couches.Add(src)
 
-		if (prob(10)) //time to flail
-			items.Add(/obj/critter/meatslinky)
-
-		if (prob(1))
-			desc = "A vague feeling of loss emanates from this couch, as if it is missing a part of itself. A global list of couches, perhaps."
-
-	disposing()
+	Del()
+		couches.Remove(src)
 		..()
 
 	proc/damage(severity)
 		if(severity > 1 && damaged < 2)
 			damaged += 2
-			overlays += image('icons/obj/objects.dmi', "couch-tear")
+			overlays += icon('icons/obj/objects.dmi', "couch-tear")
 		else if(damaged < 1)
 			damaged += 1
-			overlays += image('icons/obj/objects.dmi', "couch-rip")
-
-	attack_hand(mob/user as mob)
-		if (!user) return
-		if (damaged || buckled_guy) return ..()
-
-		user.lastattacked = src
-
-		playsound(src.loc, "rustle", 66, 1, -5) // todo: find a better sound.
-
-		if (max_uses > 0 && ((last_use + time_between_uses) < world.time) && prob(spawn_chance))
-
-			var/something = pick(items)
-
-			if (ispath(something))
-				var/thing = new something(src.loc)
-				user.put_in_hand_or_drop(thing)
-				if (istype(thing, /obj/critter/meatslinky)) //slink slink
-					user.emote("scream")
-					random_brute_damage(user, 10)
-					user.visible_message("<span style='color:blue'><b>[user.name]</b> rummages through the seams and behind the cushions of [src] and pulls \his hand out in pain! \An [thing] slithers out of \the [src]!</span>",\
-					"<span style='color:blue'>You rummage through the seams and behind the cushions of [src] and your hand gets bit by \an [thing]!</span>")
-				else
-					user.visible_message("<span style='color:blue'><b>[user.name]</b> rummages through the seams and behind the cushions of [src] and pulls \an [thing] out of it!</span>",\
-					"<span style='color:blue'>You rummage through the seams and behind the cushions of [src] and you find \an [thing]!</span>")
-				last_use = world.time
-				max_uses--
-
-		else
-			user.visible_message("<span style='color:blue'><b>[user.name]</b> rummages through the seams and behind the cushions of [src]!</span>",\
-			"<span style='color:blue'>You rummage through the seams and behind the cushions of [src]!</span>")
+			overlays += icon('icons/obj/objects.dmi', "couch-rip")
 
 	blue
 		name = "comfy blue couch"
@@ -1137,10 +819,6 @@
 	green
 		name = "comfy green couch"
 		icon_state = "chair_couch-green"
-
-	yellow
-		name = "comfy yellow couch"
-		icon_state = "chair_couch-yellow"
 
 	purple
 		name = "comfy purple couch"
@@ -1156,42 +834,46 @@
 	icon_state = "office_chair"
 	comfort_value = 4
 	foldable = 0
-	anchored = 0
-	buckle_move_delay = 3
-	//deconstructable = 0
-	parts_type = /obj/item/furniture_parts/office_chair
-	scoot_sounds = list( 'sound/misc/chair/office/scoot1.ogg', 'sound/misc/chair/office/scoot2.ogg', 'sound/misc/chair/office/scoot3.ogg', 'sound/misc/chair/office/scoot4.ogg', 'sound/misc/chair/office/scoot5.ogg' )
+	deconstructable = 0
 
 	red
 		icon_state = "office_chair_red"
-		parts_type = /obj/item/furniture_parts/office_chair/red
 
 	green
 		icon_state = "office_chair_green"
-		parts_type = /obj/item/furniture_parts/office_chair/green
 
 	blue
 		icon_state = "office_chair_blue"
-		parts_type = /obj/item/furniture_parts/office_chair/blue
 
 	yellow
 		icon_state = "office_chair_yellow"
-		parts_type = /obj/item/furniture_parts/office_chair/yellow
 
 	purple
 		icon_state = "office_chair_purple"
-		parts_type = /obj/item/furniture_parts/office_chair/purple
 
-	syndie
-		icon_state = "syndiechair"
-		parts_type = null
+	moveable
+		anchored = 0
 
-	toggle_secure(mob/user as mob)
-		if (user)
-			user.visible_message("<b>[user]</b> [src.anchored ? "loosens" : "tightens"] the castors of [src].[istype(src.loc, /turf/space) ? " It doesn't do much, though, since [src] is in space and all." : null]")
-		playsound(get_turf(src), "sound/items/Screwdriver.ogg", 100, 1)
-		src.anchored = !(src.anchored)
-		return
+	attackby(obj/item/W as obj, mob/user as mob)
+		..()
+		if (istype(W, /obj/item/screwdriver))
+			if (src.anchored)
+				playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
+				if (do_after(user, 30))
+					user.show_text("You unscrew [src] from the floor.", "blue")
+					src.anchored = 0
+					return
+			else
+				var/turf/T = get_turf(src)
+				if (istype(T, /turf/space))
+					user.show_text("What exactly are you gunna secure [src] to?", "red")
+					return
+				else
+					playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
+					if (do_after(user, 30))
+						user.show_text("You secure [src] to [T].", "blue")
+						src.anchored = 1
+						return
 
 /* ========================================================= */
 /* -------------------- Electric Chairs -------------------- */
@@ -1208,11 +890,10 @@
 	var/lethal = 0
 	var/image/image_belt = null
 	comfort_value = -3
-	securable = 0
 
 	New()
 		..()
-		SPAWN_DBG (20)
+		spawn (20)
 			if (src)
 				if (!(src.part1 && istype(src.part1)))
 					src.part1 = new /obj/item/assembly/shock_kit(src)
@@ -1221,7 +902,7 @@
 		return
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (iswrenchingtool(W))
+		if (istype(W, /obj/item/wrench))
 			var/obj/stool/chair/C = new /obj/stool/chair(get_turf(src))
 			if (src.material)
 				C.setMaterial(src.material)
@@ -1242,7 +923,7 @@
 
 	// Seems to be the only way to get this stuff to auto-refresh properly, sigh (Convair880).
 	proc/control_interface(mob/user as mob)
-		if (!user.handcuffed && isalive(user))
+		if (!user.handcuffed && user.stat == 0)
 			user.machine = src
 
 			var/dat = ""
@@ -1255,13 +936,13 @@
 				<A href='?src=\ref[src];lethal=1'>[lethal ? "<font color='red'>Lethal</font>" : "Nonlethal"]</A><BR><BR>
 				<A href='?src=\ref[src];shock=1'>Shock</A><BR>"}
 
-			user.Browse("<TITLE>Electric Chair</TITLE><b>Electric Chair</b><BR>[dat]", "window=e_chair;size=180x180")
+			user << browse("<TITLE>Electric Chair</TITLE><b>Electric Chair</b><BR>[dat]", "window=e_chair;size=180x180")
 
 			onclose(usr, "e_chair")
 		return
 
 	Topic(href, href_list)
-		if (usr.getStatusDuration("stunned") || usr.getStatusDuration("weakened") || usr.stat || usr.restrained()) return
+		if (usr.stunned || usr.weakened || usr.stat || usr.restrained()) return
 		if (!in_range(src, usr)) return
 
 		if (href_list["on"])
@@ -1352,11 +1033,12 @@
 				if (!net || (net && (power < 2000000)))
 					H.shock(src, 2000000, "chest", 0.3, 1) // Nope or not enough juice, use fixed values instead (around 80 BURN per shock).
 				else
-					//DEBUG_MESSAGE("Shocked [H] with [power]")
+					//DEBUG("Shocked [H] with [power]")
 					src.electrocute(H, 100, net, 1) // We are, great. Let that global proc calculate the damage.
 			else
 				H.shock(src, 2500, "chest", 1, 1)
-				H.changeStatus("stunned", 10 SECONDS)
+				if (H.stunned < 10)
+					H.stunned = 10
 
 			if (ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/revolution))
 				if (H.mind in ticker.mode:revolutionaries && !H.mind in ticker.mode:head_revolutionaries && prob(66))

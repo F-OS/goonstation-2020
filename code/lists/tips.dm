@@ -9,7 +9,7 @@ list(
 "You can drop your current item by pressing the Home key.",
 "You can toggle throw mode on and off by pressing the Delete key.",
 "Hold Ctrl and press F to fart. All the cool kids are doing it.",
-"Don't know how to do your job? Try asking people in your department for tips and tricks.",
+"Press the End key to run southwest. I don't know why that's a thing.",
 "If you suspect someone's being shit, adminhelp it with F1.",
 "Admins can always see adminhelps no matter whether they are currently on the server or not.",
 "Admins may not be able to give you feedback about certain subjects, IE identities of traitors.",

@@ -30,10 +30,3 @@
 	desc = "A box containing an implanting tool and five tracking implant cases. The implanter can remove the implants from their cases and inject them in a person, forcing them to be loyal to the Captain and crew."
 	spawn_contents = list(/obj/item/implantcase/antirev = 6,\
 	/obj/item/implanter)
-
-/obj/item/storage/box/accessimp_kit
-	name = "access implant kit"
-	icon_state = "implant"
-	desc = "A box containing an implanting tool and five access implant cases. The implanter can remove the implants from their cases and inject them into a subject, granting them accesses defined by an ID computer."
-	spawn_contents = list(/obj/item/implantcase/access = 6,\
-	/obj/item/implanter)

@@ -33,7 +33,7 @@
 	for(i=0, i<src.number, i++)
 		if(src.total_smoke > 20)
 			return
-		SPAWN_DBG(0)
+		spawn(0)
 			if(holder)
 				src.location = get_turf(holder)
 			var/obj/effects/harmless_smoke/smoke = unpool(/obj/effects/harmless_smoke)
@@ -48,7 +48,7 @@
 			for(var/j=0, j<pick(0,1,1,1,2,2,2,3), j++)
 				sleep(10)
 				step(smoke,direction)
-			SPAWN_DBG(75+rand(10,30))
+			spawn(75+rand(10,30))
 				if (smoke)
 					pool(smoke)
 				src.total_smoke--

@@ -5,15 +5,10 @@
 	var/list/authorized = list(  )
 	desc = "A computer that controls the movement of the nearby shuttle."
 
-	lr = 0.6
-	lg = 1
-	lb = 0.1
-
 /obj/machinery/computer/shuttle/embedded
 	icon_state = "shuttle-embed"
 	density = 0
 	layer = EFFECTS_LAYER_1 // Must appear over cockpit shuttle wall thingy.
-	plane = PLANE_LIGHTING - 1
 
 	north
 		dir = NORTH
@@ -124,16 +119,15 @@
 	var/location = 1 // 0 for bottom, 1 for top
 
 /obj/machinery/computer/shuttle/emag_act(var/mob/user, var/obj/item/card/emag/E)
-	if(emergency_shuttle.location != SHUTTLE_LOC_STATION) return
+	if(emergency_shuttle.location != 1) return
 
 	if (user)
 		var/choice = alert(user, "Would you like to launch the shuttle?","Shuttle control", "Launch", "Cancel")
-		if(get_dist(user, src) > 1 || emergency_shuttle.location != SHUTTLE_LOC_STATION) return
+		if(get_dist(user, src) > 1 || emergency_shuttle.location != 1) return
 		switch(choice)
 			if("Launch")
 				boutput(world, "<span style=\"color:blue\"><B>Alert: Shuttle launch time shortened to 10 seconds!</B></span>")
 				emergency_shuttle.settimeleft( 10 )
-				logTheThing("admin", user, null, "shortens Emergency Shuttle launch time to 10 seconds.")
 				return 1
 			if("Cancel")
 				return 1
@@ -144,11 +138,11 @@
 	return 0
 
 /obj/machinery/computer/shuttle/attackby(var/obj/item/W as obj, var/mob/user as mob)
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		return
 	if (istype(W, /obj/item/device/pda2) && W:ID_card)
 		W = W:ID_card
-	if ((!( istype(W, /obj/item/card) ) || !( ticker ) || emergency_shuttle.location != SHUTTLE_LOC_STATION || !( user )))
+	if ((!( istype(W, /obj/item/card) ) || !( ticker ) || emergency_shuttle.location != 1 || !( user )))
 		return
 
 
@@ -168,7 +162,7 @@
 			return 0
 
 		var/choice = alert(user, text("Would you like to (un)authorize a shortened launch time? [] authorization\s are still needed. Use abort to cancel all authorizations.", src.auth_need - src.authorized.len), "Shuttle Launch", "Authorize", "Repeal", "Abort")
-		if(emergency_shuttle.location != SHUTTLE_LOC_STATION || get_dist(user, src) > 1) return
+		if(emergency_shuttle.location != 1 || get_dist(user, src) > 1) return
 		switch(choice)
 			if("Authorize")
 				if(emergency_shuttle.timeleft() < 60)
@@ -198,12 +192,6 @@
 /obj/machinery/computer/mining_shuttle/attack_hand(mob/user as mob)
 	if(..())
 		return
-#ifdef TWITCH_BOT_ALLOWED
-	if (user == twitch_mob)
-		src.send() //hack to make this traversible for twitch
-		return
-#endif
-
 	var/dat = "<a href='byond://?src=\ref[src];close=1'>Close</a><BR><BR>"
 
 	if(miningshuttle_location)
@@ -216,34 +204,32 @@
 	else
 		dat += "<a href='byond://?src=\ref[src];send=1'>Move Shuttle</a><BR><BR>"
 
-	user.Browse(dat, "window=shuttle")
+	user << browse(dat, "window=shuttle")
 	onclose(user, "shuttle")
 	return
 
 /obj/machinery/computer/mining_shuttle/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 
 		if (href_list["send"])
-			src.send()
+			if(!active)
+				for(var/obj/machinery/computer/mining_shuttle/C in machines)
+					active = 1
+					C.visible_message("<span style=\"color:red\">The Mining Shuttle has been Called and will leave shortly!</span>")
+				spawn(100)
+					call_shuttle()
 
 		if (href_list["close"])
 			usr.machine = null
-			usr.Browse(null, "window=shuttle")
+			usr << browse(null, "window=shuttle")
 
 	src.add_fingerprint(usr)
 	src.updateUsrDialog()
 	return
 
-/obj/machinery/computer/mining_shuttle/proc/send()
-	if(!active)
-		for(var/obj/machinery/computer/mining_shuttle/C in machines)
-			active = 1
-			C.visible_message("<span style=\"color:red\">The Mining Shuttle has been Called and will leave shortly!</span>")
-		SPAWN_DBG(100)
-			call_shuttle()
 
 /obj/machinery/computer/mining_shuttle/proc/call_shuttle()
 	if(miningshuttle_location == 0)
@@ -285,14 +271,14 @@
 	else
 		dat += "<a href='byond://?src=\ref[src];send=1'>Move Shuttle</a><BR><BR>"
 
-	user.Browse(dat, "window=shuttle")
+	user << browse(dat, "window=shuttle")
 	onclose(user, "shuttle")
 	return
 
 /obj/machinery/computer/prison_shuttle/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 
 		if (href_list["send"])
@@ -301,12 +287,12 @@
 					active = 1
 					C.visible_message("<span style=\"color:red\">The Prison Shuttle has been Called and will leave shortly!</span>")
 
-				SPAWN_DBG(100)
+				spawn(100)
 					call_shuttle()
 
 		else if (href_list["close"])
 			usr.machine = null
-			usr.Browse(null, "window=shuttle")
+			usr << browse(null, "window=shuttle")
 
 	src.add_fingerprint(usr)
 	src.updateUsrDialog()
@@ -352,7 +338,7 @@
 
 /obj/machinery/computer/research_shuttle/New()
 	..()
-	SPAWN_DBG(5)
+	spawn(5)
 		src.net_id = generate_net_id(src)
 
 		if(!src.link)
@@ -377,14 +363,14 @@
 	else
 		dat += "<a href='byond://?src=\ref[src];send=1'>Move Shuttle</a><BR><BR>"
 
-	user.Browse(dat, "window=shuttle")
+	user << browse(dat, "window=shuttle")
 	onclose(user, "shuttle")
 	return
 
 /obj/machinery/computer/research_shuttle/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 		if (href_list["send"])
 			for(var/obj/machinery/shuttle/engine/propulsion/eng in machines) // ehh
@@ -403,12 +389,12 @@
 					active = 1
 					C.visible_message("<span style=\"color:red\">The Research Shuttle has been Called and will leave shortly!</span>")
 
-				SPAWN_DBG(100)
+				spawn(100)
 					call_shuttle()
 
 		else if (href_list["close"])
 			usr.machine = null
-			usr.Browse(null, "window=shuttle")
+			usr << browse(null, "window=shuttle")
 
 	src.add_fingerprint(usr)
 	src.updateUsrDialog()
@@ -454,14 +440,14 @@
 	else
 		dat += "<a href='byond://?src=\ref[src];send=1'>Move Elevator</a><BR><BR>"
 
-	user.Browse(dat, "window=ice_elevator")
+	user << browse(dat, "window=ice_elevator")
 	onclose(user, "ice_elevator")
 	return
 
 /obj/machinery/computer/icebase_elevator/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 
 		if (href_list["send"])
@@ -469,12 +455,12 @@
 				for(var/obj/machinery/computer/icebase_elevator/C in machines)
 					active = 1
 					C.visible_message("<span style=\"color:red\">The elevator begins to move!</span>")
-				SPAWN_DBG(50)
+				spawn(50)
 					call_shuttle()
 
 		if (href_list["close"])
 			usr.machine = null
-			usr.Browse(null, "window=ice_elevator")
+			usr << browse(null, "window=ice_elevator")
 
 	src.add_fingerprint(usr)
 	src.updateUsrDialog()
@@ -492,7 +478,7 @@
 		var/area/start_location = locate(/area/shuttle/icebase_elevator/upper)
 		var/area/end_location = locate(/area/shuttle/icebase_elevator/lower)
 		for(var/mob/M in end_location) // oh dear, stay behind the yellow line kids
-			SPAWN_DBG(1) M.gib()
+			spawn(1) M.gib()
 		start_location.move_contents_to(end_location, /turf/simulated/floor/arctic_elevator_shaft)
 		location = 0
 
@@ -518,14 +504,14 @@
 	else
 		dat += "<a href='byond://?src=\ref[src];send=1'>Move Elevator</a><BR><BR>"
 
-	user.Browse(dat, "window=ice_elevator")
+	user << browse(dat, "window=ice_elevator")
 	onclose(user, "biodome_elevator")
 	return
 
 /obj/machinery/computer/biodome_elevator/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 
 		if (href_list["send"])
@@ -533,12 +519,12 @@
 				for(var/obj/machinery/computer/icebase_elevator/C in machines)
 					active = 1
 					C.visible_message("<span style=\"color:red\">The elevator begins to move!</span>")
-				SPAWN_DBG(50)
+				spawn(50)
 					call_shuttle()
 
 		if (href_list["close"])
 			usr.machine = null
-			usr.Browse(null, "window=biodome_elevator")
+			usr << browse(null, "window=biodome_elevator")
 
 	src.add_fingerprint(usr)
 	src.updateUsrDialog()
@@ -556,7 +542,7 @@
 		var/area/start_location = locate(/area/shuttle/biodome_elevator/upper)
 		var/area/end_location = locate(/area/shuttle/biodome_elevator/lower)
 		for(var/mob/M in end_location) // oh dear, stay behind the yellow line kids
-			SPAWN_DBG(1) M.gib()
+			spawn(1) M.gib()
 		start_location.move_contents_to(end_location, /turf/unsimulated/floor/setpieces/ancient_pit/shaft)
 		location = 0
 

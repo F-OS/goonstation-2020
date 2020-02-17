@@ -16,8 +16,6 @@
 	examine()
 		set src in view()
 		..()
-		if(src.hiddenFrom && hiddenFrom.Find(usr.client)) //invislist
-			return
 		if(!alive)
 			boutput(usr, text("<span style=\"color:red\"><B>the disgusting creature is not moving</B></span>"))
 		else if (src.health > 40)
@@ -28,14 +26,14 @@
 
 	filter_target(var/mob/living/C)
 		//Don't want a dead mob, don't want a mob with the same mind as the owner
-		return !isdead(C) && (!owner || C.mind != owner)
+		return C.stat != 2 && (!owner || C.mind != owner)
 
 	ChaseAttack(var/mob/M)
 		if(attacking) return
 		if(ishuman(M))
 			var/mob/living/carbon/human/H = M
 			src.visible_message("<font color='#FF0000'><B>\The [src]</B> leaps on [H.name]!</font>")
-			H.changeStatus("weakened", 4 SECONDS)
+			H.weakened += rand(3,5)
 
 	CritterAttack(var/mob/M)
 		if(attacking) return
@@ -45,7 +43,7 @@
 			random_brute_damage(H, 10)
 			src.set_loc(H.loc)
 			src.visible_message("<font color='#FF0000'><B>\The [src]</B> crawls down [H.name]'s throat!</font>")
-			H.setStatus("paralysis", max(H.getStatusDuration("paralysis"), 100))
+			H.paralysis = max(H.paralysis, 10)
 			attacking = 1
 
 			var/datum/ailment_data/parasite/HS = new /datum/ailment_data/parasite

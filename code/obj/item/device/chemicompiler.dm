@@ -17,15 +17,15 @@
 	icon = 'icons/obj/chemical.dmi'
 	icon_state = "chemicompiler"
 	var/datum/chemicompiler_executor/executor
-
+	
 	New()
 		..()
 		executor = new(src, /datum/chemicompiler_core/portableCore)
-
+	
 	attack_self(mob/user as mob)
 		executor.panel()
-
-	proc/topicPermissionCheck(action)
+	
+	proc/topicPermissionCheck(action)		
 		if(src.loc != usr || (executor.core.running && action != "getUIState"))
 			return 0
 		return 1

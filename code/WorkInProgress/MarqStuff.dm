@@ -63,7 +63,7 @@
 				if (!NA)
 					return null
 				var/temp = copytext(str, pos, NA)
-				buf += replacetext(temp, " ", "&nbsp;")
+				buf += dd_replacetext(temp, " ", "&nbsp;")
 				pos = NA + 1
 				state = NONE
 
@@ -75,14 +75,14 @@
 					pos = NQ + 1
 					continue
 				var/temp = copytext(str, qpos, NQ)
-				buf += replacetext(replacetext(temp, " ", "&nbsp;"), "\\\"", "\"")
+				buf += dd_replacetext(dd_replacetext(temp, " ", "&nbsp;"), "\\\"", "\"")
 				pos = NQ + 1
 				state = NONE
 
-	var/list/el = splittext(buf, " ")
+	var/list/el = dd_text2list(buf, " ")
 	var/list/ret = list()
 	for (var/s in el)
-		ret += replacetext(s, "&nbsp;", " ")
+		ret += dd_replacetext(s, "&nbsp;", " ")
 	return ret
 
 #undef ESCAPE
@@ -136,7 +136,7 @@
 			//		break
 			if (kname)
 				boutput(user, "<span style='color:blue'>You insert the [I.name] into the [kname]hole and turn it. The door emits a loud click.</span>")
-				playsound(src.loc, "sound/impact_sounds/Generic_Click_1.ogg", 60, 1)
+				playsound(src.loc, "sound/effects/thunk.ogg", 60, 1)
 				if (kname in unlocked)
 					unlocked -= kname
 					overlays -= ol[kname]
@@ -151,7 +151,7 @@
 		else if (istype(I, /obj/item/reagent_containers/food/snacks/pie/lime))
 			if ("key lime pie" in expected)
 				boutput(user, "<span style='color:blue'>You insert the [I.name] into the key lime piehole and turn it. The door emits a loud click.</span>")
-				playsound(src.loc, "sound/impact_sounds/Generic_Click_1.ogg", 60, 1)
+				playsound(src.loc, "sound/effects/thunk.ogg", 60, 1)
 				if ("key lime pie" in unlocked)
 					unlocked -= "key lime pie"
 					overlays -= ol["key lime pie"]
@@ -182,7 +182,7 @@
 			return
 		playsound(src.loc, "sound/machines/door_open.ogg", 50, 1)
 		icon_state = "hld1"
-		set_density(0)
+		density = 0
 		opacity = 0
 		overlays.len = 0
 
@@ -197,12 +197,6 @@
 
 	bullet_act()
 		return
-
-/obj/nerd_trap_door/voidoor
-	name = "V O I D O O R"
-	desc = "This door cannot be returned. You see, the warranty is void."
-	expected = list("silver key", /*"skeleton key",*/ /*"literal skeleton key",*/ "hot iron key", /*"cold steel key",*/ "onyx key", /*"key lime pie",*/ "futuristic key", /*"virtual key",*/ "golden key", "bee key", /*"iron key",*/ /*"iridium key",*/ "lunar key")
-	icon_state = "hld2"
 
 /obj/steel_beams
 	name = "steel beams"
@@ -265,7 +259,7 @@
 		..()
 
 	onEnd()
-		boutput(owner, "<span style='color:red'>You let go of the string.</span>")
+		boutput(owner, "<span style='color:red'>You couldn't hold the string any longer.</span>")
 		if (bow)
 			bow.aim = null
 		..()
@@ -339,8 +333,6 @@
 	var/image/shaft
 	var/image/head
 	amount = 1
-	max_stack = 50
-	appearance_flags = RESET_COLOR | RESET_ALPHA
 
 	New()
 		..()
@@ -351,28 +343,10 @@
 		overlays += shaft
 		overlays += head
 
-	check_valid_stack(atom/movable/O as obj)
-		if(!istype(O, /obj/item/arrow)) return 0
-		var/obj/item/arrow/A = O
-
-		if(A.head_material && src.head_material)
-			if(!isSameMaterial(A.head_material, src.head_material))
-				return 0
-		else if ((A.head_material && !src.head_material) || (!A.head_material && src.head_material))
-			return 0
-
-		if(A.shaft_material && src.shaft_material)
-			if(!isSameMaterial(A.shaft_material, src.shaft_material))
-				return 0
-		else if ((A.shaft_material && !src.shaft_material) || (!A.shaft_material && src.shaft_material))
-			return 0
-
-		return 1
-
 	examine()
 		..()
 		if (amount > 1)
-			boutput(usr, "<span style='color:blue'>This is a stack of [amount] arrows.")
+			boutput(usr, "<span style='color:blue'>This is a stack of [amount] arrows. Picking it up will take a single arrow from the stack.")
 		if (reagents.total_volume)
 			boutput(usr, "<span style='color:blue'>The tip of the arrow is coated with reagents.</span>")
 
@@ -382,8 +356,7 @@
 			O.set_loc(newloc)
 		O.setHeadMaterial(head_material)
 		O.setShaftMaterial(shaft_material)
-		return O
-/*
+
 	attack_hand(var/mob/user)
 		if (amount > 1)
 			amount--
@@ -392,7 +365,6 @@
 			boutput(usr, "<span style='color:blue'>You take \a [src] from the stack of [src]s. [amount] remaining on the stack.")
 		else
 			..()
-*/
 
 	set_loc()
 		..()
@@ -409,19 +381,15 @@
 			overlays += shaft
 			overlays += head
 
-	update_stack_appearance()
-		setName()
-		return
-
 	proc/setName()
 		if (head_material && shaft_material)
-			name = "[amount] [head_material]-headed [shaft_material] arrow[amount > 1 ? "s":""]"
+			name = "[head_material]-headed [shaft_material] arrow"
 		else if (head_material)
-			name = "[amount] [head_material]-headed arrow[amount > 1 ? "s":""]"
+			name = "[head_material]-headed arrow"
 		else if (shaft_material)
-			name = "[amount] steel-headed [shaft_material] arrow[amount > 1 ? "s":""]"
+			name = "steel-headed [shaft_material] arrow"
 		else
-			name = "[amount] steel-headed arrow[amount > 1 ? "s":""]"
+			name = "steel-headed arrow"
 
 	proc/setHeadMaterial(var/datum/material/M)
 		head_material = copyMaterial(M)
@@ -437,7 +405,7 @@
 
 	proc/setShaftMaterial(var/datum/material/M)
 		shaft_material = copyMaterial(M)
-		src.setMaterial(shaft_material,copy = 0, appearance = 0, setname = 0)
+		material = shaft_material
 		overlays -= shaft
 		if (M)
 			shaft.color = M.color
@@ -445,25 +413,24 @@
 		else
 			shaft.color = null
 			shaft.alpha = 255
-		overlays += shaft
+		overlays += head
 		setName()
 
 	afterattack(var/atom/target, var/mob/user, reach)
 		if (!reach)
 			return
-		if (isliving(target))
+		if (istype(target, /mob/living))
 			if (prob(50))
 				user.visible_message("<span style='color:red'><b>[user] tries to stab [target] with [src] but misses!</b></span>")
-				playsound(get_turf(user), 'sound/impact_sounds/Generic_Swing_1.ogg', 25, 1, 1)
+				playsound(get_turf(user), 'sound/weapons/punchmiss.ogg', 25, 1, 1)
 				return
 			user.visible_message("<span style='color:red'><b>[user] stabs [target] with [src]!</b></span>")
 			user.u_equip(src)
-			playsound(get_turf(user), 'sound/impact_sounds/Flesh_Stab_1.ogg', 75, 1)
+			playsound(get_turf(user), 'sound/effects/bloody_stab.ogg', 75, 1)
 			if (ishuman(target))
 				var/mob/living/carbon/human/H = target
 				var/obj/item/implant/projectile/arrow/A = new
 				A.material = head_material
-				A.setMaterial(head_material, appearance = 0, setname = 0)
 				A.arrow = src
 				A.name = name
 				set_loc(A)
@@ -529,42 +496,22 @@
 		if (!istype(I))
 			boutput(user, "<span style='color:red'>That cannot be placed in [src]!</span>")
 			return
-
-		if(I.amount > 1)
-			var/amountinitial = I.amount
-			for(var/i=0, i<amountinitial, i++)
-				I.clone(src)
-				I.change_stack_amount(-1)
-			maptext = "[contents.len]"
-			icon_state = "quiver-[min(contents.len, 4)]"
-		else
-			user.u_equip(I)
-			I.loc = src
-			maptext = "[contents.len]"
-			icon_state = "quiver-[min(contents.len, 4)]"
-
-	proc/getArrow(var/mob/user)
-		if (src in user)
-			if (contents.len)
-				boutput(user, "<span style='color:blue'>You take [contents[1]] from [src].</span>")
-				return contents[1]
-			else return null
-
-	proc/updateApperance()
-		if (contents.len)
-			maptext = "[contents.len]"
-		else
-			maptext = null
+		user.u_equip(I)
+		I.loc = src
+		maptext = "[contents.len]"
 		icon_state = "quiver-[min(contents.len, 4)]"
-		return
 
 	attack_hand(var/mob/user)
 		if (src in user)
-			var/obj/item/arrow/I = getArrow(user)
-			if(I)
-				user.put_in_hand(I, user.hand)
-				updateApperance()
-			return
+			if (contents.len)
+				boutput(user, "<span style='color:blue'>You take [contents[1]] from [src].</span>")
+				user.put_in_hand(contents[1], user.hand)
+				if (contents.len)
+					maptext = "[contents.len]"
+				else
+					maptext = null
+				icon_state = "quiver-[min(contents.len, 4)]"
+				return
 		..()
 
 	MouseDrop(atom/over_object, src_location, over_location)
@@ -601,7 +548,7 @@
 
 /datum/projectile/arrow
 	name = "arrow"
-	power = 17
+	power = 25
 	dissipation_delay = 4
 	dissipation_rate = 5
 	shot_sound = 'sound/effects/bow_fire.ogg'
@@ -614,7 +561,7 @@
 
 	on_hit(var/atom/A, angle, var/obj/projectile/P)
 		if (ismob(A))
-			playsound(get_turf(A), 'sound/impact_sounds/Flesh_Stab_1.ogg', 75, 1)
+			playsound(get_turf(A), 'sound/effects/bloody_stab.ogg', 75, 1)
 			var/obj/item/implant/projectile/arrow/B = P.implanted
 			if (istype(B))
 				if (B.material)
@@ -627,34 +574,14 @@
 /obj/item/gun/bow
 	name = "bow"
 	icon = 'icons/obj/items.dmi'
-	inhand_image_icon = 'icons/mob/inhand/hand_weapons.dmi'
 	icon_state = "bow"
-	item_state = "bow"
 	var/obj/item/arrow/loaded = null
 	var/datum/action/bar/aim/aim = null
 	current_projectile = new/datum/projectile/arrow
-	spread_angle = 40
+	spread_angle = 30
 	force = 5
-	can_dual_wield = 0
-	contraband = 0
-
-	proc/loadFromQuiver(var/mob/user)
-		if(ishuman(user))
-			var/mob/living/carbon/human/H = user
-			if(istype(H.back, /obj/item/quiver))
-				var/obj/item/quiver/Q = H.back
-				var/obj/item/arrow/I = Q.getArrow(user)
-				if(I)
-					loaded = I
-					I.loc = src
-					overlays += I
-					Q.updateApperance()
-		return
 
 	attack_hand(var/mob/user)
-		if (!loaded && user.is_in_hands(src))
-			loadFromQuiver(user)
-
 		if (loaded && user.is_in_hands(src))
 			user.put_in_hand_or_drop(loaded)
 			boutput(user, "<span style='color:blue'>You unload the arrow from the bow.</span>")
@@ -677,23 +604,12 @@
 			game_stats.Increment("violence")
 	#endif
 			return
-	/*
-	onMouseDown(atom/target,location,control,params)
-		var/mob/user = usr
-		var/list/parameters = params2list(params)
-		if(ismob(target.loc) || istype(target, /obj/screen)) return
-		if(parameters["left"])
-			if (!aim && !loaded)
-				loadFromQuiver(user)
 
-			if (!aim && loaded)
-				aim = new(user, src)
-				actions.start(aim, user)
-		return
-	*/
 
 	attack_self(var/mob/user)
-		return
+		if (!aim && loaded)
+			aim = new(user, src)
+			actions.start(aim, user)
 
 	process_ammo(var/mob/user)
 		if (!loaded)
@@ -701,22 +617,12 @@
 			return 0
 		overlays.len = 0
 		var/obj/item/implant/projectile/arrow/A = new
-		A.setMaterial(loaded.head_material, appearance = 0, setname = 0)
+		A.material = loaded.head_material
 		A.arrow = loaded
 		A.name = loaded.name
 		current_projectile.name = loaded.name
 		loaded.set_loc(A)
 		current_projectile.implanted = A
-		current_projectile.material = copyMaterial(loaded.head_material)
-		var/default_power = 12
-		if(loaded.head_material)
-			if(loaded.head_material.hasProperty("hard"))
-				current_projectile.power = round(loaded.head_material.getProperty("hard") / 2.6) //40hard ~ 15dmg, 80hard ~ 30dmg
-			else
-				current_projectile.power = default_power
-		else
-			current_projectile.power = default_power
-
 		loaded = null
 		return 1
 
@@ -727,45 +633,18 @@
 		if (!loaded)
 			boutput(user, "<span style='color:red'>Nothing is loaded in the bow!</span>")
 			return 1
-
-		if (!aim)
-			//var/list/parameters = params2list(params)
-			if(ismob(target.loc) || istype(target, /obj/screen)) return
-			if (!aim && !loaded)
-				loadFromQuiver(user)
-
-			if (!aim && loaded)
-				aim = new(user, src)
-				actions.start(aim, user)
-		else
-			var/spread_base = 40
-			if(src.material)
-				if(src.material.hasProperty("density"))
-					var/mod = src.material.getProperty("density")
-					mod -= 50
-					mod /= 2
-					mod = mod * (-1)
-					spread_base += mod
-
-			spread_angle = spread_base
-			if (aim)
-				spread_angle = (1 - aim.progress) * spread_base
-				aim.state = ACTIONSTATE_FINISH
-			..()
+		spread_angle = 30
+		if (aim)
+			spread_angle = (1 - aim.progress) * 30
+			aim.state = ACTIONSTATE_FINISH
+		..()
 
 	attackby(var/obj/item/arrow/I, var/mob/user)
 		if (!istype(I))
 			return
 		if (loaded)
 			boutput(user, "<span style='color:red'>An arrow is already loaded onto the bow.</span>")
-
-		if(I.amount > 1)
-			var/obj/item/arrow/C = I.clone(src)
-			I.change_stack_amount(-1)
-			overlays += C
-			loaded = C
-		else
-			overlays += I
-			user.u_equip(I)
-			loaded = I
-			I.loc = src
+		overlays += I
+		user.u_equip(I)
+		loaded = I
+		I.loc = src

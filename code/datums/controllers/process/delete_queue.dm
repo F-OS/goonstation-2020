@@ -1,52 +1,41 @@
-#define QUEUE_WAIT_TIME 300
-
 datum/controller/process/delete_queue
 	var/tmp/delcount = 0
 	var/tmp/gccount = 0
 	var/tmp/deleteChunkSize = MIN_DELETE_CHUNK_SIZE
-#ifdef DELETE_QUEUE_DEBUG
-	var/tmp/datum/dynamicQueue/delete_queue = 0
-#endif
-	var/debuggy_mbc_thing_please_remove = 0
+	//var/tmp/delpause = 1
+
+	// Timing vars
+	var/tmp/start = 0
+	var/tmp/list/timeTaken = new
 
 	setup()
 		name = "DeleteQueue"
 		schedule_interval = 1
-		tick_allowance = 25
+		sleep_interval = 1
 
 	doWork()
 		if(!global.delete_queue)
 			boutput(world, "Error: there is no delete queue!")
 			return 0
 
-#ifdef DELETE_QUEUE_DEBUG
-		if (!src.delete_queue)
-			src.delete_queue = global.delete_queue
-#endif
-
 		//var/datum/dynamicQueue/queue =
 		if(global.delete_queue.isEmpty())
 			return
 
+		start = world.timeofday
+
 		var/list/toDeleteRefs = delete_queue.dequeueMany(deleteChunkSize)
-		var/numItems = delete_queue.count()
+		var/numItems = toDeleteRefs.len
 		#ifdef DELETE_QUEUE_DEBUG
 		var/t
 		#endif
 		for(var/r in toDeleteRefs)
-			LAGCHECK(LAG_REALTIME)
 			var/datum/D = locate(r)
-
-			scheck()
 
 			if (!istype(D) || !D.qdeled)
 				// If we can't locate it, it got garbage collected.
 				// If it isn't disposed, it got garbage collected and then a new thing used its ref.
 				gccount++
-				continue
-
-			if (world.time <= D.qdeltime + QUEUE_WAIT_TIME)
-				delete_queue.enqueue(r)
 				continue
 
 			#ifdef DELETE_QUEUE_DEBUG
@@ -57,39 +46,43 @@ datum/controller/process/delete_queue
 			// Because we have already logged it into the gc count in qdel.
 			#endif
 
-			if (debuggy_mbc_thing_please_remove == 1)
-				if (D.type == /obj/overlay)
-					var/obj/overlay/O = D
-					logTheThing("debug", text="Del of [D.type] -- iconstate [O.icon_state]")
-				else
-					logTheThing("debug", text="Del of [D.type]")
 			// Delete that bitch
-
-/*
-			// fuck
-			var/mob/fuck = D
-			if (istype(fuck))
-				if (fuck.client)
-					Z_LOG_ERROR("DelQueue", "TRYING TO DELETE MOB WITH CLIENT (\ref[fuck] [fuck]) / ([fuck.client])!!!")
-					continue
-				else
-					Z_LOG_INFO("DelQueue", "Deleting mob (\ref[fuck] [fuck]) (no client)")
-
-			var/client/fuck2 = D
-			if (istype(fuck2))
-				Z_LOG_ERROR("DelQueue", "NO WE ARE NOT GOING TO FUCKING DELETE THE CLIENT (\ref[fuck2] [fuck2]) FUCK YOU")
-				continue
-*/
 			delcount++
 			D.qdeled = 0
 			del(D)
+
+			scheck(0)
+
+			//if (delpause)
+				//sleep(delpause)
+
 		// The amount of time taken for this run is recorded only if
 		// the number of items considered is equal to the chunk size
-		if(numItems > deleteChunkSize * 10 && deleteChunkSize < MAX_DELETE_CHUNK_SIZE)
+		if(numItems == deleteChunkSize)
+			timeTaken.len++
+			timeTaken[timeTaken.len] = world.timeofday - start
+
+		// If the number of items processed is equal to the chunk size
+		// and the average time taken by the delete queue is greater than the scheduled interval
+		if (numItems == deleteChunkSize && averageTimeTaken() > schedule_interval && deleteChunkSize > MIN_DELETE_CHUNK_SIZE)
+			deleteChunkSize--
+		else if (numItems == deleteChunkSize && averageTimeTaken() < schedule_interval)
 			deleteChunkSize++
-		else
-			if (deleteChunkSize > MIN_DELETE_CHUNK_SIZE)
-				deleteChunkSize--
+
+	proc
+		averageTimeTaken()
+			var/t = 0
+			var/c = 0
+			for(var/time in timeTaken)
+				t += time
+				c++
+
+			if (timeTaken.len > 10)
+				timeTaken.Cut(1, 2)
+
+			if(c > 0)
+				return t / c
+			return c
 
 	tickDetail()
 		#ifdef DELETE_QUEUE_DEBUG

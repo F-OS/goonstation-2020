@@ -2,7 +2,7 @@
 	name = "shield"
 	icon_state = "shield0"
 	var/active = 0.0
-	flags = FPRINT | TABLEPASS | CONDUCT | NOSHIELD
+	flags = FPRINT | TABLEPASS| CONDUCT
 	item_state = "electronic"
 	throwforce = 5.0
 	throw_speed = 1

@@ -1,6 +1,5 @@
 /mob/dead
 	stat = 2
-	event_handler_flags = USE_CANPASS | IMMUNE_MANTA_PUSH
 
 // dead
 
@@ -14,10 +13,6 @@
 /mob/dead/say_understands()
 	return 1
 
-/mob/dead/can_strip()
-	return 0
-
-
 /mob/dead/click(atom/target, params)
 	if (targeting_spell)
 		..()
@@ -25,12 +20,6 @@
 		if (get_dist(src, target) > 0)
 			dir = get_dir(src, target)
 		target.examine()
-
-/mob/dead/process_move(keys)
-	if (!istype(src.loc,/turf)) //Pop observers and Follow-Thingers out!!
-		var/mob/dead/O = src
-		O.loc = get_turf(src)
-	. = ..()
 
 /mob/dead/projCanHit(datum/projectile/P)
 	return P.hits_ghosts
@@ -79,9 +68,6 @@
 			if (farting_allowed && src.emote_check(voluntary, 25, 1, 0))
 				var/fluff = pick("spooky", "eerie", "ectoplasmic", "frightening", "terrifying", "ghoulish", "ghostly", "haunting", "morbid")
 				var/fart_on_other = 0
-				for (var/obj/item/storage/bible/B in src.loc)
-					playsound(get_turf(src), 'sound/voice/farts/poo2.ogg', 7, 0, 0, src.get_age_pitch() * 0.4)
-					break
 				for (var/mob/living/M in src.loc)
 					message = "<B>[src]</B> lets out \an [fluff] fart in [M]'s face!"
 					fart_on_other = 1
@@ -92,20 +78,10 @@
 						break
 				if (!fart_on_other)
 					message = "<B>[src]</B> lets out \an [fluff] fart!"
-#ifdef HALLOWEEN
-				if (fart_on_other)
-					if (istype(src.abilityHolder, /datum/abilityHolder/ghost_observer))
-						var/datum/abilityHolder/ghost_observer/GH = src.abilityHolder
-						GH.change_points(20)
-#endif
 
 		if ("scream")
 			if (src.emote_check(voluntary, 25, 1, 0))
 				message = "<B>[src]</B> lets out \an [pick("spooky", "eerie", "frightening", "terrifying", "ghoulish", "ghostly", "haunting", "morbid")] [pick("wail", "screech", "shriek")]!"
-
-		if ("laugh")
-			if (src.emote_check(voluntary, 20, 1, 0))
-				message = "<B>[src]</B> lets out \an [pick("spooky", "eerie", "frightening", "terrifying", "ghoulish", "ghostly", "haunting", "morbid")] [pick("laugh", "cackle", "chuckle")]!"
 
 		if ("dance")
 			if (src.emote_check(voluntary, 100, 1, 0))
@@ -129,37 +105,18 @@
 		if ("flip")
 			if (src.emote_check(voluntary, 100, 1, 0))
 				message = "<B>[src]</B> does \an [pick("spooky", "eerie", "frightening", "terrifying", "ghoulish", "ghostly", "haunting", "morbid")] flip!"
-				animate(src) // stop the animation
-				animate_spin(src, prob(50) ? "R" : "L", 1, 0)
-				SPAWN_DBG(10)
-					animate_bumble(src)
+				if (prob(50))
+					animate_spin(src, "R", 1, 0)
+				else
+					animate_spin(src, "L", 1, 0)
 
 		if ("wave","salute","nod")
 			if (src.emote_check(voluntary, 10, 1, 0))
 				message = "<B>[src]</B> [act]s."
 
-		else
-			src.show_text("Unusable emote '[act]'.", "blue")
-			return
-
 	if (message)
-#ifdef HALLOWEEN
-		if (istype(src.abilityHolder, /datum/abilityHolder/ghost_observer))
-			var/datum/abilityHolder/ghost_observer/GH = src.abilityHolder
-			GH.change_points(5)
-
-#endif
-		logTheThing("say", src, null, "EMOTE: [html_encode(message)]")
+		logTheThing("say", src, null, "EMOTE: [message]")
 		/*for (var/mob/dead/O in viewers(src, null))
-			O.show_*/src.visible_message("<span class='game deadsay'><span class='prefix'>DEAD:</span> <span class='message'>[message]</span></span>",group = "[src]_[lowertext(act)]")
+			O.show_*/src.visible_message("<span class='game deadsay'><span class='prefix'>DEAD:</span> <span class='message'>[message]</span></span>")
 		return 1
 	return 0
-
-
-// nothing in the game currently forces dead mobs to vomit. this will probably change or end up exposed via someone fucking up (likely me) in future. - cirr
-/mob/dead/vomit(var/nutrition=0, var/specialType=null)
-	..(0, /obj/item/reagent_containers/food/snacks/ectoplasm)
-	playsound(src.loc, "sound/effects/ghost2.ogg", 50, 1)
-	src.visible_message("<span style='color: red;'>Ectoplasm splats onto the ground from nowhere!</span>",
-		"<span style='color: red;>Even dead, you're nauseated enough to vomit![pick("", "Oh god!")]</span>",
-		"<span style='color: red;'>You hear something strangely insubstantial land on the floor with a wet splat!</span>")

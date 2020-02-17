@@ -131,7 +131,7 @@ datum/hSB
 					hsb.set_loc(usr.loc)
 					boutput(usr, "<b>Sandbox:  Created an airlock.")
 				if("hsbcanister")
-					var/list/hsbcanisters = childrentypesof(/obj/machinery/portable_atmospherics/canister/)
+					var/list/hsbcanisters = typesof(/obj/machinery/portable_atmospherics/canister/) - /obj/machinery/portable_atmospherics/canister/
 					var/hsbcanister = input(usr, "Choose a canister to spawn.", "Sandbox:") in hsbcanisters + "Cancel"
 					if(!(hsbcanister == "Cancel"))
 						new hsbcanister(usr.loc)

@@ -8,24 +8,21 @@
 	offensive = 1
 	restricted_area_check = 1
 	sticky = 1
-	voice_grim = "sound/voice/wizard/WarpGrim.ogg"
-	voice_fem = "sound/voice/wizard/WarpFem.ogg"
-	voice_other = "sound/voice/wizard/WarpLoud.ogg"
 
 	cast(mob/target)
 		if(!holder)
 			return
 
 		holder.owner.say("GHEIT AUT")
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/WarpLoud.ogg", 50, 0, -1)
 
-		if (target.traitHolder.hasTrait("training_chaplain"))
+		if (target.bioHolder.HasEffect("training_chaplain"))
 			boutput(holder.owner, "<span style=\"color:red\">[target] has divine protection from magic.</span>")
 			playsound(target.loc, "sound/effects/mag_warp.ogg", 25, 1, -1)
 			target.visible_message("<span style=\"color:red\">The spell fails to work on [target]!</span>")
 			return
 
-		if (iswizard(target))
+		if (iswizard(target) && target.wizard_spellpower())
 			target.visible_message("<span style=\"color:red\">The spell fails to work on [target]!</span>")
 			playsound(target.loc, "sound/effects/mag_warp.ogg", 25, 1, -1)
 			return
@@ -35,13 +32,6 @@
 			telerange = 25
 		else
 			boutput(holder.owner, "<span style=\"color:red\">Your spell is weak without a staff to focus it!</span>")
-
-
-		if (isrestrictedz(holder.owner.z))
-			boutput(holder.owner, "<span style=\"color:blue\">You feel guilty for trying to use that spell here.</span>")
-			return
-
-
 		var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 		s.set_up(4, 1, target)
 		s.start()

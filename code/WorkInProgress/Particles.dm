@@ -3,7 +3,6 @@
 // particle system states
 #define PS_READY 1
 #define PS_RUNNING 2
-#define PS_ASLEEP 3
 #define PS_FINISHED 0
 
 // --------------------------------------------------------------------------------------------------------------------------------------
@@ -18,24 +17,8 @@
 	opacity = 0
 	layer = EFFECTS_LAYER_BASE
 	animate_movement = NO_STEPS //Stop shifting around recycled particles.
-	event_handler_flags = IMMUNE_MANTA_PUSH
 	var/atom/target = null // target location for directional particles
 	var/override_state = null
-	var/death = 0
-
-	unpooled()
-		src.alpha = 255
-		src.blend_mode = 0
-		src.color = null
-		src.pixel_x = 0
-		src.pixel_y = 0
-		src.transform = null
-		src.override_state = null
-		animate(src)
-
-	disposing()
-		particleMaster.active_particles -= src
-		..()
 
 // --------------------------------------------------------------------------------------------------------------------------------------
 // Master particle datum, handles creating and recycling particles and particle systems
@@ -45,13 +28,11 @@ var/datum/particleMaster/particleMaster = new
 /datum/particleMaster
 	var/list/particleTypes = null
 	var/list/particleSystems = null
-	var/list/active_particles = list()
-	var/allowed_particles_per_tick = 7
 
 	New()
 		particleTypes = list()
 		particleSystems = list()
-		for (var/ptype in childrentypesof(/datum/particleType))
+		for (var/ptype in typesof(/datum/particleType) - /datum/particleType)
 			var/datum/particleType/typeDatum = new ptype()
 			particleTypes[typeDatum.name] = typeDatum
 
@@ -60,11 +41,6 @@ var/datum/particleMaster/particleMaster = new
 			return
 
 		particleSystems += system
-
-		if (system.location)
-			system.location.temp_flags |= HAS_PARTICLESYSTEM
-		if (system.target)
-			system.target.temp_flags |= HAS_PARTICLESYSTEM_TARGET
 
 		return system
 
@@ -75,75 +51,42 @@ var/datum/particleMaster/particleMaster = new
 				return 1
 		return 0
 
-	//for clean gc
-	proc/ClearSystemRefs(var/atom/location)
-		for (var/datum/particleSystem/system in particleSystems)
-			if (system.location == location)
-				system.location = null
-				system.target = null
-		return 0
-
 	// kill a particle system in progress
 	proc/RemoveSystem(var/systemType, var/atom/location)
-		var/count = 0
 		for (var/datum/particleSystem/system in particleSystems)
-			if (system.location == location)
-				if (system.type == systemType)
-					system.Die()
-					particleSystems -= system
-				else
-					count++
-			LAGCHECK(LAG_MED)
-
-		if (count <= 0)
-			location.temp_flags &= ~HAS_PARTICLESYSTEM
-		//mbc : lazy remove location has_particlesystem_target flag below in particle system Die() proc. Not 100% reliable but i dont wanna do another search for target.
-
+			if (system.type == systemType && system.location == location)
+				system.Die()
+				particleSystems -= system
 
 	// Called by the particle process loop in the game controller
 	// Runs every effect that's ready to go and cleans up anything that's finished or in an invalid location
 	proc/Tick()
-		SPAWN_DBG(0)
-			var/count = 1
-			for (var/datum/particleSystem/system in particleSystems)
-				if (!(count++ % allowed_particles_per_tick))
-					sleep(1)
+		// Set background tells byond that it can sleep(0) this proc automatically within loops to get other stuff running.
+		set background = 1
+		for (var/datum/particleSystem/system in particleSystems)
+			if (!istype(system.location))
+				system.state = PS_FINISHED
+				particleSystems -= system
+				continue
 
-				if (!istype(system.location))
-					system.state = PS_FINISHED
+			switch(system.state)
+				if (PS_FINISHED)
 					particleSystems -= system
 					continue
 
-				switch(system.state)
-					if (PS_FINISHED)
-						particleSystems -= system
-						continue
-
-					if (PS_READY)
+				if (PS_READY)
+					// This is the only place a spawn is remotely helpful
+					// Adding a lot of extra spawn(0) calls can really shit up the scheduler
+					spawn(0)
 						system.Run()
-						continue
-
-					if (PS_ASLEEP)
-						if (system.next_wake < ticker.round_elapsed_ticks)
-							system.Run()
-						continue
-
-
-		var/time = world.time
-		for (var/obj/particle/P in src.active_particles)
-			if (P.death < time)
-				src.active_particles -= P
-				pool(P)
-				P = null
-			LAGCHECK(LAG_MED)
+					continue
 
 	//Spawns specified particle. If type can be recycled, do that - else create new. After time is over, move particle to recycling to avoid del and new calls.
-	proc/SpawnParticle(var/atom/location, var/particleTypeName, var/particleTime, var/particleColor, var/atom/target, var/particleSprite) //This should be the only thing you access from the outside.
-		LAGCHECK(LAG_MED)
+	proc/SpawnParticle(var/atom/location, var/particleTypeName = null, var/particleTime = null, var/particleColor = null, var/atom/target = null, var/particleSprite = null) //This should be the only thing you access from the outside.
 		var/datum/particleType/pType = particleTypes[particleTypeName]
 
 		if (istype(pType))
-			var/obj/particle/p = new_particle(particleTime)
+			var/obj/particle/p = unpool(/obj/particle)
 			p.loc = get_turf(location)
 			p.color = particleColor
 			if (particleSprite)
@@ -152,15 +95,14 @@ var/datum/particleMaster/particleMaster = new
 				p.target = get_turf(target)
 			pType.Apply(p)
 
+			spawn(particleTime)
+				if (p)
+					pType.Reset(p)
+					pool(p)
+
 			return p
 		else
 			return 0
-
-	proc/new_particle(var/lifetime)
-		var/obj/particle/P = unpool(/obj/particle)
-		P.death = world.time + lifetime
-		src.active_particles += P
-		return P
 
 // --------------------------------------------------------------------------------------------------------------------------------------
 // These datums are used by the particle master datum to apply the various effects to the base particle object before use.
@@ -175,6 +117,8 @@ var/datum/particleMaster/particleMaster = new
 	var/matrix/second = null
 	var/matrix/third = null
 
+	var/static/matrix/reset_matrix = matrix()
+
 	New()
 		MatrixInit()
 
@@ -182,10 +126,22 @@ var/datum/particleMaster/particleMaster = new
 		return
 
 	proc/Apply(var/obj/particle/par)
-		LAGCHECK(LAG_MED)
 		if (istype(par))
 			par.icon = icon
 			par.icon_state = par.override_state ? par.override_state : icon_state
+			return 1
+		return 0
+
+	proc/Reset(var/obj/particle/par)
+		if (istype(par))
+			par.alpha = 255
+			par.blend_mode = 0
+			par.color = null
+			par.pixel_x = 0
+			par.pixel_y = 0
+			par.transform = null
+			par.override_state = null
+			animate(par)
 			return 1
 		return 0
 
@@ -307,11 +263,8 @@ var/datum/particleMaster/particleMaster = new
 			animate(par,transform = second, time = 5, alpha = 245)
 			animate(transform = third, time = 5, alpha = 50)
 
-			first.Reset()
-			second.Reset()
-			third.Reset()
+			MatrixInit()
 
-var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 /datum/particleType/glitter
 	name = "glitter"
 	icon = 'icons/effects/glitter.dmi'
@@ -323,17 +276,24 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 
 	Apply(var/obj/particle/par)
 		if(..())
-			var/rot = rand(-45, 45)
-			var/matrix/first = turn(MS0101, rot)
-			var/matrix/second = matrix(first, 12, MATRIX_SCALE)
-
 			par.pixel_x += rand(-5,5)
 			par.pixel_y += rand(-5,5)
-			par.color = random_saturated_hex_color()
+			par.color = random_saturated_hex_color(1)//rgb(rand(25, 255),rand(25, 255),rand(25, 255))
 			par.icon_state = "glitter[rand(1,10)]"
+			var/rot = rand(-45, 45)
+
+			first.Turn(rot)
+			first.Scale(0.1,0.1)
 			par.transform = first
+
+			second = matrix(first, 12, MATRIX_SCALE)
+
+			third = matrix(matrix(second, rot, MATRIX_ROTATE), 0.1, MATRIX_SCALE)
+
 			animate(par,transform = second, time = 10, alpha = 200)
-			animate(transform = matrix(turn(second, rot), 0.1, MATRIX_SCALE), time = 10, alpha = 50)
+			animate(transform = third, time = 10, alpha = 50)
+
+			MatrixInit()
 
 /datum/particleType/sparkle
 	name = "sparkle"
@@ -342,6 +302,8 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 
 	MatrixInit()
 		first = matrix()
+		second = matrix()
+		third = matrix()
 
 	Apply(var/obj/particle/par)
 		if(..())
@@ -353,13 +315,15 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 			first.Scale(0.1,0.1)
 			par.transform = first
 
-			first.Scale(11)
-			animate(par, transform = first, time = 5, alpha = 245)
+			second = matrix(first, 10, MATRIX_SCALE)
+			second.Scale(1.1,1.1)
 
-			first.Scale(0.1 / 11)
-			first.Turn(rot)
-			animate(transform = first, time = 5, alpha = 50)
-			first.Reset()
+			third = matrix(matrix(first, 0.1, MATRIX_SCALE), rot, MATRIX_ROTATE)
+
+			animate(par,transform = second, time = 5, alpha = 245)
+			animate(transform = third, time = 5, alpha = 50)
+
+			MatrixInit()
 
 /datum/particleType/tpbeam
 	name = "tpbeam"
@@ -532,13 +496,14 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 			first.Scale(0.1, 0.1)
 			par.transform = first
 
-			first.Scale(5,5)
-			first.Turn(rand(-90, 90))
-			animate(par,transform = first, time = 5, alpha = 90)
+			second = first
+			second.Scale(5,5)
+			second.Turn(rand(-90, 90))
 
-			animate(transform = second, time = 20, pixel_y = 75, alpha = 1)
+			animate(par,transform = second, time = 5, alpha = 90)
+			animate(transform = third, time = 20, pixel_y = 75, alpha = 1)
 
-			first.Reset()
+			MatrixInit()
 
 /datum/particleType/cruiserSmoke
 	name = "cruiserSmoke"
@@ -663,6 +628,20 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 
 			animate(par,transform = second, time = 20, color = "#FFFF00", pixel_y = move_y, pixel_x = move_x, alpha = 25)
 			animate(transform = third, time = 10, color="#FFFFFF", alpha = 1)
+
+/datum/particleSystem/firespray
+	var/runLength = 10
+
+	New(var/atom/location, var/atom/destination)
+		..(location, "fireSpray", 10, null, destination)
+
+	Run()
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < runLength, x++)
+				for(var/i=0, i<rand(5,14), i++)
+					SpawnParticle()
+				sleep(1)
+			Die()
 
 /datum/particleType/localSmokeSmall
 	name = "localSmokeSmall"
@@ -898,108 +877,11 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 	name = "warp_star_w"
 	star_direction = WEST
 
-/datum/particleType/blow_cig_smoke
-	name = "blow_cig_smoke_n"
-	icon = 'icons/effects/64x64.dmi'
-	icon_state = "smoke"
-	var/blow_direction = NORTH
-	var/pixel_travel = 42
-
-	MatrixInit()
-		first = matrix()
-		second = matrix()
-
-	Apply(var/obj/particle/par)
-		if(..())
-			par.pixel_x += -18
-			par.pixel_y -= 7
-			if (src.blow_direction == EAST)
-				par.pixel_x += 5
-			if (src.blow_direction == WEST)
-				par.pixel_x -= 5
-			par.color = "#DBDBDB"
-
-			first.Turn(rand(-90, 90))
-			first.Scale(0.1, 0.1)
-			par.transform = first
-
-			second = first
-			second.Scale(3,3)
-			second.Turn(rand(-90, 90))
-
-			animate(par,transform = second, time = 1, alpha = 220)
-			switch (src.blow_direction)
-				if (NORTH)
-					animate(transform = third, time = rand(18,25), pixel_y = par.pixel_y + pixel_travel, alpha = 1)
-				if (SOUTH)
-					animate(transform = third, time = rand(18,25), pixel_y = par.pixel_y - pixel_travel, alpha = 1)
-				if (EAST)
-					animate(transform = third, time = rand(18,25), pixel_x = par.pixel_x + pixel_travel, alpha = 1)
-				if (WEST)
-					animate(transform = third, time = rand(18,25), pixel_x = par.pixel_x - pixel_travel, alpha = 1)
-
-
-			MatrixInit()
-
-/datum/particleType/blow_cig_smoke/blow_cig_smoke_s
-	name = "blow_cig_smoke_s"
-	blow_direction = SOUTH
-
-/datum/particleType/blow_cig_smoke/blow_cig_smoke_e
-	name = "blow_cig_smoke_e"
-	blow_direction = EAST
-
-/datum/particleType/blow_cig_smoke/blow_cig_smoke_w
-	name = "blow_cig_smoke_w"
-	blow_direction = WEST
-
-/datum/particleType/glow_stick_dance
-	name = "glow_stick_dance"
-	icon = 'icons/effects/particles.dmi'
-	icon_state = "sparkle"
-
-	MatrixInit()
-		first = matrix()
-		second = matrix()
-		third = matrix()
-
-	Apply(var/obj/particle/par)
-		if(..())
-			par.pixel_x += rand(-6,6)
-			par.pixel_y += rand(-6,6)
-			par.alpha = 0
-			par.transform = first
-			first.Turn(rand(-90, 90))
-			second = first
-			second.Turn(rand(-90, 90))
-			second.Scale(2,2)
-			third = first
-			third.Turn(rand(-180,180))
-			third.Scale(0.7,0.7)
-
-			var/x1 = rand(-12,12)
-			var/y1 = rand(-12,12)
-			var/x2 = rand(-12,12)
-			var/y2 = rand(-12,12)
-			var/x3 = rand(-12,12)
-			var/y3 = rand(-12,12)
-			var/x4 = rand(-12,12)
-			var/y4 = rand(-12,12)
-
-			animate(par, time = 2.5, pixel_x = x1, pixel_y = y1, alpha = 230)
-			animate(transform = second, time = 2.5, pixel_x = x2, pixel_y = y2)
-			animate(time = 2.5, pixel_x = x3, pixel_y = y3)
-			animate(transform = third, time = 2.5, pixel_x = x4, pixel_y = y4, alpha = 0)
-
-			MatrixInit()
-
 // --------------------------------------------------------------------------------------------------------------------------------------
 // Each particle system datum represents one effect happening in the world.
 
 /datum/particleSystem
 	var/state = PS_READY
-	var/next_wake = 0
-	var/sleepCounter = 0
 	var/particleTypeName = null
 	var/particleTime = 0
 	var/particleColor = null
@@ -1015,32 +897,18 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 			src.particleColor = particleColor
 			src.particleSprite = particleSprite
 			src.target = target
-			Init()
 		else
 			Die()
 
-	proc/Init()
-		sleepCounter = 1
-
 	proc/Run()
-		if (state == PS_RUNNING)
-			return 0
 		state = PS_RUNNING
 		if (!istype(location) || !particleTypeName)
 			Die()
 		return state != PS_FINISHED
 
-	// time to sleep is in 1/10th seconds, this works off timeofday
-	proc/Sleep(var/time)
-		time = min(time, 0)
-		state = PS_ASLEEP
-		next_wake = ticker.round_elapsed_ticks + time
-
 	proc/Die()
 		state = PS_FINISHED
 		location = null
-		if (target)	//mbc : lazy remove location has_particlesystem_target flag below. Not 100% reliable but i dont wanna do another search for target.
-			target.temp_flags &= ~HAS_PARTICLESYSTEM_TARGET
 		target = null
 		particleTypeName = null
 
@@ -1059,154 +927,122 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 	New(var/atom/location = null)
 		..(location, "elecpart_green", 15, "#00DD00")
 
-	Init()
-		sleepCounter = 20
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i < 20, i++)
 				SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/sparkles
 	New(var/atom/location = null)
 		..(location, "sparkle", 10, "#FFFFDD")
-	Run()
-		if (..())
-			if (prob(35))
-				SpawnParticle()
-			Sleep(1)
 
-/datum/particleSystem/sparkles_disco
-	New(var/atom/location = null)
-		..(location, "sparkle", 10, "#FFFFFF")
 	Run()
 		if (..())
-			SpawnParticle()
-			if (prob(40))
+			for(var/i=0, i<3, i++)
+				sleep(rand(3,6))
 				SpawnParticle()
-			if (prob(20))
-				SpawnParticle()
-			Sleep(1)
+			state = PS_READY
 
 /datum/particleSystem/glitter
 	New(var/atom/location = null)
 		..(location, "glitter", 10)
+
 	Run()
 		if (..())
-			if (prob(35))
+			for(var/i=1, i<10, i++)
+				sleep(rand(3,6))
 				SpawnParticle()
-			Sleep(1)
+			state = PS_READY
+
 
 /datum/particleSystem/swoosh/endless
-	Run()
-		if (..())
-			SpawnParticle()
-			Sleep(4)
+	endless = 1
 
 /datum/particleSystem/swoosh
+	var/endless = 0
 	New(var/atom/location = null)
 		..(location, "swoosh", 45, "#5C0E80")
 
-	Init()
-		sleepCounter = 30
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
-				SpawnParticle()
-				Sleep(4)
+		set background = 1
+		if (state != PS_RUNNING && ..())
+			if (endless)
+				while(endless)
+					SpawnParticle()
+					sleep(4)
 			else
-				Die()
+				for(var/x=0, x < 30, x++)
+					SpawnParticle()
+					sleep(4)
+			Die()
 
 /datum/particleSystem/elecburst
 	New(var/atom/location = null)
 		..(location, "elecpart", 15, "#5577CC")
 
-	Init()
-		sleepCounter = 10
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < 10, x++)
 				for(var/i=0, i<rand(5,9), i++)
 					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
-
-/datum/particleSystem/firespray
-	New(var/atom/location, var/atom/destination)
-		..(location, "fireSpray", 10, null, destination)
-
-	Init()
-		sleepCounter = 10
-
-	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
-				for(var/i=0, i<rand(5,14), i++)
-					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/localSmoke
-	New(var/col = "#ffffff", var/duration = 20, var/atom/location = null)
+	var/runLength = 1000
+
+	New(var/col = "#ffffff", var/duration = 1000, var/atom/location = null)
 		..(location, "localSmoke", 26, col)
-		sleepCounter = duration
+		runLength = duration
 
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < runLength, x++)
 				for(var/i=0, i<rand(2,6), i++)
 					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
-
+					sleep(1)
+			Die()
 
 /datum/particleSystem/barrelSmoke
 	New(var/atom/location = null)
 		..(location, "barrelSmoke", 26, "#222222")
 
 	Run()
-		if (..())
-			SpawnParticle()
-			Sleep(1)
+		if (state != PS_RUNNING && ..())
+			while(state != PS_FINISHED)
+				SpawnParticle()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/cruiserSmoke
 	New(var/atom/location = null)
 		..(location, "cruiserSmoke", 26, "#777777")
 
 	Run()
-		if (..())
-			for(var/i=0, i<rand(2,6), i++)
-				SpawnParticle()
-			Sleep(1)
-
-/datum/particleSystem/areaSmoke
-
-	New(var/col = "#ffffff", var/duration = 10, var/atom/location = null)
-		..(location, "areaSmoke", 26, col)
-		sleepCounter = duration
-
-	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			while(state != PS_FINISHED)
 				for(var/i=0, i<rand(2,6), i++)
 					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+					sleep(1)
+				sleep(1)
+			Die()
+
+/datum/particleSystem/areaSmoke
+	var/runLength = 1000
+
+	New(var/col = "#ffffff", var/duration = 1000, var/atom/location = null)
+		..(location, "areaSmoke", 26, col)
+		runLength = duration
+
+	Run()
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < runLength, x++)
+				for(var/i=0, i<rand(2,6), i++)
+					SpawnParticle()
+					sleep(1)
+			Die()
 
 /datum/particleSystem/areaSmoke/blueTest
 	New(var/atom/location = null)
@@ -1217,7 +1053,7 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 		..(location, "fireworks", 35)
 
 	Run()
-		if (..())
+		if (state != PS_RUNNING && ..())
 			for(var/i=0, i<rand(40,50), i++)
 				SpawnParticle()
 			Die()
@@ -1227,18 +1063,8 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 		..(location, "confetti", 35)
 
 	Run()
-		if (..())
+		if (state != PS_RUNNING && ..())
 			for(var/i=0, i<rand(40,50), i++)
-				SpawnParticle()
-			Die()
-
-/datum/particleSystem/confetti_more
-	New(var/atom/location = null)
-		..(location, "confetti", 35)
-
-	Run()
-		if (..())
-			for(var/i=0, i<rand(60,80), i++)
 				SpawnParticle()
 			Die()
 
@@ -1247,7 +1073,7 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 		..(location, "exppart", 25)
 
 	Run()
-		if (..())
+		if (state != PS_RUNNING && ..())
 			for(var/i=0, i<45, i++)
 				SpawnParticle()
 			Die()
@@ -1256,35 +1082,25 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 	New(var/atom/location = null)
 		..(location, "tpbeam", 28)
 
-	Init()
-		sleepCounter = 20
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < 20, x++)
 				for(var/i=0, i<rand(1,3), i++)
 					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/fireTest
 	New(var/atom/location = null)
 		..(location, "fireTest", 21)
 
-	Init()
-		sleepCounter = 1000
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < 1000, x++)
 				for(var/i=0, i<rand(2,10), i++)
 					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/stinkTest
 	New(var/atom/location = null)
@@ -1293,71 +1109,51 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 	Run()
 		if (..())
 			SpawnParticle()
-			Sleep(1)
+			state = PS_READY
 
 /datum/particleSystem/radevent_warning
 	New(var/atom/location = null)
 		..(location, "radevent_warning", 50)
 
-	Init()
-		sleepCounter = 20
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i < 20, i++)
 				SpawnParticle()
-				Sleep(0.5)
-			else
-				Die()
+				sleep(0.5)
+			Die()
 
 /datum/particleSystem/radevent_pulse
 	New(var/atom/location = null)
 		..(location, "radevent_pulse", 7)
 
-	Init()
-		sleepCounter = 20
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i < 30, i++)
 				SpawnParticle()
-				Sleep(0.2)
-			else
-				Die()
+				sleep(0.2)
+			Die()
 
 /datum/particleSystem/bhole_warning
 	New(var/atom/location = null)
 		..(location, "bhole_warning", 108)
 
-	Init()
-		sleepCounter = 100
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i < 100, i++)
 				SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/sonic_burst
 	New(var/atom/location = null)
 		..(location, "soundwave", 4)
 
-	Init()
-		sleepCounter = rand(5,12)
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i < rand(5,12), i++)
 				SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/tele_wand
 	var/particle_sprite = null
@@ -1366,7 +1162,7 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 		..(location, "tele_wand", 6, p_color, null, p_sprite)
 
 	Run()
-		if (..())
+		if (state != PS_RUNNING && ..())
 			for(var/i=0, i < rand(5,12), i++)
 				SpawnParticle()
 			Die()
@@ -1376,42 +1172,32 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 	New(var/atom/location = null, var/color)
 		..(location, "blob_attack", 70, color)
 
-	Init()
-		sleepCounter = rand(2,5)
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i < rand(2,5), i++)
 				SpawnParticle()
-				Sleep(0.2)
-			else
-				Die()
+				sleep(0.2)
+			Die()
 
 /datum/particleSystem/blobheal
 	New(var/atom/location = null, var/color)
 		..(location, "blob_heal", 60, color)
 
-	Init()
-		sleepCounter = rand(3,4)
-
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i < rand(3,4), i++)
 				SpawnParticle()
-				Sleep(0.2)
-			else
-				Die()
+				sleep(0.2)
+			Die()
 
-// always c
 /datum/particleSystem/chemSmoke
+	var/runLength = 100
 	var/datum/reagents/copied
 	var/list/affected
 	var/list/banned_reagents = list("smokepowder", "thalmerite", "fluorosurfactant", "stimulants", "salt")
 	var/smoke_size = 3
 
-	New(var/atom/location = null, var/datum/reagents/source, var/duration = 20, var/size = 3)
+	New(var/atom/location = null, var/datum/reagents/source, var/duration = 100, var/size = 3)
 		smoke_size = size
 		var/part_id = "localSmoke"
 		if (size < 3)
@@ -1426,7 +1212,7 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 			for (var/banned in banned_reagents)
 				copied.del_reagent("[banned]")
 			particleColor = copied.get_master_color(1)
-			sleepCounter = duration
+			runLength = duration
 		else
 			Die()
 
@@ -1440,35 +1226,35 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 		copied = null
 
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				if(sleepCounter % 5 == 0) //Once every 5 ticks.
-					DoEffect()
-
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < runLength, x++)
 				for(var/i=0, i<rand(2,6), i++)
 					SpawnParticle()
 
-				Sleep(1)
-			else
-				Die()
+				if(x % 10 == 0) //Once every 10 ticks.
+					DoEffect()
+
+				sleep(1)
+				if (state == PS_FINISHED)
+					return
+			Die()
 
 	proc/DoEffect()
 		if (!location)
 			Die()
 			return
 
-		for(var/atom/A in view(smoke_size, get_turf(location)))
-			if(istype(A, /obj/particle) || istype(A, /obj/overlay/tile_effect/))
+		for(var/atom/A in range(smoke_size, get_turf(location)))
+			if(istype(A, /obj/particle))
 				continue
 			if(A in affected) continue
 			affected += A
 			if(!can_line(location, A, 4)) continue
 
 			if(!istype(A,/obj/particle) && !istype(A,/obj/effects/foam))
-				copied.reaction(A, TOUCH, 0, 0)
+				copied.reaction(A, TOUCH)
 
-			if(isliving(A))
+			if(istype(A, /mob/living))
 				if(hasvar(A,"wear_mask"))
 					// Added log entries (Convair880).
 					logTheThing("combat", A, null, "is hit by chemical smoke [log_reagents(copied)] at [log_loc(A)].")
@@ -1481,6 +1267,7 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 						copied.copy_to(A:reagents, 1)
 
 /datum/particleSystem/chemspray
+	var/runLength = 10
 	var/datum/reagents/copied = null
 
 	New(var/atom/location, var/atom/destination, var/datum/reagents/source)
@@ -1489,94 +1276,49 @@ var/matrix/MS0101 = matrix(0.1, 0, 0, 0, 0.1, 0)
 		source.copy_to(copied)
 		particleColor = copied.get_master_color(1)
 
-	Init()
-		sleepCounter = 2
-
 	Die()
 		..()
 		copied.dispose()
 		copied = null
 
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/x=0, x < runLength, x++)
 				for(var/i=0, i<rand(2,6), i++)
 					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/mechanic
 	New(var/atom/location, var/atom/destination)
 		..(location, "mechpart", get_dist(location, destination) * 5,  "#00FF00", destination)
 
-	Init()
-		sleepCounter = 10
-
 	Run()
 		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+			for(var/i=0, i<10, i++)
 				SpawnParticle()
-				Sleep(2)
-			else
-				state = PS_READY
+				sleep(2)
+			state = PS_READY
 
 /datum/particleSystem/gravaccel
 	New(var/atom/location, var/direction)
-		..(location, "gravaccel", 25, "#1155ff", get_step(location, direction))
-
-	Init()
-		sleepCounter = 30
+		..(location, "gravaccel", 35, "#1155ff", get_step(location, direction))
 
 	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			for(var/i=0, i<30, i++)
 				for(var/x=0, x<3, x++)
 					SpawnParticle()
-				Sleep(1)
-			else
-				Die()
+				sleep(1)
+			Die()
 
 /datum/particleSystem/warp_star
 	New(var/atom/location = null, var/star_dir = null)
 		..(location, "warp_star[star_dir]", 35, "#FFFFFF")
 
 	Run()
-		if (..())
-			SpawnParticle()
-			Sleep(1)
-
-/datum/particleSystem/blow_cig_smoke
-	New(var/atom/location = null, var/blow_dir = null)
-		var/dir_append = "_n"
-		switch(blow_dir)
-			if (EAST)
-				dir_append = "_e"
-			if (WEST)
-				dir_append = "_w"
-			if(SOUTH)
-				dir_append = "_s"
-
-		..(location, "blow_cig_smoke[dir_append]", 25, "#DBDBDB")
-		SpawnParticle()	//want this particle system to display asap - needs to show up at the same time as its flavor text, not after
-
-
-	Init()
-		sleepCounter = 2
-
-	Run()
-		if (..())
-			if (sleepCounter > 0)
-				sleepCounter--
+		if (state != PS_RUNNING && ..())
+			while (state != PS_FINISHED)
 				SpawnParticle()
-				Sleep(0.1)
-			else
-				Die()
-
-/datum/particleSystem/glow_stick_dance
-	New(var/atom/location = null)
-		..(location, "glow_stick_dance", 9.9, "#66ff33")
-		SpawnParticle()
+				sleep(1)
+			Die()

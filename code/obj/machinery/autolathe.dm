@@ -22,7 +22,7 @@
 
 
 /obj/machinery/autolathe/attackby(var/obj/item/O as obj, var/mob/user as mob)
-	if (isscrewingtool(O))
+	if (istype(O, /obj/item/screwdriver))
 		if (!opened)
 			src.opened = 1
 			src.icon_state = "autolathef"
@@ -43,7 +43,7 @@
 */
 	if (istype(O, /obj/item/sheet/metal))
 		if (src.m_amount < 150000.0)
-			SPAWN_DBG(16) {
+			spawn(16) {
 				flick("autolathe_c",src)
 				src.m_amount += O:height * O:width * O:length * 100000.0
 				O:amount--
@@ -54,7 +54,7 @@
 			boutput(user, "The autolathe is full. Please remove metal from the autolathe in order to insert more.")
 	else if (istype(O, /obj/item/sheet/glass) || istype(O, /obj/item/sheet/glass/reinforced))
 		if (src.g_amount < 75000.0)
-			SPAWN_DBG(16) {
+			spawn(16) {
 				flick("autolathe_c",src)
 				src.g_amount += O:height * O:width * O:length * 100000.0
 				O:amount--
@@ -65,7 +65,7 @@
 			boutput(user, "The autolathe is full. Please remove glass from the autolathe in order to insert more.")
 
 	else if (O.g_amt || O.m_amt)
-		SPAWN_DBG(16) {
+		spawn(16) {
 			flick("autolathe_c",src)
 			src.g_amount += O.g_amt
 			src.m_amount += O.m_amt
@@ -115,10 +115,7 @@
 	usr.machine = src
 	src.add_fingerprint(usr)
 	if(href_list["make"])
-		var/list/makeable = list()
-		makeable += L
-		if(hacked) makeable += LL
-		var/obj/template = locate(href_list["make"]) in makeable
+		var/obj/template = locate(href_list["make"])
 		if(src.m_amount >= template.m_amt && src.g_amount >= template.g_amt)
 			src.operating = 1
 			src.m_amount -= template.m_amt
@@ -127,35 +124,35 @@
 				src.m_amount = 0
 			if(src.g_amount < 0)
 				src.g_amount = 0
-			SPAWN_DBG(16)
+			spawn(16)
 				flick("autolathe_c",src)
-				SPAWN_DBG(16)
+				spawn(16)
 					flick("autolathe_o",src)
-					SPAWN_DBG(16)
+					spawn(16)
 						new template.type(usr.loc)
 						src.operating = 0
 
 	if(href_list["act"])
 		if(href_list["act"] == "pulse")
-			if (!usr.find_tool_in_hand(TOOL_PULSING))
-				boutput(usr, "You need a multitool or similar!")
+			if (!istype(usr.equipped(), /obj/item/device/multitool))
+				boutput(usr, "You need a multitool!")
 			else
 				if(src.wires[href_list["wire"]])
 					boutput(usr, "You can't pulse a cut wire.")
 				else
 					if(src.hack_wire == href_list["wire"])
 						src.hacked = !src.hacked
-						SPAWN_DBG(100) src.hacked = !src.hacked
+						spawn(100) src.hacked = !src.hacked
 					if(src.disable_wire == href_list["wire"])
 						src.disabled = !src.disabled
 						src.shock(usr)
-						SPAWN_DBG(100) src.disabled = !src.disabled
+						spawn(100) src.disabled = !src.disabled
 					if(src.shock_wire == href_list["wire"])
 						src.shocked = !src.shocked
 						src.shock(usr)
-						SPAWN_DBG(100) src.shocked = !src.shocked
+						spawn(100) src.shocked = !src.shocked
 		if(href_list["act"] == "wire")
-			if (!usr.find_tool_in_hand(TOOL_SNIPPING))
+			if (!istype(usr.equipped(), /obj/item/wirecutters))
 				boutput(usr, "You need wirecutters!")
 			else
 				if(src.hack_wire == href_list["wire"])
@@ -184,7 +181,7 @@
 	src.L += new /obj/item/weldingtool(src)
 	src.L += new /obj/item/clothing/head/helmet/welding(src)
 	src.L += new /obj/item/device/multitool(src)
-	src.L += new /obj/item/device/light/flashlight(src)
+	src.L += new /obj/item/device/flashlight(src)
 	src.L += new /obj/item/extinguisher(src)
 	src.L += new /obj/item/sheet/metal(src)
 	src.L += new /obj/item/sheet/glass(src)

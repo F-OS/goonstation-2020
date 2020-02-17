@@ -11,7 +11,7 @@ var/global/datum/limiter/limiter
 	var/currentTick
 	var/list/limits
 	var/list/spawned
-
+	
 /datum/limiter/New()
 	limits = list()
 	spawned = list()
@@ -23,14 +23,14 @@ var/global/datum/limiter/limiter
 /datum/limiter/proc/canISpawn(var/typePath)
 	if (!(typePath in limits))
 		return 1
-
+	
 	checkTick()
-
+		
 	if (limits[typePath] > 0)
 		if (!(typePath in spawned))
 			spawned[typePath] = 1
 			return 1
-
+		
 		// This makes the probability of spawning a new object decrease linearly
 		// as the number of spawned objects approaches the limit
 		var/probability = max(0, min(1, spawned[typePath] / limits[typePath]))
@@ -38,9 +38,9 @@ var/global/datum/limiter/limiter
 		if (.)
 			spawned[typePath]++
 		return
-
+		
 	return 0
-
+		
 /datum/limiter/proc/checkTick()
 	if (world.time > currentTick)
 		// Limits are per-tick.

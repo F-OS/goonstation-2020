@@ -1,7 +1,6 @@
 /datum/targetable/vampire/radio_jammer
 	name = "Radio interference"
 	desc = "Temporarily disrupts all radio communication in the immediate vicinity."
-	icon_state = "radiointer"
 	targeted = 0
 	cooldown = 1800
 	pointCost = 50
@@ -30,7 +29,7 @@
 
 		boutput(M, __blue("<b>You will disrupt radio signals in your immediate vicinity for the next [src.duration / 10] seconds.</b>"))
 		radio_controller.active_jammers.Add(M)
-		SPAWN_DBG (src.duration)
+		spawn (src.duration)
 			if (M && istype(M) && radio_controller && istype(radio_controller) && radio_controller.active_jammers.Find(M))
 				boutput(M, __red("<b>You no longer disrupt radio signals.</b>"))
 				radio_controller.active_jammers.Remove(M)

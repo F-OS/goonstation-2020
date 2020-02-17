@@ -39,7 +39,7 @@
 
 	New()
 		..()
-		particle_color = copytext(random_color(),1,0)
+		particle_color = copytext(rgb(rand(0,255), rand(0,255), rand(0,255)),1,0)
 		particle_sprite = pick("8x8circle","8x8ring","8x8triangle","8x8square","8x8bubblegrid")
 		wand_sound = pick('sound/effects/mag_warp.ogg','sound/effects/mag_teleport.ogg','sound/effects/mag_phase.ogg','sound/effects/teleport.ogg','sound/effects/warp2.ogg','sound/weapons/ACgun2.ogg',
 		'sound/weapons/laserultra.ogg','sound/weapons/radxbow.ogg','sound/machines/ArtifactWiz1.ogg','sound/machines/ArtifactPre1.ogg','sound/machines/ArtifactAnc1.ogg','sound/machines/engine_alert3.ogg', 'sound/voice/wizard/BlinkLoud.ogg')
@@ -56,7 +56,7 @@
 			return
 
 		on_cooldown = 1
-		SPAWN_DBG(cooldown_delay)
+		spawn(cooldown_delay)
 			if (O.loc == user)
 				boutput(user, "<b>[O]</b> [recharge_phrase]")
 			on_cooldown = 0

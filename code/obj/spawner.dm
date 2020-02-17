@@ -218,7 +218,7 @@
 		if(!isturf(src.loc))
 			dispose()
 			return
-		SPAWN_DBG(20)
+		spawn(20)
 			explode()
 
 	Bumped(atom/A)
@@ -241,7 +241,7 @@
 			return
 		src.icon = null
 		src.anchored = 1
-		src.set_density(0)
+		src.density = 0
 		var/list/atom/movable/overlay/boom = list()
 		var/list/atom/movable/overlay/boom_tips = list()
 		var/list/obj/affected_objs = list()
@@ -256,7 +256,7 @@
 			var/rel_dir = get_dir(src.loc, T)
 			if(dist <= 3)
 				for(var/atom/A in T)
-					if(isliving(A))
+					if(istype(A, /mob/living))
 						affected_mobs.Add(A)
 					if(istype(A, /obj/window) || istype(A, /obj/grille))
 						affected_objs.Add(A)

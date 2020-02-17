@@ -18,7 +18,7 @@
 
 /obj/item/brain/New()
 	..()
-	SPAWN_DBG(5)
+	spawn(5)
 		if(src.donor)
 			src.name = "[src.donor]'s brain"
 		if (icon_state == "brain2")
@@ -36,7 +36,7 @@
 			boutput(usr, "<span style=\"color:red\">This brain has gone cold.</span>")
 
 /obj/item/brain/throw_impact(var/turf/T)
-	playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 100, 1)
+	playsound(src.loc, "sound/effects/splat.ogg", 100, 1)
 	if (T)
 		new /obj/decal/cleanable/blood(T)
 
@@ -57,24 +57,24 @@
 
 	New()
 		..()
-		SPAWN_DBG(10)
+		spawn(10)
 			if(src.owner && src.owner.current)
 				src.name = "[src.owner.current]'s neural net processor"
 
 /obj/item/brain/attack(mob/living/carbon/M as mob, mob/living/carbon/user as mob)
-	if(!ismob(M))
+	if(!istype(M, /mob))
 		return
 
 	src.add_fingerprint(user)
 
-	if(!(user.zone_sel.selecting == ("head")) || !ishuman(M))
+	if(!(user.zone_sel.selecting == ("head")) || !istype(M, /mob/living/carbon/human))
 		return ..()
 
-	if(!(locate(/obj/machinery/optable, M.loc) && M.lying) && !(locate(/obj/table, M.loc) && (M.getStatusDuration("paralysis") || M.stat)))
+	if(!(locate(/obj/machinery/optable, M.loc) && M.lying) && !(locate(/obj/table, M.loc) && (M.paralysis || M.stat)))
 		return ..()
 
 	var/mob/living/carbon/human/H = M
-	if(ishuman(M) && ((H.head && H.head.c_flags & COVERSEYES) || (H.wear_mask && H.wear_mask.c_flags & COVERSEYES) || (H.glasses && H.glasses.c_flags & COVERSEYES)))
+	if(istype(M, /mob/living/carbon/human) && ((H.head && H.head.c_flags & COVERSEYES) || (H.wear_mask && H.wear_mask.c_flags & COVERSEYES) || (H.glasses && H.glasses.c_flags & COVERSEYES)))
 		// you can't stab someone in the eyes wearing a mask!
 		boutput(user, "<span style=\"color:blue\">You're going to need to remove that mask/helmet/glasses first.</span>")
 		return

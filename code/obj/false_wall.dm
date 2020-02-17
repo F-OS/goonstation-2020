@@ -24,24 +24,22 @@
 		icon_state = "rdoor1"
 		mod = "R"
 
+	hive
+		name = "strange hive wall"
+		desc = "Looking more closely, these are actually really squat octagons, not hexagons! What!!"
+		icon = 'icons/turf/walls.dmi'
+		icon_state = "hive"
+		can_be_auto = 0
+
 	New()
 		..()
 		//Hide the wires or whatever THE FUCK
 		src.levelupdate()
 		src.blocks_air = 1
-		SPAWN_DBG(0)
-			src.find_icon_state()
-		SPAWN_DBG(10)
-			// so that if it's getting created by the map it works, and if it isn't this will just return
-			src.setFloorUnderlay('icons/turf/floors.dmi', "plating", 0, 100, 0, "plating")
-			if (src.can_be_auto)
-				sleep(10)
-				for (var/turf/simulated/wall/auto/W in orange(1,src))
-					W.update_icon()
-
-	disposing()
-		src.RL_SetSprite(null)
-		..()
+		src.find_icon_state()
+		spawn(10)
+		// so that if it's getting created by the map it works, and if it isn't this will just return
+		src.setFloorUnderlay('icons/turf/floors.dmi', "plating", 0, 100, 0, "plating")
 
 	proc/setFloorUnderlay(FloorIcon, FloorIcon_State, Floor_Intact, Floor_Health, Floor_Burnt, Floor_Name)
 		if(src.underlays.len)
@@ -86,10 +84,10 @@
 				boutput(user, "<span style=\"color:blue\">The wall slides shut.</span>")
 		return
 
-	attackby(obj/item/S as obj, mob/user as mob)
+	attackby(obj/item/screwdriver/S as obj, mob/user as mob)
 		src.add_fingerprint(user)
 		var/known = (user in known_by)
-		if (isscrewingtool(S))
+		if (istype(S, /obj/item/screwdriver))
 			//try to disassemble the false wall
 			if (!src.density || prob(prob_opens))
 				//without this, you can detect a false wall just by going down the line with screwdrivers
@@ -103,7 +101,7 @@
 				var/floorburnt1	= src.floorburnt
 				var/icon/flooricon1	= src.flooricon
 				var/flooricon_state1	= src.flooricon_state
-				src.set_density(0)
+				src.density = 0
 				src.RL_SetOpacity(0)
 				src.update_nearby_tiles()
 				var/turf/simulated/floor/F = src.ReplaceWithFloor()
@@ -120,7 +118,7 @@
 					A.setMaterial(src.material)
 					B.setMaterial(src.material)
 				else
-					var/datum/material/M = getMaterial("steel")
+					var/datum/material/M = getCachedMaterial("steel")
 					A.setMaterial(M)
 					B.setMaterial(M)
 				F.levelupdate()
@@ -143,10 +141,10 @@
 		src.operating = 1
 		src.name = "false wall"
 		animate(src, time = delay, pixel_x = 25, easing = BACK_EASING)
-		SPAWN_DBG(delay)
+		spawn(delay)
 			//we want to return 1 without waiting for the animation to finish - the textual cue seems sloppy if it waits
 			//actually do the opening things
-			src.set_density(0)
+			src.density = 0
 			src.blocks_air = 0
 			src.pathable = 1
 			src.update_air_properties()
@@ -165,7 +163,7 @@
 		src.operating = 1
 		src.name = "wall"
 		animate(src, time = delay, pixel_x = 0, easing = BACK_EASING)
-		src.set_density(1)
+		src.density = 1
 		src.blocks_air = 1
 		src.pathable = 0
 		src.update_air_properties()
@@ -173,33 +171,39 @@
 			src.RL_SetOpacity(1)
 		src.intact = 1
 		update_nearby_tiles()
-		SPAWN_DBG(delay)
+		spawn(delay)
 			//we want to return 1 without waiting for the animation to finish - the textual cue seems sloppy if it waits
 			src.operating = 0
 		return 1
 
 	proc/find_icon_state()
-		if (!map_settings)
+		if (!map_setting)
 			return
 
-		var/turf/wall_path = ispath(map_settings.walls) ? map_settings.walls : /turf/simulated/wall/auto
-		var/turf/r_wall_path = ispath(map_settings.rwalls) ? map_settings.rwalls : /turf/simulated/wall/auto/reinforced
-		src.icon = initial(wall_path.icon)
-		if (src.can_be_auto)
-			var/dirs = 0
-			for (var/dir in cardinal)
-				var/turf/T = get_step(src, dir)
-				if (istype(T, /turf/simulated/wall/auto))
-					var/turf/simulated/wall/auto/W = T
-					// neither of us are reinforced
-					if (!istype(W, r_wall_path) && !istype(src, /turf/simulated/wall/false_wall/reinforced))
-						dirs |= dir
-					// both of us are reinforced
-					else if (istype(W, r_wall_path) && istype(src, /turf/simulated/wall/false_wall/reinforced))
-						dirs |= dir
-					if (W.light_mod) //If the walls have a special light overlay, apply it.
-						src.RL_SetSprite("[W.light_mod][num2text(dirs)]")
-			src.icon_state = "[mod][num2text(dirs)]"
+		//var/wall_path = /turf/simulated/wall/auto
+		var/r_wall_path = /turf/simulated/wall/auto/reinforced
+		if (map_setting == "COG2")
+			icon = 'icons/turf/walls_supernorn.dmi'
+			//wall_path = /turf/simulated/wall/auto/supernorn
+			r_wall_path = /turf/simulated/wall/auto/reinforced/supernorn
+		else if (map_setting == "DESTINY")
+			icon = 'icons/turf/walls_destiny.dmi'
+			//wall_path = /turf/simulated/wall/auto/gannets
+			r_wall_path = /turf/simulated/wall/auto/reinforced/gannets
+		else
+			icon = 'icons/turf/walls_auto.dmi'
+
+		var/dirs = 0
+		for (var/dir in cardinal)
+			var/turf/T = get_step(src, dir)
+			if (istype(T, /turf/simulated/wall/auto))
+				// neither of us are reinforced
+				if (!istype(T, r_wall_path) && !istype(src, /turf/simulated/wall/false_wall/reinforced))
+					dirs |= dir
+				// both of us are reinforced
+				else if (istype(T, r_wall_path) && istype(src, /turf/simulated/wall/false_wall/reinforced))
+					dirs |= dir
+		src.icon_state = "[mod][num2text(dirs)]"
 		return src.icon_state
 
 	get_desc()
@@ -209,7 +213,7 @@
 	//Temp false walls turn back to regular walls when closed.
 	temp/New()
 		..()
-		SPAWN_DBG(11)
+		spawn(11)
 			src.open()
 
 	temp/close()
@@ -219,7 +223,7 @@
 		src.name = "wall"
 		animate(src, time = delay, pixel_x = 0, easing = BACK_EASING)
 		src.icon_state = "door1"
-		src.set_density(1)
+		src.density = 1
 		src.blocks_air = 1
 		src.pathable = 0
 		src.update_air_properties()
@@ -233,30 +237,3 @@
 		else
 			src.ReplaceWithWall()
 		return 1
-
-/turf/simulated/wall/false_wall/hive
-	name = "strange hive wall"
-	desc = "Looking more closely, these are actually really squat octagons, not hexagons! What!!"
-	icon = 'icons/turf/walls.dmi'
-	icon_state = "hive"
-	can_be_auto = 0
-
-	find_icon_state()
-		return
-
-/turf/simulated/wall/false_wall/centcom
-	desc = "There seems to be markings on one of the edges, huh."
-	icon = 'icons/misc/worlds.dmi'
-	icon_state = "leadwall"
-	can_be_auto = 0
-
-	find_icon_state()
-		return
-
-/turf/simulated/wall/false_wall/tempus
-	desc = "The pattern on the wall seems to have a seam on it"
-	icon = 'icons/turf/walls_tempus-green.dmi'
-	icon_state = "0"
-
-	find_icon_state()
-		return

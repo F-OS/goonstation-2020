@@ -7,8 +7,6 @@
 	<a href="#" id="ctx_ban">Ban</a>
 	<a href="#" id="ctx_gib">Gib</a>
 	<a href="#" id="ctx_popt">Player Options</a>
-	<a href="#" id="ctx_observe">Observe</a>
-	<a href="#" id="ctx_ghostjump">Teleport To</a>
 </div>
 
 <script type="text/javascript">
@@ -22,8 +20,7 @@ opts.menuTypes = { /* Action flags for context menu */
 	16: 'gib',
 	32: 'popt',
 	64: 'jump',
-	128: 'get',
-	512: 'ghostjump',
+	128:'get',
 };
 opts.contextMenuTarget = null; /* Contains the player mind ref */
 opts.showMessagesFilters = { /* Contains the current filters. "show: false" filters it out. "match" is all the css classes to filter on. */

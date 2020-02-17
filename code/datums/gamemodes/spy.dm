@@ -19,7 +19,7 @@
 
 /datum/game_mode/spy/announce()
 	boutput(world, "<B>The current game mode is - Conspiracy!</B>")
-	boutput(world, "<B>The Syndicate is using the [station_or_ship()] as a battleground to train elite operatives!</B>")
+	boutput(world, "<B>The Syndicate is using the station as a battleground to train elite operatives!</B>")
 
 /datum/game_mode/spy/pre_setup()
 	var/list/leaders_possible = get_possible_leaders()
@@ -36,11 +36,11 @@
 	if (num_teams > leaders_possible.len)
 		num_teams = leaders_possible.len
 
-	var/list/chosen_spies = antagWeighter.choose(pool = leaders_possible, role = "spy", amount = num_teams, recordChosen = 1)
-	for (var/datum/mind/spy in chosen_spies)
-		leaders += spy
-		spy.special_role = "spy"
-		leaders_possible.Remove(spy)
+	for(var/j = 0, j < num_teams, j++)
+		var/datum/mind/leader = pick(leaders_possible)
+		leaders += leader
+		leaders_possible.Remove(leader)
+		leader.special_role = "Spy"
 
 	return 1
 
@@ -54,21 +54,21 @@
 		spyObjective = bestow_objective(leaderMind, pick(/datum/objective/escape, /datum/objective/escape/survive)) // They have to stay alive, dunno why dying a glorious death was a possible objective.
 
 		switch(rand(1, ((leaderMind.assigned_role in list("Captain","Head of Personnel","Head of Security","Chief Engineer","Research Director")) ? 3 : 4) ))
-			if (1,2)
+			if (1)
 				spyObjective = bestow_objective(leaderMind,/datum/objective/regular/assassinate)
-			/*if (2)
+			if (2)
 				spyObjective = bestow_objective(leaderMind,/datum/objective/regular/aikill)
 			if (3)
-				spyObjective = bestow_objective(leaderMind,/datum/objective/regular/borgdeath)*/
-			if (3,4)
+				spyObjective = bestow_objective(leaderMind,/datum/objective/regular/borgdeath)
+			if (4)
 				spyObjective = bestow_objective(leaderMind,/datum/objective/regular/steal)
 
-		SHOW_SPY_TIPS(leaderMind.current)
+		leaderMind.current << browse(grabResource("html/traitorTips/spyTips.html"),"window=antagTips;titlebar=1;size=600x400;can_minimize=0;can_resize=0")
 		boutput(leaderMind.current, "<span style=\"color:red\">Oh yes, and <b>one more thing:</b> <b>[spyObjective.explanation_text]</b> That is, if you <i>really</i> want that new position.</span>")
 
 		equip_leader(leaderMind.current)
 
-	SPAWN_DBG (rand(waittime_l, waittime_h))
+	spawn (rand(waittime_l, waittime_h))
 		send_intercept()
 
 /datum/game_mode/spy/send_intercept()
@@ -86,7 +86,7 @@
 	for(var/A in possible_modes)
 		intercepttext += i_text.build(A, pick(leaders))
 
-	for (var/obj/machinery/communications_dish/C in comm_dishes)
+	for (var/obj/machinery/communications_dish/C in machines)
 		C.add_centcom_report("Cent. Com. Status Summary", intercepttext)
 
 	command_alert("Summary downloaded and printed out at all communications consoles.", "Enemy communication intercept. Security Level Elevated.")
@@ -169,12 +169,12 @@
 		if(leader_mind.current)
 			text += "[leader_mind.current.real_name]"
 			var/turf/T = get_turf_loc(leader_mind.current)
-			if(isdead(leader_mind.current))
+			if(leader_mind.current.stat == 2)
 				text += " (Dead)"
 			else
 				text += " (Survived!)"
 				survived_count++
-				if (T.z == 4)
+				if (T.z == 2)
 					var/all_complete = 1
 					for (var/datum/objective/O in leader_mind.objectives)
 						if (istype(O, /datum/objective/specialist/conspiracy))
@@ -212,7 +212,7 @@
 		for(var/datum/mind/spy_mind in spies)
 			if(spy_mind.current)
 				text += "[spy_mind.current.real_name]"
-				if(isdead(spy_mind.current))
+				if(spy_mind.current.stat == 2)
 					text += " (Dead)"
 				else
 					text += " (Survived!)"

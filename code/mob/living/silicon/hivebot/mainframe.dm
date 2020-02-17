@@ -20,7 +20,7 @@
 /mob/living/silicon/hive_mainframe/Life(datum/controller/process/mobs/parent)
 	if (..(parent))
 		return 1
-	if (isdead(src))
+	if (src.stat == 2)
 		return
 	else
 		src.updatehealth()
@@ -41,7 +41,7 @@
 	update_icons_if_needed()
 
 /mob/living/silicon/hive_mainframe/death(gibbed)
-	setdead(src)
+	src.stat = 2
 	src.canmove = 0
 	vision.set_color_mod("#ffffff") // reset any blindness
 	src.sight |= SEE_TURFS
@@ -52,20 +52,21 @@
 	src.lying = 1
 	src.icon_state = "hive_main-crash"
 
-	if(src.mind)
-		src.mind.register_death()
+	var/tod = time2text(world.realtime,"hh:mm:ss") //weasellos time of death patch
+	mind.store_memory("Time of death: [tod]", 0)
+
 
 	return ..(gibbed)
 
 
 /mob/living/silicon/hive_mainframe/say_understands(var/other)
-	if (ishuman(other) && (!other:mutantrace || !other:mutantrace.exclusive_language))
+	if (istype(other, /mob/living/carbon/human) && (!other:mutantrace || !other:mutantrace.exclusive_language))
 		return 1
-	if (isrobot(other))
+	if (istype(other, /mob/living/silicon/robot))
 		return 1
-	if (ishivebot(other))
+	if (istype(other, /mob/living/silicon/hivebot))
 		return 1
-	if (isAI(other))
+	if (istype(other, /mob/living/silicon/ai))
 		return 1
 	return ..()
 
@@ -83,7 +84,7 @@
 /mob/living/silicon/hive_mainframe/proc/return_to(var/mob/user)
 	if(user.mind)
 		user.mind.transfer_to(src)
-		SPAWN_DBG(20)
+		spawn(20)
 			if (user)
 				user:shell = 1
 				user:real_name = "Robot [pick(rand(1, 999))]"
@@ -99,7 +100,7 @@
 
 /mob/living/silicon/hive_mainframe/verb/deploy_to()
 
-	if(isdead(usr))
+	if(usr.stat == 2)
 		boutput(usr, "You can't deploy because you are dead!")
 		return
 
@@ -117,7 +118,7 @@
 		return
 
 	else if(src.mind)
-		SPAWN_DBG(30)
+		spawn(30)
 			target_shell:mainframe = src
 			target_shell:dependent = 1
 			target_shell:real_name = src.name
@@ -146,6 +147,6 @@
 	if (newname)
 		if (length(newname) >= 26)
 			newname = copytext(newname, 1, 26)
-		newname = replacetext(newname, ">", "'")
+		newname = dd_replacetext(newname, ">", "'")
 		src.real_name = newname
 		src.name = newname

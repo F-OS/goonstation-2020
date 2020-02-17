@@ -1,7 +1,7 @@
 /obj/critter/livingobj
 	name = ""
 	desc = ""
-	icon_state = "livingobj"
+	icon_state = ""
 	density = 0
 	health = 10
 	aggressive = 0
@@ -12,17 +12,17 @@
 	atksilicon = 0
 	generic = 0
 	butcherable = 1 //Because "toolbox meat" would be hilarious
-	atk_text = "slams into"
-	atk_brute_amt = 2
-	crit_chance = 0
-	chase_text = "leaps at"
+	var/atck_dmg = 0
 	var/stunprob = 0
 	layer = 5
 	var/obj/original_object = null
 
 	CritterAttack(var/mob/M)
-		playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
-		..()
+		src.attacking = 1
+		src.visible_message("<span class='combat'><B>[src]</B> slams into [src.target]!</span>")
+		random_brute_damage(src.target, atck_dmg)
+		spawn(25)
+			src.attacking = 0
 
 	attack_hand(mob/user as mob)
 		if (src.alive && (user.a_intent != INTENT_HARM))
@@ -33,8 +33,7 @@
 	CritterDeath()
 		src.visible_message("<b>[src]</b> stops moving!")
 		animate_float(src, 1, 5)
-		playsound(src.loc, "sound/effects/suck.ogg", 40, 1, -1, 0.6)
-		SPAWN_DBG (100) //Give time for people to butcher it if they want.
+		spawn (100) //Give time for people to butcher it if they want.
 			if (!src.disposed && src.loc && original_object)
 				original_object.loc = src.loc
 				original_object = null
@@ -42,10 +41,10 @@
 		return ..()
 
 	ChaseAttack(mob/M)
-		..()
+		src.visible_message("<span class='combat'><B>[src]</B> leaps at [src.target]!</span>")
 		if (prob(stunprob))
-			M.changeStatus("weakened", 2 SECONDS)
-		//playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+			M.weakened += 2
+		//playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
 
 	disposing()
 		if (original_object)
@@ -99,9 +98,6 @@
 	seekrange = 1
 	angertext = "suddenly comes to life and lunges at"
 	death_text = "%src% flops closed, dead!"
-	chase_text = "hurls itself at"
-	atk_brute_amt = 3
-	crit_brute_amt = 6
 	var/toolbox_style = "blue"
 	var/list/toolbox_list = list("blue", "red", "yellow", "green")
 	var/switcharoo = 10 // set to 0 for mimics that always are mimics and never toolboxes
@@ -137,11 +133,15 @@
 					src.update_icon()
 
 	ChaseAttack(mob/M)
-		..()
-		if (prob(33)) M.changeStatus("weakened", 4 SECONDS)
+		src.visible_message("<span class='combat'><B>[src]</B> hurls itself at [M]!</span>")
+		if (prob(33)) M.weakened += rand(3,6)
 
 	CritterAttack(mob/M)
-		..()
+		src.attacking = 1
+		src.visible_message("<span class='combat'><B>[src]</B> bites [src.target]!</span>")
+		random_brute_damage(src.target, rand(2,4))
+		spawn(25)
+			src.attacking = 0
 
 	proc/update_icon()
 		if (!src.toolbox_style)
@@ -215,7 +215,7 @@
 		src.attacking = 1
 		src.visible_message("<span class='combat'><B>[src]</B> bites [src.target]!</span>")
 		random_brute_damage(src.target, rand(2,4))
-		SPAWN_DBG(25)
+		spawn(25)
 			src.attacking = 0
 */
 /obj/critter/wraithskeleton
@@ -235,20 +235,20 @@
 	skinresult = /obj/item/material_piece/bone
 	max_skins = 2
 	death_text = "%src% vaporizes instantly!"
-	chase_text = "knocks down"
-	atk_text = "beats"
-	atk_brute_amt = 6
-	crit_chance = 0
 
 	ChaseAttack(mob/M)
 		if (prob(75))
-			..()
-			M.changeStatus("weakened", 4 SECONDS)
+			src.visible_message("<span class='combat'><B>[src]</B> knocks down [M]!</span>")
+			M.weakened += rand(3,6)
 		else
 			src.visible_message("<span class='combat'><B>[src]</B> tries to knock down [M]!</span>")
 
 	CritterAttack(mob/M)
-		..()
+		src.attacking = 1
+		src.visible_message("<span class='combat'><B>[src]</B> beats [src.target]!</span>")
+		random_brute_damage(src.target, rand(3,8))
+		spawn(25)
+			src.attacking = 0
 
 	CritterDeath()
 		..()
@@ -271,9 +271,6 @@
 	var/objname = "mechanical toolbox" //name when in disguise
 	generic = 0
 	death_text = "%src% crumbles to pieces!"
-	chase_text = "hurls itself at"
-	atk_brute_amt = 3
-	crit_brute_amt = 6
 
 	ai_think()
 		..()
@@ -290,11 +287,15 @@
 					src.name = "mimic"
 
 	ChaseAttack(mob/M)
-		..()
-		if (prob(33)) M.changeStatus("weakened", 4 SECONDS)
+		src.visible_message("<span class='combat'><B>[src]</B> hurls itself at [M]!</span>")
+		if (prob(33)) M.weakened += rand(3,6)
 
 	CritterAttack(mob/M)
-		..()
+		src.attacking = 1
+		src.visible_message("<span class='combat'><B>[src]</B> bites [src.target]!</span>")
+		random_brute_damage(src.target, rand(2,4))
+		spawn(25)
+			src.attacking = 0
 
 /obj/critter/spirit
 	name = "spirit"
@@ -315,10 +316,6 @@
 	flying = 1
 	generic = 0
 	death_text = "%src% dissipates!"
-	chase_text = "hurls itself at"
-	atk_text = "attacks"
-	atk_brute_amt = 3
-	crit_chance = 0
 
 	ai_think()
 		..()
@@ -339,13 +336,13 @@
 				break
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.health < 0) continue
 			if (C in src.friends) continue
 			if (isvampire(C)) continue
 			if (C.name == src.attacker) src.attack = 1
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -357,11 +354,15 @@
 				continue
 
 	ChaseAttack(mob/M)
-		..()
-		if (prob(30)) M.changeStatus("weakened", 3 SECONDS)
+		src.visible_message("<span class='combat'><B>[src]</B> hurls itself at [M]!</span>")
+		if (prob(30)) M.weakened += rand(2,4)
 
 	CritterAttack(mob/M)
-		..()
+		src.attacking = 1
+		src.visible_message("<span class='combat'><B>[src]</B> attacks [src.target]!</span>")
+		random_brute_damage(src.target, rand(2,4))
+		spawn(25)
+			src.attacking = 0
 
 	CritterDeath()
 		if (!src.alive)
@@ -404,7 +405,6 @@
 	flags = NOSPLASH | OPENCONTAINER
 	flying = 1
 	//var/neurotoxin = 2
-	chase_text = "stings"
 
 	CritterDeath()
 		..()
@@ -417,12 +417,12 @@
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.job == "Botanist") continue
 			if (C.health < 0) continue
 			if (C in src.friends) continue
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -434,7 +434,8 @@
 				continue
 
 	ChaseAttack(mob/M)
-		..()
+		if (!M) return
+		src.visible_message("<span class='combat'><B>[src]</B> stings [M]!</span>")
 		if (M.reagents)
 			M.reagents.add_reagent("histamine", 12)
 			M.reagents.add_reagent("toxin", 2)
@@ -459,22 +460,20 @@
 	atcritter = 1
 	firevuln = 0.25
 	brutevuln = 0.5
-	chase_text = "bashes"
 	var/pixel_y_inc = 0
 	skinresult = /obj/item/material_piece/bone
 	max_skins = 2
-	var/revivalChance = 0 // Chance to revive when killed, out of 100. Wizard spell will set to 100, defaults to 0 because skeletons appear in telesci/other sources
-	var/revivalDecrement = 16 // Decreases revival chance each successful revival. Set to 0 and revivalChance=100 for a permanently reviving skeleton
 
 	New()
 		..()
 		playsound(src.loc, "sound/items/Scissor.ogg", 50, 0)
 
 	Move()
-		playsound(src.loc, "sound/impact_sounds/Crystal_Hit_1.ogg", 50, 0)
+		playsound(src.loc, "sound/effects/crystalhit.ogg", 50, 0)
 		..()
 
 	attackby(obj/item/W as obj, mob/living/user as mob)
+
 		..()
 		if (!src.alive) return
 		if (istype(W, /obj/item/clothing/head))
@@ -492,10 +491,10 @@
 			if (iswizard(C))  continue //do not attack our master
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
-			if (isdead(C)) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
+			if (C.stat == 2) continue
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 			Cc = C
 
 		if (src.attack)
@@ -506,61 +505,41 @@
 			src.task = "chasing"
 			return
 
-	proc/CustomizeMagZom(var/NM, var/is_monkey)
+	proc/CustomizeMagZom(var/NM)
+		..()
+
 		src.name = "[capitalize(NM)]'s skeleton"
 		src.desc = "A horrible skeleton, raised from the corpse of [NM] by a wizard."
-		src.revivalChance = 100
-
-		if (is_monkey)
-			icon = 'icons/mob/monkey.dmi'
-
 		return
 
 	ChaseAttack(mob/M)
 		if (!src.alive) return
-		..()
+		M.visible_message("<span class='combat'><B>[src]</B> bashes [src.target]!</span>")
 		playsound(M.loc, "punch", 25, 1, -1)
 		random_brute_damage(M, rand(5,10))
 		if(prob(15)) // too mean before
 			M.visible_message("<span class='combat'><B>[M]</B> staggers!</span>")
-			M.changeStatus("stunned", 2 SECONDS)
-			M.changeStatus("weakened", 2 SECONDS)
+			M.stunned += rand(0,4)
+			M.weakened += rand(1,4)
 
 	CritterAttack(mob/M)
 		if (!src.alive) return
 		src.attacking = 1
-		if (ishuman(M))
-			var/mob/living/carbon/human/H = M
-			H.was_harmed(src)
 		if(!M.stat)
 			M.visible_message("<span class='combat'><B>[src]</B> pummels [src.target] mercilessly!</span>")
-			playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+			playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
 			if(prob(10)) // lowered probability slightly
 				M.visible_message("<span class='combat'><B>[M]</B> staggers!</span>")
-				M.changeStatus("stunned", 2 SECONDS)
-				M.changeStatus("weakened", 2 SECONDS)
+				M.stunned += rand(0,2)
+				M.weakened += rand(1,2)
 			random_brute_damage(M, rand(5,10))
 		else
 			M.visible_message("<span class='combat'><B>[src]</B> hits [src.target] with a bone!</span>")
 			playsound(src.loc, "punch", 30, 1, -2)
 			random_brute_damage(M, rand(10,15))
 
-		SPAWN_DBG(10)
+		spawn(10)
 			src.attacking = 0
-
-	CritterDeath(mob/M)
-		if (!src.alive) return
-		..()
-		if (rand(100) <= revivalChance)
-			src.revivalChance -= revivalDecrement
-			SPAWN_DBG(rand(400,800))
-				src.alive = 1
-				src.set_density(1)
-				src.health = initial(src.health)
-				src.icon_state = initial(src.icon_state)
-				for(var/mob/O in viewers(src, null))
-					O.show_message("<span style=\"color:red\"><b>[src]</b> re-assembles and is ready to fight once more!</span>")
-		return
 
 /obj/item/reagent_containers/food/snacks/ingredient/egg/critter/skeleton
 	name = "skeleton egg"
@@ -585,8 +564,6 @@
 	firevuln = 0.25
 	brutevuln = 0.5
 	generic = 0
-	atk_text = "bashes against"
-	atk_brute_amt = 7
 	var/reagent_id = null
 
 	New()
@@ -596,7 +573,7 @@
 		reagents = R
 		R.my_atom = src
 
-		SPAWN_DBG(40)
+		spawn(40)
 			if(!reagents.total_volume)
 				if (all_functional_reagent_ids.len > 0)
 					src.reagent_id = pick(all_functional_reagent_ids)
@@ -619,14 +596,12 @@
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if (C.ckey == null) continue //do not attack non-threats ie. NPC monkeys and AFK players
 			if (iswizard(C)) continue //do not attack our master
-			var/mob/living/carbon/human/H = C
-			if (istype(C) && (H.traitHolder.hasTrait("training_chaplain"))) continue
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
-			if (isdead(C)) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
+			if (C.stat == 2) continue
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 			Cc = C
 
 		if (src.attack)
@@ -638,6 +613,7 @@
 
 
 	proc/CustomizeGolem(var/datum/reagents/CR) //customise it with the reagents in a container
+		..() // ???
 
 		for(var/current_id in CR.reagent_list)
 			var/datum/reagent/R = CR.reagent_list[current_id]
@@ -652,15 +628,17 @@
 		return
 
 	CritterAttack(mob/M)
-		var/mob/living/carbon/human/H = M
-		if (istype(M) && (H.traitHolder.hasTrait("training_chaplain"))) return
-		..()
-		playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+		src.attacking = 1
+		M.visible_message("<span class='combat'><B>[src]</B> bashes against [src.target]!</span>")
+		playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
+		random_brute_damage(M, rand(5,10))
 		if(M.reagents)
 			if(src.reagents && src.reagents.total_volume)
 
 				src.reagents.reaction(M, TOUCH)
 				reagents.trans_to(M, 5)
+		spawn(10)
+			src.attacking = 0
 
 	CritterDeath()
 		if (!src.alive) return
@@ -670,7 +648,7 @@
 		var/datum/chemical_reaction/smoke/thesmoke = new
 		thesmoke.on_reaction(src.reagents, 12)
 		invisibility = 100
-		SPAWN_DBG(50)
+		spawn(50)
 			qdel(src)
 
 /obj/critter/townguard
@@ -689,23 +667,20 @@
 	firevuln = 0.75
 	brutevuln = 0.5
 	death_text = "%src% seizes up and falls limp, his eyes dead and lifeless..."
-	chase_text = "tackles"
 
 	var/sword_damage_max = 12
 	var/sword_damage_min = 6
 
-	passive
-		sword_damage_max = 0
-		sword_damage_min = 0
+
 	seek_target()
 		src.anchored = 0
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.health < 0) continue
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -738,13 +713,15 @@
 
 			else continue
 
+
+
 	ChaseAttack(mob/M)
 		if(iscarbon(M) && prob(15))
-			..()
-			playsound(src.loc, "sound/impact_sounds/Generic_Shove_1.ogg", 50, 1, -1)
+			src.visible_message("<span class='combat'><B>[src]</B> tackles [src.target]!</span>")
+			playsound(src.loc, "sound/weapons/thudswoosh.ogg", 50, 1, -1)
 			random_brute_damage(M, rand(0,3))
-			M.changeStatus("stunned", 2 SECONDS)
-			M.changeStatus("weakened", 2 SECONDS)
+			M.stunned += rand(0,4)
+			M.weakened += rand(1,4)
 		else
 			src.visible_message("<span class='combat'><B>[src]</B> tries to knock down [src.target] but misses!</span>", 1)
 
@@ -761,11 +738,11 @@
 			C.health -= 6
 			if(C.health <= 0)
 				C.CritterDeath()
-			SPAWN_DBG(25)
+			spawn(25)
 				src.attacking = 0
 			return
 
-		if (M.health > 40 && !M.getStatusDuration("weakened"))
+		if (M.health > 40 && !M.weakened)
 			src.visible_message("<span class='combat'><B>[src]</B> attacks [src.target] with his sword!</span>")
 			playsound(M.loc, "swing_hit", 50, 1, -1)
 
@@ -774,19 +751,16 @@
 			if(iscarbon(M))
 				if(to_deal > (((sword_damage_max-sword_damage_min)/2)+sword_damage_min) && prob(50))
 					src.visible_message("<span class='combat'><B>[src] knocks down [M]!</B></span>")
-					M:changeStatus("weakened", 80)
-			SPAWN_DBG(25)
+					M:weakened += 8
+			spawn(25)
 				src.attacking = 0
 		else
 			src.visible_message("<span class='combat'><B>[src]</B> kicks [src.target]!</span>")
 			playsound(src.loc, "swing_hit", 50, 1, -1)
 			random_brute_damage(src.target, rand(4,8))
-			SPAWN_DBG(25)
+			spawn(25)
 				src.attacking = 0
-		if (ishuman(M))
-			var/mob/living/carbon/human/H = M
-			H.was_harmed(src)
-		return
+				return
 
 	ai_think()
 		if (prob(20))
@@ -801,8 +775,6 @@
 	desc = "This is not how humans reproduce. They do not lay eggs. <i>What the hell is this?</i>"
 	critter_type = /obj/critter/townguard
 	warm_count = 75
-/obj/item/reagent_containers/food/snacks/ingredient/egg/critter/townguard/passive
-	critter_type = /obj/critter/townguard/passive
 
 /obj/critter/bloodling
 	name = "Bloodling"
@@ -819,7 +791,7 @@
 	atcritter = 0
 	firevuln = 0
 	brutevuln = 0
-	seekrange = 5
+	seekrange = 7
 	invisibility = 1
 	flying = 1
 
@@ -830,10 +802,10 @@
 		for (var/mob/living/C in hearers(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (C.health < 0) continue
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -856,8 +828,8 @@
 			else
 				boutput(M, "<span class='combat'><b>You are forced to the ground by the Bloodling!</b></span>")
 			random_brute_damage(M, rand(0,3))
-			M.changeStatus("stunned", 2 SECONDS)
-			M.changeStatus("weakened", 2 SECONDS)
+			M.stunned += rand(0,4)
+			M.weakened += rand(1,4)
 			src.attacking = 0
 			return
 
@@ -867,12 +839,12 @@
 		attacking = 1
 		if(iscarbon(M))
 			if(prob(50))
-				random_brute_damage(M, rand(3,7))
+				random_brute_damage(M, rand(5,10))
 				boutput(M, "<span class='combat'><b>You feel blood getting drawn out through your skin!</b></span>")
 			else
 				boutput(M, "<span class='combat'>You feel uncomfortable.</span>")
 
-		SPAWN_DBG(5)
+		spawn(5)
 			attacking = 0
 
 
@@ -893,8 +865,8 @@
 
 	ai_think()
 		if(!locate(/obj/decal/cleanable/blood) in src.loc)
-			playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 50, 1, -1)
-			make_cleanable( /obj/decal/cleanable/blood,loc)
+			playsound(src.loc, "sound/effects/splat.ogg", 50, 1, -1)
+			new /obj/decal/cleanable/blood(loc)
 		return ..()
 
 /obj/critter/blobman
@@ -913,20 +885,20 @@
 	firevuln = 0.75
 	brutevuln = 0.5
 	death_text = "%src% collapses into viscera."
-	atk_text = "flails against"
-	atk_brute_amt = 6
-	crit_text = "flails heavily against"
-	crit_brute_amt = 12
-	chase_text = "headbutts"
 
 	CritterAttack(mob/M)
-		..()
-		playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+		src.attacking = 1
+		M.visible_message("<span class='combat'><B>[src]</B> flails against [src.target]!</span>")
+		playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
+		random_brute_damage(M, rand(4,8))
+
+		spawn(10)
+			src.attacking = 0
 
 	ChaseAttack(mob/M)
-		..()
+		src.visible_message("<span class='combat'><B>[src]</B> headbutts [M]!</span>")
 		if(iscarbon(M))
-			if (prob(5)) M.changeStatus("stunned", 2 SECONDS)
+			if (prob(5)) M.stunned += rand(1,5)
 			random_brute_damage(M, rand(2,5))
 
 //A terrible post-human cloud of murder.
@@ -934,7 +906,7 @@
 	name = "transposed particle field"
 	desc = "A cloud of particles transposed by some manner of dangerous science, echoing some mannerisms of their previous configuration. In layman's terms, a goddamned science ghost."
 	icon_state = "aberration"
-	density = 1
+	density = 0
 	health = 2
 	aggressive = 1
 	defensive = 1
@@ -958,15 +930,15 @@
 		src.visible_message("<span class='combat'><B>The [src.name]</B> starts to envelop [M]!</span>")
 
 		var/lastloc = M.loc
-		SPAWN_DBG(60)
+		spawn(60)
 			if (get_dist(src, M) <= 1 && ((M.loc == lastloc)))
-				if(isliving(M))
-					logTheThing("combat", M, null, "was enveloped by [src] (obj) at [log_loc(src)].") // Some logging for instakill critters would be nice (Convair880).
+				if(istype(M, /mob/living))
+					logTheThing("combat", M, null, "was enveloped by [src] at [log_loc(src)].") // Some logging for instakill critters would be nice (Convair880).
 					M.ghostize()
 
 					if (iscarbon(M))
 						for(var/obj/item/W in M)
-							if (isitem(W))
+							if (istype(W,/obj/item))
 								M.u_equip(W)
 								if (W)
 									W.set_loc(M.loc)
@@ -974,7 +946,7 @@
 									W.layer = initial(W.layer)
 
 				src.visible_message("<span class='combat'><B>The [src.name]</B> completely envelops [M]!</span>")
-				playsound(src.loc, "sound/impact_sounds/Slimy_Hit_4.ogg", 50, 1)
+				playsound(src.loc, "sound/effects/blobattack.ogg", 50, 1)
 				qdel(M)
 
 			src.attacking = 0
@@ -1008,11 +980,11 @@
 		for (var/mob/living/C in range(src.seekrange,src))
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			if (iscarbon(C) && !src.atkcarbon) continue
-			if (issilicon(C) && !src.atksilicon) continue
+			if (istype(C, /mob/living/silicon/) && !src.atksilicon) continue
 			if (ishuman(C) && istype(C:head, /obj/item/clothing/head/void_crown)) continue
 			if (C.health < 0) continue
 			if (iscarbon(C) && src.atkcarbon) src.attack = 1
-			if (issilicon(C) && src.atksilicon) src.attack = 1
+			if (istype(C, /mob/living/silicon/) && src.atksilicon) src.attack = 1
 
 			if (src.attack)
 				src.target = C
@@ -1134,13 +1106,13 @@
 
 			src.visible_message("<span class='combat'><b>In a whirling flurry of tendrils, [src] rends down [src.target]! Holy shit!</b></span>")
 			logTheThing("combat", M, null, "was gibbed by [src] at [log_loc(src)].") // Some logging for instakill critters would be nice (Convair880).
-			playsound(src.loc, "sound/impact_sounds/Flesh_Break_1.ogg", 50, 1)
+			playsound(src.loc, "sound/effects/fleshbr1.ogg", 50, 1)
 			doomedMob.ghostize()
 			new /obj/decal/skeleton(doomedMob.loc)
 			doomedMob.gib()
 			src.target = null
 
-		SPAWN_DBG(40)
+		spawn(40)
 			src.attacking = 0
 
 	proc/appear()
@@ -1149,7 +1121,7 @@
 		src.name = pick("something","weird thing","odd thing","whatchamacallit","thing","something weird","old thing")
 		src.icon_state = "ancientrobot-appear"
 		src.invisibility = 0
-		SPAWN_DBG(12)
+		spawn(12)
 			src.icon_state = "ancientrobot"
 		return
 
@@ -1188,10 +1160,8 @@
 			src.visible_message("<span class='combat'><B>[src]</B> grabs at [M]'s arm!</span>")
 			boutput(M, "<span class='combat'><b>It burns!</b></span>")
 			M.TakeDamage("chest", 0, rand(5,15))
-		if (ishuman(M))
-			var/mob/living/carbon/human/H = M
-			H.was_harmed(src)
-		SPAWN_DBG(60)
+
+		spawn(60)
 			src.attacking = 0
 
 	ai_think()
@@ -1208,7 +1178,7 @@
 		speak( pick("There...is...nothing...","It's dark.  Oh god, oh god, it's dark.","Thank you.","Oh wow. Oh wow. Oh wow.") )
 		src.icon_state = "crunched-dead"
 		src.alive = 0
-		SPAWN_DBG(15)
+		spawn(15)
 			qdel(src)
 
 	seek_target()

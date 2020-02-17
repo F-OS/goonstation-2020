@@ -5,9 +5,6 @@
 	targeted = 0
 	cooldown = 300
 	requires_robes = 1
-	voice_grim = "sound/voice/wizard/MagicShieldGrim.ogg"
-	voice_fem = "sound/voice/wizard/MagicShieldFem.ogg"
-	voice_other = "sound/voice/wizard/MagicShieldLoud.ogg"
 
 	cast()
 		if(!holder)
@@ -17,7 +14,7 @@
 			return
 
 		holder.owner.say("XYZZYX")
-		..()
+		playsound(holder.owner.loc, "sound/voice/wizard/MagicshieldLoud.ogg", 50, 0, -1)
 
 		var/image/shield_overlay = null
 
@@ -27,7 +24,7 @@
 		boutput(holder.owner, "<span style=\"color:blue\"><b>You are surrounded by a magical barrier!</b></span>")
 		holder.owner.visible_message("<span style=\"color:red\">[holder.owner] is encased in a protective shield.</span>")
 		playsound(holder.owner,"sound/effects/MagShieldUp.ogg",50,1)
-		SPAWN_DBG(100)
+		spawn(100)
 			if(holder.owner && holder.owner.spellshield)
 				holder.owner.spellshield = 0
 				holder.owner.underlays -= shield_overlay

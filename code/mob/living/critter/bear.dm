@@ -40,7 +40,6 @@
 		HH.limb_name = "left bear arm"
 
 		HH = hands[2]
-		HH.icon = 'icons/mob/hud_human.dmi'
 		HH.limb = new /datum/limb/bear
 		HH.name = "right hand"
 		HH.suffix = "-R"

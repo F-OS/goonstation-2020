@@ -15,7 +15,7 @@
 		if (forceartitype)
 			AS.validtypes = list("[forceartitype]")
 		src.artifact = AS
-		SPAWN_DBG(0)
+		spawn(0)
 			src.ArtifactSetup()
 			var/datum/artifact/A = src.artifact
 			src.maxcharge = rand(15,1000)

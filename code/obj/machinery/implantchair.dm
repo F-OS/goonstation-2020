@@ -7,10 +7,6 @@
 	density = 0
 	var/obj/item/implant/imp = null
 
-	New()
-		..()
-		UnsubscribeProcess()
-
 /obj/machinery/imp/chair/MouseDrop_T(mob/M as mob, mob/user as mob)
 	if (!ticker)
 		boutput(user, "You can't buckle anyone in before the game starts.")
@@ -27,8 +23,6 @@
 	M.set_loc(src.loc)
 	implantgo(M)
 	src.add_fingerprint(user)
-	playsound(get_turf(src), "sound/misc/belt_click.ogg", 50, 1)
-	M.setStatus("buckled", duration = null)
 	return
 
 /obj/machinery/imp/chair/attack_hand(mob/user as mob)
@@ -41,11 +35,10 @@
 			M.anchored = 0
 			M.buckled = null
 			src.add_fingerprint(user)
-			playsound(get_turf(src), "sound/misc/belt_click.ogg", 50, 1)
 	return
 
 /obj/machinery/imp/chair/proc/implantgo(mob/M as mob)
-	if (!ismob(M))
+	if (!istype(M, /mob))
 		return
 
 	src.imp = new/obj/item/implant/antirev(src)
@@ -53,13 +46,20 @@
 	M.visible_message("<span style=\"color:red\">[M] has been implanted by the [src].</span>")
 
 
-	logTheThing("combat", M, "has implanted %target% with a [src.imp] implant ([src.imp.type]) at [log_loc(M)].")
-	if(ishuman(M))
+	if(istype(M, /mob/living/carbon/human))
 		M:implant.Add(src.imp)
 
+
+		if(ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/revolution))
+			if(istype(src.imp, /obj/item/implant/antirev))
+				if(M.mind in ticker.mode:head_revolutionaries)
+					M.visible_message("<span style=\"color:red\">[M] seems to resist the implant.</span>")
+				else if(M.mind in ticker.mode:revolutionaries)
+					ticker.mode:remove_revolutionary(M.mind)
+
 	src.imp.set_loc(M)
-	src.imp.owner = M
 	src.imp.implanted = 1
 	src.imp.implanted(M)
+	src.imp.owner = M
 	src.imp = null
 	return

@@ -10,7 +10,6 @@
 	name = "foamed metal"
 	desc = "A lightweight foamed metal wall."
 	flags = FPRINT | CONDUCT | USEDELAY
-	event_handler_flags = USE_FLUID_ENTER | USE_CANPASS
 	var/metal = 1		// 1=aluminium, 2=iron
 
 	New()
@@ -20,7 +19,7 @@
 			loc:ReplaceWithMetalFoam(metal)
 
 		update_nearby_tiles(1)
-		SPAWN_DBG(1)
+		spawn(1)
 			RL_SetOpacity(1)
 
 	disposing()
@@ -47,7 +46,7 @@
 			dispose()
 
 	attack_hand(var/mob/user)
-		if (user.is_hulk() || (prob(75 - metal*25)))
+		if (user.bioHolder.HasEffect("hulk") || (prob(75 - metal*25)))
 			user.visible_message("<span style=\"color:red\">[user] smashes through the foamed metal.</span>")
 			dispose()
 		else

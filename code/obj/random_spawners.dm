@@ -13,9 +13,9 @@
 	var/list/guaranteed = list() // things that will always spawn from this - set to a number to spawn that many of the thing
 
 	New()
-		SPAWN_DBG(1)
+		spawn(1)
 			src.spawn_items()
-			SPAWN_DBG(100)
+			spawn(100)
 				qdel(src)
 
 	proc/spawn_items()
@@ -23,7 +23,7 @@
 			for (var/new_item in src.guaranteed)
 				if (!ispath(new_item))
 					logTheThing("debug", src, null, "has a non-path item in its guaranteed list, [new_item]")
-					DEBUG_MESSAGE("[src] has a non-path item in its guaranteed list, [new_item]")
+					DEBUG("[src] has a non-path item in its guaranteed list, [new_item]")
 					continue
 				var/amt = 1
 				if (isnum(guaranteed[new_item]))
@@ -40,7 +40,7 @@
 			var/new_item = pick(src.items2spawn)
 			if (!ispath(new_item))
 				logTheThing("debug", src, null, "has a non-path item in its spawn list, [new_item]")
-				DEBUG_MESSAGE("[src] has a non-path item in its spawn list, [new_item]")
+				DEBUG("[src] has a non-path item in its spawn list, [new_item]")
 				continue
 			new new_item(src.loc)
 
@@ -73,11 +73,10 @@
 	/obj/item/clothing/head/helmet/welding,
 	/obj/item/cell,
 	/obj/item/cell/supercell,
-	/obj/item/device/light/flashlight,
-	/obj/item/device/light/glowstick,
+	/obj/item/device/flashlight,
+	/obj/item/device/glowstick,
 	/obj/item/device/t_scanner,
-	/obj/item/device/analyzer/atmospheric,
-	/obj/item/device/analyzer/atmosanalyzer_upgrade,
+	/obj/item/device/analyzer,
 	/obj/item/extinguisher,
 	/obj/item/reagent_containers/glass/oilcan,
 	/obj/item/storage/belt/utility)
@@ -112,45 +111,43 @@
 	/obj/item/clothing/head/helmet/welding,
 	/obj/item/cell,
 	/obj/item/cell/supercell,
-	/obj/item/device/light/flashlight,
-	/obj/item/device/light/glowstick,
+	/obj/item/device/flashlight,
+	/obj/item/device/glowstick,
 	/obj/item/device/t_scanner,
-	/obj/item/device/analyzer/atmospheric,
-	/obj/item/device/analyzer/atmosanalyzer_upgrade,
+	/obj/item/device/analyzer,
 	/obj/item/extinguisher,
 	/obj/item/reagent_containers/glass/oilcan,
 	/obj/item/storage/belt/utility)
 
 /obj/random_item_spawner/med_tool
 	name = "random medical tool spawner"
-	min_amt2spawn = 4
-	max_amt2spawn = 8
+	min_amt2spawn = 3
+	max_amt2spawn = 7
 	items2spawn = list(/obj/item/scalpel,
 	/obj/item/circular_saw,
 	/obj/item/staple_gun,
-	/obj/item/robodefibrillator,
+	/obj/item/robodefibrilator,
 	/obj/item/hemostat,
 	/obj/item/suture,
 	/obj/item/bandage,
 	/obj/item/body_bag,
-	/obj/item/device/analyzer/healthanalyzer,
-	/obj/item/device/analyzer/healthanalyzer_upgrade,
+	/obj/item/device/healthanalyzer,
+	/obj/item/device/healthanalyzer_upgrade,
 	/obj/item/reagent_containers/dropper,
-	/obj/item/reagent_containers/dropper/mechanical,
 	/obj/item/storage/box/syringes,
 	/obj/item/storage/box/patchbox,
 	/obj/item/storage/box/iv_box,
 	/obj/item/reagent_containers/hypospray,
 	/obj/item/clothing/glasses/healthgoggles,
-	/obj/item/storage/box/lglo_kit/random,
+	/obj/item/storage/box/lglo_kit,
 	/obj/item/storage/box/stma_kit,
 	/obj/item/clothing/mask/surgical_shield,
 	/obj/item/storage/belt/medical)
 
 /obj/random_item_spawner/medicine
 	name = "random medicine spawner"
-	min_amt2spawn = 4
-	max_amt2spawn = 8
+	min_amt2spawn = 3
+	max_amt2spawn = 7
 	items2spawn = list(/obj/item/storage/pill_bottle/antirad,
 	/obj/item/storage/pill_bottle/mutadone,
 	/obj/item/storage/pill_bottle/epinephrine,
@@ -164,9 +161,6 @@
 	/obj/item/reagent_containers/syringe/atropine,
 	/obj/item/reagent_containers/syringe/morphine,
 	/obj/item/reagent_containers/syringe/calomel,
-	/obj/item/reagent_containers/syringe/heparin,
-	/obj/item/reagent_containers/syringe/proconvertin,
-	/obj/item/reagent_containers/syringe/filgrastim,
 	/obj/item/reagent_containers/iv_drip/blood,
 	/obj/item/reagent_containers/iv_drip/saline,
 	/obj/item/reagent_containers/glass/bottle/epinephrine,
@@ -196,9 +190,6 @@
 	/obj/item/reagent_containers/emergency_injector/salbutamol,
 	/obj/item/reagent_containers/emergency_injector/mannitol,
 	/obj/item/reagent_containers/emergency_injector/mutadone,
-	/obj/item/reagent_containers/emergency_injector/heparin,
-	/obj/item/reagent_containers/emergency_injector/proconvertin,
-	/obj/item/reagent_containers/emergency_injector/filgrastim,
 	/obj/item/item_box/medical_patches/styptic,
 	/obj/item/item_box/medical_patches/mini_styptic,
 	/obj/item/item_box/medical_patches/silver_sulf,
@@ -223,24 +214,19 @@
 	max_amt2spawn = 5
 	items2spawn = list(/obj/item/pen,
 	/obj/item/pen/fancy,
-	/obj/item/pen/red,
-	/obj/item/pen/pencil,
 	/obj/item/pen/marker,
 	/obj/item/pen/marker/red,
 	/obj/item/pen/marker/blue,
 	/obj/item/storage/box/crayon,
-	/obj/item/storage/box/crayon/basic,
 	/obj/item/storage/box/marker,
-	/obj/item/storage/box/marker/basic,
 	/obj/item/hand_labeler,
 	/obj/item/clipboard,
-	/obj/item/stamp,
+	/obj/item/stamp/random,
 	/obj/item/paper,
 	/obj/item/paper_bin,
 	/obj/decal/cleanable/generic,
 	/obj/item/reagent_containers/food/drinks/mug/random_color,
-	/obj/item/postit_stack,
-	/obj/item/staple_gun/red)
+	/obj/item/postit_stack)
 
 /obj/random_item_spawner/desk_stuff/g_clip_bin_pen
 	name = "random desk item spawner (guaranteed basic)"
@@ -248,47 +234,35 @@
 	/obj/item/paper_bin,
 	/obj/item/pen)
 	items2spawn = list(/obj/item/pen/fancy,
-	/obj/item/pen/red,
-	/obj/item/pen/pencil,
 	/obj/item/pen/marker,
 	/obj/item/pen/marker/red,
 	/obj/item/pen/marker/blue,
-	/obj/item/pen/marker/random,
 	/obj/item/storage/box/crayon,
-	/obj/item/storage/box/crayon/basic,
 	/obj/item/storage/box/marker,
-	/obj/item/storage/box/marker/basic,
 	/obj/item/hand_labeler,
-	/obj/item/stamp,
+	/obj/item/stamp/random,
 	/obj/item/paper,
 	/obj/decal/cleanable/generic,
 	/obj/item/reagent_containers/food/drinks/mug/random_color,
-	/obj/item/postit_stack,
-	/obj/item/staple_gun/red)
+	/obj/item/postit_stack)
 
 /obj/random_item_spawner/desk_stuff/g_clip_bin_fpen
 	name = "random desk item spawner (guaranteed fancy)"
 	guaranteed = list(/obj/item/clipboard,
 	/obj/item/paper_bin,
-	/obj/item/stamp,
+	/obj/item/stamp/random,
 	/obj/item/pen/fancy)
 	items2spawn = list(/obj/item/pen,
-	/obj/item/pen/red,
-	/obj/item/pen/pencil,
 	/obj/item/pen/marker,
 	/obj/item/pen/marker/red,
 	/obj/item/pen/marker/blue,
-	/obj/item/pen/marker/random,
 	/obj/item/storage/box/crayon,
-	/obj/item/storage/box/crayon/basic,
 	/obj/item/storage/box/marker,
-	/obj/item/storage/box/marker/basic,
 	/obj/item/hand_labeler,
 	/obj/item/paper,
 	/obj/decal/cleanable/generic,
 	/obj/item/reagent_containers/food/drinks/mug/random_color,
-	/obj/item/postit_stack,
-	/obj/item/staple_gun/red)
+	/obj/item/postit_stack)
 
 /obj/random_item_spawner/tableware
 	name = "random tableware spawner"
@@ -325,34 +299,6 @@
 	/obj/item/mine/stun,
 	/obj/item/mine/blast)
 
-// Loot Crate picker.
-/obj/random_item_spawner/loot_crate/surplus
-	name = "Loot Crate Spawner"
-	guaranteed = list(/obj/item/material_piece/mauxite=10,
-	/obj/item/material_piece/molitz=10,
-	/obj/item/material_piece/pharosium=10)
-	min_amt2spawn = 24
-	max_amt2spawn = 42
-	items2spawn = list(/obj/item/material_piece/mauxite,
-		/obj/item/material_piece/molitz,
-		/obj/item/material_piece/pharosium,
-		/obj/item/material_piece/cobryl,
-		/obj/item/material_piece/claretine,
-		/obj/item/material_piece/bohrum,
-		/obj/item/material_piece/syreline,
-		/obj/item/material_piece/plasmastone,
-		/obj/item/material_piece/uqill,
-		/obj/item/material_piece/koshmarite,
-		/obj/item/material_piece/gold,
-		/obj/item/raw_material/cotton,
-		/obj/item/raw_material/miracle,
-		/obj/item/raw_material/uqill,
-		/obj/item/raw_material/cerenkite,
-		/obj/item/raw_material/erebite,
-		/obj/item/spacecash/buttcoin,
-		/obj/item/spacecash/random/tourist,
-		/obj/item/a_gift/easter)
-
 /obj/random_pod_spawner
 	name = "random pod spawner"
 	icon = 'icons/obj/objects.dmi'
@@ -364,9 +310,9 @@
 	var/obj/machinery/vehicle/pod2spawn = null
 
 	New()
-		SPAWN_DBG(1)
+		spawn(1)
 			src.set_up()
-			SPAWN_DBG(10)
+			spawn(10)
 				qdel(src)
 
 	proc/set_up()
@@ -500,277 +446,3 @@
 			pod2spawn = new /obj/machinery/vehicle/miniputt/indyputt(T)
 		else
 			pod2spawn = new /obj/machinery/vehicle/miniputt(T)
-
-// Random spawners for cargo crates. (Gannets)
-
-/obj/random_item_spawner/prosthetics
-	name = "random prosthesis spawner"
-	min_amt2spawn = 6
-	max_amt2spawn = 8
-	items2spawn = list(/obj/item/parts/robot_parts/arm/left/sturdy,
-	/obj/item/parts/robot_parts/arm/right/sturdy,
-	/obj/item/parts/robot_parts/arm/left/heavy,
-	/obj/item/parts/robot_parts/arm/right/heavy,
-	/obj/item/parts/robot_parts/arm/left/light,
-	/obj/item/parts/robot_parts/arm/right/light,
-	/obj/item/parts/robot_parts/leg/right/treads,
-	/obj/item/parts/robot_parts/leg/left/treads,
-	/obj/item/organ/eye/cyber/prodoc,
-	/obj/item/organ/eye/cyber/nightvision,
-	/obj/item/organ/eye/cyber/sechud)
-
-/obj/random_item_spawner/critter
-	name = "random critter spawner"
-	min_amt2spawn = 4
-	max_amt2spawn = 6
-	items2spawn = list(/obj/critter/domestic_bee,
-	/obj/critter/bat,
-	/obj/critter/mouse,
-	/obj/critter/opossum,
-	/obj/critter/dog/george/blair,
-	/obj/critter/dog/george/orwell,
-	/obj/critter/dog/george/shiba,
-	/obj/critter/pig,
-	/obj/critter/seagull/gannet,
-	/obj/critter/crow,
-	/obj/critter/seagull,
-	/obj/critter/nicespider,
-	/obj/critter/goose,
-	/obj/critter/goose/swan)
-
-/obj/random_item_spawner/peripherals
-	name = "random peripheral spawner"
-	min_amt2spawn = 5
-	max_amt2spawn = 8
-	items2spawn = list(/obj/item/motherboard,
-					/obj/item/peripheral/network/radio/locked,
-					/obj/item/peripheral/network/powernet_card,
-					/obj/item/peripheral/printer,
-					/obj/item/peripheral/prize_vendor,
-					/obj/item/peripheral/card_scanner,
-					/obj/item/peripheral/sound_card,
-					/obj/item/peripheral/drive/cart_reader,
-					/obj/item/peripheral/drive/tape_reader,
-					/obj/item/peripheral/cell_monitor,
-					/obj/item/peripheral/videocard)
-
-/obj/random_item_spawner/circuitboards
-	name = "random circuitboard spawner"
-	min_amt2spawn = 2
-	max_amt2spawn = 4
-	items2spawn = list(/obj/item/circuitboard/security,
-					/obj/item/circuitboard/atmospherealerts,
-					/obj/item/circuitboard/air_management,
-					/obj/item/circuitboard/general_alert,
-					/obj/item/circuitboard/atm,
-					/obj/item/circuitboard/solar_control,
-					/obj/item/circuitboard/arcade,
-					/obj/item/circuitboard/powermonitor,
-					/obj/item/circuitboard/barcode,
-					/obj/item/circuitboard/operating)
-
-/obj/random_item_spawner/buddytool
-	name = "random buddy tool spawner"
-	min_amt2spawn = 1
-	max_amt2spawn = 2
-	items2spawn = list (/obj/item/device/guardbot_tool/medicator,
-						/obj/item/device/guardbot_tool/smoker,
-						/obj/item/device/guardbot_tool/taser,
-						/obj/item/device/guardbot_tool/flash)
-
-/obj/random_item_spawner/dressup
-	name = "random gimmick clothing spawner"
-	min_amt2spawn = 15
-	max_amt2spawn = 20
-	items2spawn = list(
-		/obj/item/clothing/under/gimmick/macho,
-		/obj/item/clothing/under/gimmick/bowling,
-		/obj/item/clothing/under/gimmick/hunter,
-		/obj/item/clothing/under/gimmick/owl,
-		/obj/item/clothing/under/gimmick/waldo,
-		/obj/item/clothing/under/gimmick/odlaw,
-		/obj/item/clothing/under/gimmick/fake_waldo,
-		/obj/item/clothing/under/gimmick/johnny,
-		/obj/item/clothing/under/gimmick/police,
-		/obj/item/clothing/under/gimmick/blackstronaut,
-		/obj/item/clothing/under/gimmick/duke,
-		/obj/item/clothing/under/gimmick/mj_clothes,
-		/obj/item/clothing/under/gimmick/viking,
-		/obj/item/clothing/under/gimmick/merchant,
-		/obj/item/clothing/under/gimmick/spiderman,
-		/obj/item/clothing/under/gimmick/birdman,
-		/obj/item/clothing/under/gimmick/dawson,
-		/obj/item/clothing/under/gimmick/chav,
-		/obj/item/clothing/under/gimmick/safari,
-		/obj/item/clothing/under/gimmick/utena,
-		/obj/item/clothing/under/gimmick/anthy,
-		/obj/item/clothing/under/gimmick/butler,
-		/obj/item/clothing/under/gimmick/maid,
-		/obj/item/clothing/under/gimmick/kilt,
-		/obj/item/clothing/under/gimmick/wedding_dress,
-		/obj/item/clothing/under/gimmick/psyche,
-		/obj/item/clothing/under/gimmick/dolan,
-		/obj/item/clothing/under/gimmick/jetson,
-		/obj/item/clothing/under/gimmick/princess,
-		/obj/item/clothing/under/gimmick/cosby,
-		/obj/item/clothing/under/gimmick/chaps,
-		/obj/item/clothing/under/gimmick/vault13,
-		/obj/item/clothing/under/gimmick/murph,
-		/obj/item/clothing/under/gimmick/sealab,
-		/obj/item/clothing/under/gimmick/rainbow,
-		/obj/item/clothing/under/gimmick/yay,
-		/obj/item/clothing/under/gimmick/cloud,
-		/obj/item/clothing/under/gimmick/mario/luigi,
-		/obj/item/clothing/under/gimmick/mario/wario,
-		/obj/item/clothing/under/gimmick/mario/waluigi,
-		/obj/item/clothing/under/gimmick/mario,
-		/obj/item/clothing/under/gimmick/shirtnjeans,
-		/obj/item/clothing/under/gimmick/hakama/random,
-		/obj/item/clothing/under/gimmick/eightiesmens,
-		/obj/item/clothing/under/gimmick/eightieswomens
-	)
-
-/obj/random_item_spawner/mask
-	name = "random mask spawner"
-	min_amt2spawn = 5
-	max_amt2spawn = 10
-	items2spawn = list(/obj/item/clothing/mask/hunter,
-						/obj/item/clothing/mask/owl_mask,
-						/obj/item/clothing/mask/smile,
-						/obj/item/clothing/mask/batman,
-						/obj/item/clothing/mask/clown_hat,
-						/obj/item/clothing/mask/clown_hat/blue,
-						/obj/item/clothing/mask/balaclava,
-						/obj/item/clothing/mask/spiderman,
-						/obj/item/clothing/mask/horse_mask,
-						/obj/item/clothing/mask/gas/inquis,
-						/obj/item/clothing/mask/gas/plague,
-						/obj/item/clothing/mask/skull,
-						/obj/item/clothing/mask/niccage,
-						/obj/item/clothing/mask/waltwhite,
-						/obj/item/clothing/mask/mmyers,
-						/obj/item/clothing/mask/mime,
-						/obj/item/clothing/mask/moustache,
-						/obj/item/clothing/mask/melons,
-						/obj/item/clothing/mask/wrestling,
-						/obj/item/clothing/mask/wrestling/black,
-						/obj/item/clothing/mask/wrestling/green,
-						/obj/item/clothing/mask/wrestling/blue,
-						/obj/item/clothing/mask/anime,
-						/obj/item/paper_mask,
-						/obj/item/clothing/mask/kitsune)
-
-/obj/random_item_spawner/hat
-	name = "random hat spawner"
-	min_amt2spawn = 5
-	max_amt2spawn = 10
-	items2spawn = list(/obj/item/clothing/head/helmet/bobby,
-						/obj/item/clothing/head/helmet/batman,
-						/obj/item/clothing/head/helmet/viking,
-						/obj/item/clothing/head/helmet/turd,
-						/obj/item/clothing/head/helmet/thunderdome,
-						/obj/item/clothing/head/helmet/hardhat,
-						/obj/item/clothing/head/helmet/jetson,
-						/obj/item/clothing/head/helmet/siren,
-						/obj/item/clothing/head/helmet/bucket,
-						/obj/item/clothing/head/helmet/bucket/red,
-						/obj/item/clothing/head/tinfoil_hat,
-						/obj/item/clothing/head/raccoon,
-						/obj/item/clothing/head/fruithat,
-						/obj/item/clothing/head/waldohat,
-						/obj/item/clothing/head/odlawhat,
-						/obj/item/clothing/head/fake_waldohat,
-						/obj/item/clothing/head/flatcap,
-						/obj/item/clothing/head/devil,
-						/obj/item/clothing/head/biker_cap,
-						/obj/item/clothing/head/mj_hat,
-						/obj/item/clothing/head/genki,
-						/obj/item/clothing/head/birdman,
-						/obj/item/clothing/head/chav,
-						/obj/item/clothing/head/maid,
-						/obj/item/clothing/head/veil,
-						/obj/item/clothing/head/rando,
-						/obj/item/clothing/head/psyche,
-						/obj/item/clothing/head/serpico,
-						/obj/item/clothing/head/cakehat,
-						/obj/item/clothing/head/powdered_wig,
-						/obj/item/clothing/head/that,
-						/obj/item/clothing/head/that/purple,
-						/obj/item/clothing/head/that/gold,
-						/obj/item/clothing/head/mailcap,
-						/obj/item/clothing/head/plunger,
-						/obj/item/clothing/head/XComHair,
-						/obj/item/clothing/head/apprentice,
-						/obj/item/clothing/head/snake,
-						/obj/item/clothing/head/rabbihat,
-						/obj/item/clothing/head/formal_turban,
-						/obj/item/clothing/head/turban,
-						/obj/item/clothing/head/rastacap,
-						/obj/item/clothing/head/fedora,
-						/obj/item/clothing/head/cowboy,
-						/obj/item/clothing/head/paper_hat,
-						/obj/item/clothing/head/towel_hat,
-						/obj/item/clothing/head/crown,
-						/obj/item/clothing/head/oddjob,
-						/obj/item/clothing/head/mario/luigi,
-						/obj/item/clothing/head/mario/wario,
-						/obj/item/clothing/head/mario/waluigi,
-						/obj/item/clothing/head/mario,
-						/obj/item/clothing/head/pumpkin,
-						/obj/item/clothing/head/wig,
-						/obj/item/clothing/head/zombie,
-						/obj/item/clothing/head/werewolf/odd)
-
-
-/obj/random_item_spawner/furniture_parts
-	name = "furniture parts spawner"
-	min_amt2spawn = 8
-	max_amt2spawn = 10
-	items2spawn = list(/obj/item/furniture_parts/IVstand,
-						/obj/item/furniture_parts/surgery_tray,
-						/obj/item/furniture_parts/table/desk,
-						/obj/item/furniture_parts/table/wood/round,
-						/obj/item/furniture_parts/table/wood/desk,
-						/obj/item/furniture_parts/table/wood,
-						/obj/item/furniture_parts/table/round,
-						/obj/item/furniture_parts/table/glass/frame,
-						/obj/item/furniture_parts/table/glass/reinforced,
-						/obj/item/furniture_parts/table/glass,
-						/obj/item/furniture_parts/table/reinforced/bar,
-						/obj/item/furniture_parts/table/reinforced/chemistry,
-						/obj/item/furniture_parts/table/reinforced,
-						/obj/item/furniture_parts/table,
-						/obj/item/furniture_parts/rack,
-						/obj/item/furniture_parts/stool/bar,
-						/obj/item/furniture_parts/stool,
-						/obj/item/furniture_parts/bench/red,
-						/obj/item/furniture_parts/bench/blue,
-						/obj/item/furniture_parts/bench/green,
-						/obj/item/furniture_parts/bench/yellow,
-						/obj/item/furniture_parts/bench,
-						/obj/item/furniture_parts/wood_chair,
-						/obj/item/furniture_parts/office_chair,
-						/obj/item/furniture_parts/office_chair/red,
-						/obj/item/furniture_parts/office_chair/green,
-						/obj/item/furniture_parts/office_chair/blue,
-						/obj/item/furniture_parts/office_chair/yellow,
-						/obj/item/furniture_parts/office_chair/purple,
-						/obj/item/furniture_parts/bed/roller,
-						/obj/item/furniture_parts/bed)
-
-/obj/random_item_spawner/kineticgun // used in the 4th of july admin button.
-	name = "firearm spawner"
-	min_amt2spawn = 1
-	max_amt2spawn = 1
-	items2spawn = list(/obj/item/gun/kinetic/minigun,
-						/obj/item/gun/kinetic/revolver,
-						/obj/item/gun/kinetic/derringer,
-						/obj/item/gun/kinetic/detectiverevolver,
-						/obj/item/gun/kinetic/spacker,
-						/obj/item/gun/kinetic/riotgun,
-						/obj/item/gun/kinetic/ak47,
-						/obj/item/gun/kinetic/hunting_rifle,
-						/obj/item/gun/kinetic/silenced_22,
-						/obj/item/gun/kinetic/pistol,
-						/obj/item/gun/kinetic/assault_rifle,
-						/obj/item/gun/kinetic/light_machine_gun)

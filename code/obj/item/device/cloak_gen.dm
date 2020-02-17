@@ -4,7 +4,7 @@
 
 /obj/item/cloak_gen
 	name = "cloaking field generator"
-	desc = "It's humming softly."
+	desc = "Its humming softly."
 	icon = 'icons/obj/device.dmi'
 	icon_state = "cloakgen_off"
 	var/range = 3
@@ -14,15 +14,22 @@
 	var/list/fields = new/list()
 	is_syndicate = 1
 	mats = 12
-	contraband = 2
 
 	New()
 		var/obj/item/remote/cloak_gen/remote = new /obj/item/remote/cloak_gen(src.loc)
-		SPAWN_DBG(0)
+		spawn(0)
 			remote.my_gen = src
 
+	// For whatever reason, disposing() is never called for this item and I couldn't find out why (Convair880).
+	Del()
+		//DEBUG("Del() was called for [src].")
+		if (src.active)
+			src.turn_off()
+		..()
+		return
+
 	disposing()
-		//DEBUG_MESSAGE("Disposing() was called for [src] at [log_loc(src)].")
+		//DEBUG("Disposing() was called for [src] at [log_loc(src)].")
 		if (src.active)
 			src.turn_off()
 		..()
@@ -78,7 +85,7 @@
 			O.icon = get_cloaked_icon(T)
 			O.layer = EFFECTS_LAYER_4
 			O.anchored = 1
-			O.set_density(0)
+			O.density = 0
 			O.name = T.name
 
 	proc/turn_off()
@@ -101,10 +108,9 @@
 	w_class = 2.0
 	var/obj/item/cloak_gen/my_gen = null
 	var/anti_spam = 0 // Creating and deleting overlays en masse can cause noticeable lag (Convair880).
-	contraband = 2
 
 	attack_self()
-		if (isliving(usr))
+		if (istype(usr,/mob/living))
 			if (my_gen)
 				if (my_gen.active)
 					src.anti_spam = world.time
@@ -121,7 +127,7 @@
 
 	verb/set_pattern()
 		set src in view(1)
-		if (!isliving(usr) || !my_gen) return
+		if (!istype(usr,/mob/living) || !my_gen) return
 		var/input = input(usr,"Select cloaking pattern:","Set pattern","Noise") in list("Noise","Linear","Chaos","Cubic","Interference","Rotating")
 		switch(input)
 			if("Linear")
@@ -143,7 +149,7 @@
 
 	verb/set_range()
 		set src in view(1)
-		if (!isliving(usr) || !my_gen) return
+		if (!istype(usr,/mob/living) || !my_gen) return
 		var/input = input(usr,"Range 0-[my_gen.maxrange]:","Set range",my_gen.range) as num
 		if(input > my_gen.maxrange || input < 0)
 			boutput(usr, "<span style=\"color:red\">Invalid setting.</span>")
@@ -156,7 +162,7 @@
 
 	verb/increase_range()
 		set src in view(1)
-		if (!isliving(usr) || !my_gen) return
+		if (!istype(usr,/mob/living) || !my_gen) return
 		if (my_gen.range + 1 > my_gen.maxrange)
 			boutput(usr, "<span style=\"color:red\">Maximum range reached ([my_gen.maxrange]).</span>")
 			return
@@ -168,7 +174,7 @@
 
 	verb/decrease_range()
 		set src in view(1)
-		if (!isliving(usr) || !my_gen) return
+		if (!istype(usr,/mob/living) || !my_gen) return
 		if (my_gen.range - 1 < 0)
 			boutput(usr, "<span style=\"color:red\">Minimum range reached (0).</span>")
 			return
@@ -180,12 +186,12 @@
 
 	verb/turn_on()
 		set src in view(1)
-		if (!isliving(usr) || !my_gen || my_gen.active) return
+		if (!istype(usr,/mob/living) || !my_gen || my_gen.active) return
 		my_gen.turn_on()
 		boutput(usr, "<span style=\"color:blue\">You turn the cloaking field generator on.</span>")
 
 	verb/turn_off()
 		set src in view(1)
-		if (!isliving(usr) || !my_gen || !my_gen.active) return
+		if (!istype(usr,/mob/living) || !my_gen || !my_gen.active) return
 		my_gen.turn_off()
 		boutput(usr, "<span style=\"color:blue\">You turn the cloaking field generator off.</span>")

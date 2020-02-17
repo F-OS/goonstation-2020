@@ -16,7 +16,7 @@
 	src.c_state(0)
 
 	if (src.master)
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			var/datum/signal/signal = get_free_signal()
 			signal.source = src
 			signal.data["message"] = "ACTIVATE"
@@ -62,14 +62,14 @@
 		last_tick = world.time
 
 		if (!src.master)
-			if (ismob(src.loc))
+			if (istype(src.loc, /mob))
 				attack_self(src.loc)
 			else
 				for(var/mob/M in viewers(1, src))
 					if (M.client && (M.machine == src.master || M.machine == src))
 						src.attack_self(M)
 		else
-			if (ismob(src.master.loc))
+			if (istype(src.master.loc, /mob))
 				src.attack_self(src.master.loc)
 			else
 				for(var/mob/M in viewers(1, src.master))
@@ -119,10 +119,10 @@
 		var/timing_text = (src.timing ? "Timing - controls locked" : "Not timing - controls unlocked")
 		var/dat = text("<TT><B>Timing Unit</B><br>[] []:[]<br><A href='?src=\ref[];tp=-30'>-</A> <A href='?src=\ref[];tp=-1'>-</A> <A href='?src=\ref[];tp=1'>+</A> <A href='?src=\ref[];tp=30'>+</A><br></TT>", detonator_trigger ? timing_text : timing_links, minute, second, src, src, src, src)
 		dat += "<BR><BR><A href='?src=\ref[src];close=1'>Close</A>"
-		user.Browse(dat, "window=timer")
+		user << browse(dat, "window=timer")
 		onclose(user, "timer")
 	else
-		user.Browse(null, "window=timer")
+		user << browse(null, "window=timer")
 		user.machine = null
 
 	return
@@ -170,12 +170,12 @@
 				src.time = 90
 
 		if (href_list["close"])
-			usr.Browse(null, "window=timer")
+			usr << browse(null, "window=timer")
 			usr.machine = null
 			return
 
 		if (!src.master)
-			if (ismob(src.loc))
+			if (istype(src.loc, /mob))
 				attack_self(src.loc)
 			else
 				for(var/mob/M in viewers(1, src))
@@ -184,7 +184,7 @@
 		else
 			if (can_use_detonator)
 				src.attack_self(usr)
-			if (ismob(src.master.loc))
+			if (istype(src.master.loc, /mob))
 				src.attack_self(src.master.loc)
 			else
 				for(var/mob/M in viewers(1, src.master))
@@ -192,6 +192,6 @@
 						src.attack_self(M)
 		src.add_fingerprint(usr)
 	else
-		usr.Browse(null, "window=timer")
+		usr << browse(null, "window=timer")
 		return
 	return

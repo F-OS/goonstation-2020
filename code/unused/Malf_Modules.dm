@@ -61,7 +61,6 @@ rcd light flash thingy on matter drain
 	set category = "AI Modules"
 	set name = "Disable RCDs"
 	for(var/obj/item/weapon/rcd/rcd in world)
-		LAGCHECK(LAG_LOW)
 		rcd = new /obj/item/weapon/rcd_fake(rcd)
 	usr.verbs -= /client/proc/disable_rcd
 
@@ -78,7 +77,7 @@ rcd light flash thingy on matter drain
 			overload.uses --
 			for(var/mob/V in hearers(7, M))
 				V.show_message(text("<span style=\"color:blue\">You hear a loud electrical buzzing sound!</span>"))
-			SPAWN_DBG(50)
+			spawn(50)
 				explosion(M, get_turf(M), 0,1,1,0)
 		if(overload.uses <= 0)
 			usr.verbs -= /client/proc/overload_machine
@@ -119,8 +118,8 @@ rcd light flash thingy on matter drain
 	set name = "Reactivate Camera"
 	for(var/datum/game_mode/malfunction/AI_Module/small/reactivate_camera/camera in usr:current_modules)
 		if(camera.uses > 0)
-			if(!C.camera_status)
-				C.camera_status = !C.camera_status
+			if(!C.status)
+				C.status = !C.status
 				camera.uses --
 				for(var/mob/V in hearers(3, C))
 					V.show_message(text("<span style=\"color:blue\">You hear a quiet click.</span>"))
@@ -136,10 +135,9 @@ rcd light flash thingy on matter drain
 
 /client/proc/attack_shuttle()
 	for (var/obj/landmark/A in world)
-		LAGCHECK(LAG_LOW)
 		if (A.name == "AIgunbotshuttle")
 			new /obj/critter/gunbot(A.loc)
-			A.dispose()
+			qdel(A)
 	usr.verbs -= /client/proc/attack_shuttle
 
 
@@ -182,17 +180,6 @@ rcd light flash thingy on matter drain
 
 /datum/game_mode/malfunction/AI_Module/module_picker/Topic(href, href_list)
 	..()
-	/*
-		ATTENTION, ye who wander here.
-		
-		This Topic() is insecure as all hell, because there is nothing stopping the AI from getting all upgrades as soon as he knows the gamemode's ref.
-		He can very easily write byond://?src=[gamemode];turret=1, for instance in order to upgrade his stuff without regard for the processing time.
-		
-		Why didn't I fix it? Because this mode is defunct. So it was easier to leave a warning for you, hopeful individual remaking this.
-		Best regards,
-		SpyGuy, July 2018
-	*/
-	
 //	if (href_list["coreup"])
 //		usr.verbs += /client/proc/fireproof_core
 //		src.temp = "An upgrade to improve core resistance, making it immune to fire and heat. This effect is permanent. One use."

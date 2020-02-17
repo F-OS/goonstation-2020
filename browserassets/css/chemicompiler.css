@@ -1,8 +1,6 @@
 body {
 	background-color: #344;
 	font-family: Courier New;
-	overflow-y: visible;
-	overflow-x: visible;
 }
 
 button.btn, textarea {
@@ -11,7 +9,7 @@ button.btn, textarea {
 }
 
 textarea {
-	width: 85%;
+	width: 100%;
 }
 
 label > span{

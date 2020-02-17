@@ -5,9 +5,6 @@
 	anchored = 1.0
 	power_usage = 250
 	var/datum/light/light
-	var/lr = 1
-	var/lg = 1
-	var/lb = 1
 /*
 /obj/machinery/computer/airtunnel
 	name = "Air Tunnel Control"
@@ -36,11 +33,10 @@
 	..()
 	light = new/datum/light/point
 	light.set_brightness(0.4)
-	light.set_color(lr,lg,lb)
 	light.attach(src)
 
 /obj/machinery/computer/meteorhit(var/obj/O as obj)
-	if(status & BROKEN)	qdel(src)
+	if(stat & BROKEN)	qdel(src)
 	for(var/x in src.verbs)
 		src.verbs -= x
 	set_broken()
@@ -49,7 +45,7 @@
 /obj/machinery/computer/ex_act(severity)
 	switch(severity)
 		if(1.0)
-			//gib(src.loc) NO.
+			gib(src.loc)
 			qdel(src)
 			return
 		if(2.0)
@@ -76,44 +72,44 @@
 		for(var/x in src.verbs)
 			src.verbs -= x
 		set_broken()
-		src.set_density(0)
+		src.density = 0
 
 /obj/machinery/computer/power_change()
 	//if(!istype(src,/obj/machinery/computer/security/telescreen))
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		icon_state = initial(icon_state)
 		src.icon_state += "b"
 		light.disable()
 
 	else if(powered())
 		icon_state = initial(icon_state)
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 		light.enable()
 	else
-		SPAWN_DBG(rand(0, 15))
+		spawn(rand(0, 15))
 			//src.icon_state = "c_unpowered"
 			icon_state = initial(icon_state)
 			src.icon_state += "0"
-			status |= NOPOWER
+			stat |= NOPOWER
 			light.disable()
 
 /obj/machinery/computer/process()
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		return
 	..()
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		return
 	use_power(250)
 
 /obj/machinery/computer/proc/set_broken()
-	if (status & BROKEN) return
+	if (stat & BROKEN) return
 	var/datum/effects/system/harmless_smoke_spread/smoke = new /datum/effects/system/harmless_smoke_spread()
 	smoke.set_up(5, 0, src)
 	smoke.start()
 	icon_state = initial(icon_state)
 	icon_state += "b"
 	light.disable()
-	status |= BROKEN
+	stat |= BROKEN
 
 
 

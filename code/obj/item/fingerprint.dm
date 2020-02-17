@@ -34,7 +34,7 @@
 		if (href_list["read"])
 			var/obj/item/f_card/P = locate(href_list["read"])
 			if ((P && P.loc == src))
-				if (!( ishuman(usr) ))
+				if (!( istype(usr, /mob/living/carbon/human) ))
 					usr << browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", P.name, P.display()), text("window=[]", P.name))
 					onclose(usr, "[P.name]")
 				else
@@ -44,14 +44,14 @@
 		if (ismob(src.loc))
 			var/mob/M = src.loc
 			if (M.machine == src)
-				SPAWN_DBG( 0 )
+				spawn( 0 )
 					src.attack_self(M)
 					return
 	return
 
 /obj/item/fcardholder/attack_hand(mob/user as mob)
 	if (user.contents.Find(src))
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			src.attack_self(user)
 			return
 		src.add_fingerprint(user)
@@ -83,7 +83,7 @@
 		else
 			return
 	src.update()
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		attack_self(user)
 		return
 	return
@@ -192,7 +192,7 @@
 /obj/item/f_card/add_fingerprint()
 
 	..()
-	if (!issilicon(usr))
+	if (!istype(usr, /mob/living/silicon))
 		if (src.fingerprints)
 			if (src.amount > 1)
 				var/obj/item/f_card/F = new /obj/item/f_card( (ismob(src.loc) ? src.loc.loc : src.loc) )

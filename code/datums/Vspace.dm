@@ -7,7 +7,7 @@
 	if (!usr.client) return
 	if (!usr.network_device) return
 
-	if (!isalive(usr) || usr.getStatusDuration("stunned") !=0)
+	if (usr.stat != 0 || usr.stunned !=0)
 		return
 
 	var/mob/living/user = usr
@@ -41,8 +41,7 @@
 		src.add_fingerprint(user)
 
 		// Won't delete the VR character otherwise, which can be confusing (detective's goggles sending you to the existing body in the bomb VR etc).
-		setdead(user)
-		user.death(0)
+		user.stat = 2
 
 		Station_VNet.Leave_Vspace(user)
 		return
@@ -54,7 +53,6 @@ datum/v_space
 		active = 0
 		list/users = list()			  //Who is in V-space
 		list/inactive_bodies = list() //Spare virtual bodies. waste not want not
-		vr_key_dispensed = 0
 
 
 	v_space_network
@@ -63,8 +61,6 @@ datum/v_space
 
 	proc/Enter_Vspace(var/mob/user as mob, var/network_device, var/network)
 	//Who is entering, What they are using to enter, Which network are they entering
-		if(!user)
-			return
 		if(!active)
 			boutput(user, "<span style=\"color:red\">Unable to connect to the Net!</span>")
 			return
@@ -73,7 +69,7 @@ datum/v_space
 			return
 		if(!user:client)
 			return
-		if(!user.mind)
+		if(isnull(user:mind))
 			boutput(user, "<span style=\"color:red\">You don't have a mind!</span>")
 			return
 
@@ -83,8 +79,7 @@ datum/v_space
 //			return
 
 		var/obj/landmark/B = null
-		for (var/obj/landmark/A in landmarks)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/obj/landmark/A in world)
 			if (A.name == network)
 				B = A
 				break
@@ -92,43 +87,33 @@ datum/v_space
 			boutput(user, "<span style=\"color:red\">Invalid network!</span>")
 			return
 
-
-		if (user.mind && user.mind.virtual && user.mind.virtual.qdeled)
-			user.mind.virtual = null
-
 		var/mob/living/carbon/human/character
-		if (user.mind && user.mind.virtual && !isobserver(user))
+		if (user.mind.virtual)
 			var/mob/living/carbon/human/virtual/V = user.mind.virtual
 			V.body = user
 			user.mind.transfer_to(V)
 			character = V
-			character.visible_message("<span style=\"color:blue\"><b>[user.name] logs in!</b></span>")
+			user.visible_message("<span style=\"color:blue\"><b>[user] logs in!</b></span>")
 		else
 			character = create_Vcharacter(user, network_device, network)
 			character.set_loc(B.loc)
-			character.visible_message("<span style=\"color:blue\"><b>[character.name] logs in!</b></span>")
+			user.visible_message("<span style=\"color:blue\"><b>[user] logs in!</b></span>")
 		users.Add(character)
 		// Made much more prominent due to frequent a- and mhelps (Convair880).
 		character.show_text("<h2><font color=red><B>Death in virtual reality will result in a log-out. You can also press one of the logout buttons to leave.</B></font></h2>", "red")
+		alert(character, "Death in virtual reality will result in a log-out, and you can also press one of the logout buttons to leave. Enjoy your stay.", "Now entering V-space")
 		return
 
 
 	proc/Leave_Vspace(var/mob/living/carbon/human/virtual/user)
-		if (!user) return 0
-		//We have a body - give them a VR key if none have been dispensed
-		if(user.mind && user.body && !vr_key_dispensed && user.check_contents_for(/obj/item/device/key/virtual))
-			new /obj/item/device/key/virtual(user.body.loc)
-			vr_key_dispensed = 1
-
 		if (user.client)
-			user.client.reset_view()
-
+			user.client.view = 7
 		for(var/mob/O in oviewers())
 			boutput(O, "<span style=\"color:red\"><b>[user] logs out!</b></span>")
 		if (istype(user.loc,/obj/racing_clowncar/kart))
 			var/obj/racing_clowncar/kart/car = user.loc
 			car.reset()
-		if (isdead(user))
+		if (user.stat == 2)
 			for (var/obj/item/I in user)
 				// Stop littering the place with VR skulls and organs, aaahh (Convair880).
 				if (istype(I,/obj/item/clothing/glasses/vr_fake) || istype(I, /obj/item/parts) || istype(I, /obj/item/organ) || istype(I, /obj/item/skull) || istype(I, /obj/item/clothing/head/butt))
@@ -141,23 +126,12 @@ datum/v_space
 		users.Remove(user)
 		if (user.mind && user.body)
 			user.mind.transfer_to(user.body)
-			user.mind.virtual = null
 			user.body = null
 		else
-			if(user.network_device)
-				var/mob/dead/observer/O = user.ghostize()
-				if (O)
-					O.real_name = user.isghost
-					O.name = O.real_name
-					O.set_loc(user.network_device)
-			else
-				var/mob/dead/observer/O = user.ghostize()
-				if (O)
-					var/arrival_loc = pick(latejoin)
-					O.real_name = user.isghost
-					O.name = O.real_name
-					O.set_loc(arrival_loc)
+			user.ghostize()
 
+		if (user.stat == 2)
+			del(user)
 /*
 		if(!user.client)
 			inactive_bodies += user
@@ -181,9 +155,6 @@ datum/v_space
 		if (inactive_bodies.len)
 			virtual_character = inactive_bodies[1]
 			inactive_bodies -= virtual_character
-			while (inactive_bodies.len && virtual_character.qdeled)
-				virtual_character = inactive_bodies[1]
-				inactive_bodies -= virtual_character
 			virtual_character.full_heal()
 		else
 			virtual_character = new(src)
@@ -192,30 +163,24 @@ datum/v_space
 		virtual_character.body = user
 		virtual_character.Vnetwork = network
 
-		if(ishuman(user))
+		if(istype(user,/mob/living/carbon/human))
 			copy_to(virtual_character, user)
-
-		var/clothing_color = pick("#FF0000","#FFFF00","#00FF00","#00FFFF","#0000FF","#FF00FF")
-		var/obj/item/clothing/under/virtual/C = new
-		var/obj/item/clothing/shoes/virtual/S = new
-		C.set_loc(virtual_character)
-		S.set_loc(virtual_character)
-		C.color = clothing_color
-		S.color = clothing_color
-		virtual_character.equip_if_possible( C, virtual_character.slot_w_uniform )
-		virtual_character.equip_if_possible( S, virtual_character.slot_shoes)
-		if(isobserver(user) && !isAIeye(user))
-			virtual_character.isghost = user.real_name
-			virtual_character.real_name = "Virtual Spectre #[rand(1, 999)]"
-		else
-			virtual_character.real_name = "Virtual [user.real_name]"
+			var/clothing_color = pick("#FF0000","#FFFF00","#00FF00","#00FFFF","#0000FF","#FF00FF")
+			var/obj/item/clothing/under/virtual/C = new
+			var/obj/item/clothing/shoes/virtual/S = new
+			C.set_loc(virtual_character)
+			S.set_loc(virtual_character)
+			C.color = clothing_color
+			S.color = clothing_color
+			virtual_character.equip_if_possible( C, virtual_character.slot_w_uniform )
+			virtual_character.equip_if_possible( S, virtual_character.slot_shoes)
+		virtual_character.real_name = "Virtual [user.real_name]"
 		user.mind.virtual = virtual_character
 		user.mind.transfer_to(virtual_character)
-		SPAWN_DBG (8)
-			if (virtual_character)
-				virtual_character.update_face()
-				virtual_character.update_body()
-				virtual_character.update_clothing()
+		spawn (8)
+			virtual_character.update_face()
+			virtual_character.update_body()
+			virtual_character.update_clothing()
 		return virtual_character
 
 
@@ -252,32 +217,15 @@ datum/v_space
 		character.bioHolder.mobAppearance.underwear = user.bioHolder.mobAppearance.underwear
 		character.bioHolder.mobAppearance.u_color = user.bioHolder.mobAppearance.u_color
 
-		sanitize_null_values(character)
-
 		character.bioHolder.mobAppearance.UpdateMob()
+
+
 		return
 
-	proc/sanitize_null_values(var/mob/living/carbon/human/virtual/character)
-		if (!character.bioHolder.mobAppearance) return
-		var/datum/appearanceHolder/AH = character.bioHolder.mobAppearance
-		if (!AH)
-			AH = new
-		if (AH.customization_first_color == null)
-			AH.customization_first_color = "#101010"
-		if (AH.customization_first == null)
-			AH.customization_first = "None"
-		if (AH.customization_second_color == null)
-			AH.customization_second_color = "#101010"
-		if (AH.customization_second == null)
-			AH.customization_second = "None"
-		if (AH.customization_third_color == null)
-			AH.customization_third_color = "#101010"
-		if (AH.customization_third == null)
-			AH.customization_third = "None"
-		if (AH.e_color == null)
-			AH.e_color = "#101010"
-		if (AH.u_color == null)
-			AH.u_color = "#FEFEFE"
-		if (AH.s_tone == null  || AH.s_tone == "#ffffff")
-			AH.s_tone = "#FEFEFE"
-		return
+
+
+
+
+
+
+

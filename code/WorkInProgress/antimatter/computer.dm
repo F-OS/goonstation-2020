@@ -15,7 +15,7 @@
 
 /obj/machinery/computer/am_engine/New()
 	..()
-	SPAWN_DBG( 24 )
+	spawn( 24 )
 		for(var/obj/machinery/power/am_engine/engine/E in machines)
 			if(E.engine_id == src.engine_id)
 				src.connected_E = E

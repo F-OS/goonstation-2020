@@ -5,10 +5,6 @@
 	var/logged_in = null
 	var/vmode = 0
 
-	lr = 1
-	lg = 0.7
-	lb = 0.03
-
 /obj/machinery/computer/stockexchange/proc/balance()
 	if (!logged_in)
 		return 0
@@ -139,13 +135,12 @@ a.updated {
 			dat += "<a href='?src=\ref[src];archive=\ref[S]' class='[news ? "updated" : "default"]'>(A)</a> <a href='?src=\ref[src];viewhistory=\ref[S]'>(H)</a></td></tr>"
 
 	dat += "</body></html>"
-	user.Browse(dat, "window=computer;size=600x400")
+	user << browse(dat, "window=computer;size=600x400")
 	onclose(user, "computer")
 	return
 
 /obj/machinery/computer/stockexchange/attackby(var/obj/item/I as obj, user as mob)
-	if (istype(I, /obj/item/card/id) || (istype(I, /obj/item/device/pda2) && I:ID_card))
-		if (istype(I, /obj/item/device/pda2) && I:ID_card) I = I:ID_card
+	if (istype(I, /obj/item/card/id))
 		var/obj/item/card/id/ID = I
 		boutput(user, "<span style=\"color:blue\">You swipe the ID card.</span>")
 		var/datum/data/record/account = null
@@ -300,7 +295,7 @@ a.updated {
 			dat += "<div><b style='font-size:1.25em'>[A.headline]</b><br><i>[A.subtitle]</i><br><br>[A.article]<br>- [A.author], [A.spacetime] (via <i>[A.outlet]</i>)</div>"
 			p++
 		dat += "</div></body></html>"
-		usr.Browse(dat, "window=archive_[S.name];size=600x400")
+		usr << browse(dat, "window=archive_[S.name];size=600x400")
 
 	if (href_list["cycleview"])
 		vmode++

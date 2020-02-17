@@ -17,10 +17,10 @@ Contains:
 	desc = "An Odd Device which produces a Black Hole when set up."
 	icon = 'icons/obj/singularity.dmi'
 	icon_state = "TheSingGen"
-	anchored = 0 // so it can be moved around out of crates
+	anchored = 1
 	density = 1
 	mats = 250
-	var/bhole = 0 // it is time. we can trust people to use the singularity For Good - cirr
+	var/bhole = 1
 /* no
 /obj/machinery/the_singularitygen/New()
 	..()
@@ -46,7 +46,8 @@ Contains:
 
 /obj/machinery/the_singularitygen/attackby(obj/item/W, mob/user)
 	src.add_fingerprint(user)
-	if (iswrenchingtool(W))
+
+	if (istype(W, /obj/item/wrench))
 		if (!anchored)
 			anchored = 1
 			playsound(src.loc, "sound/items/Ratchet.ogg", 75, 1)
@@ -73,14 +74,6 @@ Contains:
 	icon_state = "Sing2"
 	anchored = 1
 	density = 1
-	event_handler_flags = IMMUNE_SINGULARITY
-
-	bound_width = 96
-	bound_height = 96
-
-	bound_x = -32
-	bound_y = -32
-
 	var/active = 0
 	var/energy = 10
 	var/warp = 5
@@ -125,12 +118,12 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			energy -= 15
 
 
-	if (prob(20))//Chance for it to run a special event
+	if (prob(15))//Chance for it to run a special event
 		event()
 
 	if (active == 1)
 		move()
-		SPAWN_DBG(11) // slowing this baby down a little -drsingh
+		spawn(11) // slowing this baby down a little -drsingh
 			move()
 	else
 		var/checkpointC = 0
@@ -141,35 +134,32 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			grav_pull = 8
 
 /obj/machinery/the_singularity/proc/eat()
-	for (var/X in orange(grav_pull,get_turf(src)))
-		LAGCHECK(LAG_LOW)
+	for (var/atom/X in orange(grav_pull,src))
+		sleep(-1)
 		if (!X)
 			continue
-		var/atom/A = X
-
-		if (A.event_handler_flags & IMMUNE_SINGULARITY)
+		if (istype(X, /obj/machinery/the_singularity))
 			continue
-
-		if (!active)
-			if (A.event_handler_flags & IMMUNE_SINGULARITY_INACTIVE)
+		if (istype(X, /obj/machinery/containment_field))
+			continue
+		if (istype(X, /obj/machinery/field_generator))
+			var/obj/machinery/field_generator/F = X
+			if (F.active)
 				continue
-
+		if (istype(X, /turf/space))
+			continue
+		if (!active)
+			if (isturf(X, /turf/simulated/floor/engine))
+				continue
 		if (!isarea(X))
 			if (get_dist(src, X) <= 2) // why was this a switch before ffs
-				src.Bumped(A)
-				if (A && A.qdeled)
-					A = null
-					X = null
+				src.Bumped(X)
 			else if (istype(X, /atom/movable))
-				var/atom/movable/AM = X
-				if (!AM.anchored)
-					step_towards(AM, src)
+				var/atom/movable/A = X
+				if (!A.anchored)
+					step_towards(A, src)
 
 /obj/machinery/the_singularity/proc/move()
-	// if we're inside something (e.g posessed mob) dont move
-	if (!isturf(src.loc))
-		return
-
 	if (selfmove)
 		var/dir = pick(cardinal)
 
@@ -184,13 +174,10 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 /obj/machinery/the_singularity/Bumped(atom/A)
 	var/gain = 0
 
-	if (A.event_handler_flags & IMMUNE_SINGULARITY)
+	if (istype(A,/obj/machinery/the_singularity))
 		return
-	if (!active)
-		if (A.event_handler_flags & IMMUNE_SINGULARITY_INACTIVE)
-			return
 
-	if (isliving(A) && !isintangible(A))//if its a mob
+	if (isliving(A))//if its a mob
 		var/mob/living/L = A
 		gain = 20
 		if (ishuman(L))
@@ -198,60 +185,41 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			//Special halloween-time Unkillable gibspam protection!
 			if (H.unkillable)
 				H.unkillable = 0
-			if (H.mind && H.mind.assigned_role)
-				switch (H.mind.assigned_role)
-					if ("Clown")
-						// Hilarious.
-						gain = 500
-					if ("Lawyer")
-						// Satan.
-						gain = 250
-					if ("Tourist", "Geneticist")
-						// Nerds that are oblivious to dangers
-						gain = 200
-					if ("Chief Engineer")
-						// Hubris
-						gain = 150
-					if ("Engineer", "Mechanic")
-						// More hubris
-						gain = 100
-					if ("Staff Assistant", "Captain")
-						// Worthless
-						gain = 20
-					else
-						gain = 50
-
+			if (H.mind)
+				if (H.mind && H.mind.assigned_role == "Station Engineer")
+					gain = 100
 		L.gib()
 
 	else if (isobj(A))
+		if (istype(A, /obj/machinery/containment_field))
+			return
 		//if (istype(A, /obj/item/gravaton_grenade))
 			//src.warp = 100
-
-		if (istype(A, /obj/decal/cleanable)) //MBC : this check sucks, but its far better than cleanables doing hard-delete at the whims of the singularity. replace ASAP when i figure out cleanablessssss
-			pool(A)
-			gain = 2
-		else
-			var/obj/O = A
-			O.ex_act(1.0)
-			if (O)
-				qdel(O)
-			gain = 2
+		var/obj/O = A
+		O.ex_act(1.0)
+		if (O)
+			qdel(O)
+		gain = 2
 
 	else if (isturf(A))
-		var/turf/T = A
-		if (T.turf_flags & IS_TYPE_SIMULATED)
-			if (istype(T, /turf/simulated/floor))
-				T.ReplaceWithSpace()
-				gain = 2
-			else
-				T.ReplaceWithFloor()
+		if (istype(A, /turf/space))
+			return
+		if (!active)
+			if (istype(A, /turf/simulated/floor/engine))
+				return
 
+		var/turf/T = A
+		if (!istype(T, /turf/simulated/floor) && (!istype(T, /turf/space)))
+			T.ReplaceWithFloor()
+		if (istype(T, /turf/simulated/floor) && (!istype(T, /turf/space)))
+			T.ReplaceWithSpace()
+			gain = 2
 	src.energy += gain
 
 /obj/machinery/the_singularity/attackby(var/obj/item/I as obj, var/mob/user as mob)
 	if (istype(I, /obj/item/clothing/mask/cigarette))
 		var/obj/item/clothing/mask/cigarette/C = I
-		if (!C.on)
+		if (C.lit == 0)
 			C.light(user, "<span style=\"color:red\"><b>[user]</b> lights [C] on [src]. Holy fucking shit!</span>")
 		else
 			return ..()
@@ -261,19 +229,22 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 // totally rewrote this proc from the ground-up because it was puke but I want to keep this comment down here vvv so we can bask in the glory of What Used To Be - haine
 		/* uh why was lighting a cig causing the singularity to have an extra process()?
 		   this is dumb as hell, commenting this. the cigarette will get processed very soon. -drsingh
-		SPAWN_DBG(0) //start fires while it's lit
+		spawn() //start fires while it's lit
 			src.process()
 		*/
 
 /////////////////////////////////////////////Controls which "event" is called
 /obj/machinery/the_singularity/proc/event()
-	var/numb = rand(1,4)
-	switch (numb)
+	var/numb = rand(1,6)//pick(1,2,3,4,5,6)
+	switch(numb)
 		if (1)//EMP
 			Zzzzap()
 			return
 		if (2)//Eats the turfs around it
-			BHolerip()
+			if (prob(60))
+				BHolerip()
+			else
+				event()
 			return
 		if (3)//tox damage all carbon mobs in area
 			Toxmob()
@@ -281,6 +252,9 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 		if (4)//Stun mobs who lack optic scanners
 			Mezzer()
 			return
+		else
+			return
+
 
 /obj/machinery/the_singularity/proc/Toxmob()
 	for (var/mob/living/carbon/M in orange(7, src))
@@ -289,49 +263,49 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			if (H.wear_suit)
 				return
 		M.take_toxin_damage(3)
-		M.changeStatus("radiation", 100)
+		M.irradiate(10)
 		M.updatehealth()
 		M.show_text("You feel odd.", "red")
 
 /obj/machinery/the_singularity/proc/Mezzer()
-	for (var/mob/living/carbon/M in oviewers(8, get_turf(src)))
+	for (var/mob/living/carbon/M in oviewers(8, src))
 		if (ishuman(M))
 			var/mob/living/carbon/human/H = M
 			if (istype(H.glasses,/obj/item/clothing/glasses/meson))
 				M.show_text("You look directly into [src.name], good thing you had your protective eyewear on!", "green")
 				return
-		M.changeStatus("stunned", 3 SECONDS)
+		if (M.stunned < 3)
+			M.stunned = 3
 		M.visible_message("<span style=\"color:red\"><B>[M] stares blankly at [src]!</B></span>",\
 		"<B>You look directly into [src]!<br><span style=\"color:red\">You feel weak!</span></B>")
 
 /obj/machinery/the_singularity/proc/BHolerip()
-	for (var/turf/T in orange(6,get_turf(src)))
-		LAGCHECK(LAG_LOW)
+	for (var/turf/T in orange(6,src))
+		sleep(-1)
 		if (prob(70))
-			continue
-		if (T && !(T.turf_flags & CAN_BE_SPACE_SAMPLE) && (get_dist(src,T) == 4 || get_dist(src,T) == 5)) // I'm very tired and this is the least dumb thing I can make of what was here for now
-			if (T.turf_flags & IS_TYPE_SIMULATED)
-				if (istype(T,/turf/simulated/floor) && !istype(T,/turf/simulated/floor/plating))
-					var/turf/simulated/floor/F = T
-					if (!F.broken)
-						if (prob(80))
-							new/obj/item/tile (F)
-							F.break_tile_to_plating()
-						else
-							F.break_tile()
-				else if (istype(T, /turf/simulated/wall))
-					var/turf/simulated/wall/W = T
-					if (istype(W, /turf/simulated/wall/r_wall) || istype(W, /turf/simulated/wall/auto/reinforced))
-						new /obj/structure/girder/reinforced(W)
+			return
+		if (T && !istype(T, /turf/space) && (get_dist(src,T) == 4 || get_dist(src,T) == 5)) // I'm very tired and this is the least dumb thing I can make of what was here for now
+			if (istype(T,/turf/simulated/floor) && !istype(T,/turf/simulated/floor/plating))
+				var/turf/simulated/floor/F = T
+				if (!F.broken)
+					if (prob(80))
+						new/obj/item/tile (F)
+						F.break_tile_to_plating()
 					else
-						new /obj/structure/girder(W)
-					var/obj/item/sheet/S = new /obj/item/sheet(W)
-					if (W.material)
-						S.setMaterial(W.material)
-					else
-						var/datum/material/M = getMaterial("steel")
-						S.setMaterial(M)
-					W.ReplaceWithFloor()
+						F.break_tile()
+			else if (istype(T, /turf/simulated/wall))
+				var/turf/simulated/wall/W = T
+				if (istype(W, /turf/simulated/wall/r_wall) || istype(W, /turf/simulated/wall/auto/reinforced))
+					new /obj/structure/girder/reinforced(W.loc)
+				else
+					new /obj/structure/girder(W.loc)
+				var/obj/item/sheet/S = new /obj/item/sheet(W.loc)
+				if (W.material)
+					S.setMaterial(W.material)
+				else
+					var/datum/material/M = getCachedMaterial("steel")
+					S.setMaterial(M)
+				W.ReplaceWithFloor()
 			else
 				T.ReplaceWithFloor()
 	return
@@ -344,7 +318,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	pulse.icon_state = "emppulse"
 	pulse.name = "emp pulse"
 	pulse.anchored = 1
-	SPAWN_DBG (20)
+	spawn (20)
 		if (pulse)
 			qdel(pulse)
 
@@ -388,15 +362,6 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	var/obj/machinery/power/data_terminal/link = null
 	mats = 14
 
-
-	proc/set_active(var/act)
-		if (src.active != act)
-			src.active = act
-			if (src.active)
-				event_handler_flags |= IMMUNE_SINGULARITY
-			else
-				event_handler_flags &= ~IMMUNE_SINGULARITY
-
 /obj/machinery/field_generator/attack_hand(mob/user as mob)
 	if(state == 3)
 		if(!src.locked)
@@ -406,7 +371,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 				boutput(user, "You are unable to turn off the field generator, wait till it powers down.")
 	//			src.cleanup()
 			else
-				set_active(1)
+				src.active = 1
 				icon_state = "Field_Gen +a"
 				boutput(user, "You turn on the field generator.")
 				logTheThing("station", user, null, "activated a [src.name] at [log_loc(src)].") // Hmm (Convair880).
@@ -421,7 +386,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 		if(src.active >= 1)
 			boutput(user, "You are unable to turn off the field generator, wait till it powers down.")
 		else
-			src.set_active(1)
+			src.active = 1
 			icon_state = "Field_Gen +a"
 			boutput(user, "You turn on the field generator.")
 			logTheThing("station", user, null, "activated a [src.name] at [log_loc(src)].") // Hmm (Convair880).
@@ -431,7 +396,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 /obj/machinery/field_generator/New()
 	..()
-	SPAWN_DBG(6)
+	spawn(6)
 		if(!src.link && (state == 3))
 			src.get_link()
 
@@ -441,7 +406,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 	if(src.Varedit_start == 1)
 		if(src.active == 0)
-			src.set_active(1)
+			src.active = 1
 			src.state = 3
 			src.power = 250
 			src.anchored = 1
@@ -450,13 +415,17 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 	if(src.active == 1)
 		if(!src.state == 3)
-			src.set_active(0)
+			src.active = 0
 			return
-		setup_field(1)
-		setup_field(2)
-		setup_field(4)
-		setup_field(8)
-		src.set_active(2)
+		spawn(1)
+			setup_field(1)
+		spawn(2)
+			setup_field(2)
+		spawn(3)
+			setup_field(4)
+		spawn(4)
+			setup_field(8)
+		src.active = 2
 	if(src.power < 0)
 		src.power = 0
 	if(src.power > src.max_power)
@@ -467,11 +436,15 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			if(src.power <= 0)
 				src.visible_message("<span style=\"color:red\">The [src.name] shuts down due to lack of power!</span>")
 				icon_state = "Field_Gen"
-				src.set_active(0)
-				src.cleanup(1)
-				src.cleanup(2)
-				src.cleanup(4)
-				src.cleanup(8)
+				src.active = 0
+				spawn(1)
+					src.cleanup(1)
+				spawn(1)
+					src.cleanup(2)
+				spawn(1)
+					src.cleanup(4)
+				spawn(1)
+					src.cleanup(8)
 
 /obj/machinery/field_generator/proc/setup_field(var/NSEW = 0)
 	var/turf/T = src.loc
@@ -539,7 +512,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 		src.power += P.power
 
 /obj/machinery/field_generator/attackby(obj/item/W, mob/user)
-	if (iswrenchingtool(W))
+	if(istype(W, /obj/item/wrench))
 		if(active)
 			boutput(user, "Turn off the field generator first.")
 			return
@@ -577,7 +550,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 				W:eyecheck(user)
 				boutput(user, "You weld the field generator to the floor.")
 				src.get_link() //Set up a link, now that we're secure!
-			else if((isrobot(user) && (user.loc == T)))
+			else if((istype(user, /mob/living/silicon/robot) && (user.loc == T)))
 				state = 3
 				boutput(user, "You weld the field generator to the floor.")
 				src.get_link()
@@ -595,7 +568,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 					src.link = null
 				W:eyecheck(user)
 				boutput(user, "You cut the field generator free from the floor.")
-			else if((isrobot(user) && (user.loc == T)))
+			else if((istype(user, /mob/living/silicon/robot) && (user.loc == T)))
 				state = 1
 				if(src.link) //Clear active link.
 					src.link.master = null
@@ -606,7 +579,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	if (istype(W, /obj/item/device/pda2) && W:ID_card)
 		W = W:ID_card
 	if (istype(W, /obj/item/card/id))
-		if (src.allowed(user))
+		if (src.allowed(user, req_only_one_required))
 			src.locked = !src.locked
 			boutput(user, "Controls are now [src.locked ? "locked." : "unlocked."]")
 		else
@@ -663,10 +636,8 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	if(!signal || !src.net_id || signal.encryption)
 		return
 
-	/* People might abuse this but I find it funny
 	if(signal.transmission_method != TRANSMISSION_WIRE) //No radio for us thanks
 		return
-	*/
 
 	var/target = signal.data["sender"]
 
@@ -674,7 +645,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	//Otherwise, ff they aren't addressing us, ignore them
 	if(signal.data["address_1"] != src.net_id)
 		if((signal.data["address_1"] == "ping") && signal.data["sender"])
-			SPAWN_DBG(5) //Send a reply for those curious jerks
+			spawn(5) //Send a reply for those curious jerks
 				src.post_status(target, "command", "ping_reply", "device", "PNET_ENG_FIELD", "netid", src.net_id)
 
 		return
@@ -685,12 +656,8 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 	//Oh okay, time to start up.
 	if(sigcommand == "activate" && !src.active)
-		src.set_active(1)
+		src.active = 1
 		icon_state = "Field_Gen +a"
-
-	if(sigcommand == "deactivate" && src.active)
-		src.set_active(0)
-		icon_state = "Field_Gen"
 
 	return
 
@@ -713,7 +680,6 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	icon_state = "Contain_F"
 	anchored = 1
 	density = 0
-	event_handler_flags = USE_FLUID_ENTER | IMMUNE_SINGULARITY | USE_CANPASS
 	var/active = 1
 	var/power = 10
 	var/delay = 5
@@ -724,6 +690,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	var/datum/light/light
 
 /obj/machinery/containment_field/New(var/obj/machinery/field_generator/A, var/obj/machinery/field_generator/B)
+	..()
 	src.gen_primary = A
 	src.gen_secondary = B
 	light = new /datum/light/point
@@ -731,8 +698,6 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	light.set_color(0, 0.1, 0.8)
 	light.attach(src)
 	light.enable()
-
-	..()
 
 /obj/machinery/containment_field/attack_hand(mob/user as mob)
 	return
@@ -757,15 +722,13 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
 	s.set_up(5, 1, user.loc)
 	s.start()
-
 	src.power = max(gen_primary.power,gen_secondary.power)
-
 	var/prot = 1
 	var/shock_damage = 0
 	if(src.power > 200)
-		shock_damage = min(rand(40,80),rand(40,100))*prot
+		shock_damage = min(rand(40,100),rand(40,100))*prot
 	else if(src.power > 120)
-		shock_damage = min(rand(30,60),rand(30,90))*prot
+		shock_damage = min(rand(30,90),rand(30,90))*prot
 	else if(src.power > 80)
 		shock_damage = min(rand(20,40),rand(20,40))*prot
 	else if(src.power > 60)
@@ -776,57 +739,41 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	// Added (Convair880).
 	logTheThing("combat", user, null, "was shocked by a containment field at [log_loc(src)].")
 
-	if (user && user.bioHolder)
-		if (user.bioHolder.HasEffect("resist_electric") == 2)
-			var/healing = 0
-			if (shock_damage)
-				healing = shock_damage / 3
-			user.HealDamage("All", shock_damage, shock_damage)
-			user.take_toxin_damage(0 - healing)
-			boutput(user, "<span style=\"color:blue\">You absorb the electrical shock, healing your body!</span>")
-			return
-		else if (user.bioHolder.HasEffect("resist_electric") == 1)
-			boutput(user, "<span style=\"color:blue\">You feel electricity course through you harmlessly!</span>")
-			return
+	if (user.bioHolder.HasEffect("resist_electric") == 2)
+		var/healing = 0
+		if (shock_damage)
+			healing = shock_damage / 3
+		user.HealDamage("All", shock_damage, shock_damage)
+		user.take_toxin_damage(0 - healing)
+		boutput(user, "<span style=\"color:blue\">You absorb the electrical shock, healing your body!</span>")
+		return
+	else if (user.bioHolder.HasEffect("resist_electric") == 1)
+		boutput(user, "<span style=\"color:blue\">You feel electricity course through you harmlessly!</span>")
+		return
 
 	user.TakeDamage(user.hand == 1 ? "l_arm" : "r_arm", 0, shock_damage)
 	user.updatehealth()
 	boutput(user, "<span style=\"color:red\"><B>You feel a powerful shock course through your body sending you flying!</B></span>")
 	user.unlock_medal("HIGH VOLTAGE", 1)
-	if (isliving(user))
+	if (istype(user,/mob/living/))
 		var/mob/living/L = user
 		L.Virus_ShockCure(100)
 		L.shock_cyberheart(100)
-	if(user.getStatusDuration("stunned") < shock_damage * 10)	user.changeStatus("stunned", shock_damage * 10)
-	if(user.getStatusDuration("weakened") < shock_damage * 10)	user.changeStatus("weakened", shock_damage * 10)
-
-	if(user.get_burn_damage() >= 500) //This person has way too much BURN, they've probably been shocked a lot! Let's destroy them!
-		user.visible_message("<span style=\"color:red;font-weight:bold;\">[user.name] was disintegrated by the [src.name]!</span>")
-		user.elecgib()
-		return
-	else
-		var/throwdir = get_dir(src, get_step_away(user, src))
-		if (prob(20))
-			user.set_loc(get_turf(src))
-			if (prob(50))
-				throwdir = turn(throwdir,90)
-			else
-				throwdir = turn(throwdir,-90)
-		var/atom/target = get_edge_target_turf(user, throwdir)
-		user.throw_at(target, 200, 4)
-		for(var/mob/M in AIviewers(src))
-			if(M == user)	continue
-			M.show_message("<span style=\"color:red\">[user.name] was shocked by the [src.name]!</span>", 3, "<span style=\"color:red\">You hear a heavy electrical crack</span>", 2)
-
+	if(user.stunned < shock_damage)	user.stunned = shock_damage
+	if(user.weakened < 10*prot)	user.weakened = 10*prot
+	var/atom/target = get_edge_target_turf(user, get_dir(src, get_step_away(user, src)))
+	user.throw_at(target, 200, 4)
+	for(var/mob/M in AIviewers(src))
+		if(M == user)	continue
+		M.show_message("<span style=\"color:red\">[user.name] was shocked by the [src.name]!</span>", 3, "<span style=\"color:red\">You hear a heavy electrical crack</span>", 2)
 	src.gen_primary.power -= 3
 	src.gen_secondary.power -= 3
 	return
 
-/obj/machinery/containment_field/CanPass(atom/movable/O as mob|obj, target as turf, height=0, air_group=0)
-	if(iscarbon(O) && prob(80))
-		shock(O)
-	..()
-
+/obj/machinery/containment_field/HasProximity(atom/movable/AM as mob|obj)
+	if(iscarbon(AM) && prob(50))
+		shock(AM)
+		return
 
 /////////////////////////////////////////// Emitter ///////////////////////////////
 /obj/machinery/emitter
@@ -853,7 +800,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 /obj/machinery/emitter/New()
 	..()
-	SPAWN_DBG(6)
+	spawn(6)
 		if(!src.link && (state == 3))
 			src.get_link()
 
@@ -923,7 +870,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 /obj/machinery/emitter/process()
 
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 
 	if(!src.state == 3)
@@ -951,7 +898,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	..()
 
 /obj/machinery/emitter/attackby(obj/item/W, mob/user)
-	if (iswrenchingtool(W))
+	if(istype(W, /obj/item/wrench))
 		if(active)
 			boutput(user, "Turn off the emitter first.")
 			return
@@ -961,7 +908,6 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			playsound(src.loc, "sound/items/Ratchet.ogg", 75, 1)
 			boutput(user, "You secure the external reinforcing bolts to the floor.")
 			src.anchored = 1
-			desc = "Shoots a high power laser when active, it has been bolted to the floor."
 			return
 
 		else if(state == 1)
@@ -969,7 +915,6 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			playsound(src.loc, "sound/items/Ratchet.ogg", 75, 1)
 			boutput(user, "You undo the external reinforcing bolts.")
 			src.anchored = 0
-			desc = "Shoots a high power laser when active."
 			return
 
 	if(istype(W, /obj/item/weldingtool) && W:welding)
@@ -991,10 +936,9 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 				state = 3
 				src.get_link()
 				boutput(user, "You weld the emitter to the floor.")
-			else if((isrobot(user) && (user.loc == T)))
+			else if((istype(user, /mob/living/silicon/robot) && (user.loc == T)))
 				state = 3
 				src.get_link()
-				desc = "Shoots a high power laser when active, it has been bolted and welded to the floor."
 				boutput(user, "You weld the emitter to the floor.")
 			return
 
@@ -1007,21 +951,19 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 				if(src.link) //Time to clear our link.
 					src.link.master = null
 					src.link = null
-					desc = "Shoots a high power laser when active, it has been bolted to the floor."
 				boutput(user, "You cut the emitter free from the floor.")
-			else if((isrobot(user) && (user.loc == T)))
+			else if((istype(user, /mob/living/silicon/robot) && (user.loc == T)))
 				state = 1
 				if(src.link)
 					src.link.master = null
 					src.link = null
-					desc = "Shoots a high power laser when active, it has been bolted to the floor."
 				boutput(user, "You cut the emitter free from the floor.")
 			return
 
 	if (istype(W, /obj/item/device/pda2) && W:ID_card)
 		W = W:ID_card
 	if (istype(W, /obj/item/card/id))
-		if (src.allowed(user))
+		if (src.allowed(user, req_only_one_required))
 			src.locked = !src.locked
 			boutput(user, "Controls are now [src.locked ? "locked." : "unlocked."]")
 			if (!src.locked)
@@ -1073,7 +1015,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	//Otherwise, ff they aren't addressing us, ignore them
 	if(signal.data["address_1"] != src.net_id)
 		if((signal.data["address_1"] == "ping") && signal.data["sender"])
-			SPAWN_DBG(5) //Send a reply for those curious jerks
+			spawn(5) //Send a reply for those curious jerks
 				src.post_status(target, "command", "ping_reply", "device", "PNET_ENG_EMITR", "netid", src.net_id)
 
 		return
@@ -1110,7 +1052,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	desc = "A device which uses Hawking Radiation and plasma to produce power."
 	icon = 'icons/obj/singularity.dmi'
 	icon_state = "ca"
-	anchored = 0 // cargo craaaates
+	anchored = 1
 	density = 1
 	directwired = 1
 	var/magic = 0
@@ -1120,13 +1062,13 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 /obj/machinery/power/collector_array/New()
 	..()
-	SPAWN_DBG(5)
+	spawn(5)
 		updateicon()
 
 
 /obj/machinery/power/collector_array/proc/updateicon()
 
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		overlays = null
 	if(P)
 		overlays += image('icons/obj/singularity.dmi', "ptank")
@@ -1164,53 +1106,40 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	if(src.active==1)
 		src.active = 0
 		icon_state = "ca_deactive"
-		if(CU)
-			CU.updatecons()
+		CU.updatecons()
 		boutput(user, "You turn off the collector array.")
 		return
 
 	if(src.active==0)
 		src.active = 1
 		icon_state = "ca_active"
-		if(CU)
-			CU.updatecons()
+		CU.updatecons()
 		boutput(user, "You turn on the collector array.")
 		return
 
 /obj/machinery/power/collector_array/attackby(obj/item/W, mob/user)
-	if (iswrenchingtool(W))
-		if(src.active)
-			boutput("<span style='color: red'>The [src.name] must be turned off first!</span>")
-		else
-			if (!src.anchored)
-				playsound(src.loc, "sound/items/Ratchet.ogg", 75, 1)
-				boutput(user, "You secure the [src.name] to the floor.")
-				src.anchored = 1
-			else
-				playsound(src.loc, "sound/items/Ratchet.ogg", 75, 1)
-				boutput(user, "You unsecure the [src.name].")
-				src.anchored = 0
-			logTheThing("station", user, null, "[src.anchored ? "bolts" : "unbolts"] a [src.name] [src.anchored ? "to" : "from"] the floor at [log_loc(src)].") // Ditto (Convair880).
-	else if(istype(W, /obj/item/tank/plasma))
+	if(istype(W, /obj/item/tank/plasma))
 		if(src.P)
 			boutput(user, "<span style=\"color:red\">There appears to already be a plasma tank loaded!</span>")
 			return
 		src.P = W
 		W.set_loc(src)
 		user.u_equip(W)
-		if(CU)
-			CU.updatecons()
+		CU.updatecons()
 		updateicon()
-	else if (ispryingtool(W))
+		return
+
+	if(istype(W, /obj/item/crowbar))
 		if(!P)
 			return
 		var/obj/item/tank/plasma/Z = src.P
 		Z.set_loc(get_turf(src))
 		Z.layer = initial(Z.layer)
 		src.P = null
-		if(CU)
-			CU.updatecons()
+		CU.updatecons()
 		updateicon()
+		return
+
 	else
 		src.add_fingerprint(user)
 		boutput(user, "<span style=\"color:red\">You hit the [src.name] with your [W.name]!</span>")
@@ -1225,7 +1154,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 	desc = "A device which uses Hawking Radiation and Plasma to produce power."
 	icon = 'icons/obj/singularity.dmi'
 	icon_state = "cu"
-	anchored = 0 // so it can be moved around out of a crate
+	anchored = 1
 	density = 1
 	directwired = 1
 	var/magic = 0
@@ -1247,7 +1176,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 
 /obj/machinery/power/collector_control/New()
 	..()
-	SPAWN_DBG(10)
+	spawn(10)
 		updatecons()
 
 /obj/machinery/power/collector_control/proc/updatecons()
@@ -1294,19 +1223,19 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			S1 = null
 
 		updateicon()
-		SPAWN_DBG(600)
+		spawn(600)
 			updatecons()
 
 	else
 		updateicon()
-		SPAWN_DBG(600)
+		spawn(600)
 			updatecons()
 
 /obj/machinery/power/collector_control/proc/updateicon()
 
 	if(magic != 1)
 
-		if(status & (NOPOWER|BROKEN))
+		if(stat & (NOPOWER|BROKEN))
 			overlays = null
 		else
 			overlays = null
@@ -1392,20 +1321,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 		return
 
 /obj/machinery/power/collector_control/attackby(obj/item/W, mob/user)
-	if (iswrenchingtool(W))
-		if(src.active)
-			boutput("<span style='color: red'>The [src.name] must be turned off first!</span>")
-		else
-			if (!src.anchored)
-				playsound(src.loc, "sound/items/Ratchet.ogg", 75, 1)
-				boutput(user, "You secure the [src.name] to the floor.")
-				src.anchored = 1
-			else
-				playsound(src.loc, "sound/items/Ratchet.ogg", 75, 1)
-				boutput(user, "You unsecure the [src.name].")
-				src.anchored = 0
-			logTheThing("station", user, null, "[src.anchored ? "bolts" : "unbolts"] a [src.name] [src.anchored ? "to" : "from"] the floor at [log_loc(src)].") // Ditto (Convair880).
-	else if(istype(W, /obj/item/device/analyzer/atmospheric))
+	if(istype(W, /obj/item/device/analyzer))
 		boutput(user, "<span style=\"color:blue\">The analyzer detects that [lastpower]W are being produced.</span>")
 
 	else
@@ -1437,7 +1353,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 /obj/machinery/the_singularitybomb/attackby(obj/item/W, mob/user)
 	src.add_fingerprint(user)
 
-	if (iswrenchingtool(W))
+	if(istype(W, /obj/item/wrench))
 
 		if(state == 0)
 			state = 1
@@ -1477,7 +1393,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 				state = 3
 				icon_state = "portgen1"
 				boutput(user, "You weld the bomb to the floor.")
-			else if((isrobot(user) && (user.loc == T)))
+			else if((istype(user, /mob/living/silicon/robot) && (user.loc == T)))
 				state = 3
 				icon_state = "portgen1"
 				boutput(user, "You weld the bomb to the floor.")
@@ -1496,7 +1412,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 				state = 1
 				icon_state = "portgen0"
 				boutput(user, "You cut the bomb free from the floor.")
-			else if((isrobot(user) && (user.loc == T)))
+			else if((istype(user, /mob/living/silicon/robot) && (user.loc == T)))
 				state = 1
 				icon_state = "portgen0"
 				boutput(user, "You cut the bomb free from the floor.")
@@ -1565,18 +1481,18 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			src.time = min(max(round(src.time), 60), 600)
 
 		if (href_list["close"])
-			usr.Browse(null, "window=timer")
+			usr << browse(null, "window=timer")
 			usr.machine = null
 			return
 		*/
-		if (ismob(src.loc))
+		if (istype(src.loc, /mob))
 			attack_hand(src.loc)
 		else
 			src.updateUsrDialog()
 
 		src.add_fingerprint(usr)
 	else
-		usr.Browse(null, "window=timer")
+		usr << browse(null, "window=timer")
 		return
 	return
 
@@ -1596,10 +1512,10 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 		var/dat = text("<TT><B>Timing Unit</B><br>[] []:[]<br><A href='?src=\ref[];tp=-30'>-</A> <A href='?src=\ref[];tp=-1'>-</A> <A href='?src=\ref[];tp=1'>+</A> <A href='?src=\ref[];tp=30'>+</A><br></TT>", (src.timing ? text("<A href='?src=\ref[];time=0'>Timing</A>", src) : text("<A href='?src=\ref[];time=1'>Not Timing</A>", src)), minute, second, src, src, src, src)
 		dat += "<BR><BR><A href='?src=\ref[src];close=1'>Close</A>"
 		*/
-		user.Browse(src.get_interface(), "window=timer")
+		user << browse(src.get_interface(), "window=timer")
 		onclose(user, "timer")
 	else
-		user.Browse(null, "window=timer")
+		user << browse(null, "window=timer")
 		user.machine = null
 
 	src.add_fingerprint(user)
@@ -1611,7 +1527,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 		O.show_message("[bicon(src)] *beep* *beep*", 3, "*beep* *beep*", 2)
 
 
-	playsound(T, 'sound/effects/creaking_metal1.ogg', 100, 0, 5, 0.5)
+	playsound(T, 'sound/ambience/creaking_metal.ogg', 100, 0, 5, 0.5)
 	for (var/mob/M in range(7,T))
 		boutput(M, "<span class='bold alert'>The contaiment field on \the [src] begins destabilizing!</span>")
 		shake_camera(M, 5, 1)
@@ -1619,7 +1535,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 		animate_shake(TF,5,1 * get_dist(TF,T),1 * get_dist(TF,T))
 	particleMaster.SpawnSystem(new /datum/particleSystem/bhole_warning(T))
 
-	SPAWN_DBG(30)
+	spawn(30)
 		for (var/mob/M in range(7,T))
 			boutput(M, "<span class='bold alert'>The containment field on \the [src] fails completely!</span>")
 			shake_camera(M, 5, 1)
@@ -1651,7 +1567,7 @@ for some reason I brought it back and tried to clean it up a bit and I regret ev
 			src.timing = 0
 			last_tick = 0
 
-		if (ismob(src.loc))
+		if (istype(src.loc, /mob))
 			attack_hand(src.loc)
 		else
 			for(var/mob/M in viewers(1, src))

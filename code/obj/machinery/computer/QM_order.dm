@@ -6,25 +6,10 @@
 	var/obj/item/card/id/scan = null
 	var/console_location = null
 
-	lr = 1
-	lg = 0.7
-	lb = 0.03
-
 	New()
 		..()
 		console_location = get_area(src)
 		return
-
-	disposing()
-		radio_controller.remove_object(src, "1149")
-		..()
-
-/obj/machinery/computer/ordercomp/console_upper
-	icon = 'icons/obj/computerpanel.dmi'
-	icon_state = "qmreq1"
-/obj/machinery/computer/ordercomp/console_lower
-	icon = 'icons/obj/computerpanel.dmi'
-	icon_state = "qmreq1"
 
 /obj/machinery/computer/ordercomp/attackby(I as obj, user as mob)
 	return src.attack_hand(user)
@@ -36,17 +21,14 @@
 /obj/machinery/computer/ordercomp/attack_hand(var/mob/user as mob)
 	if(..())
 		return
-
-	if (!global.QM_CategoryList)
-		message_coders("ZeWaka/QMCategories: QMcategoryList was not found!")
-
 	user.machine = src
 	var/dat
 	if (src.temp)
 		dat = src.temp
 	else
 
-		dat += {"<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR>
+		dat += {"<B>Supply Ordering Console</B><HR>
+		<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR>
 		<B>Scanned Card:</B> <A href='?src=\ref[src];card=1'>([src.scan])</A><BR><HR>"}
 		if(src.scan != null)
 			var/datum/data/record/account = null
@@ -58,13 +40,12 @@
 		<A href='?src=\ref[src];buypoints=1'>Purchase Supply Points</A><BR>
 		<A href='?action=mach_close&window=computer'>Close</A>"}
 		//<A href='?src=\ref[src];vieworders=1'>View Approved Orders</A><BR><BR> This right here never worked anyway.
-	user.Browse(dat, "title=Supply Request Console;window=computer_[src];size=575x450")
-	onclose(user, "computer_[src]")
+	user << browse(dat, "window=computer;size=575x450")
+	onclose(user, "computer")
 	return
 
 /obj/machinery/computer/ordercomp/attackby(var/obj/item/I as obj, user as mob)
-	if (istype(I, /obj/item/card/id) || (istype(I, /obj/item/device/pda2) && I:ID_card))
-		if (istype(I, /obj/item/device/pda2) && I:ID_card) I = I:ID_card
+	if (istype(I, /obj/item/card/id))
 		boutput(user, "<span style=\"color:blue\">You swipe the ID card.</span>")
 		var/datum/data/record/account = null
 		account = FindBankAccountByName(I:registered)
@@ -86,7 +67,7 @@
 	if(..())
 		return
 
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 
 	if (href_list["order"])
@@ -97,55 +78,19 @@
 		else
 			src.temp = "<B>Shipping Budget:</B> [wagesystem.shipping_budget] Credits<BR><HR>"
 		src.temp += "<B>Please select the Supply Package you would like to request:</B><BR><BR>"
-
-		src.temp += {"<style>
-			table {border-collapse: collapse;}
-			th,td {padding: 5px;}
-			.categoryGroup {padding:5px; margin-bottom:8px; border:1px solid black}
-			.categoryGroup .title {display:block; color:white; padding: 2px 5px; margin: -5px -5px 2px -5px;
-															width: auto;
-															height: auto; /* MAXIMUM COMPATIBILITY ACHIEVED */
-															filter: glow(color=black,strength=1);
-															text-shadow: -1px -1px 0 #000,
-																						1px -1px 0 #000,
-																						-1px 1px 0 #000,
-																						 1px 1px 0 #000;}
-		</style>"}
-
-		for (var/foundCategory in global.QM_CategoryList)
-			var/categorycolor = random_color()
-
-			src.temp += {"<div class='categoryGroup' id='[foundCategory]' style='border-color:[categorycolor]'>
-											<b class='title' style='background:[categorycolor]'>[foundCategory]</b>"}
-
-			src.temp += "<table border=1>"
-			src.temp += "<tr><th>Item</th><th>Cost (Credits)</th><th>Contents</th></tr>"
-
-			for (var/datum/supply_packs/S in qm_supply_cache) //yes I know what this is doing, feel free to make it more perf-friendly
-				if(S.syndicate || S.hidden) continue
-				if (S.category == foundCategory)
-					src.temp += "<tr><td><a href='?src=\ref[src];doorder=\ref[S]'><b><u>[S.name]</u></b></a></td><td>[S.cost]</td><td>[S.desc]</td></tr>"
-				LAGCHECK(LAG_LOW)
-
-			src.temp+="</table></div>"
-
-		src.temp += "<hr><A href='?src=\ref[src];mainmenu=1'>Main Menu</A><br>"
+		for(var/datum/supply_packs/S in qm_supply_cache)
+			if(S.hidden || S.syndicate) continue //Well, let's not emag this.
+			src.temp += {"<A href='?src=\ref[src];doorder=\ref[S]'><B><U>[S.name]</U></B></A><BR>
+			<B>Cost:</B> [S.cost] Credits<BR>
+			<B>Contents:</B> [S.desc]<BR><BR>"}
+		src.temp += "<BR><A href='?src=\ref[src];mainmenu=1'>OK</A>"
 
 	else if (href_list["doorder"])
 		var/datum/data/record/account = null
 		if(src.scan) account = FindBankAccountByName(src.scan.registered)
 		var/datum/supply_order/O = new/datum/supply_order ()
 		var/datum/supply_packs/P = locate(href_list["doorder"])
-		if(istype(P))
-			// The order computer has no emagged / other ability to display hidden or syndicate packs.
-			// It follows that someone's being clever if trying to order either of these items
-			if(P.syndicate || P.hidden)
-				// Get that jerk
-				if (usr in range(1))
-					//Check that whoever's doing this is nearby - otherwise they could gib any old scrub
-					trigger_anti_cheat(usr, "tried to href exploit order packs on [src]")
-
-				return
+		if(P)
 			if(account) //buy it with their money
 				if(account.fields["current_money"] < P.cost)
 					src.temp = "Insufficient funds in account. Log out to request purchase using supply budget.<BR>"
@@ -154,8 +99,7 @@
 					O.object = P
 					O.orderedby = usr.name
 					O.console_location = src.console_location
-					process_supply_order(O,usr)
-					logTheThing("station", usr, null, "ordered a [P.name] at [log_loc(src)].")
+					process_supply_order(O)
 					src.temp = "Your order has been processed and will be delivered shortly.<BR>"
 					supply_history += "[O.object.name] ordered by [O.orderedby] for [P.cost] credits from personal account.<BR>"
 
@@ -198,12 +142,7 @@
 		if (src.scan) src.scan = null
 		else
 			var/obj/item/I = usr.equipped()
-			if (istype(I, /obj/item/magtractor))
-				var/obj/item/magtractor/mag = I
-				if (istype(mag.holding, /obj/item/card/id))
-					I = mag.holding
-			if (istype(I, /obj/item/card/id) || (istype(I, /obj/item/device/pda2) && I:ID_card))
-				if (istype(I, /obj/item/device/pda2) && I:ID_card) I = I:ID_card
+			if (istype(I, /obj/item/card/id))
 				boutput(usr, "<span style=\"color:blue\">You swipe the ID card.</span>")
 				var/datum/data/record/account = null
 				account = FindBankAccountByName(I:registered)

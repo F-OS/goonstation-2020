@@ -42,7 +42,7 @@
 	A.icon = 'icons/effects/effects.dmi'
 	A.name = "a batarang"
 	A.anchored = 0
-	A.set_density(0)
+	A.density = 0
 	var/i
 	for(i=0, i<100, i++)
 		step_to(A,T,0)
@@ -61,7 +61,7 @@
 	set name = "Bat Kick \[Combat]"
 	set desc = "A powerful stunning kick, sending people flying across the room"
 
-	SPAWN_DBG(0)
+	spawn(0)
 		if(T)
 			for(var/mob/O in viewers(src, null))
 				O.show_message(text("<span style=\"color:red\"><B>[] powerfully kicks []!</B></span>", usr, T), 1)
@@ -79,12 +79,12 @@
 	set desc = "Unstuns you"
 
 	if(!usr.weakened)
-		usr.getStatusDuration("stunned") = 0
+		usr.stunned = 0
 		for(var/mob/O in viewers(src, null))
 			O.show_message(text("<span style=\"color:red\"><B>[] suddenly recovers!</B></span>", usr), 1)
 	else
-		usr.delStatus("weakened")
-		usr.getStatusDuration("stunned") = 0
+		usr.weakened = 0
+		usr.stunned = 0
 		for(var/mob/O in viewers(src, null))
 			O.show_message(text("<span style=\"color:red\"><B>[] suddenly jumps up!</B></span>", usr), 1)
 
@@ -96,7 +96,7 @@
 	if(usr.stat)
 		boutput(usr, "<span style=\"color:red\">Not when you're incapped!</span>")
 		return
-	SPAWN_DBG(0)
+	spawn(0)
 		for(var/mob/O in viewers(src, null))
 			O.show_message(text("<span style=\"color:red\"><B>[] punches []!</B></span>", usr, T), 1)
 		var/zone = "chest"
@@ -106,9 +106,9 @@
 			zone = "head"
 		T.TakeDamage(zone, 4, 0)
 		T.stunned += 1
-		var/image/I = image('icons/effects/effects.dmi',prob(50) ? "batpow" : "batwham")
+		var/icon/I = icon('icons/effects/effects.dmi',prob(50) ? "batpow" : "batwham")
 		T.overlays += I
-		SPAWN_DBG(50) T.overlays -= I
+		spawn(50) T.overlays -= I
 		T.updatehealth()
 
 /mob/proc/batspinkick(mob/T as mob in oview(1))
@@ -116,12 +116,12 @@
 	set name = "Batkick \[Finisher]"
 	set desc = "A spinning kick that drops motherfuckers to the CURB"
 
-	var/image/I = image('icons/effects/effects.dmi',"batpow")
-	var/image/R = image('icons/effects/effects.dmi', "batwham")
+	var/icon/I = icon('icons/effects/effects.dmi',"batpow")
+	var/icon/R = icon('icons/effects/effects.dmi', "batwham")
 	if(usr.stat)
 		boutput(usr, "<span style=\"color:red\">Not when you're incapped!</span>")
 		return
-	SPAWN_DBG(0)
+	spawn(0)
 		T.transforming = 1
 		src.transforming = 1
 		for(var/mob/O in viewers(src, null))
@@ -208,7 +208,7 @@
 	set name = "Bat Spin \[Finisher]"
 	set desc = "Grab someone and spin them around until they explode"
 
-	SPAWN_DBG(0)
+	spawn(0)
 		for(var/mob/O in viewers(src, null))
 			O.show_message(text("<span style=\"color:red\"><B>[] grabs [] tightly!</B></span>", usr, T), 1)
 		usr.transforming = 1
@@ -255,7 +255,7 @@
 	set name = "Drop Kick \[Disabler]"
 	set desc = "Fall to the ground, leap up and knock a dude out"
 
-	SPAWN_DBG(0)
+	spawn(0)
 		for(var/mob/O in viewers(src, null))
 			O.show_message(text("<span style=\"color:red\"><B>[] falls to the ground</B>!</span>", usr), 1)
 		usr.weakened += 760 // lol whatever
@@ -269,7 +269,7 @@
 				T.stunned += 10
 				for(var/mob/O in viewers(src, null))
 					O.show_message(text("<span style=\"color:red\"><B>[] flies at [], slamming \him in the head</B>!</span>", usr, T), 1)
-				usr.delStatus("weakened")
+				usr.weakened = 0
 				i=100
 			sleep(1)
 

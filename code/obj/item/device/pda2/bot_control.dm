@@ -93,11 +93,6 @@
 			return
 
 		var/obj/item/device/pda2/PDA = src.master
-		var/turf/summon_turf = get_turf(PDA)
-		if (isAIeye(usr))
-			summon_turf = get_turf(usr)
-			if (!(summon_turf.cameras && summon_turf.cameras.len))
-				summon_turf = get_turf(PDA)
 
 		switch(href_list["op"])
 
@@ -118,7 +113,7 @@
 				post_status(control_freq, "command", "bot_status", "active", active)
 
 			if("summon")
-				post_status(control_freq, "command", "summon", "active", active, "target", summon_turf )
+				post_status(control_freq, "command", "summon", "active", active, "target", get_turf(PDA) )
 				post_status(control_freq, "command", "bot_status", "active", active)
 
 		return

@@ -12,107 +12,91 @@
 
 	New()
 		..()
-		SPAWN_DBG(5)
+		spawn(5)
 			if (kit_styles && kit_styles.len)
 				icon_state = pick(kit_styles)
-				item_state = icon_state
 
 /obj/item/storage/firstaid/regular
 	icon_state = "firstaid1"
-	item_state = "firstaid1"
+	item_state = "firstaid"
 	desc = "A general medical kit that contains medical patches for both brute damage and burn damage. Also contains an epinephrine syringe for emergency use and a health analyzer."
 	kit_styles = list("firstaid1", "firstaid2", "firstaid3")
 	spawn_contents = list(/obj/item/reagent_containers/patch/bruise = 2,\
 	/obj/item/reagent_containers/pill/salicylic_acid,\
 	/obj/item/reagent_containers/patch/burn = 2,\
-	/obj/item/device/analyzer/healthanalyzer,\
+	/obj/item/device/healthanalyzer,\
 	/obj/item/reagent_containers/emergency_injector/epinephrine)
 
 	// Comes with upgraded health scanner.
 	doctor_spawn
-		spawn_contents = list(/obj/item/reagent_containers/mender/brute,\
-		/obj/item/reagent_containers/mender/burn,\
-		/obj/item/reagent_containers/patch/bruise,\
-		/obj/item/reagent_containers/patch/burn,\
+		spawn_contents = list(/obj/item/reagent_containers/patch/bruise = 2,\
 		/obj/item/reagent_containers/pill/salicylic_acid,\
-		/obj/item/device/analyzer/healthanalyzer/borg,\
+		/obj/item/reagent_containers/patch/burn = 2,\
+		/obj/item/device/healthanalyzer/borg,\
 		/obj/item/reagent_containers/emergency_injector/epinephrine)
-		
 
 /obj/item/storage/firstaid/brute
 	name = "brute first aid"
 	icon_state = "brute1"
-	item_state = "brute1"
+	item_state = "firstaid-brute"
 	desc = "A medical kit that contains several medical patches and pills for treating brute injuries. Contains one epinephrine syringe for emergency use and a health analyzer."
 	kit_styles = list("brute1", "brute2", "brute3", "brute4")
-	spawn_contents = list(\
-	/obj/item/reagent_containers/mender/brute,\
-	/obj/item/reagent_containers/patch/mini/bruise = 1,\
-	/obj/item/device/analyzer/healthanalyzer,\
+	spawn_contents = list(/obj/item/reagent_containers/patch/bruise = 4,\
+	/obj/item/device/healthanalyzer,\
 	/obj/item/reagent_containers/emergency_injector/epinephrine,\
 	/obj/item/bandage)
 
 /obj/item/storage/firstaid/fire
 	name = "fire first aid"
 	icon_state = "burn1"
-	item_state = "burn1"
+	item_state = "firstaid-ointment"
 	desc = "A medical kit that contains several medical patches and pills for treating burns. Contains one epinephrine syringe for emergency use and a health analyzer."
 	kit_styles = list("burn1", "burn2", "burn3", "burn4")
-	spawn_contents = list(\
-	/obj/item/reagent_containers/mender/burn,\
-	/obj/item/reagent_containers/patch/mini/burn = 1,\
-	/obj/item/device/analyzer/healthanalyzer,\
+	spawn_contents = list(/obj/item/reagent_containers/patch/burn = 4,\
+	/obj/item/device/healthanalyzer,\
 	/obj/item/reagent_containers/emergency_injector/epinephrine,\
 	/obj/item/reagent_containers/pill/salicylic_acid)
 
 /obj/item/storage/firstaid/toxin
 	name = "toxin first aid"
 	icon_state = "toxin1"
-	item_state = "toxin1"
+	item_state = "firstaid-toxin"
 	desc = "A medical kit designed to counter poisoning by common toxins. Contains three pills and syringes, and a health analyzer to determine the health of the patient."
 	kit_styles = list("toxin1", "toxin2", "toxin3", "toxin4")
 	spawn_contents = list(/obj/item/reagent_containers/syringe/antitoxin = 3,\
 	/obj/item/reagent_containers/pill/antitox = 3,\
-	/obj/item/device/analyzer/healthanalyzer)
+	/obj/item/device/healthanalyzer)
 
 /obj/item/storage/firstaid/oxygen
 	name = "oxygen deprivation first aid"
 	icon_state = "O21"
-	item_state = "O21"
+	item_state = "firstaid-o2"
 	desc = "A first aid kit that contains four pills of salbutamol, which is able to counter injuries caused by suffocation. Also contains a health analyzer to determine the health of the patient."
 	kit_styles = list("O21", "O22", "O23", "O24")
 	spawn_contents = list(/obj/item/reagent_containers/pill/salbutamol = 4,\
-	/obj/item/device/analyzer/healthanalyzer)
+	/obj/item/device/healthanalyzer)
 
 /obj/item/storage/firstaid/brain
 	name = "neurological damage first aid"
 	icon_state = "brain1"
-	item_state = "brain1"
+	item_state = "firstaid-red"
 	desc = "A medical kit that contains four pills of mannitol, which can heal brain damage. Also contains a health analyzer to determine the health of the patient."
 	kit_styles = list("brain1", "brain2", "brain3")
 	spawn_contents = list(/obj/item/reagent_containers/pill/mannitol = 4,\
-	/obj/item/device/analyzer/healthanalyzer)
+	/obj/item/device/healthanalyzer)
 
 // Medkit filled with old crud for shady QM merchants (Convair880).
 /obj/item/storage/firstaid/old
 	name = "dusty first aid kit"
 	icon_state = "berserk1"
-	item_state = "berserk1"
+	item_state = "firstaid-berserk"
 	desc = "Huh, how old is this thing?"
 	kit_styles = list("berserk1", "berserk2", "berserk3")
 	spawn_contents = list(/obj/item/medical/ointment = 2,\
 	/obj/item/medical/bruise_pack = 2,\
 	/obj/item/reagent_containers/emergency_injector/lexorin,\
 	/obj/item/reagent_containers/emergency_injector/synaptizine,\
-	/obj/item/device/analyzer/healthanalyzer)
-
-/obj/item/storage/firstaid/docbag
-	name = "doctor's bag"
-	icon_state = "docbag1"
-	item_state = "docbag1"
-	desc = "A old-fashioned doctor's bag designed to cary medical and surgical supplies."
-	kit_styles = list("docbag1", "docbag2", "docbag3")
-	spawn_contents = list(/obj/item/circular_saw, /obj/item/scalpel, /obj/item/suture, /obj/item/reagent_containers/syringe, /obj/item/reagent_containers/iv_drip/blood)
+	/obj/item/device/healthanalyzer)
 
 /* -------------------- First Aid Kits - VR -------------------- */
 
@@ -128,7 +112,7 @@
 	spawn_contents = list(/obj/item/reagent_containers/patch/vr/bruise = 2,\
 	/obj/item/reagent_containers/pill/vr/salicylic_acid,\
 	/obj/item/reagent_containers/patch/vr/burn = 2,\
-	/obj/item/device/analyzer/healthanalyzer/vr,\
+	/obj/item/device/healthanalyzer/vr,\
 	/obj/item/reagent_containers/emergency_injector/vr/epinephrine)
 
 /obj/item/storage/firstaid/vr/brute
@@ -136,7 +120,7 @@
 	icon_state = "brute-vr"
 	desc = "A medical kit that contains several medical patches and pills for treating brute injuries. Contains one epinephrine syringe for emergency use and a health analyzer."
 	spawn_contents = list(/obj/item/reagent_containers/patch/vr/bruise = 4,\
-	/obj/item/device/analyzer/healthanalyzer/vr,\
+	/obj/item/device/healthanalyzer/vr,\
 	/obj/item/reagent_containers/emergency_injector/vr/epinephrine,\
 	/obj/item/bandage/vr)
 
@@ -145,7 +129,7 @@
 	icon_state = "burn-vr"
 	desc = "A medical kit that contains several medical patches and pills for treating burns. Contains one epinephrine syringe for emergency use and a health analyzer."
 	spawn_contents = list(/obj/item/reagent_containers/patch/vr/burn = 4,\
-	/obj/item/device/analyzer/healthanalyzer/vr,\
+	/obj/item/device/healthanalyzer/vr,\
 	/obj/item/reagent_containers/emergency_injector/vr/epinephrine,\
 	/obj/item/reagent_containers/pill/vr/salicylic_acid)
 
@@ -155,21 +139,21 @@
 	desc = "A medical kit designed to counter poisoning by common toxins. Contains three pills and syringes, and a health analyzer to determine the health of the patient."
 	spawn_contents = list(/obj/item/reagent_containers/syringe/antitoxin = 3,\
 	/obj/item/reagent_containers/pill/vr/antitox = 3,\
-	/obj/item/device/analyzer/healthanalyzer/vr)
+	/obj/item/device/healthanalyzer/vr)
 
 /obj/item/storage/firstaid/vr/oxygen
 	name = "oxygen deprivation first aid"
 	icon_state = "O2-vr"
 	desc = "A first aid kit that contains four pills of salbutamol, which is able to counter injuries caused by suffocation. Also contains a health analyzer to determine the health of the patient."
 	spawn_contents = list(/obj/item/reagent_containers/pill/vr/salbutamol = 4,\
-	/obj/item/device/analyzer/healthanalyzer/vr)
+	/obj/item/device/healthanalyzer/vr)
 
 /obj/item/storage/firstaid/vr/brain
 	name = "neurological damage first aid"
 	icon_state = "brain-vr"
 	desc = "A medical kit that contains four pills of mannitol, which can heal brain damage. Also contains a health analyzer to determine the health of the patient."
 	spawn_contents = list(/obj/item/reagent_containers/pill/vr/mannitol = 4,\
-	/obj/item/device/analyzer/healthanalyzer/vr)
+	/obj/item/device/healthanalyzer/vr)
 
 /* -------------------- Boxes -------------------- */
 
@@ -208,12 +192,6 @@
 	desc = "A box containing sterile latex gloves."
 	spawn_contents = list(/obj/item/clothing/gloves/latex = 7)
 
-/obj/item/storage/box/lglo_kit/random
-	New()
-		if (prob(50))
-			src.spawn_contents = list(pick(25;/obj/item/clothing/gloves/latex/blue,25;/obj/item/clothing/gloves/latex/purple,25;/obj/item/clothing/gloves/latex/teal,25;/obj/item/clothing/gloves/latex/pink) = 7)
-		..()
-
 /obj/item/storage/box/injectbox
 	name = "DNA injectors"
 	icon_state = "box"
@@ -224,28 +202,17 @@
 	desc = "A box containing sterile masks to help protect from airborne diseases."
 	spawn_contents = list(/obj/item/clothing/mask/surgical = 7)
 
-/obj/item/storage/box/clothing/patient_gowns
-	name = "gowns box"
-	desc = "A box filled with patient gowns."
-	spawn_contents = list(/obj/item/clothing/under/patient_gown = 7)
-
 /obj/item/storage/box/health_upgrade_kit
 	name = "health analyzer upgrade box"
 	icon_state = "health_upgr"
 	desc = "A box containing health analyzer reagent scan upgrade cards."
-	spawn_contents = list(/obj/item/device/analyzer/healthanalyzer_upgrade = 7)
+	spawn_contents = list(/obj/item/device/healthanalyzer_upgrade = 7)
 
 /obj/item/storage/box/iv_box
 	name = "\improper IV drip box"
 	icon_state = "patches"
 	desc = "A box of empty, sterile IV drips, ready to be filled with donated blood, or healing chemicals. Or whatever."
 	spawn_contents = list(/obj/item/reagent_containers/iv_drip = 7)
-
-/obj/item/storage/box/body_bag
-	name = "body bag box"
-	icon_state = "trashybs"
-	desc = "A box containing body bags*, which, like the name suggests, are used for transporting bodies around. Usually dead ones.<br><small><i>*Bodies not included.</i></small>"
-	spawn_contents = list(/obj/item/body_bag = 7)
 
 /* -------------------- Prostheses storage -------------------- */
 
@@ -263,74 +230,44 @@
 	eye_sunglasses
 		name = "ocular prosthesis kit (polarized)"
 		desc = "A box containing a pair of polarized cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/sunglass = 2)
-
-	eye_sechud
-		name = "ocular prosthesis kit (SecHUD)"
-		desc = "A box containing a pair of Security HUD cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/sechud = 2)
+		spawn_contents = list(/obj/item/organ/eye/cyber/sunglass = 2,\
+		/obj/item/surgical_spoon = 1)
 
 	eye_thermal
 		name = "ocular prosthesis kit (thermal)"
 		desc = "A box containing a pair of thermal imager cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/thermal = 2)
+		spawn_contents = list(/obj/item/organ/eye/cyber/thermal = 2,\
+		/obj/item/surgical_spoon = 1)
 
 	eye_meson
 		name = "ocular prosthesis kit (meson)"
 		desc = "A box containing a pair of mesonic imager cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/meson = 2)
+		spawn_contents = list(/obj/item/organ/eye/cyber/meson = 2,\
+		/obj/item/surgical_spoon = 1)
 
 	eye_spectro
 		name = "ocular prosthesis kit (spectroscopic)"
 		desc = "A box containing a pair of spectroscopic imager cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/spectro = 2)
+		spawn_contents = list(/obj/item/organ/eye/cyber/spectro = 2,\
+		/obj/item/surgical_spoon = 1)
 
 	eye_prodoc
 		name = "ocular prosthesis kit (ProDoc)"
 		desc = "A box containing a pair of ProDoc Healthview cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/prodoc = 2)
+		spawn_contents = list(/obj/item/organ/eye/cyber/prodoc = 2,\
+		/obj/item/surgical_spoon = 1)
 
 	eye_ecto
 		name = "ocular prosthesis kit (ecto)"
 		desc = "A box containing a pair of ectosensor cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/ecto = 2)
+		spawn_contents = list(/obj/item/organ/eye/cyber/ecto = 2,\
+		/obj/item/surgical_spoon = 1)
 
 	eye_camera
 		name = "ocular prosthesis kit (camera)"
 		desc = "A box containing a pair of camera cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/camera = 2)
-
-	eye_nightvision
-		name = "ocular prosthesis kit (night vision)"
-		desc = "A box containing a pair of night vision cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/camera = 2)
-
-	eye_laser
-		name = "ocular prosthesis kit (laser)"
-		desc = "A box containing a pair of laser cybereyes."
-		spawn_contents = list(/obj/item/surgical_spoon = 1,
-		/obj/item/organ/eye/cyber/laser = 2)
-
-	eye_random // random selection of two eyes!  woo
-		name = "ocular prosthesis kit (surplus)"
-		desc = "A box containing some surplus cybereyes. Here's hoping they match!"
-		spawn_contents = list(/obj/item/surgical_spoon = 1)
-		make_my_stuff()
-			..()
-			var/list/eyez = typesof(/obj/item/organ/eye/cyber)
-			if (eyez.len)
-				for (var/i=rand(2,3), i>0, i--)
-					var/epath = pick(eyez)
-					new epath(src)
+		spawn_contents = list(/obj/item/organ/eye/cyber/camera = 2,\
+		/obj/item/surgical_spoon = 1)
 
 /* -------------------- Wall Storage -------------------- */
 
@@ -344,13 +281,9 @@
 		..()
 		new /obj/item/bandage(src)
 		new /obj/item/storage/pill_bottle/salicylic_acid(src)
-		new /obj/item/storage/pill_bottle/menthol(src)
 
 		if (prob(40))
 			new /obj/item/storage/firstaid/regular(src)
-		if (prob(40))
-			new /obj/item/reagent_containers/glass/bottle/ethanol(src)
-
 		switch (pickweight(list("gloves" = 20, "mask" = 20, "autoinjector" = 10, "both" = 10)))
 			if ("gloves")
 				new /obj/item/clothing/gloves/latex(src)
@@ -399,16 +332,6 @@
 	desc = "Contains pills used to treat pain and fevers."
 	spawn_contents = list(/obj/item/reagent_containers/pill/salicylic_acid = 7)
 
-/obj/item/storage/pill_bottle/menthol
-	name = "pill bottle (menthol)"
-	desc = "Contains pills used to treat burns and fevers."
-	spawn_contents = list(/obj/item/reagent_containers/pill/menthol = 7)
-
-/obj/item/storage/pill_bottle/ipecac
-	name = "pill bottle (space ipecac)"
-	desc = "Contains pills used induce emesis."
-	spawn_contents = list(/obj/item/reagent_containers/pill/ipecac = 7)
-
 /* -------------------- Pill Bottles - Drugs -------------------- */
 
 /obj/item/storage/pill_bottle/methamphetamine
@@ -441,12 +364,12 @@
 	desc = "Huh."
 	spawn_contents = list(/obj/item/reagent_containers/pill/cyberpunk = 5)
 
-/obj/item/storage/pill_bottle/custom_suicide = 1
 /obj/item/storage/pill_bottle/suicide(var/mob/user as mob)
-	if (!src.user_can_suicide(user))
-		return 0
-	user.visible_message("<span style='color:red'><b>[user] swallows [src] whole and begins to choke!</b></span>")
+	user.visible_message("<span style=\"color:red\"><b>[user] swallows the [src.name] whole and begins to choke!</b></span>")
 	user.take_oxygen_deprivation(175)
 	user.updatehealth()
+	spawn(100)
+		if (user)
+			user.suiciding = 0
 	qdel(src)
 	return 1

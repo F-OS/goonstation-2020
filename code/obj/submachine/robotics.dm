@@ -21,16 +21,19 @@
 			<HR><BR>
 			<B>Modules Available:</B> [modules]<BR>
 			<HR><BR>
-			<A href='?src=\ref[src];module=civilian'>Write Civilian Module<BR>
-			<A href='?src=\ref[src];module=engineering'>Write Engineering Module<BR>
-			<A href='?src=\ref[src];module=mining'>Write Mining Module<BR>
-			<A href='?src=\ref[src];module=medical'>Write Medical Module<BR>
-			<A href='?src=\ref[src];module=chemistry'>Write Chemistry Module<BR>
-			<A href='?src=\ref[src];module=brobocop'>Write Brobocop Module<BR>"}
+			<A href='?src=\ref[src];module=std'>Write Standard Module<BR>
+			<A href='?src=\ref[src];module=med'>Write Medical Module<BR>
+			<A href='?src=\ref[src];module=eng'>Write Engineering Module<BR>
+			<A href='?src=\ref[src];module=jan'>Write Janitor Module<BR>
+			<A href='?src=\ref[src];module=hyd'>Write Hydroponics Module<BR>
+			<A href='?src=\ref[src];module=bro'>Write Brobot Module<BR>
+			<A href='?src=\ref[src];module=min'>Write Mining Module<BR>
+			<A href='?src=\ref[src];module=cst'>Write Construction Module<BR>
+			<A href='?src=\ref[src];module=chem'>Write Chemistry Module<BR>"}
 			if (ticker && ticker.mode)
 				if (istype(ticker.mode, /datum/game_mode/construction))
-					dat += "<A href='?src=\ref[src];module=construction'>Write Construction Worker Module</A><BR>"
-			user.Browse(dat, "window=mwriter;size=400x500")
+					dat += "<A href='?src=\ref[src];module=con'>Write Construction Worker Module</A><BR>"
+			user << browse(dat, "window=mwriter;size=400x500")
 			onclose(user, "mwriter")
 		else
 			var/dat = {"<B>Module Rewriter</B><BR>
@@ -38,15 +41,15 @@
 			<B>Modules Available:</B> [modules]<BR>
 			<HR><BR>
 			The Rewriter is currently busy!"}
-			user.Browse(dat, "window=mwriter;size=400x500")
+			user << browse(dat, "window=mwriter;size=400x500")
 			onclose(user, "mwriter")
 
 		return
 
 	Topic(href, href_list)
-		if ((get_dist(src, usr) > 1 && (!issilicon(usr) && !isAI(usr))) || !isliving(usr) || iswraith(usr) || isintangible(usr))
+		if ((get_dist(src, usr) > 1 && !issilicon(usr)) || !isliving(usr) || iswraith(usr) || isintangible(usr))
 			return
-		if (usr.getStatusDuration("stunned") > 0 || usr.getStatusDuration("weakened") || usr.getStatusDuration("paralysis") > 0 || !isalive(usr) || usr.restrained())
+		if (usr.stunned > 0 || usr.weakened > 0 || usr.paralysis > 0 || usr.stat != 0 || usr.restrained())
 			return
 		if (src.working)
 			usr.show_text("[src] is currently busy.", "red")
@@ -62,25 +65,28 @@
 			var/output = null
 
 			switch (href_list["module"])
-				if ("civilian") output = /obj/item/robot_module/civilian
-				if ("medical") output = /obj/item/robot_module/medical
-				if ("engineering") output = /obj/item/robot_module/engineering
-				if ("mining") output = /obj/item/robot_module/mining
-				if ("chemistry") output = /obj/item/robot_module/chemistry
-				if ("brobocop") output = /obj/item/robot_module/brobocop
-				if ("construction")
+				if ("std") output = /obj/item/robot_module/standard
+				if ("med") output = /obj/item/robot_module/medical
+				if ("eng") output = /obj/item/robot_module/engineering
+				if ("jan") output = /obj/item/robot_module/janitor
+				if ("hyd") output = /obj/item/robot_module/hydro
+				if ("bro") output = /obj/item/robot_module/brobot
+				if ("min") output = /obj/item/robot_module/mining
+				if ("cst") output = /obj/item/robot_module/construction
+				if ("chem") output = /obj/item/robot_module/chemistry
+				if ("con")
 					if (ticker && ticker.mode)
 						if (istype(ticker.mode, /datum/game_mode/construction))
 							output = /obj/item/robot_module/construction_worker
 						else
-							output = /obj/item/robot_module/engineering
+							output = /obj/item/robot_module/construction
 					else
-						output = /obj/item/robot_module/engineering
+						output = /obj/item/robot_module/construction
 
 			src.icon_state = "moduler-on"
 			src.updateUsrDialog()
-			playsound(src.loc, 'sound/machines/pc_process.ogg', 50, 1)
-			SPAWN_DBG (50)
+
+			spawn (50)
 				if (src)
 					src.working = 0
 					src.icon_state = "moduler-off"
@@ -108,13 +114,7 @@
 	name = "Cell Cables"
 	desc = "Used by Engineering Cyborgs for emergency recharging of APCs."
 	icon = 'icons/obj/items.dmi'
-	icon_state = "robojumper-plus"
-	var/positive = 1 //boolean, if positive, then you will charge an APC with your cell, if negative, you will take charge from apc
-
-	attack_self(var/mob/user as mob)
-		positive = !positive
-		icon_state = "robojumper-[positive? "plus": "minus"]"
-		boutput(user, "<span style=\"color:red\">Switches Cell Cables to [positive ? "Positive" : "Negative"] Mode!</span>")
+	icon_state = "robojumper"
 
 /obj/item/atmosporter
 	name = "Atmospherics Transporter"
@@ -443,7 +443,7 @@ ported and crapped up by: haine
 
 			var/trans = src.active_tank.reagents.trans_to(target, amt_to_transfer)
 			user.show_text("You transfer [trans] unit\s of the solution to [target]. [active_tank.reagents.total_volume] unit\s remain.", "blue")
-			playsound(loc, "sound/impact_sounds/Liquid_Slosh_1.ogg", 50, 0) // Play a sound effect.
+			playsound(loc, "sound/effects/slosh.ogg", 50, 0) // Play a sound effect.
 			if (!(src in processing_items))
 				processing_items.Add(src)
 		else

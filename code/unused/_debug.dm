@@ -6,7 +6,7 @@
 #define VARSICON 1
 #define SDEBUG 1
 
-/client/verb/DEBUG_MESSAGE()
+/client/verb/Debug()
 	set category = "Debug"
 	set name = "Debug-Debug"
 	if(src.holder.rank == "Coder")
@@ -91,8 +91,7 @@ Doing this because FindTurfs() isn't even used
 	//set hidden = 1
 	if(Debug)
 		for(var/obj/mark/O in world)
-			del(O)
-			LAGCHECK(LAG_LOW)
+			qdel(O)
 	else
 		alert("Debugging off")
 		return
@@ -403,7 +402,7 @@ Doing this because FindTurfs() isn't even used
 	if(Debug)
 		debugobj = new()
 
-		debugobj.debuglist = list( powernets, plines, config, admins, ticker, SS13_airtunnel, sun )
+		debugobj.debuglist = list( powernets, plines, vote, config, admins, ticker, SS13_airtunnel, sun )
 
 
 		boutput(world, "<A href='?src=\ref[debugobj];Vars=1'>Debug</A>")
@@ -475,7 +474,7 @@ Doing this because FindTurfs() isn't even used
 		oxyloss = 0
 		paralysis = 0
 		stunned = 0
-		delStatus("weakened")
+		weakened = 0
 		health = 100
 		if(stat > 1) stat=0
 		disabilities = initial(disabilities)
@@ -499,7 +498,7 @@ Doing this because FindTurfs() isn't even used
 	if(Debug)
 		var/obj/effects/smoke/O = new /obj/effects/smoke( src.loc )
 		O.dir = pick(NORTH, SOUTH, EAST, WEST)
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			O.Life()
 	else
 		alert("Debugging off")
@@ -508,7 +507,7 @@ Doing this because FindTurfs() isn't even used
 /mob/verb/revent(number as num)
 	set category = "Debug"
 	set name = "Change event %"
-	if(!isadmin(src))
+	if(!src.holder)
 		boutput(src, "Only administrators may use this command.")
 		return
 	if(src.authenticated && src.holder)
@@ -520,10 +519,10 @@ Doing this because FindTurfs() isn't even used
 /mob/verb/removeplasma()
 	set category = "Debug"
 	set name = "Stabilize Atmos."
-	if(!isadmin(src))
+	if(!src.holder)
 		boutput(src, "Only administrators may use this command.")
 		return
-	SPAWN_DBG(0)
+	spawn(0)
 		for(var/turf/T in view())
 			T.poison = 0
 			T.oldpoison = 0
@@ -547,38 +546,38 @@ Doing this because FindTurfs() isn't even used
 /mob/verb/fire(turf/T as turf in world)
 	set category = "Special Verbs"
 	set name = "Create Fire"
-	if(!isadmin(src))
+	if(!src.holder)
 		boutput(src, "Only administrators may use this command.")
 		return
 	boutput(world, "[usr.key] created fire")
-	SPAWN_DBG(0)
+	spawn(0)
 		T.poison += 30000000
 		T.firelevel = T.poison
 
 /mob/verb/co2(turf/T as turf in world)
 	set category = "Special Verbs"
 	set name = "Create CO2"
-	if(!isadmin(src))
+	if(!src.holder)
 		boutput(src, "Only administrators may use this command.")
 		return
 	boutput(world, "[usr.key] created CO2")
-	SPAWN_DBG(0)
+	spawn(0)
 		T.co2 += 300000000
 
 /mob/verb/n2o(turf/T as turf in world)
 	set category = "Special Verbs"
 	set name = "Create N2O"
-	if(!isadmin(src))
+	if(!src.holder)
 		boutput(src, "Only administrators may use this command.")
 		return
 	boutput(world, "[usr.key] created N2O")
-	SPAWN_DBG(0)
+	spawn(0)
 		T.sl_gas += 30000000
 
 /mob/verb/explosion(T as obj|mob|turf in world)
 	set category = "Special Verbs"
 	set name = "Create Explosion"
-	if(!isadmin(src))
+	if(!src.holder)
 		boutput(src, "Only administrators may use this command.")
 		return
 	boutput(world, "[usr.key] created an explosion")

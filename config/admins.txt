@@ -1,91 +1,42 @@
 slurm - Host
 gibbed - Host
-stuntwaffle - Inactive
-wirewraith - Host
+stuntwaffle - Host
+pantaloons - Host
+darsant - Host
+nannek - Host
 
-pantaloons - Inactive
-keelin - Coder
 exadv1 - Coder
-nannek - Inactive
-0staf - Inactive
-emarl - Coder
+0staf - Coder
+justicefries - Coder
+eroticdad - Coder
 angriestibm - Coder
-showtime100 - Inactive
-hobnob - Inactive
-laserstrike - Inactive
-isaidno - Inactive
-procitizensa - Inactive
-lljkmosheninkov - Inactive
-halerina - Inactive
-drmelon - Inactive
-magicmountain - Coder
-infinitemonkeys - Coder
-ishallriseagain - Inactive
-aphtonites - Coder
-drcogwerks - Coder
-volundr - Coder
+hobnob - Coder
+enallyniv - Coder
+lallander - Coder
+keelin - Coder
+brianoblivion - Coder
+arthurmuggins - Coder
+isaidno - Coder
+mport2004 - Coder
 burntcornmuffin - Coder
-hullcrushdepth - Coder
+ishallriseagain - Coder
+lljkmosheninkov - Coder
+dropsy - Coder
+procitizensa - Coder
+drmelon - Coder
+halerina - Coder
+pacra - Coder
+jackmassacre - Coder
+jackbox - Coder
+infinitemonkeys - Coder
+aphtonites - Coder
+volundr - Coder
+wirewraith - Coder
 tobba - Coder
-biggsmclargehuge - Coder
-wonkmin - Coder
-marquesas - Inactive
+marquesas - Coder
 hainesa - Coder
+tom - Coder
 herrspyguy - Coder
 daeren - Coder
-conor12 - Inactive
-somepotato - Coder
-mybluecorners - Coder
-zewaka - Coder
-grayshift - Coder
-mordent - Coder
-flourish - Coder
-kremlins - Coder
-gannets - Coder
-firebarrage - Coder
-azungar - Coder
-hydrofloric - Coder
-kyle2143 - Coder
-johnwarcrimes - Coder
-zamujasa - Coder
-dionsu - Coder
-gerhazo - Coder
-
-arthurmuggins - Shit Person
-rolandtdapperman - Inactive
-sledra - Inactive
-pacra - Shit Person
-heiraphont - Inactive
-hukhukhuk - Shit Person
-gorillamydreams - Shit Person
-atomicthumbs - Shit Person
-popecrunch - Shit Person
-insanoblan - Shit Person
-mrfishstick - Inactive
-uryvichk - Shit Person
-hufflaw - Shit Person
-shotgunbill - Shit Person
-housekeep - Shit Person
-
-synthorange - Inactive
-saorangesoda - Inactive
-spacemarine9 - Inactive
-lison - Primary Administrator
-souricelle - Primary Administrator
-readster - Primary Administrator
-enallyniv - Inactive
-hokie - Primary Administrator
-freshlemon - Primary Administrator
-jasmine87 - Primary Administrator
-darkchis - Primary Administrator
-
-tellaris - Administrator
-dementedghost - Inactive
-blinkdog01 - Inactive
-mysha - Administrator
-
-arikie - Secondary Administrator
-spacenaba - Secondary Administrator
-lisi - Inactive
-slthepyro - Secondary Administrator
-wrongendoftherainbow - Secondary Administrator
+conor12 - Coder
+convair880 - Coder

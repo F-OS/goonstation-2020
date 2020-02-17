@@ -55,7 +55,7 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 		dat += "Injection amount: <A href='?src=\ref[src];change_amt=1'>[inj_amount == -1 ? "ALL" : inj_amount]</A><BR><BR>"
 		dat += "Min. time between activations: <A href='?src=\ref[src];change_mintime=1'>[min_time] seconds</A><BR><BR>"
 
-		user.Browse("<TITLE>Injector Belt</TITLE>Injector Belt:<BR><BR>[dat]", "window=inj_belt;size=575x250")
+		user << browse("<TITLE>Injector Belt</TITLE>Injector Belt:<BR><BR>[dat]", "window=inj_belt;size=575x250")
 		onclose(user, "inj_belt")
 		return
 
@@ -79,8 +79,6 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 
 	Topic(href, href_list)
 		..()
-		if(usr != src.loc)
-			return
 		if (href_list["remove_cont"])
 			container.set_loc(get_turf(src))
 			container = null
@@ -89,7 +87,7 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 			condition = null
 
 		if (href_list["sel_cond"])
-			var/list/cond_types = childrentypesof(/datum/injector_belt_condition)
+			var/list/cond_types = (typesof(/datum/injector_belt_condition) - /datum/injector_belt_condition)
 			var/list/filtered = new/list()
 
 			for(var/A in cond_types)
@@ -125,19 +123,19 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 			if(condition.check_trigger(owner) && can_trigger)
 
 				can_trigger = 0
-				SPAWN_DBG(min_time*10) can_trigger = 1
+				spawn(min_time*10) can_trigger = 1
 
 				playsound(get_turf(src),"sound/items/injectorbelt_active.ogg", 33, 0, -5)
 				boutput(owner, "<span style=\"color:blue\">Your Injector belt activates.</span>")
 
 				container.reagents.reaction(owner, INGEST)
-				SPAWN_DBG(15)
+				spawn(15)
 					if(inj_amount == -1)
 						container.reagents.trans_to(owner, container.reagents.total_volume)
 					else
 						container.reagents.trans_to(owner, inj_amount)
 
-		SPAWN_DBG(25)
+		spawn(25)
 			if (src) check()
 
 	proc/is_equipped()
@@ -201,7 +199,7 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 		dat += "Injection amount: <A href='?src=\ref[src];change_amt=1'>[inj_amount == -1 ? "ALL" : inj_amount]</A><BR><BR>"
 		dat += "Min. time between activations: <A href='?src=\ref[src];change_mintime=1'>[min_time] seconds</A><BR><BR>"
 
-		user.Browse("<TITLE>Vapo-Matic</TITLE>Vapo-Matic:<BR><BR>[dat]", "window=inj_belt;size=575x250")
+		user << browse("<TITLE>Vapo-Matic</TITLE>Vapo-Matic:<BR><BR>[dat]", "window=inj_belt;size=575x250")
 		onclose(user, "inj_belt")
 		return
 
@@ -227,10 +225,6 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 
 	Topic(href, href_list)
 		..()
-
-		if(usr != src.loc)
-			return
-
 		if (href_list["remove_cont"])
 			container.set_loc(get_turf(src))
 			container = null
@@ -239,7 +233,7 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 			condition = null
 
 		if (href_list["sel_cond"])
-			var/list/cond_types = childrentypesof(/datum/injector_belt_condition)
+			var/list/cond_types = (typesof(/datum/injector_belt_condition) - /datum/injector_belt_condition)
 			var/list/filtered = new/list()
 
 			for(var/A in cond_types)
@@ -275,23 +269,23 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 			if(condition.check_trigger(owner) && can_trigger)
 
 				can_trigger = 0
-				SPAWN_DBG(min_time*10) can_trigger = 1
+				spawn(min_time*10) can_trigger = 1
 				var/turf/T = get_turf(src)
 				if(T)
 					playsound(T,"sound/items/injectorbelt_active.ogg", 33, 0, -5)
-					SPAWN_DBG(5)
+					spawn(5)
 						playsound(T,"sound/machines/hiss.ogg", 40, 1, -5)
 
 				boutput(owner, "<span style=\"color:blue\">Your [src] activates.</span>")
 
 				container.reagents.reaction(owner, INGEST)
-				SPAWN_DBG(15)
+				spawn(15)
 					if(inj_amount == -1)
 						container.reagents.trans_to(owner, container.reagents.total_volume)
 					else
 						container.reagents.trans_to(owner, inj_amount)
 
-		SPAWN_DBG(25)
+		spawn(25)
 			if (src) check()
 
 	proc/is_equipped()
@@ -410,7 +404,7 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 		return 1
 
 	check_trigger(mob/M)
-		if(M.getStatusDuration("stunned") || M.getStatusDuration("paralysis") || M.getStatusDuration("weakened") || isunconscious(M)) return 1
+		if(M.stunned || M.paralysis || M.weakened || M.stat == 1) return 1
 		else return 0
 
 /datum/injector_belt_condition/life
@@ -421,5 +415,5 @@ There's A LOT of duplicate code here, which isn't ideal to say the least. Should
 		return 1
 
 	check_trigger(mob/M)
-		if(isdead(M)) return 1
+		if(M.stat == 2) return 1
 		else return 0

@@ -7,8 +7,7 @@
 	density = 0
 	anchored = 1
 	var/notices = 0
-	ex_act()//todo: update this entire old and dated thing
-		qdel(src)
+
 //attaching papers!!
 /obj/noticeboard/attackby(var/obj/item/O as obj, var/mob/user as mob)
 	if (istype(O, /obj/item/paper))
@@ -23,18 +22,18 @@
 		else
 			boutput(user, "<span style=\"color:red\">You reach to pin your paper to the board but hesitate. You are certain your paper will not be seen among the many others already attached.</span>")
 //
-/obj/noticeboard/attack_hand(mob/user as mob)
+/obj/noticeboard/attack_hand(user as mob)
 	var/dat = "<B>Noticeboard</B><BR>"
 	for(var/obj/item/paper/P in src)
 		dat += text("<A href='?src=\ref[];read=\ref[]'>[]</A> <A href='?src=\ref[];write=\ref[]'>Write</A> <A href='?src=\ref[];remove=\ref[]'>Remove</A><BR>", src, P, P.name, src, P, src, P)
-	user.Browse("<HEAD><TITLE>Notices</TITLE></HEAD>[dat]","window=noticeboard")
+	user << browse("<HEAD><TITLE>Notices</TITLE></HEAD>[dat]","window=noticeboard")
 	onclose(user, "noticeboard")
 
 
 /obj/noticeboard/Topic(href, href_list)
 	if (get_dist(src, usr) > 1 || !isliving(usr) || iswraith(usr) || isintangible(usr))
 		return
-	if (usr.getStatusDuration("stunned") > 0 || usr.getStatusDuration("weakened") || usr.getStatusDuration("paralysis") > 0 || !isalive(usr) || usr.restrained())
+	if (usr.stunned > 0 || usr.weakened > 0 || usr.paralysis > 0 || usr.stat != 0 || usr.restrained())
 		return
 
 	..()
@@ -67,10 +66,10 @@
 	if (href_list["read"])
 		var/obj/item/paper/P = locate(href_list["read"])
 		if ((P && P.loc == src))
-			if (!( ishuman(usr) ))
-				usr.Browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", P.name, stars(P.info)), text("window=[]", P.name))
+			if (!( istype(usr, /mob/living/carbon/human) ))
+				usr << browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", P.name, stars(P.info)), text("window=[]", P.name))
 				onclose(usr, "[P.name]")
 			else
-				usr.Browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", P.name, P.info), text("window=[]", P.name))
+				usr << browse(text("<HTML><HEAD><TITLE>[]</TITLE></HEAD><BODY><TT>[]</TT></BODY></HTML>", P.name, P.info), text("window=[]", P.name))
 				onclose(usr, "[P.name]")
 	return

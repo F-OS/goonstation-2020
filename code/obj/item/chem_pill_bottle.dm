@@ -12,7 +12,6 @@
 	var/pvol
 	var/pcount
 	var/datum/reagents/reagents_internal
-	var/average
 
 	// setup this pill bottle from some reagents
 	proc/create_from_reagents(var/datum/reagents/R, var/pillname, var/pillvol, var/pillcount)
@@ -22,8 +21,6 @@
 		reagents_internal.my_atom = src
 
 		R.trans_to_direct(reagents_internal,volume)
-
-		src.average = reagents_internal.get_average_color().to_rgb()
 
 		src.name = "[pillname] pill bottle"
 		src.desc = "Contains [pillcount] [pillname] pills."
@@ -46,22 +43,15 @@
 
 		// otherwise create a new one from the reagent holder
 		else if (pcount)
-			LAGCHECK(LAG_LOW)
-			if (src)
-				if (src.reagents_internal.total_volume < src.pvol)
-					src.pcount = 0
-				else
-					P = unpool(/obj/item/reagent_containers/pill)
-					P.loc = src
-					P.name = "[pname] pill"
+			if (src.reagents_internal.total_volume < src.pvol)
+				src.pcount = 0
+			else
+				P = unpool(/obj/item/reagent_containers/pill)
+				P.loc = src
+				P.name = "[pname] pill"
 
-					src.reagents_internal.trans_to(P,src.pvol)
-					if (P && P.reagents)
-						P.color_overlay = image('icons/obj/pills.dmi', "pill0")
-						P.color_overlay.color = src.average
-						P.color_overlay.alpha = P.color_overlay_alpha
-						P.overlays += P.color_overlay
-					src.pcount--
+				src.reagents_internal.trans_to(P,src.pvol)
+				src.pcount--
 		// else return null
 
 		return P
@@ -76,7 +66,7 @@
 			src.desc = "A [src.pname] pill bottle. There [totalpills==1? "is [totalpills] pill." : "are [totalpills] pills." ]"
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (istype(W, /obj/item/reagent_containers/pill))
+		if (istype(W, /obj/item/reagent_containers/pill/))
 			user.u_equip(W)
 			W.set_loc(src)
 			W.dropped()
@@ -87,16 +77,11 @@
 	attack_self(var/mob/user as mob)
 		var/obj/item/reagent_containers/pill/P = src.create_pill()
 		if (istype(P))
-			var/i = rand(3,8)
-			var/turf/T = user.loc
-			while(istype(P) && i > 0 && user.loc == T)
-				P.set_loc(T)
+			do
+				P.set_loc(user.loc)
 				P = src.create_pill()
-				i--
-			if (src.pcount + src.contents.len > 0)
-				boutput(user, "<span style=\"color:blue\">You tip out a bunch of pills from [src] into [T].</span>")
-			else
-				boutput(user, "<span style=\"color:blue\">You tip out all the pills from [src] into [T].</span>")
+			while(istype(P))
+			boutput(user, "<span style=\"color:blue\">You tip out all the pills from [src] into [user.loc].</span>")
 			rebuild_desc()
 		else
 			boutput(user, "<span style=\"color:red\">It's empty.</span>")
@@ -116,25 +101,4 @@
 		else
 			return ..()
 
-	MouseDrop_T(atom/movable/O as obj, mob/user as mob)
-		if (user.restrained() || user.getStatusDuration("paralysis") || user.sleeping || user.stat || user.lying)
-			return
-		if (!in_range(user, src) || !in_range(user, O))
-			user.show_text("That's too far away!", "red")
-			return
-		if (!istype(O, /obj/item/reagent_containers/pill))
-			user.show_text("\The [src] can't hold anything but pills!", "red")
-			return
 
-		user.visible_message("<span style=\"color:blue\">[user] begins quickly filling [src]!</span>")
-		var/staystill = user.loc
-		for (var/obj/item/reagent_containers/pill/P in view(1,user))
-			if (P in user)
-				continue
-			P.set_loc(src)
-			P.dropped()
-			src.rebuild_desc()
-			sleep(2)
-			if (user.loc != staystill)
-				break
-		boutput(user, "<span style=\"color:blue\">You finish filling [src]!</span>")

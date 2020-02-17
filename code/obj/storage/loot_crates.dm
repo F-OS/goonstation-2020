@@ -13,8 +13,8 @@
 
 	New()
 		..()
-		src.light = image('icons/obj/large_storage.dmi',"lootcratelocklight")
-		src.stripes = image('icons/obj/large_storage.dmi',"lootcratestripes")
+		src.light = image('icons/obj/crate.dmi',"lootcratelocklight")
+		src.stripes = image('icons/obj/crate.dmi',"lootcratestripes")
 
 		tier = RarityClassRoll(100,0,list(95,70))
 		var/kind = rand(1,5)
@@ -34,32 +34,22 @@
 
 				// SCIENCE GOODS LOOT TABLE
 				if (tier == 3)
-					picker = rand(1,4)
+					picker = rand(1,2)
 					switch(picker)
 						if(1)
 							items += /obj/item/clothing/gloves/psylink_bracelet
-							item_amounts += 1
-						if(2)
-							items += /obj/item/artifact/teleport_wand
-							item_amounts += 1
-						if(3)
-							items += /obj/item/clothing/shoes/hermes
 							item_amounts += 1
 						else
 							items += /obj/item/device/voltron
 							item_amounts += 1
 				else if (tier == 2)
-					picker = rand(1,2)
+					picker = rand(1,1)
 					switch(picker)
 						if(1)
-							items += pick(/obj/critter/bear,/obj/critter/domestic_bee,
-							/obj/critter/wendigo,/obj/critter/nicespider) // 1/2 chance for scary thing that has cool arms you can use, 1/2 chance for cute thing!!
-							item_amounts += 1
-						if(2)
-							items += pick(/obj/item/injector_belt,/obj/item/clothing/mask/gas/injector_mask)
+							items += pick(/obj/critter/bear)
 							item_amounts += 1
 				else
-					picker = rand(1,4)
+					picker = rand(1,3)
 					switch(picker)
 						if(1)
 							items += /obj/item/roboupgrade/efficiency
@@ -84,11 +74,6 @@
 						if(3)
 							items += pick(/obj/critter/spore)
 							item_amounts += 3
-						else
-							items += /obj/item/reagent_containers/glass/happyplant
-							item_amounts += 2
-							items += /obj/item/seed/alien
-							item_amounts += 3
 
 			if(3)
 				name = "industrial shipment crate"
@@ -99,26 +84,17 @@
 
 				// INDUSTRIAL GOODS LOOT TABLE
 				if (tier == 3)
-					picker = rand(1,3)
-					switch(picker)
-						if(1 to 2)
-							items += /obj/item/clothing/shoes/jetpack
-							item_amounts += 1
-						else
-							items += /obj/item/shipcomponent/mainweapon/rockdrills
-							item_amounts += 1
+					items += /obj/item/device/voltron
+					item_amounts += 1
 				else if (tier == 2)
-					picker = rand(1,4)
+					picker = rand(1,1)
 					switch(picker)
-						if(1 to 3)
+						if(1)
 							items += pick(/obj/item/raw_material/telecrystal,/obj/item/raw_material/gemstone,
 							/obj/item/raw_material/miracle,/obj/item/raw_material/uqill)
 							item_amounts += 30
-						else
-							items += /obj/critter/fermid
-							item_amounts += 1
 				else
-					picker = rand(1,6)
+					picker = rand(1,5)
 					switch(picker)
 						if(1)
 							items += /obj/item/breaching_charge/mining
@@ -141,9 +117,6 @@
 							items += pick(/obj/item/raw_material/syreline,/obj/item/raw_material/bohrum,
 							/obj/item/raw_material/claretine,/obj/item/raw_material/cerenkite)
 							item_amounts += 40
-						else
-							items += /obj/critter/rockworm
-							item_amounts += 3
 
 			if(4)
 				name = "military shipment crate"
@@ -154,19 +127,8 @@
 
 				// MILITARY GOODS LOOT TABLE
 				if (tier == 3)
-					picker = rand(1,3)
-					switch(picker)
-						if(1)
-							items += /obj/item/device/voltron
-							item_amounts += 1
-						if(2)
-							items += /obj/item/ammo/power_cell/self_charging/disruptor
-							item_amounts += 1
-							items += /obj/item/ammo/power_cell/self_charging
-							item_amounts += 1
-						else
-							items += /obj/item/clothing/gloves/ring/titanium
-							item_amounts += 1
+					items += /obj/item/device/voltron
+					item_amounts += 1
 				else if (tier == 2)
 					picker = rand(1,10)
 					switch(picker)
@@ -204,19 +166,10 @@
 
 				// CRIMINAL GOODS LOOT TABLE
 				if (tier == 3)
-					picker = rand(1,6)
-					switch(picker)
-						if(1 to 2)
-							items += /obj/item/device/voltron
-							item_amounts += 1
-						if(3 to 5)
-							items += /obj/item/gun/bling_blaster
-							item_amounts += 1
-						else
-							items += /obj/item/spacecash/million
-							item_amounts += 1
+					items += /obj/item/device/voltron
+					item_amounts += 1
 				else if (tier == 2)
-					picker = rand(1,4)
+					picker = rand(1,3)
 					switch(picker)
 						if(1)
 							items += /obj/item/spacecash/thousand
@@ -227,9 +180,6 @@
 						if(3)
 							items += /obj/item/plant/herb/cannabis/omega/spawnable
 							item_amounts += 10
-						if(4)
-							items += /obj/item/storage/pill_bottle/cyberpunk
-							item_amounts += 3
 				else
 					picker = rand(1,4)
 					switch(picker)
@@ -254,30 +204,16 @@
 
 				// CIVILIAN GOODS LOOT TABLE
 				if (tier == 3)
-					picker = rand(1,2)
-					switch(picker)
-						if(1)
-							items += /obj/item/clothing/under/gimmick/frog
-							item_amounts += 1
-						else
-							items += /obj/vehicle/skateboard
-							item_amounts += 1
+					items += /obj/item/device/voltron
+					item_amounts += 1
 				else if (tier == 2)
-					picker = rand(1,3)
+					picker = rand(1,1)
 					switch(picker)
 						if(1)
 							items += /obj/item/reagent_containers/food/snacks/plant/tomato/explosive
 							item_amounts += 5
-						if(2)
-							items += /obj/item/clothing/ears/earmuffs/yeti
-							item_amounts += 1
-						if(3)
-							items += /obj/item/device/light/zippo/brighter
-							item_amounts += 1
-							items += /obj/item/cigpacket/random
-							item_amounts += rand(2,4)
 				else
-					picker = rand(1,4)
+					picker = rand(1,2)
 					switch(picker)
 						if(1)
 							items += /obj/item/clothing/shoes/moon
@@ -333,7 +269,7 @@
 				new X(src)
 			list_counter++
 
-		SPAWN_DBG(0)
+		spawn(0)
 			update_icon()
 
 		return
@@ -365,7 +301,7 @@
 			return ..()
 
 	attackby(obj/item/W as obj, mob/user as mob)
-		if (ispulsingtool(W) && locked)
+		if (istype(W, /obj/item/device/multitool) && locked)
 			if (istype(lock))
 				lock.read_device(user)
 			if (istype(trap))
@@ -508,7 +444,7 @@
 		code_pool = "nine"
 
 	attempt_to_open(var/mob/living/opener)
-		boutput(opener, "<span style=\"color:blue\">The crate is locked with a password lock. You'll need a multitool or similar to get very far here.</span>")
+		boutput(opener, "<span style=\"color:blue\">The crate is locked with a password lock. You'll need a multitool to get very far here.</span>")
 		var/input = input(usr, "Enter one letter to reveal part of the password, or attempt to guess the password.", "Password Lock") as null|text
 		input = lowertext(input)
 
@@ -601,7 +537,7 @@
 		holder.visible_message("<span style=\"color:red\"><b>Spikes shoot out of [holder]!</b></span>")
 		if (opener)
 			random_brute_damage(opener,damage,1)
-			playsound(opener.loc, "sound/impact_sounds/Flesh_Stab_1.ogg", 60, 1)
+			playsound(opener.loc, "sound/effects/bloody_stab.ogg", 60, 1)
 		return
 
 /datum/loot_crate_trap/zap
@@ -640,7 +576,6 @@
 	desc = "Some pretty jewellery."
 	icon = 'icons/obj/items.dmi'
 	icon_state = "bracelet"
-	material_prints = "patterned scratches"
 	w_class = 1
 	var/image/gemstone = null
 	var/obj/item/clothing/gloves/psylink_bracelet/twin
@@ -669,7 +604,7 @@
 	equipped(var/mob/user, var/slot)
 		if (!user)
 			return
-		if (src.twin && ishuman(src.twin.loc))
+		if (src.twin && istype(src.twin.loc,/mob/living/carbon/human/))
 			var/mob/living/carbon/human/psy = src.twin.loc
 			if (psy.bioHolder && psy.bioHolder.HasEffect("psy_resist"))
 				return
@@ -680,7 +615,7 @@
 	unequipped(var/mob/user)
 		if (!user)
 			return
-		if (src.twin && ishuman(src.twin.loc))
+		if (src.twin && istype(src.twin.loc,/mob/living/carbon/human/))
 			var/mob/living/carbon/human/psy = src.twin.loc
 			if (psy.bioHolder && psy.bioHolder.HasEffect("psy_resist"))
 				return
@@ -702,7 +637,7 @@
 
 	if (istype(src.gloves,/obj/item/clothing/gloves/psylink_bracelet/))
 		var/obj/item/clothing/gloves/psylink_bracelet/PB = src.gloves
-		if (PB.twin && ishuman(PB.twin.loc))
+		if (PB.twin && istype(PB.twin.loc,/mob/living/carbon/human/))
 			var/mob/living/carbon/human/psy = PB.twin.loc
 			if (psy.bioHolder && psy.bioHolder.HasEffect("psy_resist"))
 				return null

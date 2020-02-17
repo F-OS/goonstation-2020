@@ -40,7 +40,7 @@ div {
 	padding-left:5px;
 	background-color:#444;
 }
-
+	
 .slot-holder {
 	overflow:auto;
 	margin-right:10px;
@@ -125,35 +125,11 @@ div {
 	margin-bottom:3px;
 }
 
-.dragging * {
-	cursor:ew-resize !important;
-}
-
-.left-ptr,
-.right-ptr,
-.sequence {
-	display:inline-block;
-	margin:0 3px;
-	position:relative;
-}
-
-.sequence {
+.splice-ent {
 	cursor:pointer;
+	margin:0px 1px 0px 1px;
+	padding:0px 2px 0px 2px;
 }
-
-.left-ptr,
-.right-ptr {
-	cursor:ew-resize;
-	color:red;
-}
-
-.left-ptr:before {
-	content:"\25BA";
-}
-.right-ptr:before {
-	content:"\25C4";
-}
-
 .splice-selected {
 	color:#F00;
 }
@@ -161,7 +137,6 @@ div {
 #spliceData {
 	display:inline-block;
 }
-
 #spliceFinalButtons {
 	height:338px;
 	width:150px;
@@ -190,12 +165,9 @@ div {
 
 .tf-long {
 	width:95%;
-	height:45px;
-	overflow-x:scroll;
-	overflow-y:hidden;
-	white-space:nowrap;
+	height:40px;
+	overflow:scroll;
 }
-
 .tf-med {
 	width:100px;
 }
@@ -275,14 +247,14 @@ div {
 	font-weight:bold;
 	background-color:#DDD;
 	color:#111;
-
+	
 	font-family: sans-serif;
-
+	
 	border-top: 3px solid #555;
 	border-left: 3px solid #555;
 	border-right: 3px solid #111;
 	border-bottom: 3px solid #111;
-
+	
 	cursor:pointer;
 }
 

@@ -6,12 +6,8 @@
 	var/obj/screen/hud/oxygen
 	var/obj/screen/hud/fire
 	var/obj/screen/hud/intent
-	var/obj/screen/hud/mintent
 	var/obj/screen/hud/throwing
-	var/obj/screen/hud/pulling
 	var/mob/living/critter/master
-	var/icon/icon_hud = 'icons/mob/hud_human.dmi'
-	var/list/statusUiElements = list() //Assoc. List  STATUS EFFECT INSTANCE : UI ELEMENT add_screen(obj/screen/S). Used to hold the ui elements since they shouldnt be on the status effects themselves.
 
 	var/nr = 0
 	var/nl = 0
@@ -32,19 +28,16 @@
 			HH.screenObj = H
 			hands += H
 		nr = hand_s + master.hands.len
-		health = create_screen("health", "health", src.icon_hud, "health0", "EAST[next_topright()],NORTH", HUD_LAYER+1)
+		health = create_screen("health", "health", 'icons/mob/hud_human.dmi', "health0", "EAST[next_topright()],NORTH", HUD_LAYER+1)
 		if (master.get_health_holder("oxy"))
-			oxygen = create_screen("oxygen", "Suffocation Warning", src.icon_hud, "oxy0", "EAST[next_topright()], NORTH", HUD_LAYER)
-			fire = create_screen("fire","Fire Warning", src.icon_hud, "fire0", "EAST[next_topright()], NORTH", HUD_LAYER)
+			oxygen = create_screen("oxygen", "Suffocation Warning", 'icons/mob/hud_human.dmi', "oxy0", "EAST[next_topright()], NORTH", HUD_LAYER)
+			fire = create_screen("fire","Fire Warning", 'icons/mob/hud_human.dmi', "fire0", "EAST[next_topright()], NORTH", HUD_LAYER)
 
 		if (master.can_throw)
-			throwing = create_screen("throw", "throw mode", src.icon_hud, "throw0", "CENTER+[nr], SOUTH", HUD_LAYER+1)
+			throwing = create_screen("throw", "throw mode", 'icons/mob/hud_human.dmi', "throw0", "CENTER+[nr], SOUTH", HUD_LAYER+1)
 			nr++
 
-		intent = create_screen("intent", "action intent", src.icon_hud, "intent-help", "CENTER+[nr],SOUTH", HUD_LAYER+1)
-		nr++
-		pulling = create_screen("pull", "pulling", 'icons/mob/critter_ui.dmi', "pull0", "CENTER+[nr], SOUTH", HUD_LAYER+1)
-		mintent = create_screen("mintent", "movement mode", 'icons/mob/critter_ui.dmi', "move-run", "CENTER+[nr], SOUTH", HUD_LAYER+1)
+		intent = create_screen("intent", "action intent", 'icons/mob/hud_human.dmi', "intent-help", "CENTER+[nr],SOUTH", HUD_LAYER+1)
 		nr++
 
 		for (var/i = 1, i <= master.equipment.len, i++)
@@ -55,10 +48,6 @@
 			equipment += EH
 			if (EH.item)
 				add_object(EH.item)
-
-	clear_master()
-		master = null
-		..()
 
 	proc/loc_left()
 		if (nl < -6)
@@ -145,18 +134,6 @@
 							master.a_intent = INTENT_GRAB
 					src.update_intent()
 
-				if ("mintent")
-					if (master.m_intent == "run")
-						master.m_intent = "walk"
-					else
-						master.m_intent = "run"
-					out(master, "You are now [master.m_intent == "walk" ? "walking" : "running"]")
-					src.update_mintent()
-
-				if ("pull")
-					master.pulling = null
-					src.update_pulling()
-
 				if ("throw")
 					var/icon_y = text2num(params["icon-y"])
 					if (icon_y > 16 || master.in_throw_mode)
@@ -168,9 +145,7 @@
 					boutput(master, "<span style='color:blue'>Your health: [master.health]/[master.max_health]</span>")
 
 	proc/update_health()
-		if (!isdead(master))
-			if (!health) //Runtime fix: Cannot modify null.icon_state
-				return
+		if (master.stat != 2)
 			var/h_ratio = master.health / master.max_health * 100
 			switch(h_ratio)
 				if(90 to INFINITY)
@@ -192,54 +167,3 @@
 
 	proc/update_intent()
 		intent.icon_state = "intent-[master.a_intent]"
-
-	proc/update_mintent()
-		if (!mintent) return 0
-		mintent.icon_state = "move-[master.m_intent]"
-
-	proc/update_pulling()
-		if (!pulling) return 0
-		pulling.icon_state = "pull[!!master.pulling]"
-
-	proc/update_status_effects()
-		for(var/obj/screen/statusEffect/G in src.objects)
-			remove_screen(G)
-
-		for(var/datum/statusEffect/S in src.statusUiElements) //Remove stray effects.
-			if(!master.statusEffects || !(S in master.statusEffects) || !S.visible)
-				pool(statusUiElements[S])
-				src.statusUiElements.Remove(S)
-				qdel(S)
-
-		var/spacing = 0.6
-		var/pos_x = spacing - 0.2 - 1
-
-		if(master.statusEffects)
-			for(var/datum/statusEffect/S in master.statusEffects) //Add new ones, update old ones.
-				if(!S.visible) continue
-				if((S in statusUiElements) && statusUiElements[S])
-					var/obj/screen/statusEffect/U = statusUiElements[S]
-					U.icon = icon_hud
-					U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH+0.3"
-					U.update_value()
-					add_screen(U)
-					pos_x -= spacing
-				else
-					if(S.visible)
-						var/obj/screen/statusEffect/U = new/obj/screen/statusEffect(master, S)
-						U.init(master,S)
-						U.icon = icon_hud
-						statusUiElements.Add(S)
-						statusUiElements[S] = U
-						U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH+0.3"
-						U.update_value()
-						add_screen(U)
-						pos_x -= spacing
-						animate_buff_in(U)
-		return
-
-/mob/living/critter/updateStatusUi()
-	if(src.hud && istype(src.hud, /datum/hud/critter))
-		var/datum/hud/critter/H = src.hud
-		H.update_status_effects()
-	return

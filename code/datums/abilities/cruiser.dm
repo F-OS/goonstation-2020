@@ -26,7 +26,7 @@
 				usr.update_cursor()
 				return
 			else
-				SPAWN_DBG(0)
+				spawn
 					spell.handleCast()
 
 		owner.holder.updateButtons()
@@ -87,7 +87,7 @@
 
 	proc/incapacitationCheck()
 		var/mob/living/M = holder.owner
-		return M.restrained() || M.stat || M.getStatusDuration("paralysis") || M.getStatusDuration("stunned") || M.getStatusDuration("weakened")
+		return M.restrained() || M.stat || M.paralysis || M.stunned || M.weakened
 
 	castcheck()
 		if (incapacitationCheck())
@@ -103,7 +103,7 @@
 			return
 		last_cast = world.time + cooldown
 		holder.updateButtons()
-		SPAWN_DBG(cooldown + 5)
+		spawn(cooldown + 5)
 			holder.updateButtons()
 
 	cast(atom/target)

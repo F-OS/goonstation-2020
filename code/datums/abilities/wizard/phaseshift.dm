@@ -7,9 +7,6 @@
 	requires_robes = 1
 	cooldown_staff = 1
 	restricted_area_check = 1
-	voice_grim = "sound/voice/wizard/MistFormGrim.ogg"
-	voice_fem = "sound/voice/wizard/MistFormFem.ogg"
-	voice_other = "sound/voice/wizard/MistFormLoud.ogg"
 
 	cast()
 		if(!holder)
@@ -18,8 +15,7 @@
 			return 1
 
 		holder.owner.say("PHEE CABUE")
-		..()
-
+		playsound(holder.owner.loc, "sound/voice/wizard/MistFormLoud.ogg", 50, 0, -1)
 		var/SPtime = 35
 		if(holder.owner.wizard_spellpower())
 			SPtime = 50
@@ -35,7 +31,7 @@
 	if (!isturf(H.loc))
 		H.show_text("You can't seem to turn incorporeal here.", "red")
 		return
-	if (H.stat || H.getStatusDuration("paralysis") > 0)
+	if (H.stat || H.paralysis > 0)
 		H.show_text("You can't turn incorporeal when you are incapacitated.", "red")
 		return
 
@@ -47,7 +43,7 @@
 	if (check_for_watchers == 1)
 		if (H.client)
 			for (var/mob/living/L in view(H.client.view, H))
-				if (isalive(L) && L.sight_check(1) && L.ckey != H.ckey)
+				if (L.stat == 0 && L.sight_check(1) && L.ckey != H.ckey)
 					H.show_text("You can only use that when nobody can see you!", "red")
 					return
 
@@ -56,16 +52,16 @@
 
 	if (stop_burning == 1)
 		var/mob/living/carbon/human/HH = H
-		if (istype(HH) && HH.getStatusDuration("burning"))
+		if (istype(HH) && HH.burning)
 			boutput(HH, "<span style=\"color:blue\">The flames sputter out as you phase shift.</span>")
-			HH.delStatus("burning")
+			HH.set_burning(0)
 
-	SPAWN_DBG(0)
+	spawn(0)
 		var/mobloc = get_turf(H.loc)
 		var/obj/dummy/spell_invis/holder = new /obj/dummy/spell_invis( mobloc )
 		var/atom/movable/overlay/animation = new /atom/movable/overlay( mobloc )
 		animation.name = "water"
-		animation.set_density(0)
+		animation.density = 0
 		animation.anchored = 1
 		animation.icon = 'icons/mob/mob.dmi'
 		animation.icon_state = "liquify"
@@ -82,13 +78,11 @@
 		steam.location = mobloc
 		steam.start()
 		H.canmove = 0
-		H.restrain_time = world.timeofday + 40
 		sleep(20)
 		flick("reappear",animation)
 		sleep(5)
 		H.set_loc(mobloc)
 		H.canmove = 1
-		H.restrain_time = 0
 		qdel(animation)
 		for (var/obj/junk_to_dump in holder.contents)
 			junk_to_dump.set_loc(mobloc)
@@ -104,7 +98,7 @@
 	density = 0
 	anchored = 1
 
-/obj/dummy/spell_invis/relaymove(var/mob/user, direction, delay)
+/obj/dummy/spell_invis/relaymove(var/mob/user, direction)
 	if (!src.canmove) return
 	switch(direction)
 		if(NORTH)
@@ -128,173 +122,10 @@
 			src.y--
 			src.x--
 	src.canmove = 0
-	SPAWN_DBG(2) src.canmove = 1
+	spawn(2) src.canmove = 1
 
 /obj/dummy/spell_invis/ex_act(blah)
 	return
 
 /obj/dummy/spell_invis/bullet_act(blah,blah)
 	return
-
-
-
-/proc/spell_batpoof(var/mob/H, var/cloak = 0)
-	if (!H || !ismob(H))
-		return
-	if (!isturf(H.loc))
-		H.show_text("You can't seem to transform in here.", "red")
-		return
-
-
-	//usecloak == check abilityholder
-	new /obj/dummy/spell_batpoof( get_turf(H), H , cloak)
-
-/obj/dummy/spell_batpoof
-	name = "bat"
-	icon = 'icons/misc/critter.dmi'
-	icon_state = "vampbat"
-	density = 0
-	flags = TABLEPASS | DOORPASS
-
-	var/mob/living/carbon/owner = 0
-	var/datum/abilityHolder/vampire/vampholder = 0
-	//var/image/overlay_image
-	var/use_cloakofdarkness = 0
-
-	New(loc,ownermob,cloak)
-		..()
-		src.owner = ownermob
-		src.owner.set_loc(src)
-
-		use_cloakofdarkness = cloak
-
-		if (isvampire(owner))
-			vampholder = owner.get_ability_holder(/datum/abilityHolder/vampire)
-
-		var/obj/itemspecialeffect/poof/P = unpool(/obj/itemspecialeffect/poof)
-		P.setup(src.loc)
-		playsound(src.loc,"sound/effects/poff.ogg", 50, 1, pitch = 1)
-
-		//overlay_image = image("icon" = 'icons/effects/genetics.dmi', "icon_state" = "aurapulse", layer = MOB_LIMB_LAYER)
-		//overlay_image.color = "#333333"
-
-		if (use_cloakofdarkness)
-			if (!(src in processing_items))
-				processing_items.Add(src)
-
-		SPAWN_DBG(-1)
-			var/reduc_count = 0
-			while(src && !src.qdeled && owner && owner.stamina >= STAMINA_SPRINT && owner.client && owner.client.check_key(KEY_RUN))
-				reduc_count++
-				if (reduc_count >= 4)
-					reduc_count = 0
-					owner.remove_stamina(1)
-				sleep(1)
-
-			if (src && !src.qdeled)
-				dispel()
-
-	disposing()
-		if(owner)
-			owner.set_loc(src.loc)
-			owner = 0
-		//overlay_image = 0
-		if (use_cloakofdarkness)
-			processing_items.Remove(src)
-		..()
-
-	proc/process()
-		..()
-		update_cloak_status()
-
-	proc/update_cloak_status()
-		var/turf/T = get_turf(owner)
-		if (T)
-			var/area/A = get_area(T)
-			if (T.turf_flags & CAN_BE_SPACE_SAMPLE || A.name == "Emergency Shuttle" || A.name == "Space" || A.name == "Ocean")
-				src.set_cloaked(0)
-
-			else
-				if (T.RL_GetBrightness() < 0.2 && can_act(owner))
-					src.set_cloaked(1)
-				else
-					src.set_cloaked(0)
-		else
-			src.set_cloaked(0)
-
-
-	proc/set_cloaked(var/cloaked = 1)
-		if (use_cloakofdarkness)
-			if (cloaked == 1)
-				src.invisibility = 1
-				src.alpha = 120
-				//src.UpdateOverlays(overlay_image, "batpoof_cloak")
-			else
-				src.invisibility = 0
-				src.alpha = 250
-				//src.UpdateOverlays(null, "batpoof_cloak")
-
-	proc/dispel(var/forced = 0)
-		if (forced)
-			owner.stamina = max(owner.stamina - 40, STAMINA_SPRINT)
-
-		var/obj/itemspecialeffect/poof/P = unpool(/obj/itemspecialeffect/poof)
-		P.setup(src.loc, forced)
-
-		playsound(src.loc,"sound/effects/poff.ogg", 50, 1, pitch = 1.3)
-
-		qdel(src)
-
-	relaymove(var/mob/user, direction, delay)//all relaymove should accept delay
-		delay = max(delay,1)			//0.75 sprint 1.25 run
-		var/glide = ((32 / delay) * world.tick_lag)
-		src.glide_size = glide
-		src.animate_movement = SLIDE_STEPS
-
-		user.animate_movement = SYNC_STEPS
-		user.glide_size = glide
-
-		step(src, direction)
-
-		src.glide_size = glide
-		src.animate_movement = SLIDE_STEPS
-
-		user.glide_size = glide
-
-		owner.remove_stamina(round(STAMINA_COST_SPRINT*0.75))
-
-		update_cloak_status()
-
-		if (vampholder && isturf(src.loc))
-			var/i = 0
-			for (var/atom in src.loc)
-				if (ishuman(atom) && vampholder.can_bite(atom, is_pointblank = 0))
-					vampholder.do_bite(atom, mult = 0.25)
-					playsound(src.loc,"sound/impact_sounds/Flesh_Crush_1.ogg", 35, 1, pitch = 1.3)
-					break
-				if (src.loc:checkingcanpass)
-					if (istype(atom,/obj/machinery/door))
-						var/obj/machinery/door/D = atom
-						//D.bumpopen(owner)
-						D.try_force_open(owner)
-				i++
-				if (i > 20)
-					break
-
-		.= delay
-
-	ex_act(severity)
-		dispel(1)
-		owner.ex_act(severity)
-
-	bullet_act()
-		.= owner
-		dispel(1)
-
-	attackby(obj/item/W, mob/M)
-		dispel(1)
-		owner.attackby(W,M)
-
-	attack_hand(mob/M)
-		dispel(1)
-		owner.attackby(M)

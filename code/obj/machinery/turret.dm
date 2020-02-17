@@ -7,7 +7,7 @@
 	anchored = 1
 	layer = OBJ_LAYER
 	invisibility = 2
-	density = 0
+	density = 1
 	var/lasers = 0
 	var/health = 100
 	var/obj/machinery/turretcover/cover = null
@@ -45,7 +45,7 @@
 	return (popping!=0)
 
 /obj/machinery/turret/power_change()
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		icon_state = "grey_target_prism"
 	else
 		if( powered() )
@@ -56,11 +56,11 @@
 					icon_state = "target_prism"
 			else
 				icon_state = "grey_target_prism"
-			status &= ~NOPOWER
+			stat &= ~NOPOWER
 		else
-			SPAWN_DBG(rand(0, 15))
+			spawn(rand(0, 15))
 				src.icon_state = "grey_target_prism"
-				status |= NOPOWER
+				stat |= NOPOWER
 
 /obj/machinery/turret/proc/setState(var/enabled, var/lethal)
 	src.enabled = enabled
@@ -68,10 +68,10 @@
 	src.power_change()
 
 /obj/machinery/turret/process()
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		return
 	..()
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		return
 	if(override_area_bullshit)
 		return
@@ -96,12 +96,13 @@
 				if (isDown())
 					popUp()
 				else
-					var/atom/target = pick(target_list)
+					var/mob/target = pick(target_list)
 					src.dir = get_dir(src, target)
 					lastfired = world.time //Setting this here to prevent immediate firing when enabled
 					if (src.enabled)
-						//if (isliving(target))
-						src.shootAt(target)
+						if (istype(target, /mob/living))
+							if (target.stat!=2)
+								src.shootAt(target)
 		else if(!isDown() && !isPopping())
 			popDown()
 
@@ -110,47 +111,12 @@
 /obj/machinery/turret/proc/get_target_list()
 	var/area/A = get_area(src)
 	.= list()
-
-	for(var/mob/living/C in mobs)
-		LAGCHECK(LAG_HIGH)
-		if (!C)
-			continue
+	for(var/mob/living/C in A)
 		if (!iscarbon(C) && !iscritter(C))
 			continue
-		if (isdead(C))
-			continue
-		if (!istype(C.loc,/turf))
-			continue
-		if (!istype(C.loc.loc,A))
+		if (C.stat == 2)
 			continue
 		. += C
-
-	if (istype(A, /area/station/turret_protected))
-		var/area/station/turret_protected/T = A
-		if (T.blob_list.len)
-			for(var/obj/blob/B in T.blob_list)
-				LAGCHECK(LAG_HIGH)
-				if (!B)
-					continue
-				if (!istype(B.loc,/turf))
-					continue
-				if (!istype(B.loc.loc,A))
-					continue
-				. += B
-
-	//slower
-	/*
-	for(var/atom/AT in A)
-		var/mob/living/C = AT
-		if( istype(C) )
-			if (!iscarbon(C) && !iscritter(C))
-				continue
-			if (isdead(C))
-				continue
-			. += C
-		else if( istype(AT, /obj/blob) )
-			. += AT
-	*/
 
 /obj/machinery/turret/proc/isDown()
 	return (invisibility!=0)
@@ -163,9 +129,8 @@
 		if (src.cover!=null)
 			flick("popup", src.cover)
 			src.cover.icon_state = "openTurretCover"
-		SPAWN_DBG(10)
+		spawn(10)
 			if (popping==1) popping = 0
-			set_density(1)
 
 /obj/machinery/turret/proc/popDown()
 	if (isDown()) return
@@ -174,17 +139,18 @@
 		if (src.cover!=null)
 			flick("popdown", src.cover)
 			src.cover.icon_state = "turretCover"
-		SPAWN_DBG(13)
+		spawn(13)
 			if (popping==-1)
 				invisibility = 2
 				popping = 0
-				set_density(0)
 
-/obj/machinery/turret/proc/shootAt(var/atom/movable/target)
+/obj/machinery/turret/proc/shootAt(var/mob/target)
 	var/turf/T = loc
-	var/atom/U = get_turf(target)
+	var/atom/U = (istype(target, /atom/movable) ? target.loc : target)
 	if ((!( U ) || !( T )))
 		return
+	while(!( istype(U, /turf) ))
+		U = U.loc
 	if (!( istype(T, /turf) ))
 		return
 
@@ -204,14 +170,12 @@
 
 /obj/machinery/turret/bullet_act(var/obj/projectile/P)
 	var/damage = 0
-	var/area/station/turret_protected/ai/aiArea = get_area(src)
-	if(istype(aiArea))
-		var/mob/living/silicon/ai/theAI = locate() in aiArea
-		if(theAI)
-			theAI.notify_attacked()
 	damage = round((P.power*P.proj_data.ks_ratio), 1.0)
 
-	if(src.material) src.material.triggerOnBullet(src, src, P)
+	if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+	for(var/atom/A in src)
+		if(A.material)
+			A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 	if(P.proj_data.damage_type == D_KINETIC)
 		src.health -= damage
@@ -238,14 +202,14 @@
 
 /obj/machinery/turret/proc/die()
 	src.health = 0
-	src.set_density(0)
-	src.status |= BROKEN
+	src.density = 0
+	src.stat |= BROKEN
 	src.icon_state = "destroyed_target_prism"
 	if (cover!=null)
 		qdel(cover)
 	sleep(3)
 	flick("explosion", src)
-	SPAWN_DBG(13)
+	spawn(13)
 		qdel(src)
 
 /*
@@ -258,7 +222,7 @@
 
 	New()
 		..()
-		SPAWN_DBG(6)
+		spawn(6)
 			src.net_id = generate_net_id(src)
 			if(!src.link)
 				var/turf/T = get_turf(src)
@@ -270,7 +234,7 @@
 		return
 
 	receive_signal(datum/signal/signal)
-		if(status & NOPOWER)
+		if(stat & NOPOWER)
 			return
 
 		if(!signal || signal.encryption || !signal.data["sender"])
@@ -281,7 +245,7 @@
 
 		var/sender = signal.data["sender"]
 		if((signal.data["address_1"] == "ping") && sender)
-			SPAWN_DBG(5)
+			spawn(5)
 				src.post_status(sender, "command", "ping_reply", "device", "PNET_SEC_TURRT", "netid", src.net_id)
 			return
 
@@ -289,8 +253,8 @@
 			var/command = lowertext(signal.data["command"])
 			switch(command)
 				if("status")
-					var/status_string = "on=[!(status & NOPOWER)]&health=[src.health]&lethal=[src.lasers]&active=[src.enabled]"
-					SPAWN_DBG(3)
+					var/status_string = "on=[!(stat & NOPOWER)]&health=[src.health]&lethal=[src.lasers]&active=[src.enabled]"
+					spawn(3)
 						src.post_status(sender, "command", "device_reply", status_string)
 				if("setmode")
 					var/list/L = params2list(signal.data["data"])
@@ -332,7 +296,7 @@
 /obj/machinery/turretid
 	name = "Turret deactivation control"
 	icon = 'icons/obj/device.dmi'
-	icon_state = "ai3"
+	icon_state = "motion3"
 	anchored = 1
 	density = 0
 	var/enabled = 1
@@ -344,17 +308,17 @@
 	req_access = list(access_ai_upload)
 
 /obj/machinery/turretid/attackby(obj/item/W, mob/user)
-	if(status & BROKEN) return
-	if (issilicon(user) || isAI(user))
+	if(stat & BROKEN) return
+	if (istype(user, /mob/living/silicon))
 		return src.attack_hand(user)
 	else // trying to unlock the interface
-		if (src.allowed(usr))
+		if (src.allowed(usr, req_only_one_required))
 			locked = !locked
 			boutput(user, "You [ locked ? "lock" : "unlock"] the panel.")
 			if (locked)
 				if (user.machine==src)
 					user.machine = null
-					user.Browse(null, "window=turretid")
+					user << browse(null, "window=turretid")
 			else
 				if (user.machine==src)
 					src.attack_hand(usr)
@@ -365,14 +329,14 @@
 	return attack_hand(user)
 
 /obj/machinery/turretid/attack_hand(mob/user as mob)
-	if (user.getStatusDuration("stunned") || user.getStatusDuration("weakened") || user.stat)
+	if (user.stunned || user.weakened || user.stat)
 		return
 
 	if ( (get_dist(src, user) > 1 ))
-		if (!issilicon(user) && !isAI(user) && !isAIeye(user))
+		if (!istype(user, /mob/living/silicon))
 			boutput(user, text("Too far away."))
 			user.machine = null
-			user.Browse(null, "window=turretid")
+			user << browse(null, "window=turretid")
 			return
 
 	user.machine = src
@@ -380,13 +344,13 @@
 	if (istype(loc, /turf))
 		loc = loc:loc
 	if (!istype(loc, /area))
-		logTheThing("debug", null, null, "Turret badly positioned - loc.loc is [loc].")
+		boutput(user, text("Turret badly positioned - loc.loc is [].", loc))
 		return
 	var/area/area = loc
 	var/t = "<TT><B>Turret Control Panel</B> ([area.name])<HR>"
 
 	if(!src.emagged && turretsExist)
-		if(src.locked && (!issilicon(user) && !isAI(user)))
+		if(src.locked && (!istype(user, /mob/living/silicon)))
 			t += "<I>(Swipe ID card to unlock control panel.)</I><BR>"
 		else
 			t += text("Turrets [] - <A href='?src=\ref[];toggleOn=1'>[]?</a><br><br>", src.enabled?"activated":"deactivated", src, src.enabled?"Disable":"Enable")
@@ -407,19 +371,19 @@
 	else
 		t += "!ALERT! Unable to connect to a turret!<br><br>"
 
-	user.Browse(t, "window=turretid")
+	user << browse(t, "window=turretid")
 	onclose(user, "turretid")
 
 /obj/machinery/turretid/Topic(href, href_list)
 	..()
-	if ((!isliving(usr) && !isAIeye(usr)) || usr.getStatusDuration("stunned") || usr.getStatusDuration("weakened") || usr.stat)
+	if (!isliving(usr) || usr.stunned || usr.weakened || usr.stat)
 		return
 	if (src.locked)
-		if (!issilicon(usr) && !isAI(usr))
+		if (!issilicon(usr))
 			boutput(usr, "Control panel is locked!")
 			return
 
-	if ((!issilicon(usr) && !isAIeye(usr)) && get_dist(usr, src) > 1)
+	if (!issilicon(usr) && get_dist(usr, src) > 1)
 		return
 
 	if (href_list["toggleOn"])
@@ -437,46 +401,21 @@
 		src.updateTurrets()
 	src.attack_hand(usr)
 
-/obj/machinery/turretid/receive_silicon_hotkey(var/mob/user)
-	..()
-
-	if (!isAI(user) && !issilicon(user))
-		return
-
-	if(user.client.check_key(KEY_OPEN))
-		. = 1
-		src.enabled = !src.enabled
-		boutput(user, "You have <B>[src.enabled ? "en" : "dis"]abled</B> the turrets.")
-		logTheThing("combat", usr, null, "turned [enabled ? "ON" : "OFF"] turrets from control \[[showCoords(src.x, src.y, src.z)]].")
-		src.updateTurrets()
-	else if(user.client.check_key(KEY_BOLT))
-		. = 1
-		src.lethal = !src.lethal
-		boutput(user, "You have set the turrets to <B>[src.lethal ? "laser" : "stun"]</B> mode.")
-		if(src.lethal)
-			logTheThing("combat", usr, null, "set turrets to LETHAL from control \[[showCoords(src.x, src.y, src.z)]].")
-			message_admins("[key_name(usr)] set turrets to LETHAL from control \[[showCoords(src.x, src.y, src.z)]].")
-		else
-			logTheThing("combat", usr, null, "set turrets to STUN from control \[[showCoords(src.x, src.y, src.z)]].")
-			message_admins("[key_name(usr)] set turrets to STUN from control \[[showCoords(src.x, src.y, src.z)]].")
-		src.updateTurrets()
-
-
 /obj/machinery/turretid/proc/updateTurrets()
 	if(turretsExist) //Let's not waste a lot of time here.
 		if (src.enabled)
 			if (src.lethal)
-				icon_state = "ai1"
+				icon_state = "motion1"
 			else
-				icon_state = "ai3"
+				icon_state = "motion3"
 		else
-			icon_state = "ai0"
+			icon_state = "motion0"
 
 		var/loc = src.loc
 		if (istype(loc, /turf))
 			loc = loc:loc
 		if (!istype(loc, /area))
-			logTheThing("debug", null, null, "Turret badly positioned - loc.loc is [loc].")
+			boutput(world, text("Turret badly positioned - loc.loc is [loc]."))
 			return
 		var/area/area = loc
 		turretsExist = 0
@@ -493,7 +432,7 @@
 		emagged = 1
 		enabled = 0
 		updateTurrets()
-		SPAWN_DBG(100 + (rand(0,20)*10))
+		spawn(100 + (rand(0,20)*10))
 			process_emag()
 
 		return 1

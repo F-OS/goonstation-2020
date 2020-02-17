@@ -30,25 +30,24 @@ datum/special_respawn
 				if(!check)
 					break
 				r_number ++
-				SPAWN_DBG(50)
+				spawn(50)
 					if(player && !player:client)
 						qdel(player)
 
-		for (var/obj/landmark/A in landmarks)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/obj/landmark/A in world)
 			if (A.name == "Syndicate-Gear-Closet")
 				new /obj/storage/closet/syndicate/personal(A.loc)
-				A.dispose()
+				qdel(A)
 				continue
 
 			if (A.name == "Syndicate-Bomb")
 				new /obj/item/ammo/bullets/a357(A.loc)
-				A.dispose()
+				qdel(A)
 				continue
 
 			if (A.name == "Nuclear-Closet")
 				new /obj/storage/closet/syndicate/nuclear(A.loc)
-				A.dispose()
+				qdel(A)
 				continue
 
 			if (A.name == "Breaching-Charges")
@@ -57,7 +56,7 @@ datum/special_respawn
 				new /obj/item/breaching_charge/thermite(A.loc)
 				new /obj/item/breaching_charge/thermite(A.loc)
 				new /obj/item/breaching_charge/thermite(A.loc)
-				A.dispose()
+				qdel(A)
 				continue
 
 
@@ -69,39 +68,16 @@ datum/special_respawn
 		for(var/c = 0, c < number, c++)
 			var/mob/player = find_player("a person")
 			if(player)
-				var/mob/living/carbon/human/normal/M = new/mob/living/carbon/human/normal(pick(latejoin))
+				var/mob/living/carbon/human/normal/male/M = new/mob/living/carbon/human/normal/male(pick(latejoin))
 				if(!player.mind)
 					player.mind = new (player)
 				player.mind.transfer_to(M)
 				//M.ckey = player:ckey
 
 				r_number ++
-				SPAWN_DBG(50)
+				spawn(50)
 					if(player && !player:client)
 						qdel(player)
-			else
-				break
-		message_admins("[r_number] players spawned.")
-
-	proc/spawn_as_job(var/number = 3, var/datum/job/job)
-		var/r_number = 0
-		for(var/c = 0, c < number, c++)
-			var/mob/player = find_player("a person")
-			if(player)
-				var/mob/living/carbon/human/normal/M = new/mob/living/carbon/human/normal(pick(latejoin))
-				SPAWN_DBG(0)
-					M.JobEquipSpawned(job.name)
-
-				if(!player.mind)
-					player.mind = new (player)
-				player.mind.transfer_to(M)
-
-				r_number ++
-				SPAWN_DBG(50)
-					if(player && !player:client)
-						qdel(player)
-			else
-				break
 		message_admins("[r_number] players spawned.")
 
 	proc/spawn_custom(var/blType, var/number = 3)
@@ -117,47 +93,17 @@ datum/special_respawn
 
 				//M.ckey = player:ckey
 				r_number++
-				SPAWN_DBG(rand(1,10))
+				spawn(rand(1,10))
 					M.set_clothing_icon_dirty()
-				SPAWN_DBG(50)
+				spawn(50)
 					if(player && !player:client)
 						qdel(player)
-			else
-				break
 		message_admins("[r_number] players spawned.")
-
-	proc/spawn_welder(var/number = 1)
-		var/list/landlist = new/list()
-		var/obj/landmark/B
-		var/trashstation = "No"
-		for (var/obj/landmark/A in landmarks)//world)
-			if (A.name == "SR Welder")
-				landlist.Add(A)
-		B = pick(landlist)
-		if(!B)	return
-		var/player = input(usr,"Who?","Spawn Welder",) as mob in world
-		if(station_creepified == 0)
-			trashstation = alert("Make the station creepy and dark?","Spawn Welder","Yes","No")
-		if(player)
-			var/check = 0
-			check = spawn_character_human("The Welder",player,B,"Welder")
-			if(!check)
-				return
-			SPAWN_DBG(50)
-				if(trashstation == "Yes")
-					creepify_station()
-					bust_lights()
-					station_creepified = 1
-				if(player && !player:client)
-					del(player)
-
-			message_admins("A Welder has spawned.", 1)
-
 /*
 	proc/spawn_commandos(var/number = 3)
 		var/r_number = 0
 		var/obj/landmark/B
-		for (var/obj/landmark/A in landmarks)//world)
+		for (var/obj/landmark/A in world)
 			if (A.name == "SR commando")
 				B = A
 		for(var/c = 0, c < number, c++)
@@ -167,7 +113,7 @@ datum/special_respawn
 				if(!check)
 					break
 				r_number ++
-				SPAWN_DBG(50)
+				spawn(50)
 					if(player && !player:client)
 						qdel(player)
 		message_admins("[r_number] officers spawned.")
@@ -184,7 +130,7 @@ datum/special_respawn
 				var/check = spawn_character_alien(player,location)
 				if(!check)
 					break
-				SPAWN_DBG(50)
+				spawn(50)
 					if(player && !player:client)
 						qdel(player)
 				return 1
@@ -197,7 +143,7 @@ datum/special_respawn
 		var/r_number = 0
 		var/obj/landmark/B
 		var/commander = 0
-		for (var/obj/landmark/A in landmarks)//world)
+		for (var/obj/landmark/A in world)
 			if (A.name == "SR Turds-Spawn")
 				B = A
 
@@ -214,7 +160,7 @@ datum/special_respawn
 				if(!check)
 					break
 				r_number ++
-				SPAWN_DBG(50)
+				spawn(50)
 					if(player && !player:client)
 						qdel(player)
 
@@ -224,7 +170,7 @@ datum/special_respawn
 	proc/spawn_smilingman(var/number = 1)
 		var/list/landlist = new/list()
 		var/obj/landmark/B
-		for (var/obj/landmark/A in landmarks)//world)
+		for (var/obj/landmark/A in world)
 			if (A.name == "SR Welder")
 				landlist.Add(A)
 		B = pick(landlist)
@@ -235,7 +181,7 @@ datum/special_respawn
 			check = spawn_character_human("The Smiling Man",player,B,"Smiling Man")
 			if(!check)
 				return
-			SPAWN_DBG(50)
+			spawn(50)
 				if(player && !player:client)
 					qdel(player)
 
@@ -247,8 +193,6 @@ datum/special_respawn
 			return 0
 		var/mob/living/carbon/human/mob
 
-		if(rname == "The Welder")
-			mob = new /mob/living/carbon/human/welder(spawn_landmark.loc)
 		if(rname == "The Smiling Man")
 			mob = new /mob/living/carbon/human(spawn_landmark.loc)
 			mob.equip_if_possible(new /obj/item/device/radio/headset(mob), mob.slot_ears)
@@ -267,7 +211,7 @@ datum/special_respawn
 			mob.verbs += /client/proc/smnoclip
 			mob.bioHolder.AddEffect("accent_smiling")
 		else
-			mob = new /mob/living/carbon/human/normal(spawn_landmark)
+			mob = new /mob/living/carbon/human(spawn_landmark)
 		mob.real_name = rname
 
 		if(!player.mind)
@@ -282,7 +226,7 @@ datum/special_respawn
 		//mob.key = player.key
 		^*/
 		mob.mind.special_role = equip
-		SPAWN_DBG(5)
+		spawn(5)
 			if (mob)
 				eq_mob(equip,mob)
 				mob.set_clothing_icon_dirty()
@@ -345,23 +289,6 @@ EndNote
 				//S.owner = user
 				//user.implant.Add(S)
 
-			if ("Welder")
-				var/obj/item/device/radio/R = new /obj/item/device/radio/headset(user)
-				user.equip_if_possible(R, user.slot_ears)
-				user.equip_if_possible(new /obj/item/clothing/gloves/black(user), user.slot_gloves)
-				var/obj/item/clothing/head/helmet/welding/W = new/obj/item/clothing/head/helmet/welding(user)
-				W.cant_self_remove = 1
-				W.cant_other_remove = 1
-				user.equip_if_possible(W, user.slot_head)
-				user.equip_if_possible(new /obj/item/clothing/shoes/black(user), user.slot_shoes)
-				user.equip_if_possible(new /obj/item/clothing/suit/armor/vest(user), user.slot_wear_suit)
-				user.equip_if_possible(new /obj/item/clothing/under/color(user), user.slot_w_uniform)
-				user.mind.welder_knife = "[pick(rand(1, 999))]"
-				var/obj/item/knife/K = new/obj/item/knife(user)
-				K.tag = user.mind.welder_knife
-				user.equip_if_possible(K, user.slot_r_hand)
-				user.make_welder()
-
 			if ("T.U.R.D.S.")
 				var/obj/item/device/radio/R = new /obj/item/device/radio/headset/security(user)
 				user.equip_if_possible(R, user.slot_ears)
@@ -387,14 +314,9 @@ EndNote
 
 
 /proc/bust_lights()
-	for(var/obj/machinery/light/lights in machines)
-		if(prob(70))
-			lights.on = 0
-			lights.status = LIGHT_BROKEN
-			lights.update()
-	for(var/obj/machinery/power/apc/apcs in machines)
-		if(prob(65))
-			apcs.cell.charge-=20
+	for(var/obj/machinery/power/apc/apc in machines)
+		if(prob(60))
+		 apc.overload_lighting(1)
 	return
 
 /proc/creepify_station()
@@ -413,3 +335,4 @@ EndNote
 			if(!istype(W, /turf/simulated/wall/r_wall) && !istype(W, /turf/simulated/wall/auto/reinforced))
 				W.icon_state = "r_wall-4"
 	return
+

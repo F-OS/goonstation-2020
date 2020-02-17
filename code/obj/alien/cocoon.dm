@@ -21,7 +21,7 @@ they're trapped
 		if (!ticker)
 			boutput(user, "You can't buckle anyone in before the game starts.")
 			return
-		if ((!( ismob(M) ) || get_dist(src, user) > 1 || user.restrained() || usr.stat))
+		if ((!( istype(M, /mob) ) || get_dist(src, user) > 1 || user.restrained() || usr.stat))
 			return
 		for(var/mob/O in viewers(user, null))
 			if ((O.client && !( O.blinded )))
@@ -59,4 +59,4 @@ they're trapped
 
 	proc/death()
 		src.icon_state = "egg_destroyed"	//need an icon for this
-		src.set_density(0)
+		src.density = 0

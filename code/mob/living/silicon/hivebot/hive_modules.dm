@@ -47,7 +47,7 @@
 	src.modules += new /obj/item/wirecutters(src)
 	src.modules += new /obj/item/device/multitool(src)
 
-	src.modules += new /obj/item/device/analyzer/atmospheric(src)
+	src.modules += new /obj/item/device/analyzer(src)
 
 
 /obj/item/hive_module/construction/New()

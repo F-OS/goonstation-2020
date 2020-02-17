@@ -4,9 +4,6 @@ var/list/asteroid_blocked_turfs = list()
 var/turf_spawn_edge_limit = 5
 
 /datum/mining_controller
-	var/mining_z = 4
-	var/mining_z_asteroids_max = 0
-	var/list/ore_types_all = list()
 	var/list/ore_types_common = list()
 	var/list/ore_types_uncommon = list()
 	var/list/ore_types_rare = list()
@@ -17,32 +14,24 @@ var/turf_spawn_edge_limit = 5
 	var/list/magnet_shields = list()
 	var/max_magnet_spawn_size = 7
 	var/min_magnet_spawn_size = 4
-	var/list/mining_encounters_all = list()
 	var/list/mining_encounters_common = list()
 	var/list/mining_encounters_uncommon = list()
 	var/list/mining_encounters_rare = list()
 	var/list/small_encounters = list()
-	var/list/mining_encounters_selectable = list()
 
-	var/list/magnet_do_not_erase = list(/obj/securearea,/obj/forcefield/mining,/obj/grille/catwalk,/obj/grille/catwalk/cross, /obj/overlay)
+	var/list/magnet_do_not_erase = list(/obj/securearea,/obj/forcefield/mining,/obj/grille/catwalk)
 
 	New()
 		..()
-		for (var/X in childrentypesof(/datum/ore) - /datum/ore/event)
+		for (var/X in typesof(/datum/ore) - /datum/ore - /datum/ore/event)
 			var/datum/ore/O = new X
 			ore_types_common += O
-			ore_types_all += O
 
-		for (var/X in childrentypesof(/datum/mining_encounter))
+		for (var/X in typesof(/datum/mining_encounter) - /datum/mining_encounter)
 			var/datum/mining_encounter/MC = new X
 			mining_encounters_common += MC
-			mining_encounters_all += MC
 
 		for (var/datum/ore/O in src.ore_types_common)
-			if (O.no_pick)
-				ore_types_common -= O
-				continue
-
 			if (istype(O, /datum/ore/event/))
 				events += O
 				ore_types_common -= O
@@ -55,10 +44,6 @@ var/turf_spawn_edge_limit = 5
 			O.set_up()
 
 		for (var/datum/mining_encounter/MC in mining_encounters_common)
-			if (MC.no_pick)
-				mining_encounters_common -= MC
-				continue
-
 			if (MC.rarity_tier == 3)
 				mining_encounters_rare += MC
 				mining_encounters_common -= MC
@@ -72,34 +57,21 @@ var/turf_spawn_edge_limit = 5
 				mining_encounters_common -= MC
 				qdel(MC)
 
-	proc/setup_mining_landmarks()
-		for (var/obj/landmark/magnet_center/MC in landmarks)//world)
+		for (var/obj/landmark/magnet_center/MC in world)
 			magnetic_center = get_turf(MC)
 			magnet_area = get_area(MC)
 			MC.dispose()
 			break
 
-		for (var/obj/landmark/magnet_shield/MS in landmarks)//world)
+		for (var/obj/landmark/magnet_shield/MS in world)
 			var/obj/forcefield/mining/S = new /obj/forcefield/mining(get_turf(MS))
 			magnet_shields += S
 			MS.dispose()
 
-	proc/spawn_mining_z_asteroids(var/amt, var/zlev)
-		SPAWN_DBG(0)
-			var/the_mining_z = zlev ? zlev : src.mining_z
-			var/turf/T
-			var/spawn_amount = amt ? amt : src.mining_z_asteroids_max
-			for (var/i=spawn_amount, i>0, i--)
-				LAGCHECK(LAG_LOW)
-				T = locate(rand(8,(world.maxy - 8)),rand(8,(world.maxy - 8)),the_mining_z)
-				if (istype(T))
-					T.GenerateAsteroid(rand(4,15))
-			message_admins("Asteroid generation on z[the_mining_z] complete: ")
-
 	proc/get_ore_from_string(var/string)
 		if (!istext(string))
 			return
-		for (var/datum/ore/O in ore_types_all)
+		for (var/datum/ore/O in ore_types_common + ore_types_uncommon + ore_types_rare)
 			if (O.name == string)
 				return O
 		return null
@@ -107,41 +79,10 @@ var/turf_spawn_edge_limit = 5
 	proc/get_ore_from_path(var/path)
 		if (!ispath(path))
 			return
-		for (var/datum/ore/O in ore_types_all)
+		for (var/datum/ore/O in ore_types_common + ore_types_uncommon + ore_types_rare)
 			if (O.type == path)
 				return O
 		return null
-
-	proc/get_encounter_by_name(var/enc_name = null)
-		if(enc_name)
-			for(var/datum/mining_encounter/A in mining_encounters_all)
-				if(A.name == enc_name)
-					return A
-		return null
-
-	proc/add_selectable_encounter(var/datum/mining_encounter/A)
-		if(A)
-			var/number = "[(mining_encounters_selectable.len + 1)]"
-			mining_encounters_selectable += number
-			mining_encounters_selectable[number] = A
-		return
-
-	proc/remove_selectable_encounter(var/number_id)
-		if(mining_encounters_selectable.Find(number_id))
-			//var/datum/mining_encounter/A = mining_encounters_selectable[number_id]
-			mining_encounters_selectable.Remove(number_id)
-
-			var/list/rebuiltList = list()
-			var/count = 1
-
-			for(var/X in mining_encounters_selectable)
-				rebuiltList.Add("[count]")
-				rebuiltList["[count]"] = mining_encounters_selectable[X]
-				count++
-
-			mining_encounters_selectable = rebuiltList
-
-		return
 
 	proc/select_encounter(var/rarity_mod)
 		if (!isnum(rarity_mod))
@@ -166,7 +107,7 @@ var/turf_spawn_edge_limit = 5
 /area/mining/magnet
 	name = "Magnet Area"
 	icon_state = "purple"
-	force_fullbright = 1
+	RL_Lighting = 0
 	requires_power = 0
 	luminosity = 1
 

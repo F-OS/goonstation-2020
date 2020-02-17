@@ -24,7 +24,7 @@
 //<A href='?src=\ref[src];make=10'>Filter Inlet<BR>
 
 
-	user.Browse("<HEAD><TITLE>Pipe Dispenser</TITLE></HEAD><TT>[dat]</TT>", "window=pipedispenser")
+	user << browse("<HEAD><TITLE>Pipe Dispenser</TITLE></HEAD><TT>[dat]</TT>", "window=pipedispenser")
 	onclose(user, "pipedispenser")
 	return
 
@@ -56,14 +56,8 @@
 	anchored = 1.0
 	mats = 16
 
-/obj/machinery/disposal_pipedispenser/mobile
-	name = "Disposal Pipe Dispenser Cart"
-	desc = "A tool for removing some of the tedium from pipe-laying."
-	anchored = 0
-	icon_state = "fab-mobile"
 
-
-/obj/machinery/disposal_pipedispenser/attack_hand(mob/user as mob)
+/obj/machinery/disposal_pipedispenser/attack_hand(user as mob)
 	if(..())
 		return
 
@@ -75,7 +69,7 @@
 <A href='?src=\ref[src];dmake=4'>Trunk</A><BR>
 "}
 
-	user.Browse("<HEAD><TITLE>Disposal Pipe Dispenser</TITLE></HEAD><TT>[dat]</TT>", "window=pipedispenser")
+	user << browse("<HEAD><TITLE>Disposal Pipe Dispenser</TITLE></HEAD><TT>[dat]</TT>", "window=pipedispenser")
 	return
 
 // 0=straight, 1=bent, 2=junction-j1, 3=junction-j2, 4=junction-y, 5=trunk
@@ -103,7 +97,7 @@
 
 		C.update()
 
-		usr.Browse(null, "window=pipedispenser")
+		usr << browse(null, "window=pipedispenser")
 		usr.machine = null
 	return
 

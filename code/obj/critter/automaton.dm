@@ -18,9 +18,6 @@ var/global/the_automaton = null
 	firevuln = 0.5
 	brutevuln = 1
 	generic = 0
-	crit_chance = 0
-	atk_text = "smashes"
-	atk_brute_amt = 10
 	var/atom/admiring_target = null
 	var/keycount = 0
 	var/vacation = 0
@@ -32,7 +29,7 @@ var/global/the_automaton = null
 
 	New()
 		..()
-		SPAWN_DBG (10)
+		spawn (10)
 			if (!the_automaton)
 				the_automaton = src
 
@@ -41,7 +38,7 @@ var/global/the_automaton = null
 			the_automaton = null
 		..()
 
-	disposing()
+	Del()
 		if (the_automaton == src)
 			the_automaton = null
 		..()
@@ -54,8 +51,12 @@ var/global/the_automaton = null
 		opensdoors = 1
 
 	CritterAttack(mob/M)
+		src.attacking = 1
+		src.visible_message("<span style=\"color:red\"><B>[src]</B> smashes [src.target]!</span>")
+		random_brute_damage(src.target, rand(5,15))
 		playsound(src.loc, "sound/misc/automaton_spaz.ogg", 50, 1)
-		..()
+		spawn(10)
+			src.attacking = 0
 
 	process()
 		if(!..())
@@ -163,23 +164,6 @@ var/global/the_automaton = null
 		if (aggressive)
 			return ..()
 		if (istype(W, /obj/item/device/key))
-			var/obj/item/device/key/K = W
-
-			if(K.dodgy)
-				//Oh, you've done it now.
-				src.visible_message("<span style=\"color:red\"><b>[src]</b> studies [W] intently for a while, then <B>forcefully grabs [user]!</B>.</span>")
-				playsound(src.loc, "sound/misc/automaton_spaz.ogg", 60, 1)
-				user.changeStatus("stunned", 50)
-				user.canmove = 0
-				user.anchored = 1
-				user.set_loc(src.loc)
-				K.burn_possible = 1
-				SPAWN_DBG(20)
-					src.visible_message("<span style=\"color:red\"><B>[src] forces [user] inside one of the keyholes!</B>.</span>")
-					user.implode()
-					K.combust()
-				return
-
 			if (keycount >= AUTOMATON_MAX_KEYS)
 				boutput(user, "<span style=\"color:red\"><b>[src]</b> ignores you.  Perhaps the time for that has passed?</span>")
 				return
@@ -208,9 +192,8 @@ var/global/the_automaton = null
 					W.throw_at(user, 20, 2)
 				else
 					src.visible_message("<span style=\"color:red\"><B>[src]</B> makes a loud ratcheting noise and crumples up \the [W]!</span>")
-					playsound(src.loc, "sound/impact_sounds/Generic_Click_1.ogg", 60, 1)
-					var/obj/item/raw_material/scrap_metal/scrapmetal = unpool(/obj/item/raw_material/scrap_metal)
-					scrapmetal.set_loc(src.loc)
+					playsound(src.loc, "sound/effects/thunk.ogg", 60, 1)
+					new /obj/item/raw_material/scrap_metal(src.loc)
 					qdel(W)
 				return
 
@@ -229,8 +212,8 @@ var/global/the_automaton = null
 				else
 					keycount = AUTOMATON_MAX_KEYS
 					src.visible_message("<span style=\"color:red\"><b>[src]</b> studies [W] intently for a moment, before secreting it away into a central key hole in its chest.</span>")
-					playsound(src.loc, "sound/impact_sounds/Generic_Click_1.ogg", 60, 1)
-					playsound(src.loc, "sound/musical_instruments/Gong_Rumbling.ogg", 60, 1)
+					playsound(src.loc, "sound/effects/thunk.ogg", 60, 1)
+					playsound(src.loc, "sound/effects/gong_rumble.ogg", 60, 1)
 					qdel(W)
 					sleep(5)
 					playsound(src.loc, "sound/misc/automaton_spaz.ogg", 60, 1)
@@ -244,8 +227,8 @@ var/global/the_automaton = null
 			else if (dd_hasprefix(ckey(W.name), "solar"))
 				keycount = AUTOMATON_MAX_KEYS
 				src.visible_message("<span style=\"color:red\"><b>[src]</b> studies [W] intently for a moment, before secreting it away into a central key hole in its chest.</span>")
-				playsound(src.loc, "sound/impact_sounds/Generic_Click_1.ogg", 60, 1)
-				playsound(src.loc, "sound/musical_instruments/Gong_Rumbling.ogg", 60, 1)
+				playsound(src.loc, "sound/effects/thunk.ogg", 60, 1)
+				playsound(src.loc, "sound/effects/gong_rumble.ogg", 60, 1)
 				qdel(W)
 				sleep(5)
 				playsound(src.loc, "sound/misc/automaton_spaz.ogg", 60, 1)
@@ -271,8 +254,8 @@ var/global/the_automaton = null
 			else
 				keycount = min(keycount+1, AUTOMATON_MAX_KEYS-1)
 				src.visible_message("<span style=\"color:red\"><b>[src]</b> studies [W] intently for a moment, before secreting it away into one of many key holes in its chest.</span>")
-				playsound(src.loc, "sound/impact_sounds/Generic_Click_1.ogg", 60, 1)
-				playsound(src.loc, "sound/musical_instruments/Gong_Rumbling.ogg", 60, 1)
+				playsound(src.loc, "sound/effects/thunk.ogg", 60, 1)
+				playsound(src.loc, "sound/effects/gong_rumble.ogg", 60, 1)
 				qdel (W)
 				sleep(5)
 				inserted_key()
@@ -287,7 +270,7 @@ var/global/the_automaton = null
 				pied = 1
 
 			src.visible_message("<span style=\"color:red\"><b>[src]</b> studies [W] intently for a moment, before secreting it away into a pie-shaped hole in its chest. How did you not notice that before?</span>")
-			playsound(src.loc, "sound/musical_instruments/Gong_Rumbling.ogg", 50, 1)
+			playsound(src.loc, "sound/effects/gong_rumble.ogg", 50, 1)
 			qdel (W)
 
 		else if (istype(W, /obj/item/skull))
@@ -321,7 +304,7 @@ var/global/the_automaton = null
 				if (keycount < (AUTOMATON_MAX_KEYS-1))
 					keycount++
 					inserted_key()
-					playsound(src.loc, "sound/musical_instruments/Gong_Rumbling.ogg", 60, 1)
+					playsound(src.loc, "sound/effects/gong_rumble.ogg", 60, 1)
 			else
 				boutput(user, "<span style=\"color:red\">[src] no longer seems interested in [W].</span>")
 
@@ -336,19 +319,19 @@ var/global/the_automaton = null
 				if (the_sun)
 					if (!src.spin_lock)
 						src.spin_lock = pick("L", "R")
-						DEBUG_MESSAGE("<B>HAINE DEBUG:</b> spin set to [src.spin_lock]")
+						DEBUG("<B>HAINE DEBUG:</b> spin set to [src.spin_lock]")
 					var/final_spin = 1000 - min(src.sun_spin, 999)
-					DEBUG_MESSAGE("<B>HAINE DEBUG:</b> final spin set to [final_spin]")
+					DEBUG("<B>HAINE DEBUG:</b> final spin set to [final_spin]")
 					animate_spin(the_sun, src.spin_lock, final_spin, -1)
 					if (src.sun_spin >= 990)
 						src.sun_spin += 1
-						DEBUG_MESSAGE("<B>HAINE DEBUG:</b> spin now [src.sun_spin]")
+						DEBUG("<B>HAINE DEBUG:</b> spin now [src.sun_spin]")
 					else if (src.sun_spin >= 900)
 						src.sun_spin += 10
-						DEBUG_MESSAGE("<B>HAINE DEBUG:</b> spin now [src.sun_spin]")
+						DEBUG("<B>HAINE DEBUG:</b> spin now [src.sun_spin]")
 					else
 						src.sun_spin += 100
-						DEBUG_MESSAGE("<B>HAINE DEBUG:</b> spin now [src.sun_spin]")
+						DEBUG("<B>HAINE DEBUG:</b> spin now [src.sun_spin]")
 			else
 				user.visible_message("<span style=\"color:red\">[src] studies [ST] for a moment. It hands it back.</span>")
 
@@ -363,24 +346,22 @@ var/global/the_automaton = null
 			user.drop_item()
 			W.set_loc(src)
 			sleep(10)
-			playsound(src.loc, 'sound/impact_sounds/Generic_Hit_3.ogg', 50, 1)
+			playsound(src.loc, 'sound/weapons/genhit3.ogg', 50, 1)
 			src.visible_message("<span style=\"color:red\"><b>[src] frantically tears [W] to pieces! What!</b></span>")
 			if (narrator_mode)
 				playsound(src.loc, 'sound/vox/ghost.ogg', 60, 1)
 			else
 				playsound(src.loc, 'sound/effects/ghost.ogg', 60, 1)
-			SPAWN_DBG(0)
+			spawn(0)
 				var/i = rand(4,8)
 				while (i-- > 0)
-					var/obj/item/paper/tornpaper = unpool(/obj/item/paper)
-					tornpaper.set_loc(src.loc)
-
+					var/obj/item/paper/tornpaper = new /obj/item/paper(src.loc)
 					tornpaper.name = "torn page"
 					tornpaper.info = "A page torn from a book.  Most of the text is illegible."
 					sleep(3)
 					tornpaper.combust()
 				keycount = INFINITY
-				world << sound('sound/musical_instruments/Gong_Rumbling.ogg')
+				world << sound('sound/effects/gong_rumble.ogg')
 				//var/obj/overlay/the_sun = locate("the_sun")
 				//if (istype(the_sun))
 				if (the_sun)
@@ -408,7 +389,7 @@ var/global/the_automaton = null
 		swirl.set_loc(target_turf)
 		swirl.pixel_y = 10
 		playsound(target_turf, "sound/effects/teleport.ogg", 50, 1)
-		SPAWN_DBG(15)
+		spawn(15)
 			swirl.pixel_y = 0
 			pool(swirl)
 
@@ -422,76 +403,6 @@ var/global/the_automaton = null
 		else
 			new /obj/item/sticker/gold_star(target_turf)
 			src.visible_message("<span style=\"color:red\">[src.name] looks very annoyed. It just wanted to relax!</span>")
-/*
-	proc/ending_death()
-
-		world << sound('sound/effects/dramatic.ogg')
-		world << sound('sound/misc/automaton_tickhum.ogg')
-		spin()
-		random_events.force_event("Solar Flare","Solarium Event (DEATH)")
-
-		src.visible_message("<span style=\"color:red\">[src.name] staggers!</span>")
-		playsound(src.loc, "sound/machines/glitch1.ogg", 50, 1)
-		spin()
-
-		var/range = 7
-
-
-		var/temp_effect_limiter = 7
-		for (var/turf/T in view(range, src))
-			var/T_dist = get_dist(T, src)
-			var/T_effect_prob = 100 * (1 - (max(T_dist-1,1) / range))
-			if (prob(8) && limiter.canISpawn(/obj/effects/sparks))
-				var/obj/sparks = unpool(/obj/effects/sparks)
-				sparks.set_loc(T)
-				SPAWN_DBG(20) if (sparks) pool(sparks)
-
-			for (var/obj/item/I in T)
-				if ( prob(T_effect_prob) )
-					animate_float(I, 5, 10)
-			if (prob(T_effect_prob))
-				SPAWN_DBG(rand(30, 50))
-					if (T)
-						playsound(T, pick('sound/effects/elec_bigzap.ogg', 'sound/effects/elec_bzzz.ogg', 'sound/effects/electric_shock.ogg'), 40, 0)
-						var/obj/somesparks = unpool(/obj/effects/sparks)
-						somesparks.set_loc(T)
-						SPAWN_DBG(20) if (somesparks) pool(somesparks)
-						var/list/tempEffect
-						if (temp_effect_limiter-- > 0)
-							tempEffect = DrawLine(src, somesparks, /obj/line_obj/elec, 'icons/obj/projectiles.dmi',"WholeLghtn",1,1,"HalfStartLghtn","HalfEndLghtn",FLY_LAYER,1,PreloadedIcon='icons/effects/LghtLine.dmi')
-						sleep(6)
-						for (var/obj/O in tempEffect)
-							pool(O)
-		world << sound('sound/misc/automaton_spaz.ogg')
-		sleep (10)
-		world << sound('sound/ambience/spooky/Void_Screaming.ogg')
-		spin()
-		sleep (10)
-		world << sound('sound/ambience/spooky/Void_Wail.ogg')
-		world << sound('sound/effects/thunder.ogg')
-		boutput(world, "<span style=\"color:red\"><tt><b>Something feels terribly, terribly wrong.</b></tt></span>")
-		sleep (10)
-		spin()
-
-		for(var/mob/living/carbon/human/H in mobs)
-			animate_float(H, 5, 10)
-			SPAWN_DBG(10)
-				H.flash(30)
-				shake_camera(H, 210, 2)
-			SPAWN_DBG(rand(10,70))
-				H.emote("scream")
-		var/turf/T = get_turf(src)
-		sleep(1)
-		new /obj/effects/void_break(T)
-		src.visible_message("<span style=\"color:red\"><b>[src]</b> shatters! Oh shit!</span>")
-		new /obj/effects/shockwave(T)
-		new /obj/effects/exposion/smoky(T)
-		src.health = 0
-		src.CritterDeath()
-		sleep(2)
-		qdel(src)
-		*/
-
 
 
 

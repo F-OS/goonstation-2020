@@ -25,7 +25,7 @@ var/list/stinkExclamations = list("Ugh","Good lord","Good grief","Christ","Fuck"
 var/list/stinkThings = list("garbage can","trash heap","cesspool","toilet","pile of poo",
 	"butt","skunk","outhouse","corpse","fart","devil")
 var/list/stinkVerbs = list("took a shit","died","farted","threw up","wiped its ass")
-var/list/stinkThingies = list("ass","taint","armpit","excretions","leftovers","Readster")
+var/list/stinkThingies = list("ass","taint","armpit","excretions","leftovers")
 
 /proc/stinkString()
 	// i am five - ISN
@@ -38,6 +38,28 @@ var/list/stinkThingies = list("ass","taint","armpit","excretions","leftovers","R
 			return "[pick(stinkExclamations)], it smells like \a [pick(stinkThings)] [pick(stinkVerbs)] in here!"
 		else
 			return "[pick(stinkExclamations)], it smells like \a [pick(stinkThings)]'s [pick(stinkThingies)] in here!"
+
+/proc/replacetext(haystack, needle, replace)
+    var
+        pos = findtext(haystack, needle)
+        needleLen = length(needle)
+        replaceLen = length(replace)
+    while(pos)
+        haystack = copytext(haystack, 1, pos) + replace + \
+            copytext(haystack, pos+needleLen)
+        pos = findtext(haystack, needle, pos+replaceLen)
+    return haystack
+
+/proc/replaceText(haystack, needle, replace)
+    var
+        pos = findtextEx(haystack, needle)
+        needleLen = length(needle)
+        replaceLen = length(replace)
+    while(pos)
+        haystack = copytext(haystack, 1, pos) + replace + \
+            copytext(haystack, pos+needleLen)
+        pos = findtextEx(haystack, needle, pos+replaceLen)
+    return haystack
 
 //For fuck's sake.
 /*
@@ -60,7 +82,7 @@ var/list/stinkThingies = list("ass","taint","armpit","excretions","leftovers","R
 		return null
 
 	for (var/obj/machinery/power/apc/APC in A.contents)
-		if (!(APC.status & BROKEN))
+		if (!(APC.stat & BROKEN))
 			return APC
 
 	// Lots and lots of APCs use area strings to make the blowout random event possible.
@@ -68,15 +90,24 @@ var/list/stinkThingies = list("ass","taint","armpit","excretions","leftovers","R
 		var/area/A2 = null
 		if (!isnull(APC2.areastring))
 			A2 = get_area_name(APC2.areastring)
-			if (!isnull(A2) && istype(A2) && A == A2 && !(APC2.status & BROKEN))
+			if (!isnull(A2) && istype(A2) && A == A2 && !(APC2.stat & BROKEN))
 				return APC2
 
 	return null
 
+/proc/get_area(O)
+	var/location = O
+	var/i
+	for(i=1, i<=20, i++)
+		if(location && !isarea(location))
+			location = location:loc
+		else
+			return location
+	return 0
+
 /proc/get_area_name(N) //get area by it's name
 
 	for(var/area/A in world)
-		LAGCHECK(LAG_LOW)
 		if(A.name == N)
 			return A
 	return 0
@@ -86,7 +117,6 @@ var/list/stinkThingies = list("ass","taint","armpit","excretions","leftovers","R
 		return null
 
 	for (var/area/A in world)
-		LAGCHECK(LAG_LOW)
 		if (A.type == type_path)
 			return A
 
@@ -107,23 +137,21 @@ var/list/stinkThingies = list("ass","taint","armpit","excretions","leftovers","R
 				if (isrestrictedz(Z) || isrestrictedz(user:z))
 					boutput(user, "<span style=\"color:red\">Your telekinetic powers don't seem to work here.</span>")
 					return 0
-				SPAWN_DBG(0)
+				spawn(0)
 					//I really shouldnt put this here but i dont have a better idea
 					var/obj/overlay/O = new /obj/overlay ( locate(X,Y,Z) )
 					O.name = "sparkles"
 					O.anchored = 1
-					O.set_density(0)
+					O.density = 0
 					O.layer = FLY_LAYER
 					O.dir = pick(cardinal)
 					O.icon = 'icons/effects/effects.dmi'
 					O.icon_state = "nothing"
 					flick("empdisable",O)
-					SPAWN_DBG(5)
+					spawn(5)
 						qdel(O)
 
 				return 1
-		if (istype(source, /obj/machinery) && isAI(user))
-			return 1
 
 	return 0 //not in range and not telekinetic
 
@@ -202,27 +230,17 @@ var/obj/item/dummy/click_dummy = new
 	return 0
 
 /proc/AutoUpdateAI(obj/subject)
-	if (!subject)
-		return
-	for(var/mob/living/silicon/ai/M in mobs)
-		var/mob/AI = M
-		if (M.deployed_to_eyecam)
-			AI = M.eyecam
-
-		if (AI && AI.client && AI.machine == subject)
-			subject.attack_ai(AI)
+	if (subject!=null)
+		for(var/mob/living/silicon/ai/M in mobs)
+			if ((M.client && M.machine == subject))
+				subject.attack_ai(M)
 
 /proc/get_viewing_AIs(center = null, distance = world.view)
 	. = list()
 
-	for (var/mob/living/silicon/ai/theAI in AIs)
-		if (theAI.deployed_to_eyecam)
-			var/mob/dead/aieye/AIeye = theAI.eyecam
-			if (AIeye in view(center, distance))
-				. += AIeye
-				. += theAI
-		//if (istype(theAI.current) && (theAI.current in view(center, distance)) )
-		//	. += theAI
+	for (var/mob/living/silicon/ai/theAI in mobs)
+		if (istype(theAI.current) && (theAI.current in view(center, distance)) )
+			. += theAI
 
 //Kinda sorta like viewers but includes observers. In theory.
 /proc/observersviewers(var/Dist=world.view, var/Center=usr)
@@ -260,11 +278,10 @@ var/obj/item/dummy/click_dummy = new
 	the_atom.tag = tag_holder
 
 /proc/can_act(var/mob/M, var/include_cuffs = 1)
-	if(!M) return 0 //Please pass the M, I need a sprinkle of it on my potatoes.
-	if(include_cuffs && M.handcuffed) return 0
-	if(M.getStatusDuration("stunned")) return 0
-	if(M.getStatusDuration("weakened")) return 0
-	if(M.getStatusDuration("paralysis")) return 0
+	if(include_cuffs) if(M.handcuffed) return 0
+	if(M.stunned) return 0
+	if(M.weakened) return 0
+	if(M.paralysis) return 0
 	if(M.stat) return 0
 	return 1
 
@@ -274,7 +291,7 @@ var/obj/item/dummy/click_dummy = new
 	if (!H || !istext(message))
 		return
 
-	if (H.bioHolder && !H.speech_void)
+	if (H.bioHolder)
 		var/datum/bioEffect/speech/S = null
 		for(var/X in H.bioHolder.effects)
 			S = H.bioHolder.GetEffect(X)
@@ -286,13 +303,8 @@ var/obj/item/dummy/click_dummy = new
 		if (world.time >= (H.last_cluwne_noise + CLUWNE_NOISE_DELAY))
 			playsound(get_turf(H), pick("sound/voice/cluwnelaugh1.ogg","sound/voice/cluwnelaugh2.ogg","sound/voice/cluwnelaugh3.ogg"), 70, 0, 0, H.get_age_pitch())
 			H.last_cluwne_noise = world.time
-	if (ishorse(H))
-		message = neigh(message)
-		if (world.time >= (H.last_cluwne_noise + CLUWNE_NOISE_DELAY))
-			playsound(get_turf(H), pick("sound/voice/cluwnelaugh1.ogg","sound/voice/cluwnelaugh2.ogg","sound/voice/cluwnelaugh3.ogg"), 70, 0, 0, H.get_age_pitch())
-			H.last_cluwne_noise = world.time
 
-	if ((H.reagents && H.reagents.get_reagent_amount("ethanol") > 30 && !isdead(H)) || H.traitHolder.hasTrait("alcoholic"))
+	if ((H.reagents && H.reagents.get_reagent_amount("ethanol") > 30 && H.stat != 2) || H.traitHolder.hasTrait("alcoholic"))
 		if((H.reagents.get_reagent_amount("ethanol") > 125 && prob(20)))
 			message = say_superdrunk(message)
 		else
@@ -302,9 +314,9 @@ var/obj/item/dummy/click_dummy = new
 	if (istype(berserker,/datum/ailment_data/disease/) && berserker.stage > 1)
 		if (prob(10))
 			message = say_furious(message)
-		message = replacetext(message, ".", "!")
-		message = replacetext(message, ",", "!")
-		message = replacetext(message, "?", "!")
+		message = dd_replaceText(message, ".", "!")
+		message = dd_replaceText(message, ",", "!")
+		message = dd_replaceText(message, "?", "!")
 		message = uppertext(message)
 		var/addexc = rand(2,6)
 		while (addexc > 0)
@@ -315,28 +327,11 @@ var/obj/item/dummy/click_dummy = new
 		if (prob(40))
 			message = say_gurgle(message)
 
-	if(H.mutantrace && !isdead(H))
+	if(H.mutantrace && H.stat != 2)
 		message = H.mutantrace.say_filter(message)
 
-	if(HasturPresent == 1)
-		message = replacetext(message, "Hastur", "????")
-		message = replacetext(message, "H.a.s.t.u.r", "????")
-		message = replacetext(message, "H.astur", "????")
-		message = replacetext(message, "H.a.stur", "????")
-		message = replacetext(message, "H.a.s.tur", "????")
-		message = replacetext(message, "H.a.s.t.ur", "????")
-		message = replacetext(message, "H-a-s-t-u-r", "????")
-		message = replacetext(message, "H-astur", "????")
-		message = replacetext(message, "H-a-stur", "????")
-		message = replacetext(message, "H-a-s-tur", "????")
-		message = replacetext(message, "H-a-s-t-ur", "????")
-		message = replacetext(message, "H a s t u r", "????")
-		message = replacetext(message, "H astur", "????")
-		message = replacetext(message, "H a s tur", "????")
-		message = replacetext(message, "H a s t ur", "????")
-
 #ifdef CANADADAY
-	if (prob(30)) message = replacetext(message, "?", " Eh?")
+	if (prob(30)) message = dd_replaceText(message, "?", " Eh?")
 #endif
 
 	return message
@@ -409,36 +404,15 @@ var/obj/item/dummy/click_dummy = new
 	. = new/list()
 
 	for(var/area/R in world)
-		LAGCHECK(LAG_LOW)
 		if(istype(R, areatype))
 			. += R
-
-/proc/get_areas_with_turfs(var/areatype)
-	//Takes: Area type as text string or as typepath OR an instance of the area.
-	//Returns: A list of all areas of that type in the world.
-	//Notes: Simple!
-	if(!areatype) return null
-	if(istext(areatype)) areatype = text2path(areatype)
-	if(isarea(areatype))
-		var/area/areatemp = areatype
-		areatype = areatemp.type
-
-	. = new/list()
-
-	for(var/area/R in world)
-		LAGCHECK(LAG_LOW)
-		if(istype(R, areatype))
-			for (var/turf/T in R)
-				. += R
-				break
 
 /proc/get_area_turfs(var/areatype, var/floors_only)
 	//Takes: Area type as text string or as typepath OR an instance of the area.
 	//Returns: A list of all turfs in areas of that type of that type in the world.
 	//Notes: Simple!
 
-	if(!areatype)
-		return null
+	if(!areatype) return null
 	if(istext(areatype)) areatype = text2path(areatype)
 	if(isarea(areatype))
 		var/area/areatemp = areatype
@@ -448,7 +422,7 @@ var/obj/item/dummy/click_dummy = new
 	var/list/areas = get_areas(areatype)
 	for(var/area/R in areas)
 		for(var/turf/T in R)
-			if(floors_only && (!isfloor(T) || is_blocked_turf(T)))
+			if(floors_only && is_blocked_turf(T))
 				continue
 			. += T
 
@@ -489,13 +463,6 @@ var/obj/item/dummy/click_dummy = new
 		b = _b
 		a = _a
 
-	proc/from_hex(var/hexstr)
-		r = GetRedPart(hexstr)
-		g = GetGreenPart(hexstr)
-		b = GetBluePart(hexstr)
-		a = 255
-		return
-
 	// return in #RRGGBB hex form
 	proc/to_rgb()
 		return rgb(r,g,b)
@@ -505,9 +472,7 @@ var/obj/item/dummy/click_dummy = new
 		return rgb(r,g,b,a)
 
 
-/area/proc/move_contents_to(var/area/A, var/turftoleave=null, var/ignore_fluid = 0)
-	set waitfor = 0
-
+/area/proc/move_contents_to(var/area/A, var/turftoleave=null)
 	//Takes: Area. Optional: turf type to leave behind.
 	//Returns: Nothing.
 	//Notes: Attempts to move the contents of one area to another area.
@@ -521,6 +486,10 @@ var/obj/item/dummy/click_dummy = new
 
 	if(!A || !src) return 0
 
+	defer_main_loops = 1
+	spawn(10)
+		defer_main_loops = 0
+
 	var/list/turfs_src = get_area_turfs(src.type)
 	var/list/turfs_trg = get_area_turfs(A.type)
 
@@ -530,14 +499,14 @@ var/obj/item/dummy/click_dummy = new
 		if(T.x < src_min_x || !src_min_x) src_min_x	= T.x
 		if(T.y < src_min_y || !src_min_y) src_min_y	= T.y
 
-	DEBUG_MESSAGE("src_min_x = [src_min_x], src_min_y = [src_min_y]")
+	DEBUG("src_min_x = [src_min_x], src_min_y = [src_min_y]")
 	var/trg_min_x = 0
 	var/trg_min_y = 0
 	for (var/turf/T in turfs_trg)
 		if(T.x < trg_min_x || !trg_min_x) trg_min_x	= T.x
 		if(T.y < trg_min_y || !trg_min_y) trg_min_y	= T.y
 
-	DEBUG_MESSAGE("trg_min_x = [src_min_x], trg_min_y = [src_min_y]")
+	DEBUG("trg_min_x = [src_min_x], trg_min_y = [src_min_y]")
 
 	var/list/refined_src = new/list()
 	for(var/turf/T in turfs_src)
@@ -565,30 +534,39 @@ var/obj/item/dummy/click_dummy = new
 				var/datum/coords/C_trg = refined_trg[B]
 				if(C_src.x_pos == C_trg.x_pos && C_src.y_pos == C_trg.y_pos)
 
-					var/old_app = T.appearance
-					var/olddir = T.dir
-					//var/old_icon_state1 = T.icon_state
+					var/old_dir1 = T.dir
+					var/old_icon_state1 = T.icon_state
 
 					var/turf/X
 					if(testmove) X = new T.type(get_step(B,pick(cardinal))) //remove this
 					else X = new T.type (B)
-					X.appearance = old_app
-					X.dir = olddir
-					//X.icon_state = old_icon_state1
+					X.dir = old_dir1
+					X.icon_state = old_icon_state1
 
 					for(var/obj/O in T)
-						if (!istype(O, /obj) || istype(O, /obj/forcefield) || istype(O, /obj/overlay/tile_effect)) continue
-						if (!ignore_fluid && istype(O, /obj/fluid)) continue
+						if (!istype(O, /obj) || istype(O, /obj/forcefield)) continue
 						O.set_loc(X)
 					for(var/mob/M in T)
-						DEBUG_MESSAGE("Moving mob [M] from [T] to [X].")
-						if(!ismob(M)) continue
+						DEBUG("Moving mob [M] from [T] to [X].")
+						if(!istype(M,/mob)) continue
 						M.set_loc(X)
+
+					var/area/AR = X.loc
+
+					if(AR.RL_Lighting)
+						X.opacity = !X.opacity
+						X.RL_SetOpacity(!X.opacity)
 
 					toupdate += X
 
 					if(turftoleave)
 						var/turf/ttl = new turftoleave(T)
+
+						var/area/AR2 = ttl.loc
+
+						if(AR2.RL_Lighting)
+							ttl.opacity = !ttl.opacity
+							ttl.RL_SetOpacity(!ttl.opacity)
 
 						fromupdate += ttl
 

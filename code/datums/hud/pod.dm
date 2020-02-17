@@ -13,9 +13,6 @@
 		wormhole
 		use_comms
 		leave
-		lights
-		tracking
-		sensor_lock
 
 	click_check = 0
 	var/image/missing
@@ -33,16 +30,11 @@
 		sensors = create_screen("sensors", "Sensors", 'icons/mob/hud_pod.dmi', "sensors-off", "NORTH+1,WEST+5", tooltipTheme = "pod-alt")
 		sensors_use = create_screen("sensors_use", "Activate Sensors", 'icons/mob/hud_pod.dmi', "sensors-use", "NORTH+1,WEST+6", tooltipTheme = "pod")
 		weapon = create_screen("weapon", "Main Weapon", 'icons/mob/hud_pod.dmi', "weapon-off", "NORTH+1,WEST+7", tooltipTheme = "pod-alt")
-		lights = create_screen("lights", "Toggle Lights", 'icons/mob/hud_pod.dmi', "lights_off", "NORTH+1, WEST+8", tooltipTheme = "pod")
-		secondary = create_screen("secondary", "Secondary System", 'icons/mob/hud_pod.dmi', "blank", "NORTH+1,WEST+9", tooltipTheme = "pod")
-		lock = create_screen("lock", "Lock", 'icons/mob/hud_pod.dmi', "weapon-off", "NORTH+1,WEST+10", tooltipTheme = "pod-alt")
-		set_code = create_screen("set_code", "Set Lock code", 'icons/mob/hud_pod.dmi', "set-code", "NORTH+1,WEST+11", tooltipTheme = "pod")
-		rts = create_screen("return_to_station", "Return To [capitalize(station_or_ship())]", 'icons/mob/hud_pod.dmi', "return-to-station", "NORTH+1,WEST+12", tooltipTheme = "pod")
+		secondary = create_screen("secondary", "Secondary System", 'icons/mob/hud_pod.dmi', "blank", "NORTH+1,WEST+8", tooltipTheme = "pod")
+		lock = create_screen("lock", "Lock", 'icons/mob/hud_pod.dmi', "weapon-off", "NORTH+1,WEST+9", tooltipTheme = "pod-alt")
+		set_code = create_screen("set_code", "Set Lock code", 'icons/mob/hud_pod.dmi', "set-code", "NORTH+1,WEST+10", tooltipTheme = "pod")
+		rts = create_screen("return_to_station", "Return To Station", 'icons/mob/hud_pod.dmi', "return-to-station", "NORTH+1,WEST+11", tooltipTheme = "pod")
 		leave = create_screen("leave", "Leave Pod", 'icons/mob/hud_pod.dmi', "leave", "SOUTH,EAST", tooltipTheme = "pod-alt")
-		tracking = create_screen("tracking", "Tracking Indicator", 'icons/mob/hud_pod.dmi', "off", "CENTER, CENTER")
-		tracking.mouse_opacity = 0
-		sensor_lock = create_screen("sensor_lock", "Sensor Lock", 'icons/mob/hud_pod.dmi', "off", "SOUTH+1,EAST")
-		sensor_lock.mouse_opacity = 0	//maybe set to one, so that clicking on it will explain what it is
 		health_bar = new(3)
 		health_bar.add_to_hud(src)
 		if (master)
@@ -50,25 +42,15 @@
 			update_systems()
 			update_states()
 
-	clear_master()
-		master = null
-		..()
-
 	proc/detach_all_clients()
 		for (var/client/C in clients)
 			remove_client(C)
-
-			if (C.tooltipHolder)
-				C.tooltipHolder.inPod = 0
 
 	proc/check_clients()
 		for (var/client/C in clients)
 			var/mob/M = C.mob
 			if (M.loc != master)
 				remove_client(C)
-
-				if (C.tooltipHolder)
-					C.tooltipHolder.inPod = 0
 
 	proc/update_health()
 		check_clients()
@@ -131,12 +113,6 @@
 				lock.icon_state = "lock-locked"
 			else
 				lock.icon_state = "lock-unlocked"
-		if (master.lights)
-			if (master.lights.active)
-				lights.icon_state = "lights_on"
-			else
-				lights.icon_state = "lights_off"
-
 
 	proc/update_systems()
 		check_clients()
@@ -218,24 +194,13 @@
 				lock.overlays += missing
 			if (!set_code.overlays.len)
 				set_code.overlays += missing
-		if (master.lights)
-			lights.name = master.lights.name
-			lights.overlays.len = 0
-		else
-			lights.name = "Lights"
-			if (!lights.overlays.len)
-				lights.overlays += missing
 
 	clicked(id, mob/user, list/params)
 		if (user.loc != master)
 			boutput(user, "<span style=\"color:red\">You're not in the pod doofus. (Call 1-800-CODER.)</span>")
 			remove_client(user.client)
-
-			if (user.client.tooltipHolder)
-				user.client.tooltipHolder.inPod = 0
-
 			return
-		if (user.getStatusDuration("stunned") > 0 || user.getStatusDuration("weakened") || user.getStatusDuration("paralysis") > 0 || !isalive(user))
+		if (user.stunned > 0 || user.weakened > 0 || user.paralysis > 0 || user.stat != 0)
 			boutput(user, "<span style=\"color:red\">Not when you are incapacitated.</span>")
 			return
 		// WHAT THE FUCK PAST MARQUESAS
@@ -310,23 +275,16 @@
 					boutput(usr, "[master.ship_message("System not installed in ship!")]")
 			if ("leave")
 				master.eject(usr)
-			if ("wormhole") //HEY THIS DOES SAMETHING AS CLIENT WORMHOLE PROC IN VEHICLE.DM
-				if(master.engine && !istype(master,/obj/machinery/vehicle/tank/car))
+			if ("wormhole")
+				if(master.engine)
 					if(master.engine.active)
 						if(master.engine.ready)
-							var/turf/T = master.loc
-							if (istype(T) && T.allows_vehicles)
-								master.engine.Wormhole()
-							else
-								boutput(usr, "[master.ship_message("Cannot create wormhole on this flooring!")]")
+							master.engine.Wormhole()
 						else
 							boutput(usr, "[master.ship_message("Engine recharging wormhole capabilities!")]")
 					else
 						boutput(usr, "[master.ship_message("SYSTEM OFFLINE")]")
 				else
 					boutput(usr, "[master.ship_message("System not installed in ship!")]")
-			if ("lights")
-				if (master.lights)
-					master.lights.toggle()
 
 		update_states()

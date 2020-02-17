@@ -30,7 +30,7 @@
 			boutput(holder.owner, "<span style=\"color:red\">That target is protected against psyblasts.</span>")
 		else
 			boutput(MT, "<span style=\"color:red\">You are blasted by psychic energy!</span>")
-			MT.changeStatus("paralysis", 7 SECONDS)
+			MT.paralysis += 5
 			MT.stuttering += 60
 			MT.take_brain_damage(20)
 			MT.TakeDamage("head", 0, 5, 0, DAMAGE_BURN)

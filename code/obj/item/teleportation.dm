@@ -34,7 +34,7 @@ Frequency:
 <A href='byond://?src=\ref[src];freq=10'>+</A><BR>
 
 <A href='?src=\ref[src];refresh=1'>Refresh</A>"}
-	user.Browse(dat, "window=radio")
+	user << browse(dat, "window=radio")
 	onclose(user, "radio")
 	return
 
@@ -51,10 +51,7 @@ Frequency:
 			if (sr)
 				src.temp += "<B>Located Beacons:</B><BR>"
 
-				for(var/obj/item/device/radio/beacon/W in tracking_beacons)//world)
-					LAGCHECK(LAG_LOW)
-					if (istype(src, /obj/item/locator/jones) && istype(W, /obj/item/device/radio/beacon/jones)) //For Jones City
-						src.temp += "Unknown Location-[W.x], [W.y], [W.z]<BR>"
+				for(var/obj/item/device/radio/beacon/W in world)
 					if (W.frequency == src.frequency)
 						var/turf/tr = get_turf(W)
 						if (tr.z == sr.z && tr)
@@ -72,14 +69,13 @@ Frequency:
 							src.temp += "[dir2text(get_dir(sr, tr))]-[direct]<BR>"
 
 				src.temp += "<B>Extranneous Signals:</B><BR>"
-				for (var/obj/item/implant/tracking/W in tracking_implants)//world)
-					LAGCHECK(LAG_LOW)
+				for (var/obj/item/implant/tracking/W in world)
 					if (W.frequency == src.frequency)
 						if (!W.implanted || !ismob(W.loc))
 							continue
 						else
 							var/mob/M = W.loc
-							if (isdead(M))
+							if (M.stat == 2)
 								if (M.timeofdeath + 6000 < world.time)
 									continue
 
@@ -106,7 +102,7 @@ Frequency:
 			else
 				if (href_list["temp"])
 					src.temp = null
-		if (ismob(src.loc))
+		if (istype(src.loc, /mob))
 			attack_self(src.loc)
 		else
 			for(var/mob/M in viewers(1, src))
@@ -126,7 +122,6 @@ Frequency:
 	throw_speed = 3
 	throw_range = 5
 	m_amt = 10000
-	flags = ONBELT
 	var/unscrewed = 0
 	mats = 8
 	desc = "An experimental portable teleportation device that can create portals that link to the same destination as a teleport computer."
@@ -143,7 +138,7 @@ Frequency:
 			return
 
 		var/turf/our_loc = get_turf(src)
-		if (our_loc && isrestrictedz(our_loc.z))
+		if (isrestrictedz(our_loc.z))
 			user.show_text("The [src.name] does not seem to work here!", "red")
 			return
 
@@ -190,17 +185,8 @@ Frequency:
 			return
 
 		var/t1 = input(user, "Please select a teleporter to lock in on.", "Target Selection") in L
-		if (user.stat || user.restrained())
+		if ((user.equipped() != src) || user.stat || user.restrained())
 			return
-		var/obj/item/I = user.equipped()
-		if (I != src)
-			if (istype(I, /obj/item/magtractor))
-				var/obj/item/magtractor/mag = I
-				if (mag.holding != src)
-					return
-			else
-				return
-
 		if (t1 == "Cancel")
 			return
 
@@ -247,10 +233,11 @@ Frequency:
 		else
 			P.target = src.our_target
 
-		user.visible_message("<span style=\"color:blue\">Portal opened.</span>")
+		for(var/mob/O in hearers(user, null))
+			O.show_message("<span style=\"color:blue\">Portal opened.</span>", 2)
 		logTheThing("station", user, null, "creates a hand tele portal (<b>Destination:</b> [src.our_target ? "[log_loc(src.our_target)]" : "*random coordinates*"]) at [log_loc(user)].")
 
-		SPAWN_DBG (300)
+		spawn (300)
 			if (P)
 				portals -= P
 				pool(P)

@@ -3,7 +3,7 @@
 
 /obj/machinery/filter_control/New()
 	..()
-	SPAWN_DBG(5)	//wait for world
+	spawn(5)	//wait for world
 		for(var/obj/machinery/inlet/filter/F in machines)
 			if(F.control == src.control)
 				F.f_mask = src.f_mask
@@ -13,17 +13,17 @@
 	return src.attack_hand(user)
 
 /obj/machinery/filter_control/attackby(obj/item/weapon/W, mob/user as mob)
-	if (istype(W, /obj/item/weapon/detective_scanner))
+	if(istype(W, /obj/item/weapon/detective_scanner))
 		return ..()
-	if (isscrewingtool(W))
+	if(istype(W, /obj/item/weapon/screwdriver))
 		src.add_fingerprint(user)
 		user.show_message(text("<span style=\"color:red\">Now [] the panel...</span>", (src.locked) ? "unscrewing" : "reattaching"), 1)
 		sleep(30)
 		src.locked =! src.locked
 		src.updateicon()
 		return
-	if (issnippingtool(W) && !src.locked)
-		status ^= BROKEN
+	if(istype(W, /obj/item/weapon/wirecutters) && !src.locked)
+		stat ^= BROKEN
 		src.add_fingerprint(user)
 		for(var/mob/O in viewers(user, null))
 			O.show_message(text("<span style=\"color:red\">[] has []activated []!</span>", user, (stat&BROKEN) ? "de" : "re", src), 1)
@@ -38,20 +38,20 @@
 	return src.attack_hand(user)
 
 /obj/machinery/filter_control/process()
-	if(!(status & NOPOWER))
+	if(!(stat & NOPOWER))
 		use_power(5,ENVIRON)
 		AutoUpdateAI(src)
 		src.updateUsrDialog()
 	src.updateicon()
 
 /obj/machinery/filter_control/attack_hand(mob/user as mob)
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		user << browse(null, "window=filter_control")
 		user.machine = null
 		return
 	if(user.stat || user.lying)
 		return
-	if ((get_dist(src, user) > 1 || !istype(src.loc, /turf)) && !isAI(user))
+	if ((get_dist(src, user) > 1 || !istype(src.loc, /turf)) && !istype(user, /mob/living/silicon/ai))
 		return 0
 
 	var/list/gases = list("O2", "N2", "Plasma", "CO2", "N2O")
@@ -68,11 +68,11 @@
 			IBadConnection++
 	var/ITotalConnections = IGoodConnection+IBadConnection
 
-	if(ITotalConnections && !(status & BROKEN))	//ugly
+	if(ITotalConnections && !(stat & BROKEN))	//ugly
 		dat += "Connection status: Inlets:[ITotalConnections]/[IGoodConnection]<BR><br>Control ID: [control]<BR><BR><br>"
 	else
 		dat += "<font color=red>No Connections Detected!</font><BR><br>Control ID: [control]<BR><br>"
-	if(!status & BROKEN)
+	if(!stat & BROKEN)
 		for (var/i = 1; i <= gases.len; i++)
 			dat += "[gases[i]]: <A HREF='?src=\ref[src];tg=[1 << (i - 1)]'>[(src.f_mask & 1 << (i - 1)) ? "Siphoning" : "Passing"]</A><BR><br>"
 	else
@@ -89,9 +89,9 @@
 		return	//Who cares if we're dead or whatever let us close the fucking window
 	if(..())
 		return
-	if ((((get_dist(src, usr) <= 1 || usr.telekinesis == 1) || isAI(usr)) && istype(src.loc, /turf)))
+	if ((((get_dist(src, usr) <= 1 || usr.telekinesis == 1) || istype(usr, /mob/living/silicon/ai)) && istype(src.loc, /turf)))
 		usr.machine = src
-		if (src.allowed(usr) || src.emagged && !(status & BROKEN))
+		if (src.allowed(usr) || src.emagged && !(stat & BROKEN))
 			if (href_list["tg"])	//someone modified the html so I added a check here
 				// toggle gas
 				src.f_mask ^= text2num(href_list["tg"])
@@ -110,16 +110,16 @@
 
 /obj/machinery/filter_control/proc/updateicon()
 	overlays = null
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "filter_control-nopower"
 		return
 	icon_state = "filter_control"
-	if(src.locked && (status & BROKEN))
+	if(src.locked && (stat & BROKEN))
 		overlays += image('icons/obj/stationobjs.dmi', "filter_control00")
 		return
 	else if(!src.locked)
 		icon_state = "filter_control-unlocked"
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			overlays += image('icons/obj/stationobjs.dmi', "filter_control-wirecut")
 			overlays += image('icons/obj/stationobjs.dmi', "filter_control00")
 			return
@@ -151,9 +151,9 @@
 
 /obj/machinery/filter_control/power_change()
 	if(powered(ENVIRON))
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
-		status |= NOPOWER
-	SPAWN_DBG(rand(1,15))
+		stat |= NOPOWER
+	spawn(rand(1,15))
 		src.updateicon()
 	return

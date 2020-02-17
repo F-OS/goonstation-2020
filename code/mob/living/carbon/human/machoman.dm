@@ -15,12 +15,12 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 /mob/living/carbon/human/machoman
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			if(src.bioHolder && src.bioHolder.mobAppearance)
 				src.bioHolder.mobAppearance.customization_first = "Dreadlocks"
 				src.bioHolder.mobAppearance.customization_second = "Full Beard"
 
-				SPAWN_DBG(10)
+				spawn(10)
 					src.bioHolder.mobAppearance.UpdateMob()
 
 			//src.mind = new
@@ -62,7 +62,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 	attack_hand(mob/user)
 		if (src.stance == "defensive")
 			src.visible_message("<span style=\"color:red\"><B>[user] attempts to attack [src]!</B></span>")
-			playsound(src.loc, "sound/impact_sounds/Generic_Swing_1.ogg", 50, 1)
+			playsound(src.loc, "sound/weapons/punchmiss.ogg", 50, 1)
 			sleep(2)
 			macho_parry(user)
 			return
@@ -72,7 +72,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 	attackby(obj/item/W, mob/user)
 		if (src.stance == "defensive")
 			src.visible_message("<span style=\"color:red\"><B>[user] swings at [src] with the [W.name]!</B></span>")
-			playsound(src.loc, "sound/impact_sounds/Generic_Swing_1.ogg", 50, 1)
+			playsound(src.loc, "sound/weapons/punchmiss.ogg", 50, 1)
 			sleep(2)
 			macho_parry(user, W)
 			return
@@ -90,16 +90,16 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				for (var/mob/C in oviewers(src))
 					shake_camera(C, 8, 3)
 					C.show_message("<span style=\"color:red\"><B>[src] clotheslines [M] into oblivion!</B></span>", 1)
-				M.changeStatus("stunned", 80)
-				M.changeStatus("weakened", 5 SECONDS)
+				M.stunned = 8
+				M.weakened = 5
 				var/turf/target = get_edge_target_turf(src, src.dir)
-				SPAWN_DBG(0)
+				spawn(0)
 					M.throw_at(target, 10, 2)
 				playsound(src.loc, "swing_hit", 40, 1)
 			else if (isobj(AM))
 				var/obj/O = AM
 				if (O.density)
-					playsound(src.loc, "sound/impact_sounds/Generic_Hit_Heavy_1.ogg", 40, 1)
+					playsound(src.loc, "sound/misc/meteorimpact.ogg", 40, 1)
 					if (istype(O, /obj/machinery/door))
 						var/obj/machinery/door/D = O
 						if (D.open())
@@ -114,12 +114,12 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 								C.show_message("<span style=\"color:red\"><B>[src] forcefully kicks [D]!</B></span>", 1)
 							if (prob(33))
 								qdel(D)
-					else if(O.anchored != 2)
+					else
 						boutput(src, "<span style=\"color:red\"><B>You crash into [O]!</B></span>")
 						for (var/mob/C in oviewers(src))
 							shake_camera(C, 8, 3)
 							C.show_message("<span style=\"color:red\"><B>[src] crashes into [O]!</B></span>", 1)
-						if ((istype(O, /obj/window) && !istype(O, /obj/window/auto/reinforced/indestructible)) || istype(O, /obj/grille) || istype(O, /obj/machinery/door) || istype(O, /obj/structure/girder) || istype(O, /obj/foamedmetal))
+						if (istype(O, /obj/window) || istype(O, /obj/grille) || istype(O, /obj/machinery/door) || istype(O, /obj/structure/girder) || istype(O, /obj/foamedmetal))
 							qdel(O)
 						else
 							var/turf/target = get_edge_target_turf(src, src.dir)
@@ -141,9 +141,9 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				src.visible_message("<span style=\"color:red\"><B>[src] grabs the [W.name] out of [M]'s hands, shoving [M] to the ground!</B></span>")
 			else
 				src.visible_message("<span style=\"color:red\"><B>[src] parries [M]'s attack, knocking them to the ground!</B></span>")
-			M.changeStatus("weakened", 10 SECONDS)
-			playsound(src.loc, "sound/impact_sounds/Generic_Shove_1.ogg", 65, 1)
-			SPAWN_DBG(20)
+			M.weakened = max(10, M.weakened)
+			playsound(src.loc, "sound/weapons/thudswoosh.ogg", 65, 1)
+			spawn(20)
 				playsound(src.loc, pick(snd_macho_rage), 60, 0, 0, src.get_age_pitch())
 		return
 
@@ -183,11 +183,11 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			src.put_in_hand(G, src.hand)
 			G.affecting = M
 			M.grabbed_by += G
-			M.changeStatus("stunned", 10 SECONDS)
+			M.stunned = max(10, M.stunned)
 			G.state = 2
 			G.update_icon()
 			src.dir = get_dir(src, M)
-			playsound(src.loc, "sound/impact_sounds/Generic_Shove_1.ogg", 65, 1)
+			playsound(src.loc, "sound/weapons/thudswoosh.ogg", 65, 1)
 
 	verb/macho_headcrunch()
 		set name = "Grapple - Headcruncher"
@@ -198,21 +198,21 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				if (ishuman(G.affecting))
 					var/mob/living/carbon/human/H = G.affecting
 					var/obj/item/affecting = H.organs["head"]
-					playsound(src.loc, "sound/impact_sounds/Flesh_Break_1.ogg", 75, 1)
+					playsound(src.loc, "sound/effects/fleshbr1.ogg", 75, 1)
 					src.visible_message("<span style=\"color:red\"><B>[src] crushes [H]'s skull like a grape!</B></span>")
 					affecting.take_damage(50, 0)
 					H.take_brain_damage(60)
-					H.changeStatus("stunned", 80)
-					H.changeStatus("weakened", 5 SECONDS)
+					H.stunned = 8
+					H.weakened = 5
 					H.UpdateDamage()
 					H.UpdateDamageIcon()
 					qdel(G)
 				else
-					playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 75, 1)
+					playsound(src.loc, "sound/effects/splat.ogg", 75, 1)
 					src.visible_message("<span style=\"color:red\"><B>[src] crushes [G.affecting]'s body into bits!</B></span>")
 					G.affecting.gib()
 					qdel(G)
-				SPAWN_DBG(20)
+				spawn(20)
 					playsound(src.loc, pick(snd_macho_rage), 50, 0, 0, src.get_age_pitch())
 					src.visible_message("<span style=\"color:red\"><b>[src]</b> lets out an angry warcry!</span>")
 				break
@@ -226,58 +226,49 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				if (ishuman(G.affecting))
 					var/mob/living/carbon/human/H = G.affecting
 					var/obj/item/affecting = H.organs["chest"]
-					playsound(src.loc, "sound/impact_sounds/Flesh_Break_1.ogg", 75, 1)
+					playsound(src.loc, "sound/effects/fleshbr1.ogg", 75, 1)
 					src.visible_message("<span style=\"color:red\"><B>[src] crushes [H]'s ribcage open like a bag of chips!</B></span>")
 					affecting.take_damage(500, 0)
-					H.changeStatus("stunned", 80)
-					H.changeStatus("weakened", 5 SECONDS)
+					H.stunned = 8
+					H.weakened = 5
 					H.UpdateDamage()
 					H.UpdateDamageIcon()
 					qdel(G)
 				else
-					playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 75, 1)
+					playsound(src.loc, "sound/effects/splat.ogg", 75, 1)
 					src.visible_message("<span style=\"color:red\"><B>[src] crushes [G.affecting]'s body into bits!</B></span>")
 					G.affecting.gib()
 					qdel(G)
-				SPAWN_DBG(20)
+				spawn(20)
 					playsound(src.loc, pick(snd_macho_rage), 50, 0, 0, src.get_age_pitch())
 					src.visible_message("<span style=\"color:red\"><b>[src]</b> lets out an angry warcry!</span>")
 				break
 
-	verb/macho_leap()
+	verb/macho_leap(var/area/A as area in world)
 		set name = "Macho Leap"
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
-			//Restricting possible leap areas to prevent NERDSS from finding secrets when they get turned into a matzo man
-			var/list/possible_areas = get_areas(/area/station)
-			possible_areas += get_areas(/area/diner)
-			possible_areas += get_areas(/area/radiostation/studio)
-			possible_areas += get_areas(/area/sim)
-			var/area/A = input("Select the area to leap to: ", "Select Area", null) as null|anything in possible_areas
-			if (!A)
-				return
-
 			src.transforming = 1
 			src.verbs -= /mob/living/carbon/human/machoman/verb/macho_leap
 			var/mob/living/H = null
 			var/obj/item/grab/G = null
 			for (G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					H = G.affecting
 			if (H)
 				if (H.lying)
 					H.lying = 0
-					H.delStatus("paralysis")
-					H.delStatus("weakened")
+					H.paralysis = 0
+					H.weakened = 0
 					H.set_clothing_icon_dirty()
 				H.transforming = 1
-				H.set_density(0)
+				H.density = 0
 				H.set_loc(src.loc)
 			else
 				src.visible_message("<span style=\"color:red\">[src] closes his eyes for a moment.</span>")
 				playsound(src.loc, "sound/voice/macho/macho_breathing18.ogg", 50, 0, 0, src.get_age_pitch())
 				sleep(40)
-			src.set_density(0)
+			src.density = 0
 			if (H)
 				src.dir = get_dir(src, H)
 				H.dir = get_dir(H, src)
@@ -351,8 +342,8 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			playsound(src.loc, pick(snd_macho_rage), 50, 0, 0, src.get_age_pitch())
 			for (var/mob/M in viewers(src, 5))
 				if (M != src)
-					M.changeStatus("weakened", 80)
-				SPAWN_DBG(0)
+					M.weakened = max(M.weakened, 8)
+				spawn(0)
 					shake_camera(M, 4, 2)
 			if (istype(src.loc, /turf/simulated/floor))
 				src.loc:break_tile()
@@ -362,37 +353,72 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				O.anchored = 1
 				O.name = "Explosion"
 				O.layer = NOLIGHT_EFFECTS_LAYER_BASE
-				O.pixel_x = -92
-				O.pixel_y = -96
-				O.icon = 'icons/effects/214x246.dmi'
+				O.pixel_x = -17
+				O.icon = 'icons/effects/hugeexplosion.dmi'
 				O.icon_state = "explosion"
-				SPAWN_DBG(35) qdel(O)
+				spawn(35) qdel(O)
 				random_brute_damage(H, 50)
-				H.changeStatus("weakened", 1 SECONDS)
+				H.weakened = max(H.weakened, 10)
 				H.pixel_x = 0
 				H.pixel_y = 0
 				H.transforming = 0
-				H.set_density(1)
+				H.density = 1
 			src.pixel_x = 0
 			src.pixel_y = 0
 			src.transforming = 0
-			src.set_density(1)
-			SPAWN_DBG(5)
+			src.density = 1
+			spawn(5)
 				src.verbs += /mob/living/carbon/human/machoman/verb/macho_leap
-
+		/*
+			src.transforming = 1
+			src.verbs -= /mob/living/carbon/human/machoman/verb/macho_leap
+			src.visible_message("<span style=\"color:red\">[src] closes his eyes for a moment.</span>")
+			playsound(src.loc, "sound/voice/macho/macho_breathing18.ogg", 50)
+			sleep(40)
+			src.visible_message("<span style=\"color:red\">[src] flies through the ceiling!</span>")
+			playsound(src.loc, "sound/effects/bionic_sound.ogg", 50)
+			playsound(src.loc, "sound/voice/macho/macho_become_enraged01.ogg", 50)
+			src.layer = 10
+			src.density = 0
+			for (var/i = 0, i < 20, i++)
+				src.pixel_y += 15
+				src.dir = turn(src.dir, 90)
+				sleep(1)
+			src.set_loc(pick(get_area_turfs(A, 1)))
+			src.visible_message("<span style=\"color:red\">[src] suddenly descends from the ceiling!</span>")
+			playsound(src.loc, "sound/effects/bionic_sound.ogg", 50)
+			for (var/i = 0, i < 20, i++)
+				src.pixel_y -= 15
+				src.dir = turn(src.dir, 90)
+				sleep(1)
+			if (istype(src.loc, /turf/simulated/floor))
+				src.loc:break_tile()
+			for (var/mob/M in viewers(src, 5))
+				if (M != src)
+					M.weakened = max(M.weakened, 8)
+				spawn(0)
+					shake_camera(M, 4, 2)
+			playsound(src.loc, "explosion", 40, 1)
+			playsound(src.loc, pick(snd_macho_rage), 50)
+			src.layer = MOB_LAYER
+			src.density = 1
+			src.transforming = 0
+			spawn(5)
+				src.verbs += /mob/living/carbon/human/machoman/verb/macho_leap
+			*/
 	verb/macho_rend()
 		set name = "Macho Rend"
 		set desc = "Tears a target limb from limb"
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
 			for (var/obj/item/grab/G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					src.verbs -= /mob/living/carbon/human/machoman/verb/macho_rend
 					var/mob/living/H = G.affecting
 					if (H.lying)
 						H.lying = 0
-						H.delStatus("paralysis")
-						H.delStatus("weakened")
+						H.paralysis = 0
+						H.weakened = 0
 						H.set_clothing_icon_dirty()
 					H.transforming = 1
 					src.transforming = 1
@@ -417,38 +443,38 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					for (var/i = 0, i < 5, i++)
 						H.pixel_y += 2
 						sleep(3)
-					if (ishuman(H))
+					if (istype(H,/mob/living/carbon/human/))
 						var/mob/living/carbon/human/HU = H
 						src.visible_message("<span style=\"color:red\"><B>[src] begins tearing [H] limb from limb!</B></span>")
 						var/original_age = HU.bioHolder.age
 						if (HU.limbs.l_arm)
 							HU.limbs.l_arm.sever()
-							playsound(src.loc, "sound/impact_sounds/Flesh_Tear_2.ogg", 75)
+							playsound(src.loc, "sound/misc/loudcrunch2.ogg", 75)
 							HU.emote("scream")
 							HU.bioHolder.age += 10
 							sleep(10)
 						if (HU.limbs.r_arm)
 							HU.limbs.r_arm.sever()
-							playsound(src.loc, "sound/impact_sounds/Flesh_Tear_2.ogg", 75)
+							playsound(src.loc, "sound/misc/loudcrunch2.ogg", 75)
 							HU.emote("scream")
 							HU.bioHolder.age += 10
 							sleep(10)
 						if (HU.limbs.l_leg)
 							HU.limbs.l_leg.sever()
-							playsound(src.loc, "sound/impact_sounds/Flesh_Tear_2.ogg", 75)
+							playsound(src.loc, "sound/misc/loudcrunch2.ogg", 75)
 							HU.emote("scream")
 							HU.bioHolder.age += 10
 							sleep(10)
 						if (HU.limbs.r_leg)
 							HU.limbs.r_leg.sever()
-							playsound(src.loc, "sound/impact_sounds/Flesh_Tear_2.ogg", 75)
+							playsound(src.loc, "sound/misc/loudcrunch2.ogg", 75)
 							HU.emote("scream")
 							sleep(10)
 						HU.bioHolder.age = original_age
-						HU.changeStatus("stunned", 10 SECONDS)
-						HU.changeStatus("weakened", 10 SECONDS)
+						HU.stunned += 10
+						HU.weakened += 12
 						var/turf/target = get_edge_target_turf(src, src.dir)
-						SPAWN_DBG(0)
+						spawn(0)
 							playsound(src.loc, "swing_hit", 40, 1)
 							src.visible_message("<span style=\"color:red\"><B>[src] casually punts [H] away!</B></span>")
 							HU.throw_at(target, 10, 2)
@@ -461,7 +487,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 						H.gib()
 					src.transforming = 0
 					src.verbs += /mob/living/carbon/human/machoman/verb/macho_rend
-					SPAWN_DBG(20)
+					spawn(20)
 						playsound(src.loc, pick(snd_macho_rage), 50, 0, 0, src.get_age_pitch())
 						src.visible_message("<span style=\"color:red\"><b>[src]</b> gloats and boasts!</span>")
 
@@ -471,13 +497,13 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
 			for (var/obj/item/grab/G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					src.verbs -= /mob/living/carbon/human/machoman/verb/macho_touch
 					var/mob/living/H = G.affecting
 					if (H.lying)
 						H.lying = 0
-						H.delStatus("paralysis")
-						H.delStatus("weakened")
+						H.paralysis = 0
+						H.weakened = 0
 						H.set_clothing_icon_dirty()
 					H.transforming = 1
 					src.transforming = 1
@@ -505,7 +531,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					src.transforming = 0
 					src.bioHolder.AddEffect("fire_resist")
 					src.transforming = 1
-					playsound(src.loc, "sound/voice/chanting.ogg", 75, 0, 0, src.get_age_pitch())
+					playsound(src.loc, "sound/effects/chanting.ogg", 75, 0, 0, src.get_age_pitch())
 					src.visible_message("<span style=\"color:red\">[src] begins radiating with dark energy!</span>")
 					sleep(40)
 					for (var/mob/N in viewers(src, null))
@@ -519,7 +545,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					src.transforming = 0
 					src.bioHolder.RemoveEffect("fire_resist")
 					src.verbs += /mob/living/carbon/human/machoman/verb/macho_touch
-					SPAWN_DBG(0)
+					spawn(0)
 						if (H)
 							H.desc = "A really dumb looking statue. Very shiny, though."
 							H.become_gold_statue()
@@ -534,7 +560,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			src.bioHolder.AddEffect("fire_resist")
 			src.transforming = 1
 			src.visible_message("<span style=\"color:red\"><B>[src] begins glowing with ominous power!</B></span>")
-			playsound(src.loc, "sound/voice/chanting.ogg", 75, 0, 0, src.get_age_pitch())
+			playsound(src.loc, "sound/effects/chanting.ogg", 75, 0, 0, src.get_age_pitch())
 			sleep(40)
 			for (var/mob/N in viewers(src, null))
 				N.flash(30)
@@ -554,7 +580,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			src.transforming = 0
 			src.bioHolder.RemoveEffect("fire_resist")
 			playsound(src.loc, pick(snd_macho_rage), 50, 0, 0, src.get_age_pitch())
-			SPAWN_DBG(1200) // holy shit the micro man spam from ONE macho man is awful
+			spawn(1200) // holy shit the micro man spam from ONE macho man is awful
 				src.verbs += /mob/living/carbon/human/machoman/verb/macho_minions
 */
 	verb/macho_piledriver()
@@ -563,18 +589,18 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
 			for (var/obj/item/grab/G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					src.verbs -= /mob/living/carbon/human/machoman/verb/macho_piledriver
 					var/mob/living/H = G.affecting
 					if (H.lying)
 						H.lying = 0
-						H.delStatus("paralysis")
-						H.delStatus("weakened")
+						H.paralysis = 0
+						H.weakened = 0
 						H.set_clothing_icon_dirty()
 					H.transforming = 1
 					src.transforming = 1
-					src.set_density(0)
-					H.set_density(0)
+					src.density = 0
+					H.density = 0
 					H.set_loc(src.loc)
 					src.dir = get_dir(src, H)
 					H.dir = get_dir(H, src)
@@ -617,8 +643,8 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					H.pixel_x = 0
 					H.pixel_y = 0
 					H.transforming = 0
-					src.set_density(1)
-					H.set_density(1)
+					src.density = 1
+					H.density = 1
 					qdel(G)
 					playsound(src.loc, "explosion", 50)
 					src.visible_message("<span style=\"color:red\"><B>[src] atomic piledrives [H]!</B></span>")
@@ -626,13 +652,12 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					O.anchored = 1
 					O.name = "Explosion"
 					O.layer = NOLIGHT_EFFECTS_LAYER_BASE
-					O.pixel_x = -92
-					O.pixel_y = -96
-					O.icon = 'icons/effects/214x246.dmi'
+					O.pixel_x = -17
+					O.icon = 'icons/effects/hugeexplosion.dmi'
 					O.icon_state = "explosion"
-					SPAWN_DBG(35) qdel(O)
+					spawn(35) qdel(O)
 					random_brute_damage(H, 50)
-					H.changeStatus("weakened", 10 SECONDS)
+					H.weakened = max(H.weakened, 10)
 					src.verbs += /mob/living/carbon/human/machoman/verb/macho_piledriver
 
 	verb/macho_superthrow()
@@ -641,18 +666,18 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
 			for (var/obj/item/grab/G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					src.verbs -= /mob/living/carbon/human/machoman/verb/macho_superthrow
 					var/mob/living/H = G.affecting
 					if (H.lying)
 						H.lying = 0
-						H.delStatus("paralysis")
-						H.delStatus("weakened")
+						H.paralysis = 0
+						H.weakened = 0
 						H.set_clothing_icon_dirty()
 					H.transforming = 1
 					src.transforming = 1
-					src.set_density(0)
-					H.set_density(0)
+					src.density = 0
+					H.density = 0
 					H.set_loc(src.loc)
 					step(H, src.dir)
 					H.dir = get_dir(H, src)
@@ -680,12 +705,12 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					src.transforming = 0
 					H.pixel_x = 0
 					H.pixel_y = 0
-					src.set_density(1)
+					src.density = 1
 					qdel(G)
 					playsound(src.loc, "sound/weapons/rocket.ogg", 50)
 					src.visible_message("<span style=\"color:red\"><B>[src] flings [H] with all of his might!</B></span>")
 					var/target_dir = get_dir(src, H)
-					SPAWN_DBG(0)
+					spawn(0)
 						if (H)
 							walk(H, target_dir, 1)
 							sleep(15)
@@ -694,12 +719,11 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 							O.anchored = 1
 							O.name = "Explosion"
 							O.layer = NOLIGHT_EFFECTS_LAYER_BASE
-							O.pixel_x = -92
-							O.pixel_y = -96
-							O.icon = 'icons/effects/214x246.dmi'
+							O.pixel_x = -17
+							O.icon = 'icons/effects/hugeexplosion.dmi'
 							O.icon_state = "explosion"
 							O.fingerprintslast = src.key
-							SPAWN_DBG(35) qdel(O)
+							spawn(35) qdel(O)
 							explosion(O, H.loc, 1, 2, 3, 4, 1)
 							H.gib()
 					src.verbs += /mob/living/carbon/human/machoman/verb/macho_superthrow
@@ -710,13 +734,13 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
 			for (var/obj/item/grab/G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					src.verbs -= /mob/living/carbon/human/machoman/verb/macho_soulsteal
 					var/mob/living/H = G.affecting
 					if (H.lying)
 						H.lying = 0
-						H.delStatus("paralysis")
-						H.delStatus("weakened")
+						H.paralysis = 0
+						H.weakened = 0
 						H.set_clothing_icon_dirty()
 					H.transforming = 1
 					src.transforming = 1
@@ -753,7 +777,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				//		composite.Blend(Ic, ICON_OVERLAY)
 				//	src.overlays = null
 				//	src.icon = composite
-					playsound(src.loc, "sound/voice/chanting.ogg", 75, 0, 0, src.get_age_pitch())
+					playsound(src.loc, "sound/effects/chanting.ogg", 75, 0, 0, src.get_age_pitch())
 					src.visible_message("<span style=\"color:red\"><b>[src] begins radiating with evil energies!</b></span>")
 					sleep(40)
 					for (var/mob/N in viewers(src, null))
@@ -771,7 +795,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 						var/obj/item/affecting = null
 						if (!src.organs[A])    continue
 						affecting = src.organs[A]
-						if (!isitem(affecting))
+						if (!istype(affecting, /obj/item))
 							continue
 						affecting.heal_damage(50, 50) //heals 50 burn, 50 brute from all organs
 					src.take_toxin_damage(-INFINITY)
@@ -791,13 +815,13 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
 			for (var/obj/item/grab/G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					src.verbs -= /mob/living/carbon/human/machoman/verb/macho_heal
 					var/mob/living/H = G.affecting
 					if (H.lying)
 						H.lying = 0
-						H.delStatus("paralysis")
-						H.delStatus("weakened")
+						H.paralysis = 0
+						H.weakened = 0
 						H.set_clothing_icon_dirty()
 					H.transforming = 1
 					src.transforming = 1
@@ -825,7 +849,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					src.transforming = 0
 					src.bioHolder.AddEffect("fire_resist")
 					src.transforming = 1
-					playsound(src.loc, "sound/voice/heavenly.ogg", 75)
+					playsound(src.loc, "sound/effects/heavenly.ogg", 75)
 					src.visible_message("<span style=\"color:red\"><b>[src] closes \his eyes in silent macho prayer!</b></span>")
 					sleep(40)
 					for (var/mob/N in viewers(src, null))
@@ -842,7 +866,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					random_brute_damage(src, 25)
 					src.UpdateDamageIcon()
 					src.updatehealth()
-					SPAWN_DBG(0)
+					spawn(0)
 						if (H)
 							H.pixel_x = 0
 							H.pixel_y = 0
@@ -854,13 +878,13 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		set category = "Macho Moves"
 		if (!src.stat && !src.transforming)
 			for (var/obj/item/grab/G in src)
-				if (isliving(G.affecting))
+				if (istype(G.affecting, /mob/living))
 					src.verbs -= /mob/living/carbon/human/machoman/verb/macho_stare
 					var/mob/living/H = G.affecting
 					if (H.lying)
 						H.lying = 0
-						H.delStatus("paralysis")
-						H.delStatus("weakened")
+						H.paralysis = 0
+						H.weakened = 0
 						H.set_clothing_icon_dirty()
 					H.jitteriness = 0
 					H.transforming = 1
@@ -896,7 +920,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 					H.make_jittery(1000)
 					H.visible_message("<span style=\"color:red\"><b>[H] starts violently convulsing!</b></span>")
 					sleep(40)
-					playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 50, 1)
+					playsound(src.loc, "sound/effects/splat.ogg", 50, 1)
 					qdel(G)
 					var/location = get_turf(H)
 					src.transforming = 0
@@ -913,7 +937,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 						if (N.client)
 							shake_camera(N, 6, 4)
 					qdel(H)
-					SPAWN_DBG(0)
+					spawn(0)
 						//alldirs
 						var/icon/overlay = icon('icons/effects/96x96.dmi',"smoke")
 						overlay.Blend(rgb(200,0,0,200),ICON_MULTIPLY)
@@ -927,7 +951,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 						var/datum/reagents/bloodholder = new /datum/reagents(25)
 						bloodholder.add_reagent("blood", 25)
 						smoke_reaction(bloodholder, 4, location)
-						particleMaster.SpawnSystem(new /datum/particleSystem/chemSmoke(location, bloodholder, 20))
+						particleMaster.SpawnSystem(new /datum/particleSystem/chemSmoke(location, bloodholder, 100))
 						//the_dir = turn(the_dir,45)
 
 	verb/macho_heartpunch(var/mob/living/M in oview(1))
@@ -943,20 +967,20 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			if (H.organHolder && H.organHolder.heart)
 				//PUNCH THE HEART! YEAH!
 				src.visible_message("<span style=\"color:red\"><B>[src] punches out [H]'s heart!</B></span>")
-				playsound(src, 'sound/impact_sounds/Flesh_Break_1.ogg', 50, 1)
+				playsound(src, 'sound/effects/fleshbr1.ogg', 50, 1)
 
 				var/obj/item/organ/heart/heart_to_punt = H.organHolder.drop_organ("heart")
 
 				for (var/I = 1, I <= 5 && heart_to_punt && step(heart_to_punt,direction, 1), I++)
 //						new D(heart_to_punt.loc)
 					bleed(H, 25, 5)
-					playsound(heart_to_punt,'sound/impact_sounds/Slimy_Splat_1.ogg', 50, 1)
+					playsound(heart_to_punt,'sound/effects/splat.ogg', 50, 1)
 
 				H.emote("scream")
 				did_it = 1
 			else
 				src.show_text("Man, this poor sucker ain't got a heart to punch, whatta chump.", "blue")
-				SPAWN_DBG(20)
+				spawn(20)
 					if (!src.stat)
 						src.emote("sigh")
 
@@ -965,32 +989,32 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			var/mob/living/silicon/robot/R = M
 			if (R.part_chest)
 				src.visible_message("<span style=\"color:red\"><B>[src] punches off [R]'s chest!</B></span>")
-				playsound(src, 'sound/impact_sounds/Metal_Hit_Light_1.ogg', 50, 1)
+				playsound(src, 'sound/effects/grillehit.ogg', 50, 1)
 				R.emote("scream")
 				var/obj/item/parts/robot_parts/chest/chestpunt = new R.part_chest.type(R.loc)
 				chestpunt.name = "[R.name]'s [chestpunt.name]"
 				R.compborg_lose_limb(R.part_chest)
 
 				for (var/I = 1, I <= 5 && chestpunt && step(chestpunt ,direction, 1), I++)
-					make_cleanable(/obj/decal/cleanable/oil,chestpunt.loc)
-					playsound(chestpunt,'sound/impact_sounds/Slimy_Splat_1.ogg', 50, 1)
+					new/obj/decal/cleanable/oil(chestpunt.loc)
+					playsound(chestpunt,'sound/effects/splat.ogg', 50, 1)
 
 				did_it = 1
 
 			else //Uh?
 				src.show_text("Man, this poor sucker ain't even got a chest to punch, whatta chump.", "blue")
-				SPAWN_DBG (20)
+				spawn (20)
 					if (!src.stat)
 						src.emote("sigh")
 
 		else
 			src.show_text("You're not entirely sure where the heart is on this thing. Better leave it alone.", "blue")
-			SPAWN_DBG (20)
+			spawn (20)
 				if (!src.stat)
 					src.emote("sigh")
 
 		if (did_it)
-			SPAWN_DBG (rand(2,4) * 10)
+			spawn (rand(2,4) * 10)
 				playsound(src.loc, pick(snd_macho_rage), 50, 0, 0, src.get_age_pitch())
 				src.visible_message("<span style=\"color:red\"><b>[src]</b> gloats and boasts!</span>")
 
@@ -1012,7 +1036,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			playsound(src.loc, "sound/effects/bionic_sound.ogg", 50)
 			playsound(src.loc, "sound/voice/macho/macho_moan07.ogg", 50)
 			src.layer = 10
-			src.set_density(0)
+			src.density = 0
 			for (var/i = 0, i < 20, i++)
 				src.pixel_y += 1
 				src.dir = turn(src.dir, 90)
@@ -1027,7 +1051,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			for (var/area/A in masters)
 				if (A.type == /area) continue
 				for (var/area/R in A.related)
-					SPAWN_DBG(0)
+					spawn(0)
 						R.eject = 1
 						R.updateicon()
 			siren.repeat = 1
@@ -1045,16 +1069,16 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			for (var/mob/M in viewers(src, 5))
 				if (M != src)
 					M.weakened = max(M.weakened, 8)
-				SPAWN_DBG(0)
+				spawn(0)
 					shake_camera(M, 4, 2)
 			playsound(src.loc, "explosion", 40, 1)
 			playsound(src.loc, pick(snd_macho_rage), 50)
 			src.layer = MOB_LAYER
-			src.set_density(1)
+			src.density = 1
 			src.transforming = 0
 			src.bioHolder.RemoveEffect("fire_resist")
 			src.mouse_opacity = 1
-			SPAWN_DBG(600)
+			spawn(600)
 				if (siren)
 					siren.repeat = 0
 					siren.status = SOUND_UPDATE
@@ -1063,7 +1087,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				for (var/area/A in masters)
 					if (A.type == /area) continue
 					for (var/area/R in A.related)
-						SPAWN_DBG(0)
+						spawn(0)
 							R.eject = 0
 							R.updateicon()
 				src.verbs += /mob/living/carbon/human/machoman/verb/macho_meteor
@@ -1071,11 +1095,8 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 	emote(var/act)
 		switch(act)
 			if ("scream")
-				if (src.mind && src.mind.special_role && src.mind.special_role == "faustian macho man")
-					return
-				else
-					playsound(src.loc, pick(snd_macho_rage), 75, 0, 0, src.get_age_pitch())
-					src.visible_message("<span style=\"color:red\"><b>[src] yells out a battle cry!</b></span>")
+				playsound(src.loc, pick(snd_macho_rage), 75, 0, 0, src.get_age_pitch())
+				src.visible_message("<span style=\"color:red\"><b>[src] yells out a battle cry!</b></span>")
 			else
 				..()
 
@@ -1127,7 +1148,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			if (prob(10))
 				playsound(src.loc, pick(snd_macho_rage), 50, 1, 0, 1.75)
 			random_brute_damage(src.target, rand(0,1))
-			SPAWN_DBG(rand(1,3))
+			spawn(rand(1,3))
 				src.attacking = 0
 
 	ChaseAttack(mob/M)
@@ -1135,15 +1156,15 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			O.show_message("<span style=\"color:red\"><B>[src]</B> charges at [M]!</span>", 1)
 		if (prob(50))
 			playsound(src.loc, pick(snd_macho_rage), 50, 1, 0, 1.75)
-		M.changeStatus("stunned", 1 SECONDS)
+		M.stunned += rand(0,1)
 		if (prob(25))
-			M.changeStatus("weakened", 2 SECONDS)
+			M.weakened += rand(1,2)
 			random_brute_damage(M, rand(1,2))
 	CritterDeath()
 		src.alive = 0
-		playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 75, 1)
+		playsound(src.loc, "sound/effects/splat.ogg", 75, 1)
 		var/obj/decal/cleanable/blood/gibs/gib = null
-		gib = make_cleanable(/obj/decal/cleanable/blood/gibs,src.loc)
+		gib = new /obj/decal/cleanable/blood/gibs(src.loc)
 		gib.streak(list(NORTH, NORTHEAST, NORTHWEST))
 		qdel(src)
 
@@ -1203,13 +1224,13 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 			target.visible_message("<span style=\"color:red\">[target] appears visibly stronger!</span>")
 			if (target.reagents)
 				target.reagents.add_reagent("stimulants", 100)
-			if (ishuman(target))
+			if (istype(target, /mob/living/carbon/human))
 				var/mob/living/carbon/human/machoman/H = target
 				for (var/A in H.organs)
 					var/obj/item/affecting = null
 					if (!H.organs[A])    continue
 					affecting = H.organs[A]
-					if (!isitem(affecting))
+					if (!istype(affecting, /obj/item))
 						continue
 					affecting.heal_damage(50, 50) //heals 50 burn, 50 brute from all organs
 				H.UpdateDamageIcon()
@@ -1217,9 +1238,9 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 				H.bodytemperature = H.base_body_temp
 		else
 			target.visible_message("<span style=\"color:red\">[target] shoves \his face deep into [src]!</span>")
-			SPAWN_DBG(25)
+			spawn(25)
 			target.visible_message("<span style=\"color:red\">[target]'s pupils dilate.</span>")
-			target.changeStatus("stunned", 10 SECONDS)
+			target.stunned += 100
 
 /obj/item/reagent_containers/food/snacks/slimjim
 	name = "Space Jim"
@@ -1237,33 +1258,33 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		R.add_reagent("porktonium", 30)
 	attack(var/mob/M, var/mob/user, def_zone)
 		if (istype(M, /mob/living/carbon/human/machoman) && M == user)
-			playsound(user.loc, "sound/impact_sounds/Generic_Snap_1.ogg", 75, 1)
+			playsound(user.loc, "sound/effects/snap.ogg", 75, 1)
 			playsound(user.loc, "sound/voice/macho/macho_slimjim.ogg", 60)
 			for (var/mob/O in viewers(user))
 				O.show_message("<span style=\"color:red\"><B>[user] snaps into a Space Jim!!</B></span>", 1)
 			sleep(rand(10,20))
 			var/turf/T = get_turf(M)
 			playsound(user.loc, "explosion", 100, 1)
-			SPAWN_DBG(0)
+			spawn(0)
 				var/obj/overlay/O = new/obj/overlay(T)
 				O.anchored = 1
 				O.name = "Explosion"
 				O.layer = NOLIGHT_EFFECTS_LAYER_BASE
-				O.pixel_x = -92
-				O.pixel_y = -96
-				O.icon = 'icons/effects/214x246.dmi'
+				O.pixel_x = -32
+				O.pixel_y = -32
+				O.icon = 'icons/effects/hugeexplosion2.dmi'
 				O.icon_state = "explosion"
-				SPAWN_DBG(35) qdel(O)
+				spawn(35) qdel(O)
 				for (var/mob/N in viewers(user))
 					shake_camera(N, 8, 3)
-			SPAWN_DBG(0)
+			spawn(0)
 				var/obj/item/old_grenade/emp/temp_nade = new(user.loc)
 				temp_nade.prime()
-			SPAWN_DBG(0)
+			spawn(0)
 				for (var/atom/A in range(user.loc, 4))
 					if (ismob(A) && A != user)
 						var/mob/N = A
-						N.changeStatus("weakened", 80)
+						N.weakened = max(N.weakened, 8)
 						step_away(N, user)
 						step_away(N, user)
 					else if (isobj(A) || isturf(A))
@@ -1279,7 +1300,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 	goldman.name = "golden statue of [src.name]"
 	goldman.desc = src.desc
 	goldman.anchored = 0
-	goldman.set_density(1)
+	goldman.density = 1
 	goldman.layer = MOB_LAYER
 	goldman.dir = src.dir
 
@@ -1292,6 +1313,7 @@ var/list/snd_macho_idle = list('sound/voice/macho/macho_alert16.ogg', 'sound/voi
 		composite.Blend(icon(I.icon, I.icon_state, null, 1), ICON_OVERLAY)
 	composite.ColorTone( rgb(255,215,0) ) // gold
 	goldman.icon = composite
-	src.remove()
+	src.take_toxin_damage(9999)
+	src.ghostize()
 
 //#undef MAX_MINIONS_PER_SPAWN

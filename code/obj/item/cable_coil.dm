@@ -1,25 +1,22 @@
 // the cable coil object, used for laying cable
 
-#define MAXCOIL 120
-#define STARTCOIL 30 //base type starting coil amt
+#define MAXCOIL 30
 /obj/item/cable_coil
 	name = "cable coil"
 	var/base_name = "cable coil"
 	desc = "A coil of power cable."
-	amount = STARTCOIL
+	amount = MAXCOIL
 	max_stack = MAXCOIL
 	stack_type = /obj/item/cable_coil // so cut cables can stack with partially depleted full coils
 	icon = 'icons/obj/power.dmi'
 	icon_state = "coil"
-	var/iconmod = null
-	var/namemod = null
 	inhand_image_icon = 'icons/mob/inhand/hand_tools.dmi'
 	item_state = "coil"
 	throwforce = 10
 	w_class = 1.0
 	throw_speed = 2
 	throw_range = 5
-	flags = TABLEPASS|EXTRADELAY|FPRINT|CONDUCT|ONBELT
+	flags = TABLEPASS|EXTRADELAY|FPRINT|CONDUCT
 	stamina_damage = 5
 	stamina_cost = 5
 	stamina_crit_chance = 10
@@ -28,18 +25,18 @@
 	var/datum/material/insulator = null
 	var/datum/material/conductor = null
 
-	// will use getMaterial() to apply these at spawn
+	// will use getCachedMaterial() to apply these at spawn
 	var/spawn_insulator_name = "synthrubber"
-	var/spawn_conductor_name = "copper"
+	var/spawn_conductor_name = "steel"
 
-	New(loc, length = STARTCOIL)
+	New(loc, length = MAXCOIL)
 		src.amount = length
 		pixel_x = rand(-2,2)
 		pixel_y = rand(-2,2)
 		updateicon()
 		..(loc)
 		if (spawn_conductor_name)
-			applyCableMaterials(src, getMaterial(spawn_insulator_name), getMaterial(spawn_conductor_name))
+			applyCableMaterials(src, getCachedMaterial(spawn_insulator_name), getCachedMaterial(spawn_conductor_name))
 
 	before_stack(atom/movable/O as obj, mob/user as mob)
 		user.visible_message("<span style=\"color:blue\">[user] begins coiling cable!</span>")
@@ -47,15 +44,12 @@
 	after_stack(atom/movable/O as obj, mob/user as mob, var/added)
 		boutput(user, "<span style=\"color:blue\">You finish coiling cable.</span>")
 
-	custom_suicide = 1
 	suicide(var/mob/user as mob)
-		if (!src.user_can_suicide(user))
-			return 0
 		user.visible_message("<span style=\"color:red\"><b>[user] wraps the cable around \his neck and tightens it.</b></span>")
 		user.take_oxygen_deprivation(160)
 		user.updatehealth()
-		SPAWN_DBG(500)
-			if (user && !isdead(user))
+		spawn(100)
+			if (user)
 				user.suiciding = 0
 		return 1
 
@@ -109,17 +103,15 @@
 		if (amount <= 0)
 			qdel(src)
 		else if (amount >= 1 && amount <= 4)
-			set_icon_state("coil[amount][iconmod]")
-			base_name = "[namemod]cable piece"
-		else if (amount > STARTCOIL * 1.5)
-			set_icon_state("coilbig[iconmod]")
-			base_name = "[namemod]cable coil"
+			icon_state = "coil[amount]"
+			base_name = "cable piece"
 		else
-			set_icon_state("coil[iconmod]")
-			base_name = "[namemod]cable coil"
+			icon_state = "coil"
+			base_name = "cable coil"
 		updateName()
 
 /obj/item/cable_coil/cut
+	icon = 'icons/obj/power.dmi'
 	icon_state = "coil2"
 	New(loc, length)
 		if (length)
@@ -130,39 +122,6 @@
 /obj/item/cable_coil/cut/small
 	New(loc, length)
 		..(loc, rand(1,5))
-
-/////////////////////////////////////////////////REINFORCED CABLE
-
-
-/obj/item/cable_coil/reinforced
-	name = "reinforced cable coil"
-	base_name = "reinforced cable coil"
-	desc = "A coil of reinforced power cable."
-	icon_state = "coil-thick"
-	stack_type = /obj/item/cable_coil/reinforced
-	namemod = "reinforced "
-	iconmod = "-thick"
-
-	spawn_insulator_name = "synthblubber"
-	spawn_conductor_name = "pharosium"
-
-	New(loc, length = MAXCOIL)
-		..(loc, length)
-
-/obj/item/cable_coil/reinforced/cut
-	icon_state = "coil2-thick"
-	New(loc, length)
-		if (length)
-			..(loc, length)
-		else
-			..(loc, rand(1,2))
-
-/obj/item/cable_coil/reinforced/cut/small
-	New(loc, length)
-		..(loc, rand(1,5))
-
-
-/////////////////////////////////////////////////REINFORCED CABLE
 
 /obj/item/cable_coil/attack_self(var/mob/living/M)
 	if (istype(M))
@@ -218,11 +177,11 @@
 	set category = "Local"
 
 	if (amount == 1)
-		boutput(usr, "A short piece of [base_name].")
+		boutput(usr, "A short piece of power cable.")
 	else if (amount == 1)
-		boutput(usr, "A piece of [base_name].")
+		boutput(usr, "A piece of power cable.")
 	else
-		boutput(usr, "A coil of [base_name]. There's [amount] length[s_es(amount)] of cable in the coil.")
+		boutput(usr, "A coil of power cable. There's [amount] length[s_es(amount)] of cable in the coil.")
 
 	if (insulator)
 		boutput(usr, "It is insulated with [insulator].")
@@ -230,10 +189,10 @@
 		boutput(usr, "Its conductive layer is made out of [conductor].")
 
 /obj/item/cable_coil/attackby(obj/item/W, mob/user)
-	if (issnippingtool(W) && src.amount > 1)
+	if (istype(W, /obj/item/wirecutters) && src.amount > 1)
 		src.amount--
 		take(1, usr.loc)
-		boutput(user, "You cut a piece off the [base_name].")
+		boutput(user, "You cut a piece off the cable coil.")
 		src.updateicon()
 		return
 
@@ -268,10 +227,8 @@
 		C.updateicon()
 
 // called when cable_coil is clicked on a turf/simulated/floor
-/obj/item/cable_coil/proc/turf_place_between(turf/A, turf/B)
-	if (!(istype(A,/turf/simulated/floor) || istype(A,/turf/space/fluid)))
-		return
-	if (!isturf(B) || !(istype(B,/turf/simulated/floor) || istype(B,/turf/space/fluid)))
+/obj/item/cable_coil/proc/turf_place_between(turf/simulated/floor/A, turf/simulated/floor/B)
+	if (!isturf(B))
 		return
 	if (get_dist(A, B) > 1)
 		return
@@ -282,7 +239,7 @@
 	for (var/obj/cable/C in A)
 		if (C.d1 == dirn || C.d2 == dirn)
 			return
-	var/obj/cable/NC = new(A, src)
+	var/obj/cable/NC = new(A)
 
 	applyCableMaterials(NC, src.insulator, src.conductor)
 	NC.d1 = 0
@@ -293,8 +250,8 @@
 	src.use(1)
 	return
 
-/obj/item/cable_coil/proc/cable_join_between(var/obj/cable/C, var/turf/B)
-	if (!isturf(B) || !(istype(B,/turf/simulated/floor) || istype(B,/turf/space/fluid)))
+/obj/item/cable_coil/proc/cable_join_between(var/obj/cable/C, var/turf/simulated/floor/B)
+	if (!isturf(B))
 		return
 
 	var/turf/T = C.loc
@@ -327,7 +284,7 @@
 			if ((LC.d1 == nd1 && LC.d2 == nd2) || (LC.d1 == nd2 && LC.d2 == nd1) )	// make sure no cable matches either direction
 				return
 		qdel(C)
-		var/obj/cable/NC = new(T, src)
+		var/obj/cable/NC = new(T)
 		applyCableMaterials(NC, src.insulator, src.conductor)
 		NC.d1 = nd1
 		NC.d2 = nd2
@@ -337,11 +294,8 @@
 		src.use(1)
 	return
 
-/obj/item/cable_coil/proc/turf_place(turf/F, mob/user)
+/obj/item/cable_coil/proc/turf_place(turf/simulated/floor/F, mob/user)
 	if (!isturf(user.loc))
-		return
-
-	if (!(istype(F,/turf/simulated/floor) || istype(F,/turf/space/fluid)))
 		return
 
 	if (get_dist(F,user) > 1)
@@ -365,7 +319,7 @@
 				boutput(user, "There's already a cable at that position.")
 				return
 
-		var/obj/cable/C = new(F, src)
+		var/obj/cable/C = new(F)
 		C.d1 = 0
 		C.d2 = dirn
 		C.add_fingerprint(user)
@@ -411,7 +365,7 @@
 					boutput(user, "There's already a cable at that position.")
 					return
 
-			var/obj/cable/NC = new(U, src)
+			var/obj/cable/NC = new(U)
 			applyCableMaterials(NC, src.insulator, src.conductor)
 			NC.d1 = 0
 			NC.d2 = fdirn
@@ -442,7 +396,7 @@
 				return
 		C.shock(user, 25)
 		qdel(C)
-		var/obj/cable/NC = new(T, src)
+		var/obj/cable/NC = new(T)
 		applyCableMaterials(NC, src.insulator, src.conductor)
 		NC.d1 = nd1
 		NC.d2 = nd2

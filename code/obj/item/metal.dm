@@ -67,7 +67,7 @@ MATERIAL
 					boutput(user, "<span style=\"color:red\">You need more fuel to weld the rods.</span>")
 					return
 				if (!istype(src.loc,/turf/))
-					if (issilicon(user))
+					if (istype(user,/mob/living/silicon/))
 						boutput(user, "<span style=\"color:red\">Hardcore as it sounds, smelting parts of yourself off isn't big or clever.</span>")
 					else
 						boutput(user, "<span style=\"color:red\">You should probably put the rods down first.</span>")
@@ -112,13 +112,13 @@ MATERIAL
 		return
 
 	attack_self(mob/user as mob)
-		if (user.weakened | user.getStatusDuration("stunned"))
+		if (user.weakened | user.stunned)
 			return
 		if (locate(/obj/grille, usr.loc))
 			for(var/obj/grille/G in usr.loc)
 				if (G.destroyed)
 					G.health = G.health_max
-					G.set_density(1)
+					G.density = 1
 					G.destroyed = 0
 					G.update_icon()
 					if(src.material)
@@ -134,8 +134,8 @@ MATERIAL
 				return
 			user.visible_message("<span style=\"color:blue\"><b>[user]</b> begins building a grille.</span>")
 			var/turf/T = usr.loc
-			SPAWN_DBG(15)
-				if (T == usr.loc && !usr.weakened && !usr.getStatusDuration("stunned"))
+			spawn(15)
+				if (T == usr.loc && !usr.weakened && !usr.stunned)
 					src.amount -= 2
 					var/atom/G = new /obj/grille(usr.loc)
 					G.setMaterial(src.material)
@@ -258,7 +258,7 @@ MATERIAL
 	Topic(href, href_list)
 		..()
 		if ((usr.restrained() || usr.stat || usr.equipped() != src))
-			if(!isrobot(usr))
+			if(!istype(usr, /mob/living/silicon/robot))
 				return
 		if (href_list["make"])
 			if (src.amount < 1)
@@ -283,7 +283,7 @@ MATERIAL
 						boutput(usr, text("<span style=\"color:red\">You need at least two metal to build table parts.</span>"))
 						return
 					src.amount -= 2
-					var/atom/A = new /obj/item/furniture_parts/table( usr.loc )
+					var/atom/A = new /obj/item/table_parts( usr.loc )
 					A.setMaterial(src.material)
 				if("light")
 					if (src.amount < 2)
@@ -305,7 +305,7 @@ MATERIAL
 						C.layer = 5 // TODO layer
 				if("rack")
 					src.amount--
-					var/atom/A = new /obj/item/furniture_parts/rack_parts( usr.loc )
+					var/atom/A = new /obj/item/rack_parts( usr.loc )
 					A.setMaterial(src.material)
 				if("reinforced")
 					if (src.amount < 2)
@@ -398,7 +398,7 @@ MATERIAL
 
 
 				return
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			src.attack_self(usr)
 			return
 		return
@@ -493,7 +493,7 @@ MATERIAL
 						boutput(usr, text("<span style=\"color:red\">You haven't got enough metal to build the reinforced table parts!</span>"))
 						return
 					src.amount -= 2
-					var/atom/A = new /obj/item/furniture_parts/table/reinforced( usr.loc )
+					var/atom/A = new /obj/item/table_parts/reinforced( usr.loc )
 					if(src.material) A.setMaterial(src.material)
 				if("metal")
 					if (src.amount < 1)
@@ -512,7 +512,7 @@ MATERIAL
 
 
 				return
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			src.attack_self(usr)
 			return
 		return

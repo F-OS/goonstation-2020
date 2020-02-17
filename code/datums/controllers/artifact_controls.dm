@@ -9,11 +9,11 @@ var/datum/artifact_controller/artifact_controls
 
 	New()
 		..()
-		for (var/X in childrentypesof(/datum/artifact) - /datum/artifact/art)
+		for (var/X in typesof(/datum/artifact) - /datum/artifact - /datum/artifact/art)
 			var/datum/artifact/A = new X
 			artifact_types += A
 
-		for (var/X in childrentypesof(/datum/artifact_origin))
+		for (var/X in typesof(/datum/artifact_origin) - /datum/artifact_origin)
 			var/datum/artifact_origin/AO = new X
 			artifact_origins += AO
 
@@ -92,10 +92,9 @@ var/datum/artifact_controller/artifact_controls
 
 		dat += "</small></body></html>"
 
-		usr.Browse(dat,"window=artifacts;size=400x600")
+		usr << browse(dat,"window=artifacts;size=400x600")
 
 	Topic(href, href_list[])
-		usr_admin_only
 		if (href_list["Activate"])
 			var/obj/O = locate(href_list["Activate"]) in src.artifacts
 			if (!istype(O,/obj/))
@@ -145,7 +144,7 @@ var/datum/artifact_controller/artifact_controls
 			src.log_me(usr, null, "spawns", 0)
 
 		else if (href_list["Spawntype"])
-			spawner_type = input("What type of artifact?","Artifact Controls") as null|anything in list("ancient","martian","wizard","eldritch","precursor")//,"bee","void","lattice","feather")
+			spawner_type = input("What type of artifact?","Artifact Controls") as null|anything in list("ancient","martian","wizard","eldritch","precursor")
 
 		else if (href_list["Spawncine"])
 			spawner_cine = !spawner_cine
@@ -166,10 +165,7 @@ var/datum/artifact_controller/artifact_controls
 	var/fx_green_max = 255
 	var/fx_blue_min = 0
 	var/fx_blue_max = 255
-	var/nofx = 0 // If set to 1, does not apply an overlay but a flat icon_state change.
-	var/scramblechance = 10 //probability to have "fake" artifact with altered appearance
 	var/list/activation_sounds = list()
-	var/list/instrument_sounds = list()
 	var/list/fault_types = list("all")
 	var/list/adjectives = list("strange","unusual","odd","curious","bizarre","weird","abnormal","peculiar")
 	var/list/nouns_large = list("object","machine","artifact","contraption","structure","edifice")
@@ -179,7 +175,7 @@ var/datum/artifact_controller/artifact_controls
 	New()
 		..()
 		if ("all" in fault_types)
-			fault_types += childrentypesof(/datum/artifact_fault)
+			fault_types += typesof(/datum/artifact_fault) - /datum/artifact_fault
 
 	proc/generate_name()
 		return "unknown object"
@@ -189,10 +185,6 @@ var/datum/artifact_controller/artifact_controls
 	fault_types = list(/datum/artifact_fault/burn,/datum/artifact_fault/irradiate,/datum/artifact_fault/shutdown,
 	/datum/artifact_fault/murder,/datum/artifact_fault/zap)
 	activation_sounds = list('sound/machines/ArtifactAnc1.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Ancient_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Ancient_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Ancient_3.ogg",
-		"sound/musical_instruments/artifact/Artifact_Ancient_4.ogg")
 	impact_reaction_one = 1
 	impact_reaction_two = 0.5
 	heat_reaction_one = 1.5
@@ -214,10 +206,6 @@ var/datum/artifact_controller/artifact_controls
 	name = "martian"
 	fault_types = list(/datum/artifact_fault/shutdown,/datum/artifact_fault/zap,/datum/artifact_fault/poison)
 	activation_sounds = list('sound/machines/ArtifactMar1.ogg','sound/machines/ArtifactMar2.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Martian_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Martian_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Martian_3.ogg",
-		"sound/musical_instruments/artifact/Artifact_Martian_4.ogg")
 	impact_reaction_one = 1
 	impact_reaction_two = 0
 	heat_reaction_one = 0.99
@@ -247,10 +235,6 @@ var/datum/artifact_controller/artifact_controls
 	fault_types = list(/datum/artifact_fault/irradiate,/datum/artifact_fault/shutdown,/datum/artifact_fault/murder,
 	/datum/artifact_fault/warp,/datum/artifact_fault/zap,/datum/artifact_fault/messager/creepy_whispers)
 	activation_sounds = list('sound/machines/ArtifactWiz1.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Wizard_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Wizard_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Wizard_3.ogg",
-		"sound/musical_instruments/artifact/Artifact_Wizard_4.ogg")
 	impact_reaction_one = 8
 	impact_reaction_two = 6
 	heat_reaction_one = 0.75
@@ -278,10 +262,6 @@ var/datum/artifact_controller/artifact_controls
 /datum/artifact_origin/eldritch
 	name = "eldritch"
 	activation_sounds = list('sound/machines/ArtifactEld1.ogg','sound/machines/ArtifactEld2.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Eldritch_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Eldritch_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Eldritch_3.ogg",
-		"sound/musical_instruments/artifact/Artifact_Eldritch_4.ogg")
 	impact_reaction_one = 0.5
 	impact_reaction_two = 0
 	heat_reaction_one = 0.25
@@ -340,12 +320,6 @@ var/datum/artifact_controller/artifact_controls
 /datum/artifact_origin/precursor
 	name = "precursor"
 	activation_sounds = list('sound/machines/ArtifactPre1.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Precursor_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Precursor_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Precursor_3.ogg",
-		"sound/musical_instruments/artifact/Artifact_Precursor_4.ogg",
-		"sound/musical_instruments/artifact/Artifact_Precursor_5.ogg",
-		"sound/musical_instruments/artifact/Artifact_Precursor_6.ogg")
 	impact_reaction_one = 2
 	impact_reaction_two = 10
 	heat_reaction_one = 2
@@ -373,42 +347,3 @@ var/datum/artifact_controller/artifact_controls
 			namestring += "de"
 		namestring += "[pick(verber)]"
 		return namestring
-
-
-// TODO: These origins are not ready for general use yet
-
-/*
-/datum/artifact_origin/bee
-	name = "bee"
-	activation_sounds = list('sound/machines/ArtifactBee1.ogg', 'sound/machines/ArtifactBee2.ogg', 'sound/machines/ArtifactBee3.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Bee_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Bee_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Bee_3.ogg",
-		"sound/musical_instruments/artifact/Artifact_Bee_4.ogg")
-	max_sprites = 6
-
-/datum/artifact_origin/void
-	name = "void"
-	activation_sounds = list('sound/machines/ArtifactVoi1.ogg', 'sound/machines/ArtifactVoi2.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Void_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Void_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Void_3.ogg",
-		"sound/musical_instruments/artifact/Artifact_Void_4.ogg")
-	max_sprites = 6
-
-/datum/artifact_origin/lattice
-	name = "lattice"
-	activation_sounds = list('sound/machines/ArtifactLat1.ogg', 'sound/machines/ArtifactLat2.ogg', 'sound/machines/ArtifactLat3.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Lattice_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Lattice_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Lattice_3.ogg")
-	max_sprites = 6
-
-/datum/artifact_origin/feather
-	name = "feather"
-	activation_sounds = list('sound/machines/ArtifactFea1.ogg', 'sound/machines/ArtifactFea2.ogg', 'sound/machines/ArtifactFea3.ogg')
-	instrument_sounds = list("sound/musical_instruments/artifact/Artifact_Feather_1.ogg",
-		"sound/musical_instruments/artifact/Artifact_Feather_2.ogg",
-		"sound/musical_instruments/artifact/Artifact_Feather_3.ogg")
-	max_sprites = 6
-*/

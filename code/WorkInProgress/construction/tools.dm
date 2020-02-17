@@ -6,14 +6,14 @@
 	density = 1
 	anchored = 1
 	New()
-		SPAWN_DBG(10)
+		spawn(10)
 			var/obj/term = new /obj/machinery/power/terminal(get_step(get_turf(src), dir))
 			term.dir = get_dir(get_turf(term), src)
 			new /obj/machinery/power/smes(get_turf(src))
 			qdel(src)
 
 /obj/ai_frame
-	name = "\improper Asimov 5 Artifical Intelligence"
+	name = "Asimov 5 Artifical Intelligence"
 	desc = "An artificial intelligence unit which requires the brain of a living organism to function as a neural processor."
 	icon = 'icons/mob/ai.dmi'
 	icon_state = "ai"
@@ -62,10 +62,10 @@
 	override_area_bullshit = 1
 
 	process()
-		if(status & BROKEN)
+		if(stat & BROKEN)
 			return
 		..()
-		if(status & NOPOWER)
+		if(stat & NOPOWER)
 			return
 		if(lastfired && world.time - lastfired < shot_delay)
 			return
@@ -76,7 +76,7 @@
 		var/list/targets = list()
 		if (firesat == "humanoids")
 			for (var/mob/living/carbon/M in view(5, src))
-				if (!isdead(M))
+				if (M.stat != 2)
 					targets += M
 		else if (firesat == "critters")
 			for (var/obj/critter/C in view(5, src))
@@ -113,29 +113,29 @@
 
 	attack_hand(var/mob/user as mob)
 		if ( (get_dist(src, user) > 1 ))
-			if (!issilicon(user))
+			if (!istype(user, /mob/living/silicon))
 				boutput(user, text("Too far away."))
 				user.machine = null
-				user.Browse(null, "window=turretid")
+				user << browse(null, "window=turretid")
 				return
 
 		user.machine = src
 		var/t = "<TT><B>Turret Control Panel</B><BR><B>Controlled turrets:</B> [turrets.len] (<A href='?src=\ref[src];rescan=1'>Rescan</a>)<HR>"
 
-		if(src.locked && (!issilicon(user)))
+		if(src.locked && (!istype(user, /mob/living/silicon)))
 			t += "<I>(Swipe ID card to unlock control panel.)</I><BR>"
 		else
 			t += text("Turrets [] - <A href='?src=\ref[];toggleOn=1'>[]?</a><br><br>", src.enabled?"activated":"deactivated", src, src.enabled?"Disable":"Enable")
 			t += text("Currently firing at <A href='?src=\ref[];firesAt=1'>[]</a><br><br>", src, firesat)
 			t += text("Currently set for [] - <A href='?src=\ref[];toggleLethal=1'>Change to []?</a><br><br>", src.lethal?"lethal":"stun repeatedly", src,  src.lethal?"Stun repeatedly":"Lethal")
 
-		user.Browse(t, "window=turretid")
+		user << browse(t, "window=turretid")
 		onclose(user, "turretid")
 
 
 	Topic(href, href_list)
 		if (src.locked)
-			if (!issilicon(usr))
+			if (!istype(usr, /mob/living/silicon))
 				boutput(usr, "Control panel is locked!")
 				return
 		if (href_list["rescan"])
@@ -170,7 +170,7 @@
 			aTurret.setState(enabled, lethal)
 
 /obj/item/room_marker
-	name = "\improper Room Designator"
+	name = "Room Designator"
 	icon = 'icons/obj/construction.dmi'
 	icon_state = "room"
 	item_state = "gun"
@@ -214,7 +214,7 @@
 			return
 		using = 1
 		boutput(user, "<span style=\"color:blue\">Designating room.</span>")
-		SPAWN_DBG(0)
+		spawn(0)
 			if (designated.check_completion(target))
 				boutput(user, "<span style=\"color:blue\">Designation successful, room matches required parameters.</span>")
 				//new /obj/machinery/power/apc(get_turf(target))
@@ -225,20 +225,18 @@
 			using = 0
 
 /obj/item/clothing/glasses/construction
-	name = "\improper Construction Visualizer"
+	name = "Construction Visualizer"
 	icon_state = "meson"
 	item_state = "glasses"
 	mats = 6
 	desc = "The latest technology in viewing live blueprints."
 
 /obj/item/material_shaper
-	name = "\improper Window Planner"
+	name = "Material Shaper"
 	icon = 'icons/obj/construction.dmi'
 	icon_state = "shaper"
 	item_state = "gun"
-	flags = FPRINT | TABLEPASS | EXTRADELAY
 	mats = 6
-	click_delay = 1
 
 	var/mode = 0
 	var/datum/material/metal = null
@@ -349,10 +347,10 @@
 			var/obj/item/material_piece/D = W
 			var/which = determine_material(D, user)
 			if (which == "metal")
-				pool(W)
+				qdel(W)
 				metal_count += 10
 			else if (which == "glass")
-				pool(W)
+				qdel(W)
 				glass_count += 10
 			else
 				return
@@ -373,6 +371,9 @@
 			new /obj/plan_marker/glass_shaper(T)
 
 		boutput(user, "<span style=\"color:blue\">Done.</span>")
+		if (!disable_next_click || ismob(target))
+			user.next_click = world.time + 1
+
 		return 1
 
 	MouseDrop_T(var/obj/over_object, mob/user as mob)
@@ -421,20 +422,18 @@
 						metal_count += 10
 					else
 						glass_count += 10
-					pool(M)
+					qdel(M)
 					sleep(1)
 			processing = 0
 			user.visible_message("<span style=\"color:blue\">[user] finishes stuffing materials into [src].</span>")
 
 /obj/item/room_planner
-	name = "\improper Floor and Wall Planner"
+	name = "Plan Designator"
 	icon = 'icons/obj/construction.dmi'
 	icon_state = "plan"
 	item_state = "gun"
-	flags = FPRINT | TABLEPASS | EXTRADELAY
 	mats = 6
 	w_class = 2
-	click_delay = 1
 
 	var/selecting = 0
 	var/mode = "floors"
@@ -445,9 +444,8 @@
 	var/turf_op = 0
 
 	attack_self(mob/user as mob)
-		// This seems to not actually stop anything from working so just axing it.
-		//if (!(ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/construction)))
-		//	boutput(user, "<span style=\"color:red\">You can only use this tool in construction mode.</span>")
+		if (!(ticker && ticker.mode && istype(ticker.mode, /datum/game_mode/construction)))
+			boutput(user, "<span style=\"color:red\">You can only use this tool in construction mode.</span>")
 
 		if (selecting)
 			return
@@ -455,10 +453,7 @@
 		selecting = 1
 		mode = input("What to mark?", "Marking", mode) in icons
 		selected = null
-		var/states = list()
-		if (mode == "walls")
-			states += "* AUTO *"
-		states += icon_states(icons[mode])
+		var/list/states = icon_states(icons[mode])
 		selected = input("What kind?", "Marking", states[1]) in states
 		if (mode == "floors" && findtext(selected, "catwalk") != 0)
 			pod_turf = 1
@@ -494,11 +489,13 @@
 			old.turf_op = turf_op
 			old:check()
 		boutput(user, "<span style=\"color:blue\">Done.</span>")
+		if (!disable_next_click || ismob(target))
+			user.next_click = world.time + 1
 
 		return 1
 
 /obj/plan_marker
-	name = "\improper Plan Marker"
+	name = "Plan Marker"
 	icon = 'icons/turf/construction_walls.dmi'
 	icon_state = null
 	anchored = 1
@@ -525,7 +522,7 @@
 			W.afterattack(T, user)
 
 /obj/plan_marker/glass_shaper
-	name = "\improper Window Plan Marker"
+	name = "Window Plan Marker"
 	icon = 'icons/obj/grille.dmi'
 	icon_state = "grille-0"
 	anchored = 1
@@ -643,7 +640,7 @@
 			return
 		else
 			for (var/atom/movable/O in T)
-				if ((istype(O, /obj) && O.density) || isliving(O))
+				if ((istype(O, /obj) && O.density) || istype(O, /mob/living))
 					boutput(usr, "<span style=\"color:red\">Cannot complete material shaping: [O] blocking construction.</span>")
 					filling = 0
 					return
@@ -651,9 +648,9 @@
 		var/datum/material/glass = origin.glass
 		var/turf/L = get_turf(src)
 		if (!metal)
-			metal = getMaterial("steel")
+			metal = getCachedMaterial("steel")
 		if (!glass)
-			glass = getMaterial("glass")
+			glass = getCachedMaterial("glass")
 
 		origin.use_materials(2, borders)
 
@@ -725,42 +722,28 @@
 			..()
 
 /obj/plan_marker/wall
-	name = "\improper Wall Plan Marker"
+	name = "Wall Plan Marker"
 	desc = "Build a wall here to complete the plan."
 
 	proc/check()
 		var/turf/T = get_turf(src)
-		// Originally worked only on this type specifically.
-		// Which meant it didn't work with the fancy new auto-walls
-		if (istype(T, /turf/simulated/wall))
-			// Only update if the wall should have a different type
-			if (src.icon_state != "* AUTO *")
-				T.icon = src.icon
-				T.icon_state = src.icon_state
-				T.dir = src.dir
-				T:allows_vehicles = src.allows_vehicles
-			else if (istype(T, /turf/simulated/wall/auto))
-				var/turf/simulated/wall/auto/AT = T
-				AT.icon = initial(AT.icon)
-				AT.icon_state = initial(AT.icon_state)
-				AT.dir = initial(AT.dir)
-				AT:allows_vehicles = initial(AT.allows_vehicles)
-				AT.update_icon()
-				AT.update_neighbors()
-
+		if (T.type == /turf/simulated/wall)
+			T.icon = src.icon
+			T.icon_state = src.icon_state
+			T.dir = src.dir
+			T:allows_vehicles = src.allows_vehicles
+			T.opacity = turf_op
 			src.loc = null
 			qdel(src)
 
 /obj/plan_marker/floor
-	name = "\improper Floor Plan Marker"
+	name = "Floor Plan Marker"
 	desc = "Build a floor here to complete the plan."
 	icon = 'icons/turf/construction_floors.dmi'
 
 	proc/check()
 		var/turf/T = get_turf(src)
-		if (istype(T, /turf/simulated/floor))
-			// Same deal as above, only checked for that specific type of floor
-			// so the various alternate designs weren't able to be converted
+		if (T.type == /turf/simulated/floor)
 			T.icon = src.icon
 			T.icon_state = src.icon_state
 			T.dir = src.dir

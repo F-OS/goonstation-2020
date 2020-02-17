@@ -5,7 +5,6 @@
 	var/timing = 0.0
 	var/time = null
 	flags = FPRINT | TABLEPASS| CONDUCT
-	event_handler_flags = USE_PROXIMITY | USE_FLUID_ENTER
 	w_class = 2.0
 	item_state = "electronic"
 	m_amt = 300
@@ -15,7 +14,7 @@
 
 /obj/item/device/prox_sensor/dropped()
 	..()
-	SPAWN_DBG(0)
+	spawn(0)
 		src.sense()
 
 /obj/item/device/prox_sensor/proc/update_icon()
@@ -33,7 +32,7 @@
 /obj/item/device/prox_sensor/proc/sense()
 	if (src.armed == 1)
 		if (src.master)
-			SPAWN_DBG(0)
+			spawn(0)
 				var/datum/signal/signal = get_free_signal()
 				signal.source = src
 				signal.data["message"] = "ACTIVATE"
@@ -57,21 +56,17 @@
 			src.timing = 0
 			src.update_icon()
 		if (!src.master)
-			if (ismob(src.loc))
+			if (istype(src.loc, /mob))
 				attack_self(src.loc)
 			else
 				for(var/mob/M in viewers(1, src))
-					if (isintangible(M) || isdead(M))
-						continue
 					if (M.client && (M.machine == src.master || M.machine == src))
 						src.attack_self(M)
 		else
-			if (ismob(src.master.loc))
+			if (istype(src.master.loc, /mob))
 				src.attack_self(src.master.loc)
 			else
 				for(var/mob/M in viewers(1, src.master))
-					if (isintangible(M) || isdead(M))
-						continue
 					if (M.client && (M.machine == src.master || M.machine == src))
 						src.attack_self(M)
 	else
@@ -115,10 +110,10 @@
 		var/dat = text("<TT><B>Proximity Sensor</B><br>[] []:[]<br><A href='?src=\ref[];tp=-30'>-</A> <A href='?src=\ref[];tp=-1'>-</A> <A href='?src=\ref[];tp=1'>+</A> <A href='?src=\ref[];tp=30'>+</A><br></TT>", (src.timing ? text("<A href='?src=\ref[];time=0'>Timing</A>", src) : text("<A href='?src=\ref[];time=1'>Not Timing</A>", src)), minute, second, src, src, src, src)
 		dat += "<BR><A href='?src=\ref[src];arm=1'>[src.armed ? "Armed":"Not Armed"]</A> (Movement sensor active when armed!)"
 		dat += "<BR><BR><A href='?src=\ref[src];close=1'>Close</A>"
-		user.Browse(dat, "window=prox")
+		user << browse(dat, "window=prox")
 		onclose(user, "prox")
 	else
-		user.Browse(null, "window=prox")
+		user << browse(null, "window=prox")
 		user.machine = null
 		return
 
@@ -170,26 +165,26 @@
 			src.time = min(max(round(src.time), 0), 600)
 
 		if (href_list["close"])
-			usr.Browse(null, "window=prox")
+			usr << browse(null, "window=prox")
 			usr.machine = null
 			return
 
 		if (!src.master)
-			if (ismob(src.loc))
+			if (istype(src.loc, /mob))
 				attack_self(src.loc)
 			else
 				for(var/mob/M in viewers(1, src))
 					if (M.client && (M.machine == src.master || M.machine == src))
 						src.attack_self(M)
 		else
-			if (ismob(src.master.loc))
+			if (istype(src.master.loc, /mob))
 				src.attack_self(src.master.loc)
 			else
 				for(var/mob/M in viewers(1, src.master))
 					if (M.client && (M.machine == src.master || M.machine == src))
 						src.attack_self(M)
 	else
-		usr.Browse(null, "window=prox")
+		usr << browse(null, "window=prox")
 		return
 	return
 

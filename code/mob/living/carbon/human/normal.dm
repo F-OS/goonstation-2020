@@ -1,218 +1,355 @@
-/mob/living/carbon/human/normal
+/mob/living/carbon/human/normal/female
 	New()
 		..()
-		SPAWN_DBG(0)
-			randomize_look(src, 1, 1, 1, 1, 1, 1)
+		spawn(0)
+			bioHolder.mobAppearance.gender = "female"
+			bioHolder.mobAppearance.customization_first = "Bedhead"
+			src.real_name = pick(first_names_female)+" "+pick(last_names)
 
-		SPAWN_DBG(10)
+		spawn(10)
+			bioHolder.mobAppearance.UpdateMob()
 			set_clothing_icon_dirty()
 
-/mob/living/carbon/human/normal/assistant
+/mob/living/carbon/human/normal/female/assistant
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Staff Assistant")
 
-/mob/living/carbon/human/normal/syndicate
+/mob/living/carbon/human/normal/female/syndicate
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Syndicate")
 
-/mob/living/carbon/human/normal/captain
+/mob/living/carbon/human/normal/female/captain
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Captain")
 
-/mob/living/carbon/human/normal/headofpersonnel
+/mob/living/carbon/human/normal/female/headofpersonnel
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Head of Personnel")
 
-/mob/living/carbon/human/normal/chiefengineer
+/mob/living/carbon/human/normal/female/chiefengineer
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Chief Engineer")
 
-/mob/living/carbon/human/normal/researchdirector
+/mob/living/carbon/human/normal/female/researchdirector
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Research Director")
 
-/mob/living/carbon/human/normal/headofsecurity
+/mob/living/carbon/human/normal/female/headofsecurity
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Head of Security")
 
-/mob/living/carbon/human/normal/securityofficer
+/mob/living/carbon/human/normal/female/securityofficer
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Security Officer")
 
-/mob/living/carbon/human/normal/detective
+/mob/living/carbon/human/normal/female/detective
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Detective")
 
-/mob/living/carbon/human/normal/clown
+/mob/living/carbon/human/normal/female/clown
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Clown")
 
-/mob/living/carbon/human/normal/chef
+/mob/living/carbon/human/normal/female/chef
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Chef")
 
-/mob/living/carbon/human/normal/chaplain
+/mob/living/carbon/human/normal/female/chaplain
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Chaplain")
 
-/mob/living/carbon/human/normal/barman
+/mob/living/carbon/human/normal/female/barman
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Barman")
 
-/mob/living/carbon/human/normal/botanist
+/mob/living/carbon/human/normal/female/botanist
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Botanist")
 
-/mob/living/carbon/human/normal/janitor
+/mob/living/carbon/human/normal/female/janitor
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Janitor")
 
-/mob/living/carbon/human/normal/mechanic
+/mob/living/carbon/human/normal/female/mechanic
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Mechanic")
 
-/mob/living/carbon/human/normal/engineer
+/mob/living/carbon/human/normal/female/engineer
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Engineer")
 
-/mob/living/carbon/human/normal/miner
+/mob/living/carbon/human/normal/female/miner
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Miner")
 
-/mob/living/carbon/human/normal/quartermaster
+/mob/living/carbon/human/normal/female/quartermaster
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Quartermaster")
 
-/mob/living/carbon/human/normal/medicaldoctor
+/mob/living/carbon/human/normal/female/medicaldoctor
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Medical Doctor")
 
-/mob/living/carbon/human/normal/geneticist
+/mob/living/carbon/human/normal/female/geneticist
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Geneticist")
 
-/mob/living/carbon/human/normal/roboticist
+/mob/living/carbon/human/normal/female/roboticist
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Roboticist")
 
-/mob/living/carbon/human/normal/chemist
+/mob/living/carbon/human/normal/female/chemist
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Chemist")
 
-/mob/living/carbon/human/normal/scientist
+/mob/living/carbon/human/normal/female/scientist
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			JobEquipSpawned("Scientist")
 
-/mob/living/carbon/human/normal/wizard
+/mob/living/carbon/human/normal/male
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
+			src.mind = new
+			if(src.key)
+				src.mind.key = src.key
+			src.mind.current = src
+			bioHolder.mobAppearance.gender = "male"
+			src.cust_one_state = "short"
+			src.real_name = pick(first_names_male)+" "+pick(last_names)
+
+		spawn(10)
+			bioHolder.mobAppearance.UpdateMob()
+			set_clothing_icon_dirty()
+
+/mob/living/carbon/human/normal/male/assistant
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Staff Assistant")
+
+/mob/living/carbon/human/normal/male/syndicate
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Syndicate")
+
+/mob/living/carbon/human/normal/male/captain
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Captain")
+
+/mob/living/carbon/human/normal/male/headofpersonnel
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Head of Personnel")
+
+/mob/living/carbon/human/normal/male/chiefengineer
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Chief Engineer")
+
+/mob/living/carbon/human/normal/male/researchdirector
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Research Director")
+
+/mob/living/carbon/human/normal/male/headofsecurity
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Head of Security")
+
+/mob/living/carbon/human/normal/male/securityofficer
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Security Officer")
+
+/mob/living/carbon/human/normal/male/detective
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Detective")
+
+/mob/living/carbon/human/normal/male/clown
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Clown")
+
+/mob/living/carbon/human/normal/male/chef
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Chef")
+
+/mob/living/carbon/human/normal/male/chaplain
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Chaplain")
+
+/mob/living/carbon/human/normal/male/barman
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Barman")
+
+/mob/living/carbon/human/normal/male/botanist
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Botanist")
+
+/mob/living/carbon/human/normal/male/janitor
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Janitor")
+
+/mob/living/carbon/human/normal/male/mechanic
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Mechanic")
+
+/mob/living/carbon/human/normal/male/engineer
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Engineer")
+
+/mob/living/carbon/human/normal/male/miner
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Miner")
+
+/mob/living/carbon/human/normal/male/quartermaster
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Quartermaster")
+
+/mob/living/carbon/human/normal/male/medicaldoctor
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Medical Doctor")
+
+/mob/living/carbon/human/normal/male/geneticist
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Geneticist")
+
+/mob/living/carbon/human/normal/male/roboticist
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Roboticist")
+
+/mob/living/carbon/human/normal/male/chemist
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Chemist")
+
+/mob/living/carbon/human/normal/male/scientist
+	New()
+		..()
+		spawn(0)
+			JobEquipSpawned("Scientist")
+
+/mob/living/carbon/human/normal/male/wizard
+	New()
+		..()
+		spawn(0)
 			if (src.gender && src.gender == "female")
-				src.real_name = wiz_female.len ? pick(wiz_female) : "Witch"
+				src.real_name = pick(wiz_female)
 			else
-				src.real_name = wiz_male.len ? pick(wiz_male) : "Wizard"
+				src.real_name = pick(wiz_male)
 
 			equip_wizard(src, 1)
 		return
 
-/mob/living/carbon/human/normal/rescue
+/mob/living/carbon/human/normal/meteor_rescue
 	New()
 		..()
-		SPAWN_DBG(0)
+		spawn(0)
 			src.equip_if_possible(new /obj/item/clothing/shoes/red(src), slot_shoes)
 			src.equip_if_possible(new /obj/item/clothing/under/color/red(src), slot_w_uniform)
-			src.equip_if_possible(new /obj/item/card/id(src), slot_wear_id)
 			src.equip_if_possible(new /obj/item/device/radio/headset(src), slot_ears)
-			src.equip_if_possible(new /obj/item/storage/belt/utility/prepared(src), slot_belt)
-			src.equip_if_possible(new /obj/item/storage/backpack/withO2(src), slot_back)
-			src.equip_if_possible(new /obj/item/device/light/flashlight(src), slot_l_store)
+			src.equip_if_possible(new /obj/item/storage/backpack(src), slot_back)
 			src.equip_if_possible(new /obj/item/clothing/suit/armor/vest(src), slot_wear_suit)
 			src.equip_if_possible(new /obj/item/clothing/mask/gas(src), slot_wear_mask)
 			src.equip_if_possible(new /obj/item/clothing/gloves/black(src), slot_gloves)
-			src.equip_if_possible(new /obj/item/clothing/glasses/nightvision(src), slot_glasses)
+			src.equip_if_possible(new /obj/item/clothing/glasses/meson(src), slot_glasses)
+			src.spawnId("Rescue Worker")
 
-			var/obj/item/card/id/C = src.wear_id
-			if(C)
-				C.registered = src.real_name
-				C.assignment = "NT-SO Rescue Worker"
-				C.name = "[C.registered]'s ID Card ([C.assignment])"
-				C.access = get_all_accesses()
+			if (prob(50))
+				bioHolder.mobAppearance.gender = "male"
+				src.cust_one_state = "short"
+				src.real_name = pick(first_names_male)+" "+pick(last_names)
+			else
+				bioHolder.mobAppearance.gender = "female"
+				bioHolder.mobAppearance.customization_first = "Bedhead"
+				src.real_name = pick(first_names_female)+" "+pick(last_names)
 
-			update_clothing()
 
-/mob/living/carbon/human/normal/ntso
-	New()
-		..()
-		SPAWN_DBG(0)
-			src.equip_if_possible(new /obj/item/clothing/shoes/swat(src), slot_shoes)
-			src.equip_if_possible(new /obj/item/clothing/under/misc/NT(src), slot_w_uniform)
-			src.equip_if_possible(new /obj/item/card/id(src), slot_wear_id)
-			src.equip_if_possible(new /obj/item/device/radio/headset/command/captain(src), slot_ears)
-			src.equip_if_possible(new /obj/item/storage/belt/security(src), slot_belt)
-			src.equip_if_possible(new /obj/item/storage/backpack/NT(src), slot_back)
-			src.equip_if_possible(new /obj/item/clothing/glasses/nightvision(src), slot_l_store)
-			src.equip_if_possible(new /obj/item/crowbar(src), slot_r_store)
-			src.equip_if_possible(new /obj/item/clothing/suit/armor/NT_alt(src), slot_wear_suit)
-			src.equip_if_possible(new /obj/item/clothing/mask/gas/swat(src), slot_wear_mask)
-			src.equip_if_possible(new /obj/item/clothing/head/NTberet(src), slot_head)
-			src.equip_if_possible(new /obj/item/clothing/gloves/black(src), slot_gloves)
-			src.equip_if_possible(new /obj/item/clothing/glasses/sunglasses/sechud(src), slot_glasses)
-
-			var/obj/item/card/id/C = src.wear_id
-			if(C)
-				C.registered = src.real_name
-				C.assignment = "NT-SO Special Operative"
-				C.name = "[C.registered]'s ID Card ([C.assignment])"
-				var/list/ntso_access = get_all_accesses()
-				ntso_access += access_maxsec // This makes sense, right? They're highly trained and trusted.
-				C.access = ntso_access
-
-			update_clothing()
+			sleep(10)
+			bioHolder.mobAppearance.UpdateMob()
+			set_clothing_icon_dirty()

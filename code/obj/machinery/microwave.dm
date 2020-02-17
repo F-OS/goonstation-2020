@@ -21,26 +21,6 @@
 	var/obj/item/reagent_containers/food/snacks/being_cooked = null // The item being cooked
 	var/obj/item/extra_item // One non food item that can be added
 	mats = 12
-	var/emagged = 0
-
-	emag_act(var/mob/user, var/obj/item/card/emag/E)
-		if (src.emagged)
-			if (user)
-				user.show_text("You use the card to change the internal radiation setting to \"IONIZING\"", "blue")
-			src.emagged = 1
-			return 1
-		else
-			if (user)
-				user.show_text("The [src] has already been tampered with", "red")
-				return 0
-
-	demag(var/mob/user)
-		if (!src.emagged)
-			return 0
-		if (user)
-			user.show_text("You reset the radiation levels to a more food-safe setting.", "blue")
-		src.emagged = false
-		return 1
 
 /obj/machinery/microwave/New() // *** After making the recipe in datums\recipes.dm, add it in here! ***
 	..()
@@ -58,7 +38,6 @@
 	src.available_recipes += new /datum/recipe/donkpocket_warm(src)
 	src.available_recipes += new /datum/recipe/pie(src)
 	src.available_recipes += new /datum/recipe/popcorn(src)
-	UnsubscribeProcess()
 
 
 /*******************
@@ -67,12 +46,12 @@
 
 obj/machinery/microwave/attackby(var/obj/item/O as obj, var/mob/user as mob)
 	if(src.broken > 0)
-		if (isscrewingtool(O) && src.broken == 2)
+		if(src.broken == 2 && istype(O, /obj/item/screwdriver)) // If it's broken and they're using a screwdriver
 			src.visible_message("<span style=\"color:blue\">[user] starts to fix part of the microwave.</span>")
 			sleep(20)
 			src.visible_message("<span style=\"color:blue\">[user] fixes part of the microwave.</span>")
 			src.broken = 1 // Fix it a bit
-		else if (src.broken == 1 && iswrenchingtool(O))
+		else if(src.broken == 1 && istype(O, /obj/item/wrench)) // If it's broken and they're doing the wrench
 			src.visible_message("<span style=\"color:blue\">[user] starts to fix part of the microwave.</span>")
 			sleep(20)
 			src.visible_message("<span style=\"color:blue\">[user] fixes the microwave!</span>")
@@ -89,9 +68,6 @@ obj/machinery/microwave/attackby(var/obj/item/O as obj, var/mob/user as mob)
 			src.icon_state = "mw"
 		else //Otherwise bad luck!!
 			return
-	else if (isghostdrone(user))
-		boutput(usr, "<span style=\"color:red\">\The [src] refuses to interface with you, as you are not a properly trained chef!</span>")
-		return
 	else if(istype(O, /obj/item/reagent_containers/food/snacks/ingredient/egg)) // If an egg is used, add it
 		if(src.egg_amount < 5)
 			src.visible_message("<span style=\"color:blue\">[user] adds an egg to the microwave.</span>")
@@ -129,7 +105,7 @@ obj/machinery/microwave/attackby(var/obj/item/O as obj, var/mob/user as mob)
 			src.donkpocket_amount++
 			qdel(O)
 	else
-		if(!isitem(extra_item)) //Allow one non food item to be added!
+		if(!istype(extra_item, /obj/item)) //Allow one non food item to be added!
 			user.u_equip(O)
 			extra_item = O
 			O.set_loc(src)
@@ -142,10 +118,7 @@ obj/machinery/microwave/attackby(var/obj/item/O as obj, var/mob/user as mob)
 *   Microwave Menu
 ********************/
 
-/obj/machinery/microwave/attack_hand(mob/user as mob) // The microwave Menu
-	if (isghostdrone(user))
-		boutput(usr, "<span style=\"color:red\">\The [src] refuses to interface with you, as you are not a properly trained chef!</span>")
-		return
+/obj/machinery/microwave/attack_hand(user as mob) // The microwave Menu
 	var/dat
 	if(src.broken > 0)
 		dat = {"
@@ -176,7 +149,7 @@ Please clean it before use!</TT><BR>
 <A href='?src=\ref[src];cook=2'>Dispose contents!<BR>
 "}
 
-	user.Browse("<HEAD><TITLE>Microwave Controls</TITLE></HEAD><TT>[dat]</TT>", "window=microwave")
+	user << browse("<HEAD><TITLE>Microwave Controls</TITLE></HEAD><TT>[dat]</TT>", "window=microwave")
 	onclose(user, "microwave")
 	return
 
@@ -228,7 +201,7 @@ Please clean it before use!</TT><BR>
 						src.synthmeat_amount = 0
 						src.donkpocket_amount = 0
 						sleep(40) // Half way through
-						playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 50, 1) // Play a splat sound
+						playsound(src.loc, "sound/effects/splat.ogg", 50, 1) // Play a splat sound
 						icon_state = "mwbloody1" // Make it look dirty!!
 						sleep(40) // Then at the end let it finish normally
 						playsound(src.loc, "sound/machines/ding.ogg", 50, 1)
@@ -291,7 +264,7 @@ Please clean it before use!</TT><BR>
 				src.updateUsrDialog()
 				src.being_cooked = new cooking(src)
 
-				SPAWN_DBG(cook_time) //After the cooking time
+				spawn(cook_time) //After the cooking time
 					if(!isnull(src.being_cooked))
 						playsound(src.loc, "sound/machines/ding.ogg", 50, 1)
 						if(istype(src.being_cooked, /obj/item/reagent_containers/food/snacks/burger/humanburger))
@@ -300,8 +273,6 @@ Please clean it before use!</TT><BR>
 							src.being_cooked:warm = 1
 							src.being_cooked.name = "warm " + src.being_cooked.name
 							src.being_cooked:cooltime()
-						if (src.emagged)
-							src.being_cooked.reagents.add_reagent("radium", 25)
 						src.being_cooked.set_loc(get_turf(src)) // Create the new item
 						src.being_cooked = null // We're done!
 

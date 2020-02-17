@@ -15,7 +15,7 @@
 		return src
 
 	proc/addClass(var/class as text)
-		var/list/classlist = kText.text2list(class, " ")
+		var/tmp/list/classlist = kText.text2list(class, " ")
 
 		for(var/cls in classlist)
 			if(!classes.Find(cls))
@@ -29,7 +29,7 @@
 
 	proc/toHtml()
 		beforeToHtmlHook()
-		var/html = "";
+		var/tmp/html = "";
 
 		html = "<[tagName]"
 

@@ -4,7 +4,6 @@
 	icon = 'icons/obj/stationobjs.dmi'
 	icon_state = "atmos_field"
 	layer = OBJ_LAYER+0.5
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER | USE_CANPASS
 
 	New()
 		..()
@@ -20,7 +19,7 @@
 		return 1
 
 	HasEntered(atom/A, turf/OldLoc)
-		if (ishuman(A) && !locate(/obj/atmos_field, OldLoc)) // stepping around in the field while you're already inside it is fine
+		if (istype(A, /mob/living/carbon/human) && !locate(/obj/atmos_field, OldLoc)) // stepping around in the field while you're already inside it is fine
 			var/mob/living/carbon/human/M = A
 			if (prob(50))
 				M.shock(src, 10000, "chest", 1, 1)
@@ -67,7 +66,7 @@
 
 	power_change()
 		..()
-		if (status & NOPOWER && src.other)
+		if (stat & NOPOWER && src.other)
 			break_field()
 
 	proc
@@ -97,7 +96,7 @@
 			src.updateicon()
 
 		updateicon()
-			if (status & (NOPOWER|BROKEN))
+			if (stat & (NOPOWER|BROKEN))
 				icon_state = "atmos_field_gen_off"
 			else if (src.other)
 				icon_state = "atmos_field_gen_on"

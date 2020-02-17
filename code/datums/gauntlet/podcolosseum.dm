@@ -1,7 +1,6 @@
 /area/colosseum
 	name = "The Colosseum"
 	virtual = 1
-	ambient_light = "#bfbfbf"
 
 	Entered(var/atom/A)
 		..()
@@ -20,7 +19,7 @@
 
 	Entered(var/atom/movable/A)
 		..()
-		if (isliving(A))
+		if (istype(A, /mob/living))
 			if (colosseum_controller.state >= 2)
 				A:gib()
 
@@ -50,7 +49,7 @@
 			return
 		var/mobn = 0
 		for (var/mob/N in colosseum_controller.staging)
-			if (ishuman(N) && !isdead(N))
+			if (ishuman(N) && N.stat != 2)
 				mobn++
 		if (mobn > 4)
 			boutput(usr, "<span style=\"color:red\">The Colosseum is for 1-4 players. Sorry!</span>")
@@ -88,7 +87,7 @@
 	var/score = 0
 	var/moblist_names = ""
 
-	var/list/icons = list("mini", "nanoputt", "putt_black", "syndiputt")
+	var/list/icons = list("miniputt", "nanoputt", "putt_black", "syndiputt")
 
 	var/list/common_drops = list()
 	var/list/uncommon_drops = list()
@@ -115,8 +114,7 @@
 			boutput(M, rendered)
 		for (var/mob/M in colosseum)
 			boutput(M, rendered)
-		for (var/mob/M in mobs)//world)
-			LAGCHECK(LAG_LOW)
+		for (var/mob/M in world)
 			if (ismob(M.eye) && M.eye != M)
 				var/mob/N = M.eye
 				if (N.is_near_colosseum())
@@ -129,11 +127,11 @@
 			return
 		state = 1
 		for (var/obj/machinery/door/poddoor/buff/staging/S in staging)
-			SPAWN_DBG(0)
+			spawn(0)
 				S.close()
 		var/mobn = 0
 		for (var/mob/M in staging)
-			if (ishuman(M) && !isdead(M))
+			if (ishuman(M) && M.stat != 2)
 				mobn++
 				moblist += M
 				if (moblist_names != "")
@@ -174,13 +172,13 @@
 		announceAll("The Pod Colosseum Arena has now entered staging phase. No more players may enter the game area. The game will start once all players enter the colosseum space inside a pod.")
 		var/spawned_match_id = current_match_id
 		for (var/obj/machinery/door/poddoor/buff/gauntlet/S in colosseum)
-			SPAWN_DBG(0)
+			spawn(0)
 				S.open()
 		for (var/obj/machinery/door/poddoor/buff/gauntlet/S in staging)
-			SPAWN_DBG(0)
+			spawn(0)
 				S.open()
 		allow_processing = 1
-		SPAWN_DBG(1200)
+		spawn(1200)
 			if (state == 1 && current_match_id == spawned_match_id)
 				announceAll("Game did not start after 2 minutes. Resetting arena.")
 				resetArena()
@@ -191,13 +189,13 @@
 		state = 2
 
 		for (var/obj/machinery/door/poddoor/buff/gauntlet/S in colosseum)
-			SPAWN_DBG(0)
+			spawn(0)
 				S.close()
 		for (var/obj/machinery/door/poddoor/buff/gauntlet/S in staging)
-			SPAWN_DBG(0)
+			spawn(0)
 				S.close()
 		for (var/mob/living/M in colosseum)
-			if (M in moblist || !ishuman(M) || isdead(M))
+			if (M in moblist || !ishuman(M) || M.stat == 2)
 				continue
 			moblist += M
 			if (moblist_names != "")
@@ -320,13 +318,13 @@
 		announceAll("The Pod Colosseum match concluded. Final score: [score].")
 		if (score > 10000)
 			var/command_report = "A Pod Colosseum match has concluded with score [score]. Congratulations to: [moblist_names]."
-			for (var/obj/machinery/communications_dish/C in comm_dishes)
+			for (var/obj/machinery/communications_dish/C in machines)
 				C.add_centcom_report("[command_name()] Update", command_report)
 
 			command_alert(command_report, "Pod Colosseum match finished")
 		statlog_gauntlet(moblist_names, score, 0)
 
-		SPAWN_DBG(0)
+		spawn(0)
 			for (var/obj/machinery/colosseum_putt/P in staging)
 				for (var/mob/living/M in P)
 					M.gib()
@@ -354,13 +352,13 @@
 					qdel(D)
 
 			for (var/obj/machinery/door/poddoor/buff/staging/S in staging)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.open()
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in colosseum)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.close()
 			for (var/obj/machinery/door/poddoor/buff/gauntlet/S in staging)
-				SPAWN_DBG(0)
+				spawn(0)
 					S.close()
 
 		moblist.len = 0
@@ -371,11 +369,10 @@
 		resetting = 0
 
 	New()
-		SPAWN_DBG(5)
+		spawn(5)
 			viewing = locate() in world
 			staging = locate() in world
 			for (var/area/colosseum/G in world)
-				LAGCHECK(LAG_LOW)
 				if (G.type == /area/colosseum)
 					colosseum = G
 					break
@@ -398,7 +395,7 @@
 				if (T.x > minx + 2 && T.y > miny + 2 && T.x < maxx - 2 && T.y < maxy - 2)
 					bossturfs += T
 
-			for (var/PUP in childrentypesof(/obj/colosseum_powerup/stat))
+			for (var/PUP in typesof(/obj/colosseum_powerup/stat) - /obj/colosseum_powerup/stat)
 				var/obj/colosseum_powerup/stat/S = new PUP(null, 1)
 				switch (S.rarity_class)
 					if (1)
@@ -410,7 +407,7 @@
 					else
 						common_drops += S
 
-			for (var/PUP in childrentypesof(/datum/colosseumSystem))
+			for (var/PUP in typesof(/datum/colosseumSystem) - /datum/colosseumSystem)
 				var/datum/colosseumSystem/NS = new PUP()
 				if (NS.abstract)
 					continue
@@ -479,7 +476,6 @@ var/global/datum/arena/colosseumController/colosseum_controller = new()
 	name = "Colosseum Hangar Floor"
 	desc = "You wonder if that little flashing white thing is a pod or a butt."
 	icon_state = "gauntfloorPod"
-	event_handler_flags = USE_CANPASS
 
 	CanPass(atom/movable/mover, turf/target, height=0, air_group=0)
 		if (istype(mover, /obj/machinery/colosseum_putt))
@@ -853,7 +849,7 @@ var/global/datum/arena/colosseumController/colosseum_controller = new()
 					if (get_dist(T, Q) == 2)
 						var/obj/overlay/Wall = new(T)
 						Wall.anchored = 1
-						Wall.set_density(1)
+						Wall.density = 1
 						Wall.opacity = 0
 						Wall.icon = 'icons/effects/effects.dmi'
 						Wall.icon_state = "shockwave"
@@ -866,7 +862,7 @@ var/global/datum/arena/colosseumController/colosseum_controller = new()
 						else
 							Wall.dir = 1
 						affected += Wall
-				SPAWN_DBG(forcewall_time)
+				spawn(forcewall_time)
 					for (var/obj/W in affected)
 						qdel(W)
 
@@ -978,7 +974,7 @@ proc/get_colosseum_message(var/name, var/message)
 	var/owner = null
 	var/mob/living/carbon/human/piloting = null
 	var/flying = 0
-	var/speed = 8
+	var/speed = 2
 	var/facing = 2
 	var/datum/projectile/laser/light/upgradeable/simple
 	var/datum/colosseumSystem/primary/primary
@@ -1017,7 +1013,7 @@ proc/get_colosseum_message(var/name, var/message)
 	var/on_fire = 0
 
 	var/obj/machinery/camera/cam
-	var/datum/movement_controller/colosseum_putt/movement_controller
+
 	New()
 		..()
 		if (!fire_overlay)
@@ -1051,11 +1047,6 @@ proc/get_colosseum_message(var/name, var/message)
 		src.cam.c_tag = src.name
 		src.cam.network = "Zeta"
 		radio = new(src)
-
-		movement_controller = new(src)
-
-	get_movement_controller()
-		return movement_controller
 
 	proc/on_damage()
 		next_shield_regen = ticker.round_elapsed_ticks + 50
@@ -1136,18 +1127,18 @@ proc/get_colosseum_message(var/name, var/message)
 		update_indicators(INDICATOR_SECONDARY)
 
 	Bump(atom/A)
-		//walk(src, 0)
+		walk(src, 0)
 		flying = 0
 		dir = facing
 
-	/*override_southeast(mob/user)
+	override_southeast(mob/user)
 		if (piloting != user)
 			return
 		fire_primary()
 		return 1
 
 	hotkey(mob/user, var/key)
-		if (key == "space")
+		if (key == " ")
 			override_southeast(user)
 
 	override_northeast(mob/user)
@@ -1161,7 +1152,7 @@ proc/get_colosseum_message(var/name, var/message)
 			return
 		walk(src, 0)
 		flying = 0
-		return 1*/
+		return 1
 
 	attack_hand(mob/user)
 		if (!user.ckey) // how does this happen?
@@ -1202,7 +1193,7 @@ proc/get_colosseum_message(var/name, var/message)
 			boutput(usr, "<span style=\"color:blue\">You exit the Colosseum Putt.</span>")
 			piloting = null
 			on_exit(usr)
-	/*
+
 	relaymove(mob/user as mob, direction)
 		if (user.stat)
 			return
@@ -1219,22 +1210,23 @@ proc/get_colosseum_message(var/name, var/message)
 			else
 				src.dir = direction
 
-	*/
 	proc/broadcast(var/message)
 		radio.hear_talk(piloting, message)
 
 	proc/on_board(var/mob/M)
+		M.client.view = 10
 		update_indicators(INDICATOR_ALL)
 		add_indicators(M)
 		may_exit = 0
-		SPAWN_DBG(10)
+		spawn(10)
 			may_exit = 1
 
 	proc/on_exit(var/mob/M)
-		M.client.view = M.client.reset_view()
+		M.client.view = 7
 		remove_indicators(M)
 
 	client_login(var/mob/user)
+		user.client.view = 10
 		update_indicators(INDICATOR_ALL)
 		add_indicators(user)
 
@@ -1335,7 +1327,10 @@ proc/get_colosseum_message(var/name, var/message)
 			return
 		log_shot(P, src)
 
-		if(src.material) src.material.triggerOnBullet(src, src, P)
+		if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+		for(var/atom/A in src)
+			if(A.material)
+				A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
 
 		var/damage = 0
 		damage = round((P.power*P.proj_data.ks_ratio), 1.0)
@@ -1410,7 +1405,7 @@ proc/get_colosseum_message(var/name, var/message)
 			die_now()
 		else if(health < 25 && !shield)
 			if(!on_fire)
-				particleMaster.SpawnSystem(new /datum/particleSystem/areaSmoke("#CCCCCC", 50, src))
+				particleMaster.SpawnSystem(new /datum/particleSystem/areaSmoke("#CCCCCC", 1000, src))
 				on_fire = 1
 				src.overlays += fire_overlay
 				message_pilot("The cabin bursts into flames!", 1)
@@ -1423,7 +1418,7 @@ proc/get_colosseum_message(var/name, var/message)
 		if(dying)
 			return
 		dying = 1
-		SPAWN_DBG(1)
+		spawn(1)
 			src.visible_message("<b>[src] is breaking apart!</b>")
 			new /obj/effects/explosion (src.loc)
 			var/sound/expl_sound = sound('sound/effects/Explosion1.ogg')
@@ -1454,7 +1449,7 @@ proc/get_colosseum_message(var/name, var/message)
 				remove_indicators(piloting)
 				piloting = null
 				M.set_loc(Q)
-				SPAWN_DBG(2)
+				spawn(2)
 					var/dx = rand(-10, 10)
 					var/dy = rand(-10, 10)
 					var/turf/T = locate(Q.x + dx, Q.y + dy, Q.z)
@@ -1466,10 +1461,7 @@ proc/get_colosseum_message(var/name, var/message)
 				src.visible_message("<b>[src] explodes!</b>")
 				explosion_new(src, T, 5)
 			for(T in range(src,1))
-				make_cleanable(/obj/decal/cleanable/machine_debris, T)
-				var/obj/decal/cleanable/machine_debris/C = unpool(/obj/decal/cleanable/machine_debris)
-				C.setup(T)
-
+				new /obj/decal/cleanable/machine_debris (T)
 			qdel(src)
 
 	attackby(obj/item/W as obj, mob/living/user as mob)
@@ -1524,7 +1516,7 @@ proc/get_colosseum_message(var/name, var/message)
 		..()
 
 		if (!is_template)
-			SPAWN_DBG(rand(150, 300))
+			spawn(rand(150, 300))
 				icon = null
 				qdel(src)
 
@@ -1715,10 +1707,8 @@ proc/get_colosseum_message(var/name, var/message)
 		if (!istype(M))
 			return
 		var/rendered = get_colosseum_message(M.real_name, messages[1])
-		SPAWN_DBG(0)
-			for (var/obj/colosseum_radio/R in world)//FUCK??
-				LAGCHECK(LAG_LOW)
-				R.receive(rendered)
+		for (var/obj/colosseum_radio/R in world)
+			R.receive(rendered)
 
 	proc/receive(var/rendered)
 		if (isturf(loc))
@@ -1749,3 +1739,4 @@ proc/get_colosseum_message(var/name, var/message)
 		if (istype(A, /obj/machinery/colosseum_putt) || istype(A, /obj/critter/gunbot/drone))
 			mine_effect(A)
 			qdel(src)
+

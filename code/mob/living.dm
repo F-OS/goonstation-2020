@@ -1,11 +1,19 @@
 // living
 
 /mob/living
+	var/t_plasma = null
+	var/t_oxygen = null
+	var/t_sl_gas = null
+	var/t_n2 = null
+
+	var/cameraFollow = null
 	var/spell_soulguard = 0
 
 	// this is a read only variable. do not set it directly.
 	// use set_burning or update_burning instead.
 	// the value means how on fire is the mob, from 0 to 100
+	var/burning = 0
+	var/misstep_chance = 0
 
 	var/datum/hud/vision/vision
 
@@ -33,80 +41,44 @@
 	var/list/mob/living/ai_target_old = list()
 	var/is_npc = 0
 
-	var/move_laying = null
+	var/obj/move_laying = null
 	var/list/mob/dead/target_observer/observers = list()
 	var/static/image/speech_bubble = image('icons/mob/mob.dmi', "speech")
-	var/static/image/sleep_bubble = image('icons/mob/mob.dmi', "sleep")
 	var/image/static_image = null
-	var/static_type_override = null
-	var/icon/default_static_icon = null // set to an icon and that's what the static will generate from
 	var/in_point_mode = 0
 	var/butt_op_stage = 0.0 // sigh
-	var/dna_to_absorb = 10
 
-	var/canspeak = 1
-
-	var/datum/organHolder/organHolder = 0 //Not all living mobs will use organholder. Instantiate on New() if you want one.
-
-	var/list/stomach_process = list() //digesting foods
-	var/list/skin_process = list() //digesting patches
-
-	var/sound_burp = 'sound/voice/burp.ogg'
-	var/sound_scream = 'sound/voice/screams/robot_scream.ogg' // for silicon mobs
-	//var/sound_scream = 'sound/voice/screams/male_scream.ogg'
-	//var/sound_femalescream = 'sound/voice/screams/female_scream.ogg'
+	var/sound_burp = 'sound/misc/burp.ogg'
+	var/sound_scream = 'sound/voice/robot_scream.ogg' // for silicon mobs
+	var/sound_malescream = 'sound/voice/male_scream.ogg'
+	var/sound_femalescream = 'sound/voice/female_scream.ogg'
 	var/sound_flip1 = 'sound/machines/whistlealert.ogg' // for silicon mobs
 	var/sound_flip2 = 'sound/machines/whistlebeep.ogg' // for silicon mobs
-	var/sound_fart = 'sound/voice/farts/poo2.ogg'
-	var/sound_snap = 'sound/impact_sounds/Generic_Snap_1.ogg'
+	var/sound_fart = 'sound/misc/poo2.ogg'
+	var/sound_snap = 'sound/effects/snap.ogg'
 	var/sound_fingersnap = 'sound/effects/fingersnap.ogg'
-	var/sound_gasp = 'sound/voice/gasps/gasp.ogg'
-	var/voice_type = 0
-	var/last_voice_sound = 0
-	var/speechbubble_enabled = 1
-	var/speechpopupstyle = null
 
-	var/caneat = 1
-	var/candrink = 1
-
-//#ifdef MAP_OVERRIDE_DESTINY
+#ifdef MAP_OVERRIDE_DESTINY
 	var/hibernating = 0 // if they're stored in the cryotron, Life() gets skipped
-//#endif
-
-	var/throws_can_hit_me = 1
+#endif
 
 /mob/living/New()
 	vision = new()
 	src.attach_hud(vision)
 	..()
-	SPAWN_DBG(0)
+	spawn(0)
 		src.get_static_image()
-		sleep_bubble.appearance_flags = RESET_TRANSFORM
 
 /mob/living/flash(duration)
 	vision.flash(duration)
+
+/mob/living/Stat()
+	..()
 
 /mob/living/disposing()
 	ai_target = null
 	ai_target_old.len = 0
 	move_laying = null
-
-	for (var/atom in stomach_process)
-		var/atom/A = atom
-		qdel(A)
-	for (var/atom in skin_process)
-		var/atom/A = atom
-		qdel(A)
-	stomach_process = null
-	skin_process = null
-
-	for(var/mob/dead/target_observer/TO in observers)
-		observers -= TO
-		TO.ghostize()
-
-	for(var/mob/dead/aieye/E in src.contents)
-		E.cancel_camera()
-
 	observers.len = 0
 	if (src.static_image)
 		mob_static_icons.Remove(src.static_image)
@@ -118,63 +90,28 @@
 	if (src.client && (ticker.round_elapsed_ticks >= 12000))
 		var/num_players = 0
 		for(var/mob/players in mobs)
-			if (players.client && !isdead(players) && !isVRghost(players) && !isghostcritter(players) && !inafterlife(players)) num_players++
-			LAGCHECK(LAG_HIGH)
+			if (players.client && players.stat != 2) num_players++
 
-		if (num_players <= 5 && master_mode != "battle_royale")
-			if (!emergency_shuttle.online && current_state != GAME_STATE_FINISHED && ticker.mode.crew_shortage_enabled)
+		if (num_players <= 5)
+			if (!emergency_shuttle.online && ticker && ticker.current_state != GAME_STATE_FINISHED && ticker.mode.crew_shortage_enabled)
 				emergency_shuttle.incall()
-				boutput(world, "<span style=\"color:blue\"><B>Alert: The emergency shuttle has been called.</B></span>")
-				boutput(world, "<span style=\"color:blue\">- - - <b>Reason:</b> Crew shortages and fatalities.</span>")
-				boutput(world, "<span style=\"color:blue\"><B>It will arrive in [round(emergency_shuttle.timeleft()/60)] minutes.</B></span>")
+				boutput(world, "<span style=\"color:blue\"><B>Alert: Due to crew shortages and fatalities, the emergency shuttle has been called. It will arrive in [round(emergency_shuttle.timeleft()/60)] minutes.</B></span>")
 
-	if (deathConfettiActive || (src.mind && src.mind.assigned_role == "Clown")) //Active if XMAS or manually toggled. Or if theyre a clown. Clowns always have death confetti.
+	if (deathConfettiActive) //Active if XMAS or manually toggled
 		src.deathConfetti()
-
-	var/youdied = "You have died!"
-	if (prob(1))
-		if (gibbed)
-			youdied = pick("Cleanup on aisle 5", "What a mess...", "Nice and creamy", "Salsa con [src.real_name]", "Someone get the janitor!", "Gib and let gib", "Rest In Pieces")
-		else
-			youdied = pick("Congratulations on your recent death!", "Welp, so much for that.", "You are dead. Not big surprise.", "You are no longer alive.", "haha you died loser.", "R.I.P. [src.real_name]", "well, shit.", "Better luck next time.", "MISSING: Life, 100 credit reward")
-
-	boutput(src, {"
-	<div style="border: 3px solid red; padding: 3px;">
-		<div style="background: black; padding: 0.1em; color: #f33; text-align: center; font-size: 150%; font-weight: bold;">
-			[youdied]
-		</div>
-		<div style=" text-align: center;">
-			[!gibbed ? {"
-				<a href="byond://winset?command=Ghost" style="display: inline-block; font-size: 130%; font-weight: bold;">Become a Ghost</a>
-				<br><em style="color: #666; font-size: 75%;">You can also use the "<a href="byond://winset?command=Ghost" style="font-family: 'Consolas', monospace;">Ghost</a>" command to observe.</em><br><br>
-			"} : ""]
-		<strong>You may be revived if someone clones you.</strong>
-		<br>Otherwise, you'll have to wait for the next round.
-		<br>
-		<br>There's still plenty to do, even while dead!
-		<br><strong><a href='byond://winset?command=Afterlife-Bar'>Visit the Afterlife Bar</a> &bull; <a href='byond://winset?command=Enter-VR'>Enter Virtual Reality</a>
-			<br><a href='byond://winset?command=Enter-Ghostdrone-Queue'>Become a Ghost Drone</a> &bull; <a href='byond://winset?command=Respawn-as-Animal'>Become a Critter</a></strong>
-		</div>
-	</div>
-		"})
 
 	return ..(gibbed)
 
-/mob/living/Login()
-	..()
-	if(!isdead(src))
-		respawn_controller.unsubscribeRespawnee(src.ckey)
-
 /mob/living/Life(datum/controller/process/mobs/parent)
-//#ifdef MAP_OVERRIDE_DESTINY
+#ifdef MAP_OVERRIDE_DESTINY
 	if (hibernating)
 		if (istype(src.loc, /obj/cryotron))
 			if (!stat)
-				setunconscious(src)
+				stat = 1
 			return 1
 		else
 			hibernating = 0
-//#endif
+#endif
 	if (..(parent))
 		return 1
 	return
@@ -191,35 +128,25 @@
 	return ..()
 
 /mob/living/detach_hud(datum/hud/hud)
-	if (observers.len) //Wire note: Attempted fix for BUG: Bad ref (f:410976) in IncRefCount(DM living.dm:132)
-		for (var/mob/dead/target_observer/observer in observers)
-			observer.detach_hud(hud)
+	for (var/mob/dead/target_observer/observer in observers)
+		observer.detach_hud(hud)
 	return ..()
 
 /mob/living/projCanHit(datum/projectile/P)
 	if (!src.lying || (src:lying && prob(P.hit_ground_chance))) return 1
 	return 0
 
-/mob/living/proc/hand_attack(atom/target, params, location, control, origParams)
-	target.attack_hand(src, params, location, control, origParams)
+/mob/living/proc/hand_attack(atom/target, params)
+	target.attack_hand(src)
 
-/mob/living/proc/hand_range_attack(atom/target, params, location, control, origParams)
-	.= 0
-	var/datum/limb/L = src.equipped_limb()
-	if (L)
-		.= L.attack_range(target,src,params)
-		if (.)
-			src.lastattacked = src
+/mob/living/proc/hand_range_attack(atom/target, params)
+	return
 
 /mob/living/proc/weapon_attack(atom/target, obj/item/W, reach, params)
 	var/usingInner = 0
 	if (W.useInnerItem && W.contents.len > 0)
-		var/obj/item/held = W.holding
-		if (!held)
-			held = pick(W.contents)
-		if (held && !istype(held, /obj/ability_button))
-			W = held
-			usingInner = 1
+		W = pick(W.contents)
+		usingInner = 1
 
 	if (reach)
 		target.attackby(W, src, params)
@@ -235,87 +162,32 @@
 		else if (!pixelable && W)
 			W.afterattack(target, src, reach, params)
 
-/mob/living/onMouseDrag(src_object,over_object,src_location,over_location,src_control,over_control,params)
-	if (!src.stat && !src.restrained() && !src.getStatusDuration("weakened") && !src.getStatusDuration("paralysis") && !src.getStatusDuration("stunned"))
-		var/obj/item/W = src.equipped()
-		if (W) //nah dude, don't typecheck. just assume that mobs can only hold items, this proc gets called a fuckload
-			W.onMouseDrag(src_object,over_object,src_location,over_location,src_control,over_control,params)
-	return
-
-/* nothing currently uses needOnMouseMove, so im commenting this out.
-/mob/living/onMouseMove(object,location,control,params)
-	var/obj/item/W = src.equipped()
-	if(W.needOnMouseMove)
-		if (!src.stat && !src.restrained() && !src.getStatusDuration("weakened") && !src.getStatusDuration("paralysis") && !src.getStatusDuration("stunned"))
-			if (W && istype(W))
-				W.onMouseMove(object,location,control,params)
-	return
-*/
-/mob/living/onMouseDown(object,location,control,params)
-	if (!src.stat && !src.restrained() && !src.getStatusDuration("weakened") && !src.getStatusDuration("paralysis") && !src.getStatusDuration("stunned"))
-		var/obj/item/W = src.equipped()
-		if (W && istype(W))
-			W.onMouseDown(object,location,control,params)
-	return
-
-/mob/living/onMouseUp(object,location,control,params)
-	if (!src.stat && !src.restrained() && !src.getStatusDuration("weakened") && !src.getStatusDuration("paralysis") && !src.getStatusDuration("stunned"))
-		var/obj/item/W = src.equipped()
-		if (W && istype(W))
-			W.onMouseUp(object,location,control,params)
-	return
-
-/mob/living/hotkey(name)
-	switch (name)
-		if ("togglepoint")
-			src.toggle_point_mode()
-		if ("say_radio")
-			src.say_radio()
-		else
-			return ..()
-
-//gross are we tg or something with all of these /s
-// i'd like to hear your suggestion for better searching for procs!!! - cirr
-/mob/living/Click(location,control,params)
-	if(istype(usr, /mob/dead/observer) && usr.client && !usr.client.keys_modifier && !usr:in_point_mode)
-		var/mob/dead/observer/O = usr
-		O.insert_observer(src)
-
-	else return ..()
-
-/mob/living/click(atom/target, params, location, control)
+/mob/living/click(atom/target, params)
 	. = ..()
 	if (. == 100)
 		return 100
+
+#ifdef MAP_OVERRIDE_DESTINY
+	if (src.hibernating && istype(src.loc, /obj/cryotron))
+		var/obj/cryotron/cryo = src.loc
+		if (cryo.exit_prompt(src))
+			return
+#endif
+
+	if (params["alt"])
+		target.examine() // in theory, usr should be us, this is shit though
+		return
 
 	if (params["middle"])
 		src.swap_hand()
 		return
 
-	if (location != "map")
-//#ifdef MAP_OVERRIDE_DESTINY
-		if (src.hibernating && istype(src.loc, /obj/cryotron))
-			var/obj/cryotron/cryo = src.loc
-			if (cryo.exit_prompt(src))
-				return
-//#endif
-
-		if (src.client && src.client.check_key(KEY_EXAMINE))
-			target.examine() // in theory, usr should be us, this is shit though
-			return
-
-		if (src.in_point_mode || (src.client && src.client.check_key(KEY_POINT)))
-			src.point(target)
-			if (src.in_point_mode)
-				src.toggle_point_mode()
-			return
-
-	if (src.restrained())
-		if (src.handcuffed)
-			boutput(src, "<span style=\"color:red\">You are handcuffed! Use Resist to attempt removal.</span>")
+	if (src.in_point_mode)
+		src.point(target)
+		src.toggle_point_mode()
 		return
 
-	if (!src.stat && !src.getStatusDuration("weakened") && !src.getStatusDuration("paralysis") && !src.getStatusDuration("stunned"))
+	if (!src.stat && !src.restrained() && !src.weakened && !src.paralysis && !src.stunned)
 		if (target != src && ishuman(src))
 			var/mob/living/carbon/human/S = src
 			if (S.sims)
@@ -324,107 +196,77 @@
 					if (prob((0.5 - mult) * 200))
 						boutput(src, pick("<span style=\"color:red\">You're not in the mood to attack that.</span>", "<span style=\"color:red\">You don't feel like doing that.</span>"))
 						return
+		var/obj/item/item = target
+		if (istype(item) && item == src.equipped())
+			if (!disable_next_click && world.time < src.next_click)
+				return
+			item.attack_self(src)
+			return
 
-
-		var/obj/item/equipped = src.equipped()
-		var/use_delay = !(target in src.contents) && !istype(target,/obj/screen) && (!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (equipped && equipped.flags & USEDELAY))
-		var/grace_penalty = 0
-		if ((target == equipped || use_delay) && world.time < src.next_click) // if we ignore next_click on attack_self we get... instachoking, so let's not do that
-			var/time_left = src.next_click - world.time
-			// since we're essentially encouraging players to click as soon as they possibly can, and how clicking strongly depends on lag, having a strong cutoff feels like bullshit
-			// the grace window gives people a small amount of leeway without increasing the overall click rate by much
-			if (time_left > CLICK_GRACE_WINDOW || (equipped && (equipped.flags & EXTRADELAY))) // also let's not enable this for guns.
-				return time_left
-			else
-				grace_penalty = time_left
-
-		if (target == equipped)
-			equipped.attack_self(src, params, location, control)
-		else if (params["ctrl"])
+		if (params["ctrl"])
 			var/atom/movable/movable = target
 			if (istype(movable))
 				movable.pull()
-				if (src.at_gunpoint && src.at_gunpoint.holding_at_gunpoint != src)
-					src.at_gunpoint.shoot_at_gunpoint(src)
-				.= 0
-				return
-		else
-			var/reach = can_reach(src, target)
+			return
 
-			if (reach || (equipped && equipped.special) || (equipped && (equipped.flags & EXTRADELAY))) //Fuck you, magic number prickjerk //MBC : added bit to get weapon_attack->pixelaction to work for itemspecial
-				if (use_delay)
-					src.next_click = world.time + (equipped ? equipped.click_delay : src.click_delay)
+		var/obj/item/W = src.equipped()
+		if ((!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (W && W.flags & USEDELAY)) && world.time < src.next_click)
+			return src.next_click - world.time
 
-				if (src.invisibility > 0 && get_dist(src, target) > 0) // dont want to check for a cloaker every click if we're not invisible
-					for (var/obj/item/cloaking_device/I in src)
-						if (I.active)
-							I.deactivate(src)
-							src.visible_message("<span style=\"color:blue\"><b>[src]'s cloak is disrupted!</b></span>")
-
-				if (equipped)
-					weapon_attack(target, equipped, reach, params)
-				else
-					hand_attack(target, params, location, control)
-
-				//If lastattacked was set, this must be a combat action!! Use combat click delay ||  the other condition is whether a special attack was just triggered.
-				if ((lastattacked != null && (src.lastattacked == target || src.lastattacked == equipped || src.lastattacked == src) && use_delay) || (equipped && equipped.special && equipped.special.last_use >= world.time - src.click_delay))
-					src.next_click = world.time + (equipped ? max(equipped.click_delay,src.combat_click_delay) : src.combat_click_delay)
-					src.lastattacked = null
-
-			else if (!equipped)
-				// oh god
-				// okay, this is only ACTUALLY used for power gloves, I'm disabling the rest for now because heavy hasvar usage is causing lag
-				/*if(hasvar(src, "back") && src:back) src:back:equipment_click(target, src)
-				if(hasvar(src, "belt") && src:belt) src:belt:equipment_click(target, src)
-				if(src.ears) src.ears.equipment_click(target, src)
-				if(hasvar(src, "glasses") && src:glasses) src:glasses:equipment_click(target, src)*/
-				if(hasvar(src, "gloves") && src:gloves) src:gloves:equipment_click(target, src)
-				/*if(hasvar(src, "head") && src:head) src:head:equipment_click(target, src)
-				if(src.l_hand) src.l_hand.equipment_click(target, src)
-				if(hasvar(src, "l_store") && src:l_store) src:l_store:equipment_click(target, src)
-				if(src.r_hand) src.r_hand.equipment_click(target, src)
-				if(hasvar(src, "r_store") && src:r_store) src:r_store:equipment_click(target, src)
-				if(hasvar(src, "shoes") && src:shoes) src:shoes:equipment_click(target, src)
-				if(hasvar(src, "wear_id") && src:wear_id) src:wear_id:equipment_click(target, src)
-				if(src.wear_mask) src.wear_mask.equipment_click(target, src)
-				if(hasvar(src, "wear_suit") && src:wear_suit) src:wear_suit:equipment_click(target, src)
-				if(hasvar(src, "w_uniform") && src:w_uniform) src:w_uniform:equipment_click(target, src)*/
-
-				hand_range_attack(target, params, location, control)
-
-				if (lastattacked != null && (src.lastattacked == target || src.lastattacked == equipped || src.lastattacked == src) && use_delay)
-					src.next_click = world.time + src.combat_click_delay
-					src.lastattacked = null
-
-		//Don't think I need the above, this should work here.
-		if (istype(src.loc, /obj/machinery/vehicle))
-			var/obj/machinery/vehicle/ship = src.loc
-			if (ship.sensors)
-				if (ship.sensors.active)
-					var/obj/machinery/vehicle/target_pod = target
-					if (src.loc != target_pod && istype(target_pod))
-						ship.sensors.end_tracking()
-						ship.sensors.quick_obtain_target(target_pod)
-				else
-					if (istype(target, /obj/machinery/vehicle))
-						boutput(src, "<span style=\"color:red\">Sensors are inactive, unable to target craft!</span>")
-
-
-		if (src.next_click >= world.time) // since some of these attack functions go wild with modifying next_click, we implement the clicking grace window with a penalty instead of changing how next_click is set
-			src.next_click += grace_penalty
+		var/reach = can_reach(src, target)
+		if (reach || (W && (W.flags & EXTRADELAY))) //Fuck you, magic number prickjerk
+			if (!disable_next_click || ismob(target) || (target && target.flags & USEDELAY) || (W && W.flags & USEDELAY))
+				src.next_click = world.time + 10
+			if (src.invisibility > 0 && get_dist(src, target) > 0) // dont want to check for a cloaker every click if we're not invisible
+				for (var/obj/item/cloaking_device/I in src)
+					if (I.active)
+						I.deactivate(src)
+						src.visible_message("<span style=\"color:blue\"><b>[src]'s cloak is disrupted!</b></span>")
+			if (W && istype(W))
+				weapon_attack(target, W, reach, params)
+			else if (!W)
+				hand_attack(target, params)
+		else if (!reach && W)
+			if (!disable_next_click || ismob(target))
+				src.next_click = world.time + 10
+			var/pixelable = isturf(target)
+			if (!pixelable)
+				if (istype(target, /atom/movable) && isturf(target:loc))
+					pixelable = 1
+			if (pixelable)
+				W.pixelaction(target, params, src, 0)
+		else if (!W)
+			// oh god
+			// okay, this is only ACTUALLY used for power gloves, I'm disabling the rest for now because heavy hasvar usage is causing lag
+			/*if(hasvar(src, "back") && src:back) src:back:equipment_click(target, src)
+			if(hasvar(src, "belt") && src:belt) src:belt:equipment_click(target, src)
+			if(src.ears) src.ears.equipment_click(target, src)
+			if(hasvar(src, "glasses") && src:glasses) src:glasses:equipment_click(target, src)*/
+			if(hasvar(src, "gloves") && src:gloves) src:gloves:equipment_click(target, src)
+			/*if(hasvar(src, "head") && src:head) src:head:equipment_click(target, src)
+			if(src.l_hand) src.l_hand.equipment_click(target, src)
+			if(hasvar(src, "l_store") && src:l_store) src:l_store:equipment_click(target, src)
+			if(src.r_hand) src.r_hand.equipment_click(target, src)
+			if(hasvar(src, "r_store") && src:r_store) src:r_store:equipment_click(target, src)
+			if(hasvar(src, "shoes") && src:shoes) src:shoes:equipment_click(target, src)
+			if(hasvar(src, "wear_id") && src:wear_id) src:wear_id:equipment_click(target, src)
+			if(src.wear_mask) src.wear_mask.equipment_click(target, src)
+			if(hasvar(src, "wear_suit") && src:wear_suit) src:wear_suit:equipment_click(target, src)
+			if(hasvar(src, "w_uniform") && src:w_uniform) src:w_uniform:equipment_click(target, src)*/
+			hand_range_attack(target, params)
 
 /mob/living/update_cursor()
 	..()
 	if (src.client)
-		if (src.in_point_mode || src.client.check_key(KEY_POINT))
+		if (src.in_point_mode)
 			src.set_cursor('icons/cursors/point.dmi')
 			return
 
-		if (src.client.check_key(KEY_EXAMINE))
+		if (src.client.check_key("alt"))
 			src.set_cursor('icons/cursors/examine.dmi')
 			return
 
-		if (src.client.check_key(KEY_PULL))
+		if (src.client.check_key("ctrl"))
 			src.set_cursor('icons/cursors/pull.dmi')
 			return
 
@@ -451,9 +293,6 @@
 	if (!isturf(src.loc) || usr.stat || usr.restrained())
 		return
 
-	if (isghostcritter(src))
-		return
-
 	if (src.reagents && src.reagents.has_reagent("capulettium_plus"))
 		src.show_text("You are completely paralysed and can't point!", "red")
 		return
@@ -463,28 +302,55 @@
 
 	var/obj/item/gun/G = src.equipped()
 	if(!istype(G) || !ismob(target))
-		src.visible_message("<span style='color:#605b59'><b>[src]</b> points to [target].</span>")
+		src.visible_message("<b>[src]</b> points to [target].")
 	else
 		src.visible_message("<span style='font-weight:bold;color:#f00;font-size:120%;'>[src] points \the [G] at [target]!</span>")
 
 	var/obj/decal/point/P = new(get_turf(target))
-	P.pixel_x = target.pixel_x
-	P.pixel_y = target.pixel_y
-	P.color = src.bioHolder.mobAppearance.customization_first_color
 	src = null // required to make sure its deleted
-	SPAWN_DBG (20)
+	spawn (20)
 		P.invisibility = 101
 		qdel(P)
 
+// set burning to a value
 /mob/living/proc/set_burning(var/new_value)
-	setStatus("burning", new_value*10)
-	return
+	if (new_value == burning)
+		return
 
+	update_burning(new_value - burning)
+
+// change burning, for example update_burning(-10) in a fire fighting item
+// doesn't matter if you tell it to go past 0-100. the proc will deal with it.
 /mob/living/proc/update_burning(var/change)
-	changeStatus("burning", change*10)
-	return
+	if (change == 0)
+		return
 
-/mob/living/proc/update_burning_icon(var/force_remove = 0)
+	// cache the original value
+	var/old_burning = src.burning
+
+	// mob/living update_burning sets the burning var and clamps the value
+	if (change == 0)
+		return
+
+	burning += change
+	if (burning < 0) burning = 0
+	if (burning > 100) burning = 100
+
+	// set the upper and lower bounds of the change based on the direction
+	var/lbound
+	var/ubound
+	if (change > 0)
+		lbound = old_burning
+		ubound = burning
+	else if (change < 0)
+		ubound = old_burning
+		lbound = burning
+
+	// figure out if we crossed an icon threshold
+	if (lbound == 0 || (lbound < 33 && ubound >= 33) || (lbound < 66 && ubound >= 66))
+		update_burning_icon(old_burning)
+
+/mob/living/proc/update_burning_icon(var/old_burning)
 	return
 
 /mob/living/proc/get_equipped_ore_scoop()
@@ -504,16 +370,18 @@
 			if (src.r_hand)
 				src.r_hand.talk_into(src, messages, param, src.real_name, lang_id)
 			else
-				src.emote("handpuppet")
+				spawn(0)
+					src.emote("handpuppet")
 
 		if ("left hand")
 			if (src.l_hand)
 				src.l_hand.talk_into(src, messages, param, src.real_name, lang_id)
 			else
-				src.emote("handpuppet")
+				spawn (0)
+					src.emote("handpuppet")
 
 /mob/living/say(var/message)
-	message = strip_html(trim(copytext(sanitize_noencode(message), 1, MAX_MESSAGE_LEN)))
+	message = trim(copytext(sanitize_noencode(message), 1, MAX_MESSAGE_LEN))
 
 	if (!message)
 		return
@@ -532,23 +400,14 @@
 		boutput(src, "You are currently muted and may not speak.")
 		return
 
-	if(!src.canspeak)
-		boutput(src, "<span style=\"color:red\">You can not speak!</span>")
-		return
-
 	if(src.reagents && src.reagents.has_reagent("capulettium_plus"))
 		boutput(src, "<span style=\"color:red\">You are completely paralysed and can't speak!</span>")
 		return
 
-	if (isdead(src))
+	if (src.stat == 2)
 		if (dd_hasprefix(message, "*")) // no dead emote spam
 			return
 		return src.say_dead(message)
-
-	if(src.z == 2 && istype(get_area(src),/area/afterlife)) //check zlevel before doing istype
-		if (dd_hasprefix(message, ":d"))
-			message = trim(copytext(message, 3, MAX_MESSAGE_LEN))
-			return src.say_dead(message)
 
 	// wtf?
 	if (src.stat)
@@ -559,29 +418,29 @@
 		return src.emote(copytext(message, 2),1)
 
 	// Mute disability
-	if (src.bioHolder && src.bioHolder.HasEffect("mute"))
+	if (src.bioHolder.HasEffect("mute"))
 		boutput(src, "<span style=\"color:red\">You seem to be unable to speak.</span>")
 		return
 
-	if (src.wear_mask && src.wear_mask.is_muzzle)
+	if (istype(src.wear_mask, /obj/item/clothing/mask/muzzle))
 		boutput(src, "<span style=\"color:red\">Your muzzle prevents you from speaking.</span>")
 		return
 
+	// Insert space check here
+//	var/turf/T = get_turf(src)
+	// If human
 	if (ishuman(src))
 		var/mob/living/carbon/human/H = src
 		// If theres no oxygen
 		if (H.oxyloss > 10 || H.losebreath >= 4) // Perfluorodecalin cap - normal life() depletion - buffer.
-			H.whisper(message)
+			H.emote("gasp")
 			return
 
-	//Pod coloseum is broken - disable this unnecessary istype
-	/*
 	if (istype(loc, /obj/machinery/colosseum_putt))
 		var/obj/machinery/colosseum_putt/C = loc
 		logTheThing("say", src, null, "<i>broadcasted between Colosseum Putts:</i> \"[message]\"")
 		C.broadcast(message)
 		return
-	*/
 
 	var/italics = 0
 	var/forced_language = null
@@ -590,7 +449,7 @@
 	var/secure_headset_mode = null
 	var/skip_open_mics_in_range = 0 // For any radios or intercoms that happen to be in range.
 
-	if (prob(50) && src.get_brain_damage() >= 60)
+	if (src.get_brain_damage() >= 60 && prob(50))
 		if (ishuman(src))
 			message_mode = "headset"
 	// Special message handling
@@ -618,7 +477,7 @@
 
 			else
 				// AI radios. See further down in this proc (Convair880).
-				if (isAI(src))
+				if (issilicon(src))
 					switch (lowertext(copytext(message, 2, 3))) // One vs. two letter prefix.
 						if ("1")
 							message_mode = "internal 1"
@@ -629,18 +488,14 @@
 							message = copytext(message, 3)
 
 						if ("3")
-							message_mode = "monitor"
-							var/end = 3
-							if (!lowertext(copytext(message,3,4) == " "))
-								end = 4
-								secure_headset_mode = lowertext(copytext(message,3,end)) //why did i do this to the players
-							message = copytext(message, end)
+							message_mode = "internal 3"
+							message = copytext(message, 3)
 
 						else
 							message = copytext(message, 3)
 
 				else
-					if (ishuman(src) || iscritter(src) || isrobot(src)) // this is shit
+					if (ishuman(src) || istype(src, /mob/living/critter)) // this is shit
 						message_mode = "secure headset"
 						secure_headset_mode = lowertext(copytext(message,2,3))
 					message = copytext(message, 3)
@@ -652,85 +507,32 @@
 	if (!message)
 		return
 
-
-	if (src.voice_type && world.time > last_voice_sound + 8)
-		var/VT = voice_type
-		var/ending = copytext(message, length(message))
-
-		switch (message_mode)
-			if ("headset", "secure headset", "right hand", "left hand", "intercom")
-				VT = "radio"
-				ending = 0
-
-		if (ending == "?")
-			playsound(src, sounds_speak["[VT]?"], 55, 0.01, 8, src.get_age_pitch_for_talk(), ignore_flag = SOUND_SPEECH)
-			speech_bubble.icon_state = "?"
-		else if (ending == "!")
-			playsound(src, sounds_speak["[VT]!"], 55, 0.01, 8, src.get_age_pitch_for_talk(), ignore_flag = SOUND_SPEECH)
-			speech_bubble.icon_state = "!"
-		else
-			playsound(src, sounds_speak["[VT]"],  55, 0.01, 8, src.get_age_pitch_for_talk(), ignore_flag = SOUND_SPEECH)
-			speech_bubble.icon_state = "speech"
-
-		last_voice_sound = world.time
-	else
-		speech_bubble.icon_state = "speech"
-
-	if (text2num(message)) //mbc : check mob.dmi for the icons
-		var/n = round(text2num(message),1)
-		if ((n >= 0 && n <= 20) || n == 420)
-			speech_bubble.icon_state = "[n]"
-
 	if (src.stuttering)
 		message = stutter(message)
 
+	// :downs:
 	if (src.get_brain_damage() >= 60)
-		message = replacetext(message, "is ", "am ")
-		message = replacetext(message, "are ", "am ")
-		message = replacetext(message, "i ", "me ")
-		message = replacetext(message, "have ", "am ")
-		message = replacetext(message, "youre ", "your ")
-		message = replacetext(message, "you're ", "your ")
-		message = replacetext(message, "attack ", "kill ")
-		message = replacetext(message, "hurt", " kill")
-		message = replacetext(message, "acquire ", "get ")
-		message = replacetext(message, "attempt ", "try ")
-		message = replacetext(message, "attention ", "help ")
-		message = replacetext(message, "attempt ", "try ")
-		message = replacetext(message, "grief", "grife")
-		message = replacetext(message, "her ", "she ")
-		message = replacetext(message, "him ", "he ")
-		message = replacetext(message, "heal", "fix")
-		message = replacetext(message, "repair ", "fix")
-		message = replacetext(message, "heal ", "fix")
-		message = replacetext(message, "space", "spess")
-		message = replacetext(message, "clown", "honky man")
-		message = replacetext(message, "cluwne", "bad honky man")
-		message = replacetext(message, "traitor", "bad guy")
-		message = replacetext(message, "spy", "bad guy")
-		message = replacetext(message, "operative", "bad guy")
-		message = replacetext(message, "nukie", "bad guy")
-		message = replacetext(message, "vampire", "bad guy")
-		message = replacetext(message, "wrestler", "bad guy")
-		message = replacetext(message, "alien", "allen")
-		message = replacetext(message, "changeling", "alien")
-		message = replacetext(message, "pain", "hurt")
-		message = replacetext(message, "damage", "hurt")
-		message = replacetext(message, "they", "them")
+		message = dd_replacetext(message, " am ", " ")
+		message = dd_replacetext(message, " is ", " ")
+		message = dd_replacetext(message, " are ", " ")
+		message = dd_replacetext(message, "you", "u")
+		message = dd_replacetext(message, "help", "halp")
+		message = dd_replacetext(message, "grief", "grife")
+		message = dd_replacetext(message, "she ", "him ")
+		message = dd_replacetext(message, "he ", "him ")
 
-		if (prob(20))
-			if(prob(25))
-				message = uppertext(message)
-				message = "[message][stutter(pick("!", "!!", "!!!"))]"
-			if(!src.stuttering && prob(8))
-				message = stutter(message)
+		if(prob(50))
+			message = uppertext(message)
+			message = "[message][stutter(pick("!", "!!", "!!!"))]"
+		if(!src.stuttering && prob(15))
+			message = stutter(message)
 
 	UpdateOverlays(speech_bubble, "speech_bubble")
-	SPAWN_DBG(15)
+	spawn(15)
 		UpdateOverlays(null, "speech_bubble")
 
 	//Blobchat handling
-	if (src.mob_flags & SPEECH_BLOB)
+	if (istype(src, /mob/living/intangible/blob_overmind))
 		message = html_encode(src.say_quote(message))
 		var/rendered = "<span class='game blobsay'>"
 		rendered += "<span class='prefix'>BLOB:</span> "
@@ -742,54 +544,16 @@
 			if (istype(M, /mob/new_player))
 				continue
 
-			if (M.client && (isblob(M) || (M.client.holder && M.client.deadchat && !M.client.player_mode)))
+			if (M.client && (istype(M, /mob/living/intangible/blob_overmind) || M.client.holder))
 				var/thisR = rendered
-				if ((M.mob_flags & MOB_HEARS_ALL || M.client.holder) && src.mind)
+				if (M.client.holder && src.mind)
 					thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[rendered]</span>"
 				M.show_message(thisR, 2)
 
 		return
 
-	//Overmind handling - Cirr
-	// this code duplication is pretty bad. todo: fix the code duplication, hopefully
-	if (src.mob_flags & SPEECH_INTRUDER)
-		var/scrambledMessage = src.say_quote(stutter(say_superdrunk(message)))
-		message = src.say_quote(message)
-		var/rendered = "<span class='game astralsay'>"
-		rendered += "<span class='prefix'>ASTRAL:</span> "
-		rendered += "<span class='name text-normal' data-ctx='\ref[src.mind]'>[src.get_heard_name()]</span> "
-		rendered += "<span class='message'>[message]</span>"
-		rendered += "</span>"
-
-		for (var/mob/M in mobs)
-			if (istype(M, /mob/new_player))
-				continue
-
-			if (M.client)
-				if((istype(M, /mob/living/intangible/intruder) || M.client.holder))
-					var/thisR = rendered
-					if (M.client.holder && src.mind)
-						thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[rendered]</span>"
-					boutput(M, thisR)
-				else
-					if(prob(30))
-						boutput(M, "<em>A strange, unnatural voice enters your mind... [scrambledMessage]</em>")
-					else if(prob(20))
-						var/description = "[pick("chimes", "croaks", "shines", "whispers", "sings", "echoes")] "
-						description += "[pick("strangely", "hollowly", "incomprehensibly", "menacingly", "peacefully", "softly")]"
-						boutput(M, "<em>A strange, unnatural voice [description].</em>")
-
-		return
-
-
-
 	var/list/messages = process_language(message, forced_language)
 	var/lang_id = get_language_id(forced_language)
-
-	// Do they have a phone?
-	var/obj/item/equipped_talk_thing = src.equipped()
-	if(equipped_talk_thing && equipped_talk_thing.flags & TALK_INTO_HAND && !message_mode)
-		equipped_talk_thing.talk_into(src, messages, secure_headset_mode, src.real_name, lang_id)
 	switch (message_mode)
 		if ("headset", "secure headset", "right hand", "left hand")
 			talk_into_equipment(message_mode, messages, secure_headset_mode, lang_id)
@@ -803,7 +567,7 @@
 
 		// Added shortcuts for the AI mainframe radios. All the relevant vars are already defined here, and
 		// I didn't want to have to reinvent the wheel in silicon.dm (Convair880).
-		if ("internal 1", "internal 2", "monitor")
+		if ("internal 1", "internal 2", "internal 3")
 			var/mob/living/silicon/ai/A
 			var/obj/item/device/radio/R1
 			var/obj/item/device/radio/R2
@@ -826,27 +590,27 @@
 
 			switch (message_mode)
 				if ("internal 1")
-					if (R1 && !(A.stat || A.getStatusDuration("stunned")|| A.getStatusDuration("weakened"))) // Mainframe may be stunned when the shell isn't.
+					if (R1 && !(A.stat || A.stunned || A.weakened)) // Mainframe may be stunned when the shell isn't.
 						R1.talk_into(src, messages, null, A.name, lang_id)
 						italics = 1
 						skip_open_mics_in_range = 1 // First AI intercom broadcasts everything by default.
-						//DEBUG_MESSAGE("AI radio #1 triggered. Message: [message]")
+						//DEBUG("AI radio #1 triggered. Message: [message]")
 					else
 						src.show_text("Mainframe radio inoperable or unavailable.", "red")
 				if ("internal 2")
-					if (R2 && !(A.stat || A.getStatusDuration("stunned") || A.getStatusDuration("weakened")))
+					if (R2 && !(A.stat || A.stunned || A.weakened))
 						R2.talk_into(src, messages, null, A.name, lang_id)
 						italics = 1
 						skip_open_mics_in_range = 1
-						//DEBUG_MESSAGE("AI radio #2 triggered. Message: [message]")
+						//DEBUG("AI radio #2 triggered. Message: [message]")
 					else
 						src.show_text("Mainframe radio inoperable or unavailable.", "red")
-				if ("monitor")
-					if (R3 && !(A.stat || A.getStatusDuration("stunned") || A.getStatusDuration("weakened")))
-						R3.talk_into(src, messages, secure_headset_mode, A.name, lang_id)
+				if ("internal 3")
+					if (R3 && !(A.stat || A.stunned || A.weakened))
+						R3.talk_into(src, messages, null, A.name, lang_id)
 						italics = 1
 						skip_open_mics_in_range = 1
-						//DEBUG_MESSAGE("AI radio #3 triggered. Message: [message]")
+						//DEBUG("AI radio #3 triggered. Message: [message]")
 					else
 						src.show_text("Mainframe radio inoperable or unavailable.", "red")
 
@@ -860,9 +624,10 @@
 			italics = 1
 
 	var/heardname = src.real_name
-
-	if (!skip_open_mics_in_range)
-		src.send_hear_talks(message_range, messages, heardname, lang_id)
+	for (var/obj/O in all_view(message_range, src))
+		spawn (0)
+			if (!skip_open_mics_in_range && O)
+				O.hear_talk(src, messages, heardname, lang_id)
 
 	var/list/listening = list()
 	var/list/olocs = list()
@@ -871,15 +636,11 @@
 		listening = all_hearers(message_range, src)
 	else
 		olocs = obj_loc_chain(src)
-		if(olocs.len > 0) // fix runtime list index out of bounds when loc is null (IT CAN HAPPEN, APPARENTLY)
-			for (var/atom/movable/AM in olocs)
-				thickness += AM.soundproofing
-			listening = all_hearers(message_range, olocs[olocs.len])
-
-
+		for (var/atom/movable/AM in olocs)
+			thickness += AM.soundproofing
+		listening = all_hearers(message_range, olocs[olocs.len])
 	listening -= src
 	listening += src
-
 
 	var/list/heard_a = list() // understood us
 	var/list/heard_b = list() // didn't understand us
@@ -904,26 +665,17 @@
 	if (italics)
 		message = "<i>[message]</i>"
 
-	if (!message_range && speechpopups)
-		new /obj/maptext_junk/speech(src, msg = messages[1], style = src.speechpopupstyle)
-
-
 	rendered = "<span class='game say'>[src.get_heard_name()] <span class='message'>[message]</span></span>"
-	if(src.mob_flags & SPEECH_REVERSE)
-		rendered = "<span style='-ms-transform: rotate(180deg)'>[rendered]</span>"
 
-	var/viewrange = 0
-	for (var/client/C)
-		var/mob/M = C.mob
-
-		if (!M || M.z == 2 && istype(M, /mob/new_player))
+	for (var/mob/M in mobs)
+		if (istype(M, /mob/new_player))
 			continue
 
 		//Hello welcome to the world's most awful if
-		if (( \
-			M.mob_flags & MOB_HEARS_ALL || \
-			(iswraith(M) && !M.density) || \
-			(isintangible(M) && M in hearers(src)) || \
+		if (M.client && ( \
+			istype(M, /mob/dead/observer) || \
+			(istype(M, /mob/wraith) && !M.density) || \
+			(istype(M, /mob/living/intangible) && M in hearers(src)) || \
 			( \
 				(!isturf(src.loc) && src.loc == M.loc) && \
 				!(M in heard_a) && \
@@ -933,18 +685,15 @@
 		))
 
 			var/thisR = rendered
-			if (src.mind && M.client.chatOutput && (M.mob_flags & MOB_HEARS_ALL || M.client.holder))
+			if (M.client.holder && src.mind)
 				thisR = "<span class='adminHearing' data-ctx='[M.client.chatOutput.ctxFlag]'>[rendered]</span>"
 
-			if (isobserver(M)) //if a ghooooost (dead) (and online)
-				viewrange = (((istext(C.view) ? WIDE_TILE_WIDTH : SQUARE_TILE_WIDTH) - 1) / 2)
-				if (M.client.local_deadchat || iswraith(M)) //only listening locally (or a wraith)? w/e man dont bold dat
-					//if (M in range(M.client.view, src))
-					if (get_dist(M,src) <= viewrange)
+			if (istype(M, /mob/dead) && M.client) //if a ghooooost (dead) (and online)
+				if (M.client.local_deadchat || istype(M, /mob/wraith)) //only listening locally (or a wraith)? w/e man dont bold dat
+					if (M in range(M.client.view, src))
 						M.show_message(thisR, 2)
 				else
-					//if (M in range(M.client.view, src)) //you're not just listening locally and the message is nearby? sweet! bold that sucka brosef
-					if (get_dist(M,src) <= viewrange) //you're not just listening locally and the message is nearby? sweet! bold that sucka brosef
+					if (M in range(M.client.view, src)) //you're not just listening locally and the message is nearby? sweet! bold that sucka brosef
 						M.show_message("<span class='bold'>[thisR]</span>", 2) //awwwww yeeeeeah lookat dat bold
 					else
 						M.show_message(thisR, 2)
@@ -953,44 +702,351 @@
 
 // helper proooocs
 
-/mob/proc/send_hear_talks(var/message_range, var/messages, var/heardname, var/lang_id)	//helper to send hear_talk to all mob, obj, and turf
-	for (var/thing in all_view(message_range, src))
-		var/atom/A = thing
-		A.hear_talk(src,messages,heardname,lang_id)
-
 /mob/proc/get_heard_name()
 	return "<span class='name' data-ctx='\ref[src.mind]'>[src.name]</span>"
 
+// say filters
 
-/mob/proc/move_callback_trigger(var/obj/move_laying, var/turf/NewLoc, var/oldloc, direct)
-	if (move_laying)
-		if((direct & (NORTH|SOUTH)) && (direct & (EAST|WEST)))//MBC : work around the diagonal bug that we don't understand : if((direct & (NORTH|SOUTH)) && (direct & (EAST|WEST)))
-			for (var/d in cardinal)
-				if (direct & d)
-					var/nloc = get_step(oldloc, d)
-					move_laying.move_callback(src, oldloc, nloc)
-					oldloc = nloc
+/proc/say_drunk(var/string)
+	var/modded = ""
+	var/datum/text_roamer/T = new/datum/text_roamer(string)
+
+	for(var/i = 0, i < length(string), i++)
+		switch(T.curr_char)
+			if("k")
+				if(lowertext(T.prev_char) == "n" || lowertext(T.prev_char) == "c")
+					modded += "gh"
+				else
+					modded += "g"
+			if("K")
+				if(lowertext(T.prev_char) == "N" || lowertext(T.prev_char) == "C")
+					modded += "GH"
+				else
+					modded += "G"
+
+			if("s")
+				modded += "sh"
+			if("S")
+				modded += "SH"
+
+			if("t")
+				if(lowertext(T.next_char) == "h")
+					modded += "du"
+					T.curr_char_pos++
+				else if(lowertext(T.prev_char) == "n")
+					modded += "thf"
+				else
+					modded += "ff"
+			if("T")
+				if(lowertext(T.next_char) == "H")
+					modded += "DU"
+					T.curr_char_pos++
+				else if(lowertext(T.prev_char) == "N")
+					modded += "THF"
+				else
+					modded += "FF"
+			else
+				modded += T.curr_char
+		T.curr_char_pos++
+		T.update()
+
+	return modded
+
+// totally garbled drunk slurring
+
+/proc/say_superdrunk(var/string)
+	var/modded = ""
+	var/datum/text_roamer/T = new/datum/text_roamer(string)
+
+	for(var/i = 0, i < length(string), i++)
+		switch(T.curr_char)
+			if("b","c","d","f","g","h","j","k","l","m","n","p","q","r","s","t","v","w","x","y","z")
+				modded += pick(consonants_lower)
+			if("B","C","D","F","G","H","J","K","L","M","N","P","Q","R","S","T","V","W","X","Y","Z")
+				modded += pick(consonants_upper)
+			else
+				modded += T.curr_char
+		T.curr_char_pos++
+		T.update()
+
+	return modded
+
+// berserker proc thing
+
+/proc/say_furious(var/string)
+	var/modded = ""
+	var/datum/text_roamer/T = new/datum/text_roamer(string)
+
+	for(var/i = 0, i < length(string), i=i)
+		var/datum/parse_result/P = say_furious_parse(T)
+		modded += P.string
+		i += P.chars_used
+		T.curr_char_pos = T.curr_char_pos + P.chars_used
+		T.update()
+
+	return modded
+
+/proc/say_furious_parse(var/datum/text_roamer/R)
+	var/new_string = ""
+	var/used = 0
+
+	switch(R.curr_char)
+		if(" ","!","?",".",",",";")
+			used = 1
 		else
-			move_laying.move_callback(src, oldloc, NewLoc)
+			new_string = pick("A","R","G","H")
+			used = 1
+
+	if(new_string == "")
+		new_string = R.curr_char
+		used = 1
+
+	var/datum/parse_result/P = new/datum/parse_result
+	P.string = new_string
+	P.chars_used = used
+	return P
+
+// genetically falling apart!
+
+/proc/say_gurgle(var/string)
+	var/modded = ""
+	var/datum/text_roamer/T = new/datum/text_roamer(string)
+
+	for(var/i = 0, i < length(string), i=i)
+		var/datum/parse_result/P = say_gurgle_parse(T)
+		modded += P.string
+		i += P.chars_used
+		T.curr_char_pos = T.curr_char_pos + P.chars_used
+		T.update()
+
+	return modded
+
+/proc/say_gurgle_parse(var/datum/text_roamer/R)
+	var/new_string = ""
+	var/used = 0
+
+	switch(R.curr_char)
+		if(" ","!","?",".",",",";")
+			used = 1
+		else
+			new_string = pick("g","u","b","l")
+			used = 1
+
+	if(new_string == "")
+		new_string = R.curr_char
+		used = 1
+
+	var/datum/parse_result/P = new/datum/parse_result
+	P.string = new_string
+	P.chars_used = used
+	return P
+
+/proc/chavify(var/string)
+	var/modded = ""
+	var/datum/text_roamer/T = new/datum/text_roamer(string)
+
+	for(var/i = 0, i < length(string), i=i)
+		var/datum/parse_result/P = chav_parse(T)
+		modded += P.string
+		i += P.chars_used
+		T.curr_char_pos = T.curr_char_pos + P.chars_used
+		T.update()
+
+	if(prob(15))
+		modded += pick(" innit"," like"," mate")
+
+	return modded
+
+/proc/chav_parse(var/datum/text_roamer/R)
+	var/new_string = ""
+	var/used = 0
+
+	switch(lowertext(R.curr_char))
+		if("w")
+			if(lowertext(R.next_char) == "h" && lowertext(R.next_next_char) == "a")
+				new_string = "wo"
+				used = 3
+		if("W")
+			if(lowertext(R.next_char) == "H" && lowertext(R.next_next_char) == "A")
+				new_string = "WO"
+				used = 3
+
+		if("o")
+			if(lowertext(R.next_char) == "u" && lowertext(R.next_next_char) == "g" && lowertext(R.next_next_next_char) == "h")
+				new_string = "uf"
+				used = 4
+			if(lowertext(R.next_char) == "r" && lowertext(R.next_next_char) == "r" && lowertext(R.next_next_next_char) == "y")
+				new_string = "oz"
+				used = 4
+		if("O")
+			if(lowertext(R.next_char) == "U" && lowertext(R.next_next_char) == "G" && lowertext(R.next_next_next_char) == "H")
+				new_string = "UF"
+				used = 4
+			if(lowertext(R.next_char) == "R" && lowertext(R.next_next_char) == "R" && lowertext(R.next_next_next_char) == "Y")
+				new_string = "OZ"
+				used = 4
+
+		if("t")
+			if(lowertext(R.next_char) == "i" && lowertext(R.next_next_char) == "o" && lowertext(R.next_next_next_char) == "n")
+				new_string = "shun"
+				used = 4
+			else if(lowertext(R.next_char) == "h" && lowertext(R.next_next_char) == "e")
+				new_string = "zee"
+				used = 3
+			else if(lowertext(R.next_char) == "h" && (lowertext(R.next_next_char) == " " || lowertext(R.next_next_char) == "," || lowertext(R.next_next_char) == "." || lowertext(R.next_next_char) == "-"))
+				new_string = "t" + R.next_next_char
+				used = 3
+		if("T")
+			if(lowertext(R.next_char) == "I" && lowertext(R.next_next_char) == "O" && lowertext(R.next_next_next_char) == "N")
+				new_string = "SHUN"
+				used = 4
+			else if(lowertext(R.next_char) == "H" && lowertext(R.next_next_char) == "E")
+				new_string = "ZEE"
+				used = 3
+			else if(lowertext(R.next_char) == "H" && (lowertext(R.next_next_char) == " " || lowertext(R.next_next_char) == "," || lowertext(R.next_next_char) == "." || lowertext(R.next_next_char) == "-"))
+				new_string = "T" + R.next_next_char
+				used = 3
+
+		if("u")
+			if (lowertext(R.prev_char) != " " || lowertext(R.next_char) != " ")
+				new_string = "oo"
+				used = 1
+		if("U")
+			if (lowertext(R.prev_char) != " " || lowertext(R.next_char) != " ")
+				new_string = "OO"
+				used = 1
+
+		if("o")
+			if (lowertext(R.next_char) == "w"  && (lowertext(R.prev_char) != " " || lowertext(R.next_next_char )!= " "))
+				new_string = "oo"
+				used = 2
+			else if (lowertext(R.prev_char) != " " || lowertext(R.next_char) != " ")
+				new_string = "u"
+				used = 1
+			else if(lowertext(R.next_char) == " " && lowertext(R.prev_char) == " ") ///!!!
+				new_string = "oo"
+				used = 1
+		if("O")
+			if (lowertext(R.next_char) == "W"  && (lowertext(R.prev_char) != " " || lowertext(R.next_next_char )!= " "))
+				new_string = "OO"
+				used = 2
+			else if (lowertext(R.prev_char) != " " || lowertext(R.next_char) != " ")
+				new_string = "U"
+				used = 1
+			else if(lowertext(R.next_char) == " " && lowertext(R.prev_char) == " ") ///!!!
+				new_string = "OO"
+				used = 1
+
+		if("i")
+			if (lowertext(R.next_char) == "r"  && (lowertext(R.prev_char) != " " || lowertext(R.next_next_char) != " "))
+				new_string = "ur"
+				used = 2
+			else if((lowertext(R.prev_char) != " " || lowertext(R.next_char) != " "))
+				new_string = "ee"
+				used = 1
+		if("I")
+			if (lowertext(R.next_char) == "R"  && (lowertext(R.prev_char) != " " || lowertext(R.next_next_char) != " "))
+				new_string = "UR"
+				used = 2
+			else if((lowertext(R.prev_char) != " " || lowertext(R.next_char) != " "))
+				new_string = "EE"
+				used = 1
+
+		if("e")
+			if (lowertext(R.next_char) == "n"  && lowertext(R.next_next_char) == " ")
+				new_string = "ee "
+				used = 3
+			else if (lowertext(R.next_char) == "w"  && (lowertext(R.prev_char) != " " || lowertext(R.next_next_char) != " "))
+				new_string = "oo"
+				used = 2
+			else if ((lowertext(R.next_char) == " " || lowertext(R.next_char) == "," || lowertext(R.next_char) == "." || lowertext(R.next_char) == "-")  && lowertext(R.prev_char) != " ")
+				new_string = "e-a" + R.next_char
+				used = 2
+			else if(lowertext(R.next_char) == " " && lowertext(R.prev_char) == " ") ///!!!
+				new_string = "i"
+				used = 1
+		if("E")
+			if (lowertext(R.next_char) == "N"  && lowertext(R.next_next_char) == " ")
+				new_string = "EE "
+				used = 3
+			else if (lowertext(R.next_char) == "W"  && (lowertext(R.prev_char) != " " || lowertext(R.next_next_char) != " "))
+				new_string = "OO"
+				used = 2
+			else if ((lowertext(R.next_char) == " " || lowertext(R.next_char) == "," || lowertext(R.next_char) == "." || lowertext(R.next_char) == "-")  && lowertext(R.prev_char) != " ")
+				new_string = "E-A" + R.next_char
+				used = 2
+			else if(lowertext(R.next_char) == " " && lowertext(R.prev_char) == " ") ///!!!
+				new_string = "I"
+				used = 1
+
+		if("a")
+			if (lowertext(R.next_char) == "u")
+				new_string = "oo"
+				used = 2
+			else if (lowertext(R.next_char) == "n")
+				new_string = "un"
+				used = 2
+			else
+				new_string = "e" //{WC} ?
+				used = 1
+		if("A")
+			if (lowertext(R.next_char) == "U")
+				new_string = "OO"
+				used = 2
+			else if (lowertext(R.next_char) == "N")
+				new_string = "UN"
+				used = 2
+			else
+				new_string = "E" //{WC} ?
+				used = 1
+
+	if(new_string == "")
+		new_string = R.curr_char
+		used = 1
+
+	var/datum/parse_result/P = new/datum/parse_result
+	P.string = new_string
+	P.chars_used = used
+	return P
+
+/proc/smilify(var/string)
+	var/modded = ""
+	var/datum/text_roamer/T = new/datum/text_roamer(string)
+
+	for(var/i = 0, i < length(string), i=i)
+		var/datum/parse_result/P = smile_parse(T)
+		modded += P.string
+		i += P.chars_used
+		T.curr_char_pos = T.curr_char_pos + P.chars_used
+		T.update()
+
+	modded += " :)"
+
+	return modded
+
+/proc/smile_parse(var/datum/text_roamer/R)
+	var/used = 0
+	var/new_string = ""
+	if(R.next_char && lowertext(R.next_char) != " ")
+		if(R.next_next_char != " ") new_string = "[R.curr_char] [R.next_char] "
+		else new_string = "[R.curr_char] [R.next_char]"
+		used = 2
+
+	if(new_string == "")
+		new_string = R.curr_char
+		used = 1
+
+	var/datum/parse_result/P = new/datum/parse_result
+	P.string = new_string
+	P.chars_used = used
+	return P
 
 /mob/living/Move(var/turf/NewLoc, direct)
 	var/oldloc = loc
-	. = ..()
+	..()
 	if (isturf(oldloc) && isturf(loc) && move_laying)
-		var/list/equippedlist = src.equipped_list()
-		if (equippedlist && equippedlist.len)
-			var/move_callback_happened = 0
-			for (var/I in equippedlist)
-				if (I == move_laying)
-					move_callback_trigger(move_laying, NewLoc, oldloc, direct)
-					move_callback_happened = 1
-				else if (islist(move_laying))
-					for (var/M in move_laying)
-						if (I == M)
-							move_callback_trigger(M, NewLoc, oldloc, direct)
-							move_callback_happened = 1
-			if (!move_callback_happened)
-				move_laying = null
+		if (move_laying == src.equipped())
+			move_laying.move_callback(src, oldloc, NewLoc)
 		else
 			move_laying = null
 
@@ -1004,131 +1060,12 @@
 /mob/living/proc/get_static_image()
 	if (src.disposed)
 		return
-	if (!islist(default_mob_static_icons))
-		return
 	if (src.static_image)
 		mob_static_icons.Remove(src.static_image)
-	var/checkpath = src.static_type_override ? src.static_type_override : src.type
-	if (ishuman(src))
-		var/mob/living/carbon/human/H = src
-		if (istype(H.mutantrace) && H.mutantrace.icon_override_static)
-			checkpath = H.mutantrace.type
-	if (ispath(checkpath))
-		var/generate_static = 1
-		if (default_mob_static_icons.Find(checkpath))
-			if (istype(default_mob_static_icons[checkpath], /image))
-				src.static_image = image(default_mob_static_icons[checkpath])
-				DEBUG_MESSAGE(bicon(src.static_image) + "<br>\ref[src.static_image]")
-				DEBUG_MESSAGE(bicon(default_mob_static_icons[checkpath]) + "<br>\ref[default_mob_static_icons[checkpath]]")
-				src.static_image.override = 1
-				src.static_image.loc = src
-				src.static_image.plane = PLANE_LIGHTING
-				mob_static_icons.Add(src.static_image)
-				generate_static = 0
-		if (generate_static)
-			if (ispath(checkpath, /datum/mutantrace) && ishuman(src))
-				var/mob/living/carbon/human/H = src
-				if (H.mutantrace)
-					src.static_image = getTexturedImage(icon(H.mutantrace.icon, H.mutantrace.icon_state), "static", ICON_OVERLAY)
-			else
-				src.static_image = getTexturedImage(src.default_static_icon ? src.default_static_icon : icon(src.icon, src.icon_state), "static", ICON_OVERLAY)
-			if (src.static_image)
-				default_mob_static_icons[checkpath] = image(src.static_image)
-				DEBUG_MESSAGE(bicon(src.static_image) + "<br>\ref[src.static_image]")
-				DEBUG_MESSAGE(bicon(default_mob_static_icons[checkpath]) + "<br>\ref[default_mob_static_icons[checkpath]]")
-				src.static_image.override = 1
-				src.static_image.loc = src
-				src.static_image.plane = PLANE_LIGHTING
-				mob_static_icons.Add(src.static_image)
+	src.static_image = getTexturedImage(src.build_flat_icon(), "static", ICON_OVERLAY)//src, "static", ICON_OVERLAY)
+	if (src.static_image)
+		src.static_image.override = 1
+		src.static_image.loc = src
+		mob_static_icons.Add(src.static_image)
+		DEBUG(bicon(src.static_image))
 		return src.static_image
-
-/proc/check_static_defaults()
-	if (!islist(default_mob_static_icons))
-		DEBUG_MESSAGE("default_mob_static_icons is not a list")
-		return
-	for (var/Type in default_mob_static_icons)
-		var/image/i = default_mob_static_icons[Type]
-		if (i)
-			DEBUG_MESSAGE(bicon(i) + "\ref[i][Type]")
-
-var/global/icon/human_static_base_idiocy_bullshit_crap = icon('icons/mob/human.dmi', "body_m")
-
-
-/mob/living/verb/give_item()
-	set name = "Give Item"
-	set src in view(1)
-	set category = "Local"
-
-	SPAWN_DBG (7) //secret spawn delay, so you can't spam this during combat for a free "stun"
-		if (usr && isliving(usr) && !issilicon(usr) && get_dist(src,usr) <= 1)
-			var/mob/living/L = usr
-			L.give_to(src)
-
-/mob/living/proc/give_to(var/mob/living/M)
-	if (!M) return
-
-#ifdef TWITCH_BOT_ALLOWED
-	if (IS_TWITCH_CONTROLLED(M))
-		return
-#endif
-
-
-	var/message = null
-
-	var/obj/item/thing = src.equipped()
-	if (!thing)
-		if (src.l_hand)
-			thing = src.l_hand
-		else if (src.r_hand)
-			thing = src.r_hand
-
-	if (thing)
-		if (alert(M, "[src] offers [his_or_her(src)] [thing] to you. Do you accept it?", "Choice", "Yes", "No") == "Yes")
-			if (!thing || !M || !(get_dist(src, M) <= 1) || thing.loc != src || src.restrained())
-				return
-			src.u_equip(thing)
-			if (src.bioHolder && src.bioHolder.HasEffect("clumsy") && prob(50))
-				message = "<B>[src]</B> tries to hand [thing] to [M], but [src] drops it!"
-				thing.set_loc(src.loc)
-			else if (M.bioHolder && M.bioHolder.HasEffect("clumsy") && prob(50))
-				message = "<B>[src]</B> tries to hand [thing] to [M], but [M] drops it!"
-				thing.set_loc(M.loc)
-			else if (M.put_in_hand(thing))
-				message = "<B>[src]</B> hands [thing] to [M]."
-			else
-				src.put_in_hand_or_drop(thing)
-				message = "<B>[src]</B> tries to hand [thing] to [M], but [M]'s hands are full!"
-		else
-			message = "<B>[src]</B> tries to hand [thing] to [M], but [M] declines."
-
-	src.visible_message("<span style=\"color:#888888\">[message]</span>")
-
-/mob/living/proc/pull_speed_modifier(var/atom/move_target = 0)
-	var/mod = 1
-	if (src.pulling && istype(src.pulling, /atom/movable) && !(src.is_hulk() || (src.bioHolder && src.bioHolder.HasEffect("strong"))))
-		var/atom/movable/M = src.pulling
-		// hi grayshift sorry grayshift
-		if (get_dist(src,M) > 0 && get_dist(move_target,M) > 0) //i think this is mbc dist stuff for if we're actually stepping away and pulling the thing or not?
-			if(pull_slowing)
-				mod *= max(M.p_class, 1)
-			else
-				if(istype(M,/obj/machinery/nuclearbomb)) //can't speed off super fast with the nuke, it's heavy
-					mod *= max(M.p_class, 1)
-				// else, ignore p_class*/
-				else if (ishuman(src))
-					if(ishuman(M))
-						// if they're not on help intent and also not standing, THEN we might deign to use the p_class
-						var/mob/living/carbon/human/H = M
-						if(istype(H) && H.intent != INTENT_HELP && H.lying)
-							mod *= max(H.p_class, 1)
-					else if(istype(M, /obj/storage))
-						// if the storage object contains mobs, use its p_class (updated within storage to reflect containing mobs or not)
-						var/contains_unwilling_mobs = 0
-						var/obj/storage/S = M
-						for(var/mob/B in M.contents)
-							if(B.intent != INTENT_HELP && B.lying)
-								contains_unwilling_mobs = 1
-								break
-						if(contains_unwilling_mobs)
-							mod *= max(S.p_class, 1)
-	return mod

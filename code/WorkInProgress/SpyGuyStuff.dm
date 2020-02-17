@@ -4,9 +4,6 @@ Skull of Souls
 Tommyize proc
 Donald Trumpet
 SpyGUI
-Chemistry spectrometer prototype
-Retractable solar panel prototype
-Fibre wire
 */
 
 
@@ -63,18 +60,18 @@ Fibre wire
 		H.drop_item(src)
 		src.set_loc(H.loc)
 		src.layer = EFFECTS_LAYER_4
-		playsound(src.loc, 'sound/ambience/spooky/Void_Calls.ogg', 40, 1)
-		SPAWN_DBG(0) animate_levitate(src, -1)
+		playsound(src.loc, 'sound/ambience/voidfx4.ogg', 40, 1)
+		spawn(0) animate_levitate(src, -1)
 		H.emote("scream")
 
-		H.changeStatus("weakened", 10 SECONDS)
+		H.weakened = 10
 
-		SPAWN_DBG(70)
+		spawn(70)
 			if(!H)
 				being_mean = 0
 				return
 			H.emote("faint")
-			H.changeStatus("paralysis", 150)
+			H.paralysis = 10
 			H.show_text("<I><font size=5>You feel your mind drifting away from your body!</font></I>", "red")
 
 			playsound(src.loc, 'sound/effects/ghost.ogg', 50, 1)
@@ -90,7 +87,7 @@ Fibre wire
 				else //How the fuck did we even get here??
 					H.ghostize()
 
-			SPAWN_DBG(15) playsound(src.loc, 'sound/effects/ghostlaugh.ogg', 70, 1)
+			spawn(15) playsound(src.loc, 'sound/effects/ghostlaugh.ogg', 70, 1)
 			flick("skull_ominous_explode", src)
 			sleep(30)
 			qdel(src)
@@ -118,7 +115,7 @@ proc/Create_Tommyname()
 	else
 		T.key = src.key
 
-	SPAWN_DBG(10)
+	spawn(10)
 		qdel(src)
 
 /mob/living/carbon/human/proc/tommyize_reshape()
@@ -127,7 +124,7 @@ proc/Create_Tommyname()
 	AH.gender = "male"
 	AH.customization_first = "Dreadlocks"
 	AH.gender = "male"
-	AH.s_tone = "#FAD7D0"
+	AH.s_tone = -15
 	AH.owner = src
 	AH.parentHolder = src.bioHolder
 
@@ -154,13 +151,13 @@ proc/Create_Tommyname()
 	src.equip_if_possible(new /obj/item/clothing/under/suit {cant_drop = 1; cant_other_remove = 1; cant_self_remove = 1} (src), slot_w_uniform)
 	src.equip_if_possible(new /obj/item/football(src), slot_in_backpack)
 
-	src.sound_scream = 'sound/voice/tommy_you-are-tearing-me-apart-lisauh.ogg'
+	src.sound_malescream = 'sound/voice/tommy_you-are-tearing-me-apart-lisauh.ogg'
 	src.sound_fingersnap = 'sound/voice/tommy_did-not-hit-hehr.ogg'
 
 	if(src.bioHolder)
 		src.bioHolder.mobAppearance = AH
 		src.bioHolder.AddEffect("accent_tommy")
-	SPAWN_DBG(10)
+	spawn(10)
 		src.bioHolder.mobAppearance.UpdateMob()
 
 //////////////////////////////
@@ -307,7 +304,6 @@ proc/Create_Tommyname()
 	icon_state = "x2"
 	anchored = 1
 	invisibility = 101
-	event_handler_flags = USE_HASENTERED
 
 	HasEntered(atom/movable/AM)
 		..()
@@ -332,123 +328,15 @@ proc/Create_Tommyname()
 	on_trigger(var/atom/movable/triggerer)
 		if(isobserver(triggerer)) return
 		var/atom/target = get_edge_target_turf(src, src.throw_dir)
-		SPAWN_DBG(0)
+		spawn(0)
 			if (target)
 				triggerer.throw_at(target, 50, 1)
 
 
-/obj/trigger/cluwnegib
-	name = "floor cluwne trigger"
-	desc = "The name belies the fact that floor cluwnes are not real."
-
-	on_trigger(var/atom/movable/triggerer)
-		if(isobserver(triggerer)) return
-		var/mob/M = triggerer
-		if(istype(M))
-			M.cluwnegib(10)
-
-/obj/trigger/badmantrigger
-	name = "Death Badman Meeting Zone"
-	desc = "He's very angry he lost the election."
-	var/activated = 0
-
-	on_trigger(var/atom/movable/triggerer)
-		//Sanity check, thanks readster.
-		if(isobserver(triggerer)) return
-		var/mob/M = triggerer
-		if(!istype(M))
-			return
-		if(istype(M, /mob/living/carbon/human) && !activated)
-			switch(M.ckey)
-				if("hydrofloric")
-					return
-				if("kyle2143")
-					return
-				if("johnwarcrimes")
-					return
-				else
-					activated = 1
-					sleep(20)
-					var/startx = 1
-					var/starty = 1
-					var/mob/badmantarget = M
-					boutput(badmantarget, "<span style=\"color:black\"> <B> You hear a voice in your head, 'You're not supposed to be here'. </B>")
-					playsound(badmantarget, 'sound/misc/american_patriot.ogg', 50, 1, -1)
-					sleep(100)
-					startx = badmantarget.x - rand(-11, 11)
-					starty = badmantarget.y - rand(-11, 11)
-					var/turf/pickedstart = locate(startx, starty, badmantarget.z)
-					new /obj/badman(pickedstart, badmantarget)
-					sleep(150)
-					activated = 0
-
-
-/obj/trigger/readsteroffice
-	name = "that horrible thing in Readster's office trigger"
-	desc = "There's something terrible here."
-
-	var/running = 0
-
-	on_trigger(var/atom/movable/triggerer)
-		//Sanity check
-		if(isobserver(triggerer) || running) return
-		var/mob/M = triggerer
-		if(!istype(M))
-			return
-		if(istype(M, /mob/living/carbon/human))
-			var/mob/living/carbon/human/H = M
-			H.unkillable = 0
-		//Get the area and ensure it's the correct type. Otherwise straight-up gib.
-		var/area/centcom/offices/readster/readster_office = get_area(src)
-		if(!istype(readster_office))
-			M.cluwnegib(10)
-			return
-
-		try
-			running = 1
-			var/obj/machinery/door/unpowered/D = locate() in readster_office
-			//Close the door
-			close_door(D)
-			sleep(15)
-
-			//Lights out
-			for(var/obj/machinery/light/L in readster_office)
-				L.seton(0)
-			sleep(30)
-
-			//Here comes the meanie
-			M.mind.karma -= 1000 //stay out of my office!!
-			M.cluwnegib(10)
-			sleep(20)
-
-			//Lights on
-			for(var/obj/machinery/light/L in readster_office)
-				L.seton(1)
-			sleep(10)
-			D.locked = 0
-			D.open()
-			running = 0
-		catch
-			//The best error handling
-			if(M) M.cluwnegib(10)
-			running = 0
-
-
-	proc/close_door(var/obj/machinery/door/unpowered/D)
-		if(istype(D))
-			var/turf/T = get_turf(D)
-			T.set_density(1)
-			for(var/mob/living/L in T)
-				L.set_loc(get_step(D, WEST))
-
-			D.close()
-			D.locked = 1
-			T.set_density(0)
-
 ////////////////////////////// Donald Trumpet
 /datum/projectile/energy_bolt_v/trumpet
 	name = "trumpet bolt"
-	shot_sound = 'sound/musical_instruments/Bikehorn_2.ogg'
+	shot_sound = 'sound/items/dootdoot.ogg'
 
 	on_hit(atom/hit)
 		..()
@@ -489,11 +377,9 @@ proc/Create_Tommyname()
 		generating = (input("Select the amount of power this machine should generate (in MW))", "Playing with power") as num) * 1e6
 		if(generating > 0)
 			SubscribeToProcess()
-			powernet = get_direct_powernet()
 			icon_state = "ggenoff"
 		else
 			UnsubscribeProcess()
-			powernet = null
 			icon_state = "ggen"
 
 	process()
@@ -502,7 +388,6 @@ proc/Create_Tommyname()
 		add_avail(generating)
 
 ////////////////////////////// Spy GUI (ha ha ha ha)
-#define INIT_CHECK if(!src.initialized) src.initialize()
 /datum/spyGUI
 	var/target_file = null
 	var/desired_file = ""
@@ -516,18 +401,14 @@ proc/Create_Tommyname()
 	var/time_per_try = 2
 
 	var/validate_user = 0
-	var/initialized = 0
 
 	New(var/filename, var/windowname, var/parameters, var/datum/master)
 		..()
 		target_window = windowname
 		target_params = parameters
+		target_file = grabResource(filename)
 		desired_file = filename
 		src.master = master
-
-	proc/initialize()
-		target_file = grabResource(desired_file)
-		initialized = 1
 
 	proc/getFile()
 		if(!target_file)
@@ -536,13 +417,12 @@ proc/Create_Tommyname()
 
 
 	proc/displayInterface(var/mob/target, var/initData)
-		INIT_CHECK //Initialize the SpyGUI instance on use
 		if((target in connecting))
 			return
 		connecting[target] = initData
 		var/retries = max_retries
 		var/extrasleep = 0
-		target.Browse(getFile(), "window=[target_window];[target_params]")
+		target << browse(getFile(), "window=[target_window];[target_params]")
 		onclose(target, target_window, src)
 
 		do
@@ -553,19 +433,17 @@ proc/Create_Tommyname()
 
 		if(target in connecting)
 			connecting -= target
-			target.Browse(null, target_window)
+			target << browse(null, target_window)
 
 	proc/unsubscribeTarget(var/mob/target, close=1)
-		INIT_CHECK //Initialize the SpyGUI instance on use
 		if(close)
-			target.Browse(null, target_window)
+			target << browse(null, target_window)
 		subscribed_mobs -= target
 
 
 	Topic(href, href_list)
-		INIT_CHECK //Initialize the SpyGUI instance on use
 		..()
-		DEBUG_MESSAGE("Received: [href]")
+		DEBUG("Received: [href]")
 		if (href_list["ackref"] )
 			var/D = connecting[usr]
 			if(D)
@@ -593,8 +471,7 @@ proc/Create_Tommyname()
 			. = (sub in range(1, master))
 
 	proc/sendToSubscribers(var/data, var/handler)
-		INIT_CHECK //Initialize the SpyGUI instance on use
-		//DEBUG_MESSAGE("Sending: [data] to [handler ? handler : "-nothing-"]")
+		DEBUG("Sending: [data] to [handler ? handler : "-nothing-"]")
 		for(var/mob/M in subscribed_mobs)
 			if(validateSubscriber(M))
 				sendData(M, data, handler)
@@ -608,7 +485,7 @@ proc/Create_Tommyname()
 		var/O = list2params(L)
 		target << output(O, "[target_window].browser:receiveData")
 
-#undef INIT_CHECK
+
 
 #define STAT_STANDBY 0
 #define STAT_MOVING 1
@@ -656,24 +533,24 @@ proc/Create_Tommyname()
 	var/paneldir2 = turn(extension_dir, -90)
 	var/list/turf/panelturfs = list()
 	var/turf/walker = get_turf(src)
-	DEBUG_MESSAGE("Extending panel at [showCoords(src.x, src.y, src.z)]. extension_dir: [extension_dir] ([dir2text(extension_dir)]), paneldir1: [paneldir1] ([dir2text(paneldir1)]), paneldir2: [paneldir2] ([dir2text(paneldir2)])")
+	DEBUG("Extending panel at [showCoords(src.x, src.y, src.z)]. extension_dir: [extension_dir] ([dir2text(extension_dir)]), paneldir1: [paneldir1] ([dir2text(paneldir1)]), paneldir2: [paneldir2] ([dir2text(paneldir2)])")
 	var/total_len = station_padding + controller_padding + (panel_space * (num_panels -1)) + num_panels * panel_width
-	DEBUG_MESSAGE("Determined total length of panel to be [total_len] tiles.")
+	DEBUG("Determined total length of panel to be [total_len] tiles.")
 
 	//Create the initial padding
-	DEBUG_MESSAGE("Creating stationside padding.")
-	var/list/catwalk = list(/turf/simulated/floor/airless/plating/catwalk, /obj/grille/catwalk)
+	DEBUG("Creating stationside padding.")
+	var/list/catwalk = list(/turf/simulated/floor/plating/airless/catwalk, /obj/grille/catwalk)
 	for(var/i = 0; i < station_padding;i++)
 		move_create_obj(catwalk, walker, extension_dir, extension_dir) //Then we walk outwards, creating stuff as we go along
 		walker = get_step(walker,extension_dir)
 		/*
 		if(i == 0)
-			SPAWN_DBG(0)
+			spawn(0)
 				move_create_obj(list(new /obj/lattice{icon_state="lattice-dir-b"}), walker, paneldir1, paneldir2 | extension_dir)
 			move_create_obj(list(new /obj/lattice{icon_state="lattice-dir-b"}), walker, paneldir2, paneldir1 | turn(extension_dir, 180))
 		*/
 
-	DEBUG_MESSAGE("Creating panel segments.")
+	DEBUG("Creating panel segments.")
 	//Create the panels themselves
 	for(var/i = 0; i < num_panels; i++)
 		for(var/j = 0; j < (panel_space + panel_width);j++)
@@ -681,29 +558,29 @@ proc/Create_Tommyname()
 			walker = get_step(walker, extension_dir)
 			if(j >= panel_space) panelturfs += walker
 
-	DEBUG_MESSAGE("Creating controller padding")
+	DEBUG("Creating controller padding")
 	for(var/i = 0; i < controller_padding; i++)
 		move_create_obj(catwalk, walker, extension_dir, extension_dir) //Then we walk outwards, creating stuff as we go along
 		walker = get_step(walker,extension_dir)
 
 
-	DEBUG_MESSAGE("Creating solar panels")
+	DEBUG("Creating solar panels")
 	var/list/solar_list = list(/turf/simulated/floor/airless/solar, /obj/machinery/power/solar)
 	for(var/turf/T in panelturfs)
-		SPAWN_DBG(0)
+		spawn(0)
 			var/turf/w1 = T
 			var/turf/w2 = T
 			for(var/i = 0; i < panel_length; i++)
-				SPAWN_DBG(-1)
+				spawn(-1)
 					move_create_obj(solar_list, w1, paneldir1, paneldir1)
 				w1 = get_step(w1, paneldir1)
 				move_create_obj(solar_list, w2, paneldir2, paneldir2)
 				w2 = get_step(w2, paneldir2)
 
-	DEBUG_MESSAGE("Creating solar controller")
+	DEBUG("Creating solar controller")
 	move_create_obj(list(/turf/simulated/floor/plating/airless, /obj/machinery/power/tracker), walker, extension_dir)
 	walker = get_step(walker,extension_dir)
-	SPAWN_DBG(0) move_create_obj(list(new /obj/lattice{icon_state="lattice-dir-b"}), walker, paneldir1, paneldir2)
+	spawn(0) move_create_obj(list(new /obj/lattice{icon_state="lattice-dir-b"}), walker, paneldir1, paneldir2)
 	move_create_obj(list(new /obj/lattice{icon_state="lattice-dir-b"}), walker, paneldir2, paneldir1)
 
 	status = STAT_EXTENDED
@@ -718,7 +595,7 @@ proc/Create_Tommyname()
 	for(var/i = panels.len; i > 0; i--)
 		var/list/atom/L = panels[i]
 		for(var/atom/A in L)
-			SPAWN_DBG(0)
+			spawn(0)
 				move_and_delete_object(A)
 		sleep(DEFAULT_ANIMATION_TIME)
 
@@ -800,7 +677,7 @@ proc/Create_Tommyname()
 			ipy = 32
 
 
-	DEBUG_MESSAGE("Initial offsets calculated based on movedir: [movedir] ([dir2text(movedir)]) as ipx: [ipx], ipy: [ipy]")
+	DEBUG("Initial offsets calculated based on movedir: [movedir] ([dir2text(movedir)]) as ipx: [ipx], ipy: [ipy]")
 	var/is_turf = 0
 	var/turf/T = get_step(startturf, movedir)
 	var/turf_type = null
@@ -808,7 +685,7 @@ proc/Create_Tommyname()
 		if(ispath(t_type, /turf))
 			turf_type = t_type
 			break
-	SPAWN_DBG(0)
+	spawn(0)
 		for(var/t_type in to_create)
 			var/obj/O
 			is_turf = ispath(t_type, /turf) //If it's a turf we need some special handling.
@@ -837,7 +714,7 @@ proc/Create_Tommyname()
 	playsound(T, "sound/effects/airbridge_dpl.ogg", 50, 1)
 	sleep(animtime)
 	if(turf_type)
-		DEBUG_MESSAGE("Creating [turf_type] at [showCoords(T.x, T.y, T.z)]")
+		DEBUG("Creating [turf_type] at [showCoords(T.x, T.y, T.z)]")
 		var/turf/NT = new turf_type(T)
 		if(setdir) NT.dir = setdir
 		created_atoms += NT
@@ -846,7 +723,7 @@ proc/Create_Tommyname()
 //Helpers
 /obj/solar_control/proc/get_reciprocal(var/atom/A)
 	var/d = get_dir(A,src)
-	d &= ~(extension_dir | turn(extension_dir, 180)) //Turn off the bits parallel to the extension_dir
+	d &= ~(extension_dir | turn(extension_dir, 180)) //Turn off the bits parallell to the extension_dir
 	if(!d) d = turn(extension_dir, 180) //If this wound up turning off all the bits, the dir is on the extension line
 	//Look, I'm Swedish, I don't know your goddamn mathwords
 	return d
@@ -857,7 +734,7 @@ proc/Create_Tommyname()
 	else if ( extension_dir & (EAST|WEST) )
 		.= abs(A.y - src.y)
 
-	DEBUG_MESSAGE("get_dist from [showCoords(A.x, A.y, A.z)] returned: [.]")
+	DEBUG("get_dist from [showCoords(A.x, A.y, A.z)] returned: [.]")
 
 
 //The dummy object that imitates a turf
@@ -876,13 +753,13 @@ proc/Create_Tommyname()
 	src.desc = initial(T.desc)
 	src.icon = initial(T.icon)
 	src.icon_state = initial(T.icon_state)
-	src.set_density(initial(T.density))
+	src.density = initial(T.density)
 	src.opacity = initial(T.opacity)
 	src.dir = initial(T.dir)
 	src.layer = initial(T.layer)
 	src.invisibility = 0
 	if(TTL)
-		SPAWN_DBG(TTL)
+		spawn(TTL)
 			pool(src)
 
 #undef STAT_STANDBY
@@ -891,295 +768,3 @@ proc/Create_Tommyname()
 #undef DEFAULT_ANIMATION_TIME
 
 //Aw heck
-
-
-////////////////////////////// Fibre wire
-
-/*
-	TO DO:
-	- = Must have
-	? = Nice to have
-	* = Done
-
-	* Only allow someone to initiate a stranglehold from behind. Eg - someone facing NORTH should only be strangleable from SOUTHWEST, SOUTH and SOUTHEAST
-	* setTwoHanded does not really cover cases where both hands have contents during the switch, if done while the item is equipped. This needs handling
-	* There's some weirdness with dropping the garrote and trying to pick it back up calling attack_self() instead of the pick up proc. Test & fix whatever causes it.
-	* The art needs considerable improvement, good grief
-	* Stunned targets should not take facing into consideration
-	* Faster death
-	* Lower slowdown when opened
-	? Break free message in case whoever manages to avoid the strangle in the action bar
-	? Improve grab strangles to jostle the target mob slightly? Make it look more fierce. Make_Jittery() or something similar,  perhaps?
-*/
-
-/obj/item/garrote
-	name = "fibre wire"
-	desc = "A sturdy wire between two handles. Could be used with both hands to really ruin someone's day."
-	w_class = 1
-
-	icon = 'icons/obj/items.dmi'
-	icon_state = "garrote0"
-
-	event_handler_flags = USE_GRAB_CHOKE | USE_FLUID_ENTER
-
-	// The actual grab in charge of maintaining the chokehold
-	// Will be stored inside the garroteing player's mob because grabs are horrid
-	var/obj/item/grab/garrote_grab/chokehold = null
-
-	// Are we ready to do something mean here?
-	var/wire_readied = 0
-
-
-/obj/item/garrote/proc/toggle_wire_readiness()
-	set_readiness(!wire_readied)
-
-
-/obj/item/garrote/proc/set_readiness(new_readiness)
-	wire_readied = new_readiness
-	// Try to stretch the wire
-	if(!src.setTwoHanded(new_readiness))
-		wire_readied = 0
-		return
-
-
-	if(wire_readied)
-		playsound(usr, 'sound/items/garrote_twang.ogg', 25,5)
-		w_class = 4
-	else
-		drop_grab()
-		w_class = 1
-
-	update_state()
-
-/obj/item/garrote/proc/update_state()
-	if(src.chokehold)
-
-		if(!src.chokehold.extra_deadly)
-			icon_state = "garrote2"
-			//We're choking someone out - apply a hefty slowdown
-			src.setProperty("movespeed", 6)
-		else
-			icon_state = "garrote3"
-			// We're really putting our back into it now - apply a heftier slowdown
-			src.setProperty("movespeed", 12)
-	else
-		icon_state = "garrote[wire_readied]"
-		//Slow us down slightly when we have the thing readied to encourage late-readying
-		src.setProperty("movespeed", 1 * wire_readied)
-
-
-
-/obj/item/garrote/proc/is_behind_target(var/mob/living/assailant, var/mob/living/target)
-	var/assailant_dir = get_dir(target, assailant)
-	var/target_rear = turn(target.dir, 180)
-
-	return (assailant_dir & target_rear) > 0 || target.lying || target.stat
-
-
-// Try to grab someone
-/obj/item/garrote/proc/attempt_grab(var/mob/living/assailant, var/mob/living/target)
-	// Can't strangle someone who doesn't exist. Or if we're already strangling someone.
-	// Also no strangling with flaccid wires, that's just weird.
-
-	if(!assailant || !target)
-		return 1
-
-	if(!wire_readied)
-		assailant.show_message("<span class='combat'>You have to have a firm grip of the wire before you can strangle [target]!</span>")
-		return 1
-
-	if(chokehold)
-		assailant.show_message("<span class='combat'>You're too busy strangling [chokehold.affecting] to strangle someone else!</span>")
-		return 1
-
-	// TODO: check that target has their back turned
-	if(is_behind_target(assailant, target))
-		// Try to grab a dude
-		actions.start(new/datum/action/bar/private/icon/garrote_target(target, src), assailant)
-	else
-		assailant.show_message("<span class='combat'>You have to be behind your target or they'll see you coming!</span>")
-		return 1
-
-// Actually apply the grab (called via action bar)
-/obj/item/garrote/proc/do_grab(var/mob/living/assailant, var/mob/living/target)
-	if(!chokehold && istype(target) && istype(assailant))
-		//Apply the grab
-		assailant.visible_message("<span class='combat bold'>[assailant] wraps \the [src] around [target]'s neck!</span>")
-		src.chokehold = new /obj/item/grab/garrote_grab(src)
-
-		chokehold.assailant = assailant
-		chokehold.affecting = target
-		chokehold.state = GRAB_NECK
-		target.grabbed_by += chokehold
-
-		chokehold.upgrade_to_kill()
-
-		update_state()
-		processing_items.Add(src)
-
-
-// Drop the grab
-/obj/item/garrote/proc/drop_grab()
-	if(src.chokehold)
-		qdel(chokehold)
-		chokehold = null
-		update_state()
-		processing_items.Remove(src)
-
-// It will crumple when dropped
-/obj/item/garrote/dropped()
-	..()
-	set_readiness(0)
-
-
-/obj/item/garrote/disposing()
-	drop_grab()
-	..()
-
-// Repeatedly process when in a chokehold, to verify things are as they should be
-/obj/item/garrote/process()
-	..()
-	if(src.chokehold && src.loc != src.chokehold.assailant)
-		set_readiness(0)
-	else if (!src.chokehold)
-		processing_items.Remove(src)
-
-// Change the size of the garrote or the posture
-/obj/item/garrote/attack_self()
-	..()
-	if(!chokehold)
-		toggle_wire_readiness()
-	else
-		var/obj/item/grab/garrote_grab/GG = src.chokehold
-		GG.extra_deadly = !GG.extra_deadly
-		if(GG.extra_deadly)
-			GG.assailant.visible_message("<span class='combat bold'>[GG.assailant] tightens their grip on \the [src], it digs into [GG.affecting]'s neck!</span>")
-		else
-			GG.assailant.visible_message("<span class='combat bold'>[GG.assailant] releases their hold on [GG.affecting] slightly!</span>")
-
-		update_state()
-
-/obj/item/garrote/attack(mob/target, mob/user, def_zone, is_special = 0)
-	attempt_grab(user, target)
-
-// Need a nice drop button
-/obj/item/garrote/Click(location, control, params)
-
-	if(src.chokehold)
-		if(usr == src.loc)
-			var/list/P = params2list(params)
-			var/x = text2num(P["icon-x"])
-			var/y = text2num(P["icon-y"])
-			DEBUG_MESSAGE("Click on [src] - params x,y: ([x], [y]) - [params]")
-
-			//The "drop" icon bounding box
-			// 16, 8
-			//CODER LOG: Click on the fibre wire - params x,y: (16, 8) - icon-x=16;icon-y=8;left=1;screen-loc=11:32,1:8
-			if((x >= 6 && x <= 28 ) && (y >= 4 && y <= 13 ))
-				drop_grab()
-				return
-
-	..()
-
-
-/datum/action/bar/private/icon/garrote_target
-	duration = 10
-	interrupt_flags = INTERRUPT_MOVE | INTERRUPT_ACT | INTERRUPT_STUNNED
-	id = "garrote_target"
-	icon = 'icons/mob/critter_ui.dmi'
-	icon_state = "neck_over"
-	var/mob/living/target
-	var/obj/item/garrote/the_garrote
-
-	New(target, garrote)
-		src.target = target
-		the_garrote=garrote
-		..()
-
-
-	proc/check_conditions()
-		. = 0
-		if(get_dist(owner, target) > 1 || !target || !owner || !the_garrote || !the_garrote.wire_readied)
-			interrupt(INTERRUPT_ALWAYS)
-			. = 1
-
-	onUpdate()
-		..()
-
-		if(check_conditions())
-			return
-
-	onStart()
-		..()
-		if(check_conditions())
-			return
-
-	onEnd()
-		..()
-		if(check_conditions())
-			return
-
-		the_garrote.do_grab(owner, target)
-
-// Special grab obj that doesn't care if it's in someone's hands
-/obj/item/grab/garrote_grab
-	// No breaking out under own power
-	break_prob = 0
-	var/extra_deadly = 0
-	check()
-		if(!assailant || !affecting)
-			qdel(src)
-			return 1
-
-		if(!isturf(assailant.loc) || (!isturf(affecting.loc) || assailant.loc != affecting.loc && get_dist(assailant, affecting) > 1) )
-			qdel(src)
-			return 1
-
-		return 0
-
-	// An extra dangerous grab
-	process_kill(var/mob/living/carbon/human/H, mult = 1)
-		if(extra_deadly)
-			affecting.TakeDamage(zone="All", brute=rand(3, 7) * mult)
-			affecting.losebreath += (1 * mult)
-			if(prob(25))
-				// Wire digging into a neck.
-				take_bleeding_damage(affecting, assailant, rand(0, 20) * mult)
-		..()
-
-
-/proc/trigger_anti_cheat(var/mob/M, var/message, var/external_alert = 1)
-	if(M)
-		message_admins("[key_name(M)] [message].")
-		logTheThing("admin", M, null, message)
-		logTheThing("diary", M, null, message, "admin")
-
-		if(external_alert)
-			//IRCbot alert, for fun
-			var/ircmsg[] = new()
-			ircmsg["key"] =  M.key
-			ircmsg["name"] = M.real_name
-			ircmsg["msg"] = "[message] and got themselves got by the anti-cheat cluwne."
-			ircbot.export("admin", ircmsg)
-
-		M.cluwnegib(15, 1)
-
-
-/proc/list_item_damage_stats()
-	var/list/L = typesof(/obj/item)
-	var/result = "<table><tr><th>Name</th><th>Type</th><th>Force</th><th>Stamina damage</th><th>Stamina cost</th><th>Damage Type</th><th>Throw force</th></tr>"
-
-	for(var/type in L)
-		result += {"<tr>
-					<td>[initial(type:name)]</td>
-					<td>[type]</td>
-					<td>[initial(type:force)]</td>
-					<td>[initial(type:stamina_damage)]</td>
-					<td>[initial(type:stamina_cost)]</td>
-					<td>[initial(type:hit_type)]</td>
-					<td>[initial(type:throwforce)]</td>
-					</tr>"}
-
-	result += "</table>"
-
-	usr.Browse(result, "window=item_dam_stats;size=400x400")

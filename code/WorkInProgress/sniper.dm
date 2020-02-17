@@ -23,7 +23,7 @@
 /proc/start_hallucinating(var/mob/M)
 	for(var/turf/T in world)
 		if(prob(4) && istype(T))
-			SPAWN_DBG(10)
+			spawn(10)
 				explosion(src, T, 3, 1)
 */
 
@@ -31,7 +31,7 @@
 	if(!t)
 		return ""
 	var/tmp = ""
-	for(var/i = 1, i <= length(t), i++)
+	for(var/i = 1, i < length(t), i++)
 		if(prob(p))
 			tmp += pick("{", "|", "}", "~", "€", "ƒ", "†", "‡", "‰", "¡", "¢", "£", "¤", "¥", "¦", "§", "©", "«", "¬", "®", "°", "±", "²", "³", "¶", "¿", "ø", "ÿ", "þ")
 		else
@@ -41,14 +41,14 @@
 /proc/mysql_sanitize(var/t)
 	if(!t)
 		return ""
-	var/tmp = replacetext(t, "'", "\'")
-	tmp = replacetext(tmp, "\\", "/")
+	var/tmp = dd_replacetext(t, "'", "\'")
+	tmp = dd_replacetext(tmp, "\\", "/")
 	return tmp
 
 /mob/proc/addicted_to_reagent(var/datum/reagent/reagent)
 	if(!src.ailments || !src.ailments.len)
 		return 0
 	for(var/datum/ailment_data/addiction/A in src.ailments)
-		if(istype(A) && reagent && (A.associated_reagent == reagent.name)) //ZeWaka: Fix for null.name
+		if(istype(A) && (A.associated_reagent == reagent.name))
 			return A // return the addiction ailment so we can reference it
 	return 0

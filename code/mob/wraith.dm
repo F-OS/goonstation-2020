@@ -13,19 +13,12 @@
 	blinded = 0
 	anchored = 1
 	alpha = 180
-	event_handler_flags = USE_CANPASS | IMMUNE_MANTA_PUSH
-
+	stat = 2 // = technically, we hear ghost chat.
 	var/deaths = 0
-	var/datum/hud/wraith/hud
-
-	var/atom/movable/overlay/animation = null
 
 	var/haunting = 0
 	var/hauntBonus = 0
 	var/justdied = 0
-
-	var/last_life_update = 0
-	var/const/life_tick_spacing = 20
 	//////////////
 	// Wraith Overrides
 	//////////////
@@ -58,10 +51,6 @@
 		src.see_in_dark = SEE_DARK_FULL
 		src.abilityHolder = new /datum/abilityHolder/wraith(src)
 		src.abilityHolder.points = 50
-		src.addAllAbilities()
-		last_life_update = world.timeofday
-		src.hud = new(src)
-		src.attach_hud(hud)
 
 		name = make_name() + "[pick(" the Impaler", " the Tormentor", " the Forsaken", " the Destroyer", " the Devourer", " the Tyrant", " the Overlord", " the Damned", " the Desolator", " the Exiled")]"
 		real_name = name
@@ -71,8 +60,8 @@
 
 	movement_delay()
 		if (density)
-			return 3 + movement_delay_modifier
-		return 1
+			return 4
+		return -1
 
 	meteorhit()
 		return
@@ -80,15 +69,7 @@
 	Login()
 		..()
 		src.updateButtons()
-		var/atom/plane = client.get_plane(PLANE_LIGHTING)
-		plane.alpha = 200
 
-	Logout()
-		..()
-		if (src.last_client)
-			var/atom/plane = last_client.get_plane(PLANE_LIGHTING)
-			if (plane)
-				plane.alpha = 255
 
 	disposing()
 		..()
@@ -107,24 +88,20 @@
 		if (!src.abilityHolder)
 			src.abilityHolder = new /datum/abilityHolder/wraith(src)
 
-		var/life_time_passed = max(life_tick_spacing, world.timeofday - last_life_update)
-
 		if (src.haunting)
 			src.hauntBonus = 0
 			for (var/mob/living/carbon/human/H in viewers(6, src))
 				if (!H.stat && !H.bioHolder.HasEffect("revenant"))
 					src.hauntBonus += 5
-			src.abilityHolder.addBonus(src.hauntBonus * (life_time_passed / life_tick_spacing))
+			src.abilityHolder.addBonus(src.hauntBonus)
 
-		src.abilityHolder.generatePoints(mult = (life_time_passed / life_tick_spacing))
+		src.abilityHolder.generatePoints()
 
 		if (src.health < 1)
 			src.death(0)
 			return
 		else if (src.health < src.max_health)
-			src.health += 1 * (life_time_passed / life_tick_spacing)
-
-		last_life_update = world.timeofday
+			src.health++
 
 	// No log entries for unaffected mobs (Convair880).
 	ex_act(severity)
@@ -152,27 +129,13 @@
 			boutput(src, "<span style=\"color:red\"><b>You have been defeated...for now. The strain of banishment has weakened you, and you will not survive another.</b></span>")
 			src.justdied = 1
 			src.set_loc(pick(latejoin))
-			SPAWN_DBG(150) //15 seconds
+			spawn(150) //15 seconds
 				src.justdied = 0
 		else
 			boutput(src, "<span style=\"color:red\"><b>Your connection with the mortal realm is severed. You have been permanently banished.</b></span>")
 			if (src.mind)
 				for (var/datum/objective/specialist/wraith/WO in src.mind.objectives)
 					WO.onBanished()
-
-			src.transforming = 1
-			src.canmove = 0
-			src.icon = null
-			src.invisibility = 101
-
-			if (client) client.color = null
-
-			animation = new(src.loc)
-			animation.icon_state = "blank"
-			animation.icon = 'icons/mob/mob.dmi'
-			animation.master = src
-			flick("wraithdie", animation)
-
 			src.ghostize()
 			qdel(src)
 
@@ -238,13 +201,12 @@
 		if(!isturf(src.loc)) src.set_loc(get_turf(src))
 
 		if (NewLoc)
-			if (isghostrestrictedz(NewLoc.z) && !restricted_z_allowed(src, NewLoc) && !(src.client && src.client.holder))
+			if (isrestrictedz(NewLoc.z) && !restricted_z_allowed(src, NewLoc) && !(src.client && src.client.holder))
 				var/OS = observer_start.len ? pick(observer_start) : locate(1, 1, 1)
 				if (OS)
 					src.set_loc(OS)
 				else
 					src.z = 1
-				OnMove()
 				return
 
 			var/mydir = get_dir(src, NewLoc)
@@ -306,14 +268,13 @@
 
 			dir = get_dir(loc, NewLoc)
 			src.set_loc(NewLoc)
-			OnMove()
 			NewLoc.HasEntered(src)
 
 			//if tile contains salt, wraith becomes corporeal
 			if (salted && !src.density && !src.justdied)
 				src.makeCorporeal()
 				boutput(src, "<span style=\"color:red\">You have passed over salt! You now interact with the mortal realm...</span>")
-				SPAWN_DBG(600) //one minute
+				spawn(600) //one minute
 					src.makeIncorporeal()
 
 			return
@@ -327,7 +288,6 @@
 			src.x++
 		if((direct & WEST) && src.x > 1)
 			src.x--
-		OnMove()
 
 
 	can_use_hands()
@@ -341,6 +301,15 @@
 
 	put_in_hand(obj/item/I, hand)
 		return 0
+
+	south_east()
+		Move(get_step(src, SOUTHEAST))
+
+	swap_hand()
+		Move(get_step(src, NORTHEAST))
+
+	drop_item_v()
+		Move(get_step(src, NORTHWEST))
 
 	equipped()
 		return 0
@@ -415,7 +384,6 @@
 				M.show_message("<span style=\"color:red\">[src] [acts]!</span>")
 
 	attack_hand(var/mob/user)
-		user.lastattacked = src
 		if (user.a_intent != "harm")
 			visible_message("[user] pets [src]!")
 		else
@@ -431,7 +399,7 @@
 
 		makeCorporeal()
 			if (!src.density)
-				src.set_density(1)
+				src.density = 1
 				src.invisibility = 0
 				src.alpha = 255
 				src.see_invisible = 0
@@ -440,7 +408,7 @@
 		makeIncorporeal()
 			if (src.density)
 				src.visible_message(pick("<span style=\"color:red\">[src] vanishes!</span>", "<span style=\"color:red\">The wraith dissolves into shadow!</span>"), pick("<span style=\"color:blue\">The ectoplasm around you dissipates!</span>", "<span style=\"color:blue\">You fade into the aether!</span>"))
-				src.set_density(0)
+				src.density = 0
 				src.invisibility = 10
 				src.alpha = 160
 				src.see_invisible = 16
@@ -453,7 +421,7 @@
 			src.makeCorporeal()
 			src.haunting = 1
 
-			SPAWN_DBG (300)
+			spawn (300)
 				src.makeIncorporeal()
 				src.haunting = 0
 
@@ -472,7 +440,7 @@
 			src.addAbility(/datum/targetable/wraithAbility/haunt)
 			src.addAbility(/datum/targetable/wraithAbility/poltergeist)
 			src.addAbility(/datum/targetable/wraithAbility/whisper)
-			src.addAbility(/datum/targetable/wraithAbility/blood_writing)
+
 
 		removeAllAbilities()
 			src.removeAbility(/datum/targetable/wraithAbility/help)
@@ -486,7 +454,6 @@
 			src.removeAbility(/datum/targetable/wraithAbility/haunt)
 			src.removeAbility(/datum/targetable/wraithAbility/poltergeist)
 			src.removeAbility(/datum/targetable/wraithAbility/whisper)
-			src.removeAbility(/datum/targetable/wraithAbility/blood_writing)
 
 		addAbility(var/abilityType)
 			abilityHolder.addAbility(abilityType)
@@ -508,7 +475,7 @@
 				boutput(usr, "<span style=\"color:red\">You can only extend your consciousness into humans corpses.</span>")
 				return 1
 			var/mob/living/carbon/human/H = M
-			if (!isdead(H))
+			if (H.stat != 2)
 				boutput(usr, "<span style=\"color:red\">A living consciousness possesses this body. You cannot force your way in.</span>")
 				return 1
 			if (H.decomp_stage == 4)
@@ -564,7 +531,7 @@
 		var/mob/wraith/W = new/mob/wraith(src)
 
 		var/turf/T = get_turf(src)
-		if (!(T && isturf(T)) || ((isghostrestrictedz(T.z) || T.z != 1) && !(src.client && src.client.holder)))
+		if (!(T && isturf(T)) || ((isrestrictedz(T.z) || T.z != 1) && !(src.client && src.client.holder)))
 			var/OS = observer_start.len ? pick(observer_start) : locate(1, 1, 1)
 			if (OS)
 				W.set_loc(OS)
@@ -589,7 +556,7 @@
 		src = null
 		qdel(this)
 
-		//W.addAllAbilities()
+		W.addAllAbilities()
 		boutput(W, "<B>You are a wraith! Terrorize the mortals and drive them into releasing their life essence!</B>")
 		boutput(W, "Your astral powers enable you to survive one banishment. Beware of salt.")
 		boutput(W, "Use the question mark button in the lower right corner to get help on your abilities.")
@@ -600,7 +567,7 @@
 /proc/visibleBodies(var/mob/M)
 	var/list/ret = new
 	for (var/mob/living/carbon/human/H in view(M))
-		if (istype(H) && isdead(H) && H.decomp_stage < 4)
+		if (istype(H) && H.stat == 2 && H.decomp_stage < 4)
 			ret += H
 	return ret
 

@@ -8,19 +8,18 @@
 	var/obj/item/tripod_bulb/bulb = null
 
 	attack_hand(mob/user)
-		if (can_reach(user,src))
-			if (bulb)
-				bulb.removed(src)
-				user.put_in_hand_or_drop(bulb)
-				bulb = null
-				src.updateicon()
-			else
-				boutput(user, "<span style=\"color:blue\">You fold up the tripod.</span>")
-				var/obj/item/tripod/I = new()
-				if (src.material)
-					I.setMaterial(src.material)
-				user.put_in_hand_or_drop(I)
-				qdel(src)
+		if (bulb)
+			bulb.removed(src)
+			user.put_in_hand_or_drop(bulb)
+			bulb = null
+			src.updateicon()
+		else
+			boutput(user, "<span style=\"color:blue\">You fold up the tripod.</span>")
+			var/obj/item/tripod/I = new()
+			if (src.material)
+				I.setMaterial(src.material)
+			user.put_in_hand_or_drop(I)
+			qdel(src)
 
 	attackby(obj/item/W, mob/user)
 		if (istype(W, /obj/item/tripod_bulb) && !bulb)

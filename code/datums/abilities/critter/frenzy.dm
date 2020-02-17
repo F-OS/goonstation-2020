@@ -22,7 +22,7 @@
 			target = get_turf(target)
 		if (isturf(target))
 			for (var/mob/living/M in target)
-				if (M != src && M.getStatusDuration("weakened"))
+				if (M != src && M.weakened)
 					target = M
 					break
 			if (!ismob(target))
@@ -34,23 +34,23 @@
 			boutput(holder.owner, __red("That is too far away to frenzy."))
 			return 1
 		var/mob/MT = target
-		if (!MT.getStatusDuration("weakened") && !MT.getStatusDuration("paralysis") && !MT.stat)
+		if (!MT.weakened && !MT.paralysis && !MT.stat)
 			boutput(holder.owner, __red("That is moving around far too much to pounce."))
 			return 1
-		playsound(get_turf(holder.owner), "sound/voice/animal/wendigo_roar.ogg", 80, 1)
+		playsound(get_turf(holder.owner), "sound/misc/wendigo_roar.ogg", 80, 1)
 		disabled = 1
-		SPAWN_DBG(0)
+		spawn(0)
 			var/frenz = rand(10, 20)
 			holder.owner.canmove = 0
 			while (frenz > 0 && MT && !MT.disposed)
-				MT.changeStatus("weakened", 2 SECONDS)
+				MT.weakened = max(MT.weakened, 2)
 				MT.canmove = 0
 				if (MT.loc)
 					holder.owner.set_loc(MT.loc)
-				holder.owner.changeStatus("stunned", 1 SECONDS)
-				if (holder.owner.getStatusDuration("stunned") || holder.owner.getStatusDuration("weakened") || holder.owner.getStatusDuration("paralysis"))
+				holder.owner.stunned = max(holder.owner.stunned, 1)
+				if (holder.owner.stunned > 1 || holder.owner.weakened || holder.owner.paralysis)
 					break
-				playsound(get_turf(holder.owner), "sound/voice/animal/wendigo_maul.ogg", 80, 1)
+				playsound(get_turf(holder.owner), "sound/misc/wendigo_maul.ogg", 80, 1)
 				holder.owner.visible_message("<span style=\"color:red\"><b>[holder.owner] [pick("mauls", "claws", "slashes", "tears at", "lacerates", "mangles")] [MT]!</b></span>")
 				holder.owner.dir = pick(cardinal)
 				holder.owner.pixel_x = rand(-5, 5)

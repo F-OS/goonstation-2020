@@ -24,8 +24,14 @@ THAT STUPID GAME KIT
 
 /obj/item/game_kit/MouseDrop(mob/user as mob)
 	if (user == usr && !usr.restrained() && !usr.stat && (usr.contents.Find(src) || in_range(src, usr)))
-		if (!user.put_in_hand(src))
-			return ..()
+		if (usr.hand)
+			if (!usr.l_hand)
+				spawn (0)
+					src.attack_hand(usr, 1, 1)
+		else
+			if (!usr.r_hand)
+				spawn (0)
+					src.attack_hand(usr, 0, 1)
 
 /obj/item/game_kit/proc/update()
 	var/dat = text("<CENTER><B>Game Board</B></CENTER><BR><a href='?src=\ref[];mode=hia'>[]</a> <a href='?src=\ref[];mode=remove'>remove</a><HR><table width= 256  border= 0  height= 256  cellspacing= 0  cellpadding= 0 >", src, (src.selected ? text("Selected: []", src.selected) : "Nothing Selected"), src)
@@ -33,7 +39,7 @@ THAT STUPID GAME KIT
 		dat += "<tr>"
 
 		for (var/x = 1 to 8)
-			var/tilecolor = (y + x) % 2 ? "#999999" : "#ffffff"
+			var/tilecolor = (y + x) % 2 ? "#ffffff" : "#999999"
 			var/piece = copytext(src.board_stat, ((y - 1) * 8 + x) * 2 - 1, ((y - 1) * 8 + x) * 2 + 1)
 
 			dat += "<td>"
@@ -58,13 +64,18 @@ THAT STUPID GAME KIT
 		dat += "<a href='?src=\ref[src];s_piece=[piece]'><img src='[resource("images/chess/board_[piece].png")]' width=32 height=32 border=0></a>"
 	src.data = dat
 
-/obj/item/game_kit/attack_hand(mob/user as mob)
-	user.machine = src
+/obj/item/game_kit/attack_hand(mob/user as mob, unused, flag)
 
-	if (!( src.data ))
-		update()
-	user.Browse(src.data, "window=game_kit;size=325x550")
-	onclose(user, "game_kit")
+	if (flag)
+		return ..()
+	else
+		user.machine = src
+
+		if (!( src.data ))
+			update()
+		user << browse(src.data, "window=game_kit;size=325x550")
+		onclose(user, "game_kit")
+		return
 	return
 
 /obj/item/game_kit/Topic(href, href_list)

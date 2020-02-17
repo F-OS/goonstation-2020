@@ -16,7 +16,6 @@
 	density = 0
 	butcherable = 1
 	can_revive = 1
-	chase_text = "tackles"
 	var/boredom_countdown = 0
 	var/spazzing = 0
 	var/frenzied = 0
@@ -47,13 +46,13 @@
 
 	CritterDeath()
 		if (src.alive)
-			playsound(src.loc, "sound/voice/animal/wendigo_cry.ogg", 60, 1)
+			playsound(src.loc, "sound/misc/wendigo_cry.ogg", 60, 1)
 			src.visible_message("<b>[src]</b> dies!")
 			src.alive = 0
 			walk_to(src,0)
 			src.update_dead_icon()
 			anchored = 0
-			set_density(0)
+			density = 0
 			layer = initial(layer)
 
 	seek_target()
@@ -62,7 +61,7 @@
 			src.task = "chasing"
 			return
 		for (var/mob/living/C in hearers(src.seekrange,src))
-			if (!isrobot(C) && !ishuman(C)) continue
+			if (!istype(C,/mob/living/silicon/robot/) && !istype(C,/mob/living/carbon/human/)) continue
 			if ((C.name == src.oldtarget_name) && (world.time < src.last_found + 100)) continue
 			//if (C.stat || C.health < 0) continue
 
@@ -82,7 +81,7 @@
 			src.task = "chasing"
 			src.appear()
 			if(king)
-				playsound(src.loc, "sound/voice/animal/wendigo_roar.ogg", 75, 1)
+				playsound(src.loc, "sound/misc/wendigo_roar.ogg", 75, 1)
 				src.visible_message("<span style=\"color:red\"><b>[src] roars!</b></span>", 1)
 			break
 
@@ -97,8 +96,7 @@
 		. += "-dead"
 		icon_state = .
 
-	attackby(obj/item/W as obj, mob/living/user as mob) //ARRRRGH WHY
-		user.lastattacked = src
+	attackby(obj/item/W as obj, mob/living/user as mob)
 		if (!src.alive)
 			// TODO: tie this into surgery()
 			if (istype(W, /obj/item/scalpel))
@@ -175,14 +173,15 @@
 		for(var/mob/O in viewers(src, null))
 			O.show_message("<span style=\"color:red\"><b>[user]</b> hits [src] with [W]!</span>", 1)
 		if(prob(30))
-			playsound(src.loc, "sound/voice/animal/wendigo_cry.ogg", 60, 1)
+			playsound(src.loc, "sound/misc/wendigo_cry.ogg", 60, 1)
 			src.visible_message("<span style=\"color:red\"><b>[src] cries!</b></span>", 1)
 		if(prob(25) && alive) // crowds shouldn't be able to beat the fuck out of a confused wendigo with impunity, fuck that
 			src.target = user
 			src.oldtarget_name = user.name
 			src.task = "chasing"
-			playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 60, 1)
+			playsound(src.loc, "sound/weapons/genhit1.ogg", 60, 1)
 			src.visible_message("<span style=\"color:red\"><b>[src]</b> slams into [src.target]!</span>")
+			target:weakened += 2
 			frenzy(src.target)
 
 		if (src.alive && src.health <= 0) src.CritterDeath()
@@ -193,7 +192,7 @@
 		src.task = "chasing"
 
 	attack_hand(var/mob/user as mob)
-		user.lastattacked = src
+
 		if (!src.alive)
 			..()
 			return
@@ -204,15 +203,15 @@
 				O.show_message("<span style=\"color:red\"><b>[user]</b> punches [src]!</span>", 1)
 			playsound(src.loc, "punch", 50, 1)
 			if(prob(30))
-				playsound(src.loc, "sound/voice/animal/wendigo_cry.ogg", 60, 1)
+				playsound(src.loc, "sound/misc/wendigo_cry.ogg", 60, 1)
 				src.visible_message("<span style=\"color:red\"><b>[src] cries!</b></span>", 1)
 			if(prob(20) && alive) // crowd beatdown fix
 				src.target = user
 				src.oldtarget_name = user.name
 				src.task = "chasing"
-				playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1)
+				playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1)
 				src.visible_message("<span style=\"color:red\"><b>[src]</b> slams into [src.target]!</span>")
-				user.changeStatus("weakened", 2 SECONDS)
+				target:weakened += 20
 				frenzy(src.target)
 			if (src.alive && src.health <= 0) src.CritterDeath()
 
@@ -222,7 +221,7 @@
 			src.task = "chasing"
 		else
 			src.visible_message("<span style=\"color:red\"><b>[user]</b> pets [src]!</span>", 1)
-			playsound(src.loc, "sound/voice/animal/wendigo_laugh.ogg", 60, 1)
+			playsound(src.loc, "sound/misc/wendigo_laugh.ogg", 60, 1)
 			src.visible_message("<span style=\"color:red\"><b>[src] laughs!</b></span>", 1)
 
 	on_sleep()
@@ -231,85 +230,82 @@
 
 	ChaseAttack(mob/M)
 		if(prob(10))
-			playsound(src.loc, "sound/voice/animal/wendigo_scream.ogg", 75, 1)
+			playsound(src.loc, "sound/misc/wendigo_scream.ogg", 75, 1)
 			src.visible_message("<span style=\"color:red\"><b>[src] howls!</b></span>", 1)
-			..()
-			playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1, -1)
+			src.visible_message("<span style=\"color:red\"><B>[src]</B> tackles [M]!</span>")
+			playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1, -1)
 			if(ismob(M))
-				M.changeStatus("stunned", 2 SECONDS)
-				M.changeStatus("weakened", 2 SECONDS)
+				M.stunned += rand(1,2)
+				M.weakened += rand(1,2)
 
 	CritterAttack(mob/M) // nominating this for scariest goddamn critter 2013
 		src.attacking = 1
 		var/attack_delay = rand(10,30) // needs to attack more often, changed from 30
 
-		if (isrobot(M))
+		if (istype(M,/mob/living/silicon/robot/))
 			var/mob/living/silicon/robot/BORG = M
 			if (!BORG.part_head)
 				src.visible_message("<span style=\"color:red\"><B>[src]</B> sniffs at [BORG.name].</span>")
 				sleep(15)
 				src.visible_message("<span style=\"color:red\"><B>[src]</B> throws a tantrum and smashes [BORG.name] to pieces!</span>")
-				playsound(src.loc, "sound/voice/animal/wendigo_scream.ogg", 75, 1)
-				playsound(src.loc, 'sound/impact_sounds/Metal_Hit_Lowfi_1.ogg', 70, 1)
+				playsound(src.loc, "sound/misc/wendigo_scream.ogg", 75, 1)
+				playsound(src.loc, "sound/effects/wbreak.wav", 70, 1)
 				BORG.gib()
 				src.target = null
 				src.boredom_countdown = 0
 			else
 				if (BORG.part_head.ropart_get_damage_percentage() >= 85)
 					src.visible_message("<span style=\"color:red\"><B>[src]</B> grabs [BORG.name]'s head and wrenches it right off!</span>")
-					playsound(src.loc, "sound/voice/animal/wendigo_laugh.ogg", 70, 1)
-					playsound(src.loc, 'sound/impact_sounds/Metal_Hit_Lowfi_1.ogg', 70, 1)
+					playsound(src.loc, "sound/misc/wendigo_laugh.ogg", 70, 1)
+					playsound(src.loc, "sound/effects/wbreak.wav", 70, 1)
 					BORG.compborg_lose_limb(BORG.part_head)
 					sleep(15)
 					src.visible_message("<span style=\"color:red\"><B>[src]</B> ravenously eats the mangled brain remnants out of the decapitated head!</span>")
-					playsound(src.loc, "sound/voice/animal/wendigo_maul.ogg", 80, 1)
-					make_cleanable( /obj/decal/cleanable/blood,src.loc)
+					playsound(src.loc, "sound/misc/wendigo_maul.ogg", 80, 1)
+					new /obj/decal/cleanable/blood(src.loc)
 					src.target = null
 				else
 					src.visible_message("<span style=\"color:red\"><B>[src]</B> pounds on [BORG.name]'s head furiously!</span>")
-					playsound(src.loc, "sound/impact_sounds/Wood_Hit_1.ogg", 50, 1)
+					playsound(src.loc, "sound/effects/zhit.ogg", 50, 1)
 					BORG.part_head.ropart_take_damage(rand(20,40),0)
-					if (prob(33)) playsound(src.loc, "sound/voice/animal/wendigo_scream.ogg", 75, 1)
+					if (prob(33)) playsound(src.loc, "sound/misc/wendigo_scream.ogg", 75, 1)
 					attack_delay = 5
 		else
 			if (boredom_countdown-- > 0)
 				if(prob(70))
 					src.visible_message("<span style=\"color:red\"><B>[src]</B> [pick("bites", "nibbles", "chews on", "gnaws on")] [src.target]!</span>")
-					playsound(src.loc, "sound/impact_sounds/Flesh_Stab_1.ogg", 50, 1)
+					playsound(src.loc, "sound/effects/bloody_stab.ogg", 50, 1)
 					playsound(src.loc, "sound/items/eatfood.ogg", 50, 1)
 					random_brute_damage(target, 10)
 					take_bleeding_damage(target, null, 5, DAMAGE_STAB, 1, get_turf(target))
 					if(prob(40))
-						playsound(src.loc, "sound/voice/animal/wendigo_laugh.ogg", 70, 1)
+						playsound(src.loc, "sound/misc/wendigo_laugh.ogg", 70, 1)
 						src.visible_message("<span style=\"color:red\"><b>[src] laughs!</b></span>", 1)
 				else
 					src.visible_message("<span style=\"color:red\"><B>[src]</B> [pick("slashes", "swipes", "claws", "tears")] a chunk out of [src.target]!</span>")
-					playsound(src.loc, "sound/impact_sounds/Flesh_Stab_1.ogg", 50, 1)
+					playsound(src.loc, "sound/effects/bloody_stab.ogg", 50, 1)
 					random_brute_damage(target, 20)
 					take_bleeding_damage(target, null, 10, DAMAGE_CUT, 0, get_turf(target))
-					playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 50, 1)
-					playsound(src.loc, "sound/voice/animal/wendigo_scream.ogg", 75, 1)
+					playsound(src.loc, "sound/effects/splat.ogg", 50, 1)
+					playsound(src.loc, "sound/misc/wendigo_scream.ogg", 75, 1)
 					src.visible_message("<span style=\"color:red\"><b>[src] howls!</b></span>", 1)
 					if(!M.stat) M.emote("scream") // don't scream while dead/asleep
 
 			else // flip the fuck out
-				playsound(src.loc, "sound/impact_sounds/Generic_Hit_1.ogg", 50, 1)
+				playsound(src.loc, "sound/weapons/genhit1.ogg", 50, 1)
 				src.visible_message("<span style=\"color:red\"><b>[src]</b> slams into [src.target]!</span>")
-				M.changeStatus("weakened", 2 SECONDS)
+				target:weakened += 3
 				frenzy(src.target)
 
-			if (isdead(M)) // devour corpses
+			if (M.stat == 2) // devour corpses
 				src.visible_message("<span style=\"color:red\"><b>[src] devours [src.target]! Holy shit!</b></span>")
-				playsound(src.loc, "sound/impact_sounds/Flesh_Break_1.ogg", 50, 1)
+				playsound(src.loc, "sound/effects/fleshbr1.ogg", 50, 1)
 				M.ghostize()
 				new /obj/decal/skeleton(M.loc)
 				M.gib()
 				src.target = null
-			else if (ishuman(M))
-				var/mob/living/carbon/human/H = M
-				H.was_harmed(src)
 
-		SPAWN_DBG(attack_delay)
+		spawn(attack_delay)
 			src.attacking = 0
 
 	proc/appear()
@@ -317,13 +313,13 @@
 			return
 		src.icon_state = "wendigo_appear"
 		src.invisibility = 0
-		set_density(1)
-		SPAWN_DBG(12)
+		density = 1
+		spawn(12)
 			if(king)
 				src.icon_state = "wendigoking"
 			else
 				src.icon_state = "wendigo"
-			playsound(src.loc, "sound/voice/animal/wendigo_scream.ogg", 85, 1)
+			playsound(src.loc, "sound/misc/wendigo_scream.ogg", 85, 1)
 			src.visible_message("<span style=\"color:red\"><B>[src]</B> howls!</span>")
 		return
 
@@ -332,8 +328,8 @@
 			return
 
 		src.icon_state = "wendigo_melt"
-		set_density(0)
-		SPAWN_DBG(12)
+		density = 0
+		spawn(12)
 			src.invisibility = 16
 			if(king)
 				src.icon_state = "wendigoking"
@@ -346,7 +342,7 @@
 			return
 
 		spazzing = 25
-		SPAWN_DBG(0)
+		spawn(0)
 			while(spazzing-- > 0)
 				src.pixel_x = rand(-2,2) * 2
 				src.pixel_y = rand(-2,2) * 2
@@ -363,13 +359,13 @@
 		if (src.frenzied)
 			return
 
-		SPAWN_DBG(0)
+		spawn(0)
 			src.visible_message("<span style=\"color:red\"><b>[src] goes [pick("into a frenzy", "into a bloodlust", "berserk", "hog wild", "crazy")]!</b></span>")
-			playsound(src.loc, "sound/voice/animal/wendigo_maul.ogg", 80, 1)
+			playsound(src.loc, "sound/misc/wendigo_maul.ogg", 80, 1)
 			if(king)
-				playsound(src.loc, "sound/voice/animal/wendigo_roar.ogg", 80, 1)
+				playsound(src.loc, "sound/misc/wendigo_roar.ogg", 80, 1)
 				src.visible_message("<span style=\"color:red\"><b>[src] roars!</b></span>")
-			SPAWN_DBG(1)
+			spawn(1)
 				if(!spazzing) src.spaz()
 			src.set_loc(M.loc)
 			src.frenzied = 20
@@ -403,13 +399,13 @@
 		quality = 200 // for the limbs
 
 	CritterDeath()
-		playsound(src.loc, "sound/voice/animal/wendigo_roar.ogg", 75, 1)
-		playsound(src.loc, "sound/voice/animal/wendigo_cry.ogg", 75, 1)
+		playsound(src.loc, "sound/misc/wendigo_roar.ogg", 75, 1)
+		playsound(src.loc, "sound/misc/wendigo_cry.ogg", 75, 1)
 		src.visible_message("<b>[src]</b> collapses in a heap!")
 		src.alive = 0
 		walk_to(src,0)
 		icon_state = "wendigoking-dead"
-		set_density(0)
+		density = 0
 
 ////////////////
 ////// e-egg?

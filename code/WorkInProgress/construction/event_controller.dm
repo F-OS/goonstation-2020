@@ -120,7 +120,7 @@
 	var/player_modifier = 0
 
 	proc/early_warning()
-		for (var/obj/machinery/communications_dish/C in comm_dishes)
+		for (var/obj/machinery/communications_dish/C in machines)
 			C.add_centcom_report("[command_name()] Update", early_warning_text)
 
 		if (!early_warning_heading)
@@ -367,7 +367,7 @@
 /datum/construction_event/siege/animals
 	name = "Animal Siege"
 	warning_text = "A pack of animals have been teleported on board our station!"
-	attacker_types = list(/obj/critter/spacebee, /obj/critter/mouse, /obj/critter/goose, /obj/critter/goose/swan, /obj/critter/owl, /obj/critter/bat/buff, /obj/critter/cat, /obj/critter/nicespider, /obj/critter/spider/spacerachnid)
+	attacker_types = list(/obj/critter/spacebee, /obj/critter/mouse, /obj/critter/goose, /obj/critter/owl, /obj/critter/bat/buff, /obj/critter/cat, /obj/critter/nicespider, /obj/critter/spider/spacerachnid)
 	bosses = list(/obj/critter/lion, /obj/critter/bear)
 	original_size = 30
 	original_bosses = 5
@@ -549,7 +549,7 @@
 			if (!target)
 				possible_target_turfs -= target
 				return
-			new /obj/anomaly/radioactive_burst(target,rand(30,70))
+			create_radwave(target, rand(30, 60), radsound)
 
 /proc/trigger_construction_event()
 	if (!ticker)

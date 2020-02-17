@@ -21,14 +21,13 @@
 		if(istype(src.loc, /obj/item/device/pda2))
 			src.host = src.loc
 			src.loc:module = src
-			src.add_abilities_to_host()
 		return
 
 	Topic(href, href_list)
 		if(!src.host || src.loc != src.host)
 			return 1
 
-		if ((!usr.contents.Find(src.host) && (!in_range(src.host, usr) || !istype(src.host.loc, /turf))) && (!issilicon(usr)))
+		if ((!usr.contents.Find(src.host) && (!in_range(src.host, usr) || !istype(src.host.loc, /turf))) && (!istype(usr, /mob/living/silicon)))
 			return 1
 
 		if(usr.stat || usr.restrained())
@@ -39,55 +38,30 @@
 
 	disposing()
 		host = null
-		contents = null
 		..()
 
-	//Return string as part of PDA main menu, ie easy way to toggle a function.  One line!!
-	proc/return_menu_badge()
-		return null
+	proc
+		//Return string as part of PDA main menu, ie easy way to toggle a function.  One line!!
+		return_menu_badge()
+			return null
 
-	proc/relay_pickup(mob/user as mob)
-		return
+		relay_pickup(mob/user as mob)
+			return
 
-	proc/relay_drop(mob/user as mob)
-		return
+		relay_drop(mob/user as mob)
+			return
 
-	proc/install(var/obj/item/device/pda2/pda)
-		if(pda)
-			pda.module = src
-			src.host = pda
-			src.add_abilities_to_host()
-		return
+		install(var/obj/item/device/pda2/pda)
+			if(pda)
+				pda.module = src
+				src.host = pda
+			return
 
-	proc/uninstall()
-		if(src.host)
-			src.remove_abilities_from_host()
-			src.host.module = null
-			src.host = null
-		return
-
-	proc/add_abilities_to_host()
-		if (src.host && islist(src.ability_buttons) && src.ability_buttons.len)
-			for (var/obj/ability_button/B in src.ability_buttons)
-				if (!islist(src.host.ability_buttons))
-					src.host.ability_buttons = list()
-				if (!src.host.ability_buttons.Find(B))
-					src.host.ability_buttons.Add(B)
-					if (src.host.the_mob)
-						src.host.the_mob.item_abilities.Add(B)
-			if (src.host.the_mob)
-				src.host.the_mob.need_update_item_abilities = 1
-				src.host.the_mob.update_item_abilities()
-
-	proc/remove_abilities_from_host()
-		if (src.host && islist(src.host.ability_buttons) && src.host.ability_buttons.len && islist(src.ability_buttons) && src.ability_buttons.len)
-			for (var/obj/ability_button/B in src.ability_buttons)
-				src.host.ability_buttons.Remove(B)
-				if (src.host.the_mob)
-					src.host.the_mob.item_abilities.Remove(B)
-			if (src.host.the_mob)
-				src.host.the_mob.need_update_item_abilities = 1
-				src.host.the_mob.update_item_abilities()
+		uninstall()
+			if(src.host)
+				src.host.module = null
+				src.host = null
+			return
 
 /obj/item/device/pda_module/flashlight
 	name = "flashlight module"
@@ -97,7 +71,6 @@
 	var/on = 0 //Are we currently on?
 	var/lumlevel = 0.5 //How bright are we?
 	var/datum/light/light
-	abilities = list(/obj/ability_button/pda_flashlight_toggle)
 
 	New()
 		..()
@@ -111,10 +84,13 @@
 
 	relay_drop(mob/user)
 		..()
-		SPAWN_DBG(0)
-			if (src.host)
-				if (src.host.loc != user)
-					light.attach(src.host.loc)
+		spawn(0)
+			if (src.host.loc != user)
+				light.attach(src.host.loc)
+
+	high_power
+		name = "high-power flashlight module"
+		lumlevel = 1
 
 	return_menu_badge()
 		var/text = "<a href='byond://?src=\ref[src];toggle=1'>[src.on ? "Disable" : "Enable"] Flashlight</a>"
@@ -132,46 +108,18 @@
 	Topic(href, href_list)
 		if(..())
 			return
+
 		if(href_list["toggle"])
-			src.toggle_light()
+			src.on = !src.on
+			if (ismob(src.host.loc))
+				light.attach(src.host.loc)
+			if (src.on)
+				light.enable()
+			else
+				light.disable()
+
+		src.host.updateSelfDialog()
 		return
-
-	proc/toggle_light()
-		src.on = !src.on
-		if (ismob(src.host.loc))
-			light.attach(src.host.loc)
-		if (src.on)
-			light.enable()
-		else
-			light.disable()
-		if (islist(src.ability_buttons))
-			for (var/obj/ability_button/pda_flashlight_toggle/B in src.ability_buttons)
-				B.icon_state = "pda[src.on]"
-		if (src.host)
-			src.host.updateSelfDialog()
-
-/obj/item/device/pda_module/flashlight/dan
-	name = "Deluxe Dan's Fancy Flashlight Module"
-	desc = "What a name, what an experience."
-	lumlevel = 0.2
-
-	toggle_light()
-		..()
-		light.set_color(rand(255), rand(255), rand(255))
-
-
-/obj/item/device/pda_module/flashlight/high_power
-	name = "high-power flashlight module"
-	lumlevel = 1
-
-/obj/ability_button/pda_flashlight_toggle
-	name = "Toggle PDA Flashlight"
-	icon_state = "pda0"
-
-	execute_ability()
-		var/obj/item/device/pda_module/flashlight/J = the_item
-		if (J.host)
-			J.toggle_light()
 
 /obj/item/device/pda_module/tray
 	name = "t-ray scanner module"
@@ -179,7 +127,6 @@
 	icon_state = "pdamod_tscanner"
 	setup_use_menu_badge = 1
 	var/on = 0
-	abilities = list(/obj/ability_button/pda_tray_toggle)
 
 	return_menu_badge()
 		var/text = "<a href='byond://?src=\ref[src];toggle=1'>[src.on ? "Disable" : "Enable"] T-Scanner</a>"
@@ -188,18 +135,16 @@
 	Topic(href, href_list)
 		if(..())
 			return
-		if(href_list["toggle"])
-			src.toggle_scan()
-		return
 
-	proc/toggle_scan()
-		src.on = !src.on
-		if (src.on && !(src in processing_items))
-			processing_items.Add(src)
-		for (var/obj/ability_button/pda_tray_toggle/B in src.ability_buttons)
-			B.icon_state = "pda[src.on]"
-		if (src.host)
-			src.host.updateSelfDialog()
+		if(href_list["toggle"])
+
+			src.on = !src.on
+
+			if(src.on && !(src in processing_items))
+				processing_items.Add(src)
+
+		src.host.updateSelfDialog()
+		return
 
 	uninstall()
 		..()
@@ -210,42 +155,30 @@
 		if(!src.on || !src.host)
 			processing_items.Remove(src)
 			return
-		var/loc_to_check = src.host.loc
 
-		src = null
-		for(var/turf/T in range(1, loc_to_check) )
+		for(var/turf/T in range(1, src.host.loc) )
 
 			if(!T.intact)
 				continue
 
 			for(var/obj/O in T.contents)
+
 				if(O.level != 1)
 					continue
 
 				if(O.invisibility == 101)
 					O.invisibility = 0
-					O.alpha = 128
-					SPAWN_DBG(10)
+					spawn(10)
 						if(O)
 							var/turf/U = O.loc
 							if(!istype(U))
 								return
 							if(U.intact)
 								O.invisibility = 101
-								O.alpha = 255
 
 			var/mob/living/M = locate() in T
 			if(M && M.invisibility == 2)
 				M.invisibility = 0
-				SPAWN_DBG(2)
+				spawn(2)
 					if(M)
 						M.invisibility = 2
-
-/obj/ability_button/pda_tray_toggle
-	name = "Toggle PDA T-Scanner"
-	icon_state = "pda0"
-
-	execute_ability()
-		var/obj/item/device/pda_module/tray/J = the_item
-		if (J.host)
-			J.toggle_scan()

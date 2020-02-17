@@ -16,12 +16,12 @@
 /*
 /obj/effects/harmless_smoke/New()
 	..()
-	SPAWN_DBG (100)
+	spawn (100)
 		pool(src)
 	return
 */
 /obj/effects/harmless_smoke/proc/kill(var/time)
-	SPAWN_DBG(time)
+	spawn(time)
 		pool(src)
 
 /obj/effects/harmless_smoke/Move()

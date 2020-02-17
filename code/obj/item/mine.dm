@@ -10,7 +10,6 @@
 	icon_state = "mine"
 	is_syndicate = 1
 	mats = 6
-	event_handler_flags = USE_HASENTERED | USE_FLUID_ENTER
 	var/suppress_flavourtext = 0
 	var/armed = 0
 	var/used_up = 0
@@ -207,8 +206,8 @@
 		if (mobs.len)
 			for (var/mob/living/L in mobs)
 				if (istype(L))
-					L.changeStatus("radiation", 800)
-					if (L.bioHolder && ishuman(L))
+					L.irradiate(80)
+					if (L.bioHolder)
 						L.bioHolder.RandomEffect("bad")
 					if (L != M)
 						src.log_me(null, L)
@@ -248,7 +247,7 @@
 		if (mobs.len)
 			for (var/mob/living/L in mobs)
 				if (istype(L))
-					L.changeStatus("weakened", 150)
+					L.weakened += 15
 					L.stuttering += 15
 					if (L != M)
 						src.log_me(null, L)
@@ -291,6 +290,6 @@
 
 		src.visible_message("<span style=\"color:red\">[src] bursts[pick(" like an overripe melon!", " like an impacted bowel!", " like a balloon filled with blood!", "!", "!")]</span>")
 		gibs(src.loc)
-		playsound(src.loc, "sound/impact_sounds/Flesh_Break_1.ogg", 50, 1)
+		playsound(src.loc, "sound/effects/fleshbr1.ogg", 50, 1)
 
 		return

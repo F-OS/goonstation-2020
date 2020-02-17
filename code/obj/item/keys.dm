@@ -9,8 +9,6 @@
 	force = null
 	w_class = 1.0
 	burn_possible = 0 // too important to burn!
-	var/id = null
-	var/dodgy = 0 //Woe be upon the poor fool who tries to give a dodgy key to the automaton
 
 /obj/item/device/key/cheget
 	name = "old fancy key"
@@ -139,40 +137,9 @@ var/list/rkey_descfluff = list(\
 	New()
 		..()
 		. = rand(5, 20)
-		SPAWN_DBG(rand(1,10))
+		spawn(rand(1,10))
 			animate(src, pixel_y = 32, transform = matrix(., MATRIX_ROTATE), time = 20, loop = -1, easing = SINE_EASING)
 			animate(pixel_y = 0, transform = matrix(. * (-1), MATRIX_ROTATE), time = 20, loop = -1, easing = SINE_EASING)
 
 /obj/item/device/key/lead
 	name = "lead key"
-
-/obj/item/device/key/onyx
-	desc = "What does this go to?"
-	icon_state = "key_onyx"
-	name = "onyx key"
-
-/obj/item/device/key/silver
-	desc = "What does this go to?"
-	name = "silver key"
-
-/obj/item/device/key/hotiron
-	desc = "What does this go to?"
-	name = "hot iron key"
-
-/obj/item/device/key/hospital
-	desc = "What does this go to?"
-	name = "niobium key"
-	item_state = ""
-	icon = null
-
-//Something for the solarium nerds to obsess over for a month
-/obj/item/device/key/filing_cabinet
-	name = "tubular key"
-	desc = "One of those cylinder keys that you see on vending machines and stuff."
-	icon_state = "key_round"
-
-
-/obj/item/device/key/hairball //Hairball key construction is in jonescity.dm
-	desc = "Gross, it's all slimy. It's still dripping."
-	name = "hairball key"
-	icon_state = "key_cat"

@@ -12,9 +12,7 @@
 /obj/displaycase/ex_act(severity)
 	switch(severity)
 		if (1)
-			var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-			G.set_loc(src.loc)
-
+			new /obj/item/raw_material/shard/glass( src.loc )
 			if (occupied)
 				new /obj/item/captaingun( src.loc )
 				occupied = 0
@@ -34,6 +32,11 @@
 	if (damage < 1)
 		return
 
+	if(src.material) src.material.triggerOnAttacked(src, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter) )
+	for(var/atom/A in src)
+		if(A.material)
+			A.material.triggerOnAttacked(A, P.shooter, src, (ismob(P.shooter) ? P.shooter:equipped() : P.shooter))
+
 	switch(P.proj_data.damage_type)
 		if(D_KINETIC)
 			src.health -= (damage*2)
@@ -48,8 +51,7 @@
 
 /obj/displaycase/blob_act(var/power)
 	if (prob(50))
-		var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-		G.set_loc(src.loc)
+		new /obj/item/raw_material/shard/glass( src.loc )
 		if (occupied)
 			new /obj/item/captaingun( src.loc )
 			occupied = 0
@@ -57,8 +59,7 @@
 
 
 /obj/displaycase/meteorhit(obj/O as obj)
-		var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-		G.set_loc(src.loc)
+		new /obj/item/raw_material/shard/glass( src.loc )
 		new /obj/item/captaingun( src.loc )
 		qdel(src)
 
@@ -66,14 +67,13 @@
 /obj/displaycase/proc/healthcheck()
 	if (src.health <= 0)
 		if (!( src.destroyed ))
-			src.set_density(0)
+			src.density = 0
 			src.destroyed = 1
-			var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-			G.set_loc(src.loc)
+			new /obj/item/raw_material/shard/glass( src.loc )
 			playsound(src, "shatter", 70, 1)
 			update_icon()
 	else
-		playsound(src.loc, "sound/impact_sounds/Glass_Hit_1.ogg", 75, 1)
+		playsound(src.loc, "sound/effects/Glasshit.ogg", 75, 1)
 	return
 
 /obj/displaycase/proc/update_icon()
@@ -182,7 +182,7 @@
 	7 Screwdriver
 	*/
 	attackby(obj/item/O as obj, mob/user as mob)
-		if (isscrewingtool(O))
+		if (istype(O, /obj/item/screwdriver))
 			if (src.repair_stage == 0)
 				user.show_text("You open the maintenance panel.", "blue")
 				src.repair_stage = 1
@@ -201,7 +201,7 @@
 
 				// The man with the golden gun.
 				if (src.quality_counter >= src.q_threshold2)
-					L.setMaterial(getMaterial("gold"), appearance = 0, setname = 0)
+					L.material = getCachedMaterial("gold")
 					if (L.material)
 						L.material.owner = L
 						L.material.triggerOnAdd(L)
@@ -268,7 +268,7 @@
 					user.show_text("You were interrupted!", "red")
 					return
 
-		else if (ispulsingtool(O))
+		else if (istype(O, /obj/item/device/multitool))
 			if (src.repair_stage == 5)
 				user.show_text("You initialize the control board.", "blue")
 				src.repair_stage = 6
@@ -322,5 +322,5 @@
 			src.our_projectile = /datum/projectile/laser/old
 			src.our_projectile2 = /datum/projectile/laser/old_burst
 
-		//DEBUG_MESSAGE("[src.name]'s quality_counter: [quality_counter]")
+		//DEBUG("[src.name]'s quality_counter: [quality_counter]")
 		return

@@ -15,25 +15,20 @@
 	var/require_login = 1
 	desc = "A computer that allows an authorized user to set warrants, view fingerprints, and add notes to various crewmembers."
 
-	lr = 1
-	lg = 0.7
-	lb = 0.74
-
 /obj/machinery/computer/secure_data/detective_computer
 	icon = 'icons/obj/computer.dmi'
 	icon_state = "messyfiles"
 	req_access = list(access_forensics_lockers)
 
-/obj/machinery/computer/secure_data/attackby(obj/item/I as obj, user as mob)
-	if (isscrewingtool(I))
+/obj/machinery/computer/secure_data/attackby(I as obj, user as mob)
+	if(istype(I, /obj/item/screwdriver))
 		playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		if(do_after(user, 20))
-			if (src.status & BROKEN)
+			if (src.stat & BROKEN)
 				boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 				var/obj/computerframe/A = new /obj/computerframe( src.loc )
 				if(src.material) A.setMaterial(src.material)
-				var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-				G.set_loc(src.loc)
+				new /obj/item/raw_material/shard/glass( src.loc )
 				var/obj/item/circuitboard/secure_data/M = new /obj/item/circuitboard/secure_data( A )
 				for (var/obj/C in src)
 					C.set_loc(src.loc)
@@ -102,7 +97,7 @@
 				else
 		else
 			dat += text("<A href='?src=\ref[];login=1'>{Log In}</A>", src)
-	user.Browse(text("<HEAD><TITLE>Security Records</TITLE></HEAD><TT>[]</TT>", dat), "window=secure_rec")
+	user << browse(text("<HEAD><TITLE>Security Records</TITLE></HEAD><TT>[]</TT>", dat), "window=secure_rec")
 	onclose(user, "secure_rec")
 	return
 
@@ -113,7 +108,7 @@
 		src.active1 = null
 	if (!( data_core.security.Find(src.active2) ))
 		src.active2 = null
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr) || isAI(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 		if (href_list["temp"])
 			src.temp = null
@@ -127,13 +122,6 @@
 					usr.drop_item()
 					I.set_loc(src)
 					src.scan = I
-				else if (istype(I, /obj/item/magtractor))
-					var/obj/item/magtractor/mag = I
-					if (istype(mag.holding, /obj/item/card/id))
-						I = mag.holding
-						mag.dropItem(0)
-						I.set_loc(src)
-						src.scan = I
 		else
 			if (href_list["logout"] && require_login)
 				src.authenticated = null
@@ -142,7 +130,7 @@
 				src.active2 = null
 			else
 				if (href_list["login"])
-					if (!require_login || ((issilicon(usr) || isAI(usr)) && !isghostdrone(usr)))
+					if (!require_login || (issilicon(usr) && !isghostdrone(usr)))
 						src.active1 = null
 						src.active2 = null
 						src.authenticated = 1
@@ -156,7 +144,6 @@
 							src.rank = src.scan.assignment
 							src.screen = 1
 		if (src.authenticated)
-			var/usr_is_robot = issilicon(usr) || isAIeye(usr)
 			if (href_list["list"])
 				src.screen = 2
 				src.active1 = null
@@ -173,7 +160,6 @@
 						if (href_list["del_all2"])
 							for(var/datum/data/record/R in data_core.security)
 								//R = null
-								data_core.security -= R
 								qdel(R)
 								//Foreach goto(497)
 							src.temp = "All records deleted."
@@ -191,21 +177,21 @@
 											if (istype(src.active1, /datum/data/record))
 												var/t1 = input("Please input name:", "Secure. records", src.active1.fields["name"], null)  as text
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot))) || src.active1 != a1)
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon)))) || src.active1 != a1)
 													return
 												src.active1.fields["name"] = t1
 										if("id")
 											if (istype(src.active2, /datum/data/record))
 												var/t1 = input("Please input id:", "Secure. records", src.active1.fields["id"], null)  as text
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active1 != a1))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active1 != a1))
 													return
 												src.active1.fields["id"] = t1
 										if("fingerprint")
 											if (istype(src.active1, /datum/data/record))
 												var/t1 = input("Please input fingerprint hash:", "Secure. records", src.active1.fields["fingerprint"], null)  as text
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active1 != a1))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active1 != a1))
 													return
 												src.active1.fields["fingerprint"] = t1
 										if("sex")
@@ -218,42 +204,42 @@
 											if (istype(src.active1, /datum/data/record))
 												var/t1 = input("Please input age:", "Secure. records", src.active1.fields["age"], null)  as num
 												t1 = max(1, min(t1, 99))
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active1 != a1))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active1 != a1))
 													return
 												src.active1.fields["age"] = t1
 										if("mi_crim")
 											if (istype(src.active2, /datum/data/record))
 												var/t1 = input("Please input minor disabilities list:", "Secure. records", src.active2.fields["mi_crim"], null)  as text
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active2 != a2))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active2 != a2))
 													return
 												src.active2.fields["mi_crim"] = t1
 										if("mi_crim_d")
 											if (istype(src.active2, /datum/data/record))
 												var/t1 = input("Please summarize minor dis.:", "Secure. records", src.active2.fields["mi_crim_d"], null)  as message
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active2 != a2))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active2 != a2))
 													return
 												src.active2.fields["mi_crim_d"] = t1
 										if("ma_crim")
 											if (istype(src.active2, /datum/data/record))
 												var/t1 = input("Please input major diabilities list:", "Secure. records", src.active2.fields["ma_crim"], null)  as text
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active2 != a2))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active2 != a2))
 													return
 												src.active2.fields["ma_crim"] = t1
 										if("ma_crim_d")
 											if (istype(src.active2, /datum/data/record))
 												var/t1 = input("Please summarize major dis.:", "Secure. records", src.active2.fields["ma_crim_d"], null)  as message
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active2 != a2))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active2 != a2))
 													return
 												src.active2.fields["ma_crim_d"] = t1
 										if("notes")
 											if (istype(src.active2, /datum/data/record))
 												var/t1 = input("Please summarize notes:", "Secure. records", src.active2.fields["notes"], null)  as message
 												t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active2 != a2))
+												if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active2 != a2))
 													return
 												src.active2.fields["notes"] = t1
 										if("criminal")
@@ -326,7 +312,6 @@
 												if (href_list["del_r2"])
 													if (src.active2)
 														//src.active2 = null
-														data_core.security -= src.active2
 														qdel(src.active2)
 												else
 													if (href_list["dela_r"])
@@ -337,16 +322,13 @@
 															for(var/datum/data/record/R in data_core.medical)
 																if ((R.fields["name"] == src.active1.fields["name"] || R.fields["id"] == src.active1.fields["id"]))
 																	//R = null
-																	data_core.medical -= R
 																	qdel(R)
 																else
 															if (src.active2)
 																//src.active2 = null
-																data_core.security -= src.active2
 																qdel(src.active2)
 															if (src.active1)
 																//src.active1 = null
-																data_core.general -= src.active1
 																qdel(src.active1)
 														else
 															if (href_list["d_rec"])
@@ -400,12 +382,12 @@
 																			var/a2 = src.active2
 																			var/t1 = input("Add Comment:", "Secure. records", null, null)  as message
 																			t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-																			if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!usr_is_robot)) || src.active2 != a2))
+																			if ((!( t1 ) || !( src.authenticated ) || usr.stat || usr.restrained() || (!in_range(src, usr) && (!istype(usr, /mob/living/silicon))) || src.active2 != a2))
 																				return
 																			var/counter = 1
 																			while(src.active2.fields[text("com_[]", counter)])
 																				counter++
-																			src.active2.fields[text("com_[]", counter)] = text("Made by [] ([]) on [], [CURRENT_SPACE_YEAR]<BR>[]", src.authenticated, src.rank, time2text(world.realtime, "DDD MMM DD hh:mm:ss"), t1)
+																			src.active2.fields[text("com_[]", counter)] = text("Made by [] ([]) on [], 2053<BR>[]", src.authenticated, src.rank, time2text(world.realtime, "DDD MMM DD hh:mm:ss"), t1)
 																		else
 																			if (href_list["del_c"])
 																				if ((istype(src.active2, /datum/data/record) && src.active2.fields[text("com_[]", href_list["del_c"])]))
@@ -414,7 +396,7 @@
 																				if (href_list["search_f"])
 																					var/t1 = input("Search String: (Fingerprint)", "Secure. records", null, null)  as text
 																					t1 = copytext(adminscrub(t1), 1, MAX_MESSAGE_LEN)
-																					if ((!( t1 ) || usr.stat || !( src.authenticated ) || usr.restrained() || (!in_range(src, usr)) && (!usr_is_robot)))
+																					if ((!( t1 ) || usr.stat || !( src.authenticated ) || usr.restrained() || (!in_range(src, usr)) && (!istype(usr, /mob/living/silicon))))
 																						return
 																					src.active1 = null
 																					src.active2 = null

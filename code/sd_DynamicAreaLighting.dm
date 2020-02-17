@@ -194,7 +194,7 @@ turf
 	var/tmp/sd_LastGreenAdditiveApplied = 0
 	var/tmp/sd_LastBlueAdditiveApplied = 0
 
-//	disposing()
+//	Del()
 //		sd_StripEffectOverlayLighting()
 //		sd_StripAdditiveEffectOverlay()
 //		..()
@@ -208,7 +208,7 @@ turf
 		var/area/Loc = loc
 		return
 
-		if(fullbright)
+		if(RL_Ignore)
 			sd_StripEffectOverlayLighting()
 			sd_StripAdditiveEffectOverlay()
 			return

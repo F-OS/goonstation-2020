@@ -136,7 +136,7 @@
 
 /obj/item/electronics/frame/verb/rotate()
 	set src in view(1)
-	if (!isliving(usr))
+	if (!istype(usr, /mob/living))
 		return
 	src.dir = turn(src.dir, 90)
 
@@ -162,16 +162,12 @@
 				secured = 0
 				boutput(user, "<span style=\"color:red\">You deploy the [src]!</span>")
 				logTheThing("station", user, null, "deploys a [src.name] in [user.loc.loc] ([showCoords(src.x, src.y, src.z)])")
-				if (!istype(user.loc,/turf) && store_type in typesof(/obj/critter))
-					qdel(user.loc)
-
-				actions.start(new/datum/action/bar/icon/build_electronics_frame(src), user)
-				//deploy()
+				deploy()
 			return
 	..()
 
 /obj/item/electronics/frame/MouseDrop_T(atom/movable/O as obj, mob/user as mob)
-	if(!iscarbon(user) || user.stat || user.getStatusDuration("weakened") || user.getStatusDuration("paralysis"))
+	if(!iscarbon(user) || user.stat || user.weakened || user.paralysis)
 		return
 
 	if(get_dist(user, src) > 1)
@@ -212,7 +208,7 @@
 				dat += "[P.name]: <A href='?src=\ref[src];op=\ref[P];tp=move'>Remove</A><BR>"
 
 				user.machine = src
-				user.Browse("<HEAD><TITLE>Frame</TITLE></HEAD><TT>[dat]</TT>", "window=fkit")
+				user << browse("<HEAD><TITLE>Frame</TITLE></HEAD><TT>[dat]</TT>", "window=fkit")
 				onclose(user, "fkit")
 
 		if(1)
@@ -252,7 +248,7 @@
 		switch(href_list["tp"])
 			if("move")
 				if(href_list["op"])
-					var/obj/Z = locate(href_list["op"]) in src.contents
+					var/obj/Z = locate(href_list["op"])
 					var/turf/T = src.loc
 					if (ismob(T))
 						T = T.loc
@@ -262,7 +258,7 @@
 
 		updateDialog()
 	else
-		usr.Browse(null, "window=fkit")
+		usr << browse(null, "window=fkit")
 		usr.machine = null
 	return
 
@@ -274,39 +270,6 @@
 	qdel(src)
 
 	return
-
-/datum/action/bar/icon/build_electronics_frame
-	duration = 10
-	interrupt_flags = INTERRUPT_STUNNED
-	id = "build_vent_capture"
-	icon = 'icons/ui/actions.dmi'
-	icon_state = "working"
-	var/obj/item/electronics/frame/F
-
-	New(Frame)
-		F = Frame
-		..()
-
-	onUpdate()
-		..()
-		if(get_dist(owner, F) > 1 || F == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onStart()
-		..()
-		if(get_dist(owner, F) > 1 || F == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-
-	onEnd()
-		..()
-		if(get_dist(owner, F) > 1 || F == null || owner == null)
-			interrupt(INTERRUPT_ALWAYS)
-			return
-		if(owner && F)
-			F.deploy()
-
 
 /obj/item/electronics/frame/proc/parts_check()
 //	if(src.contents.len != needed_parts.len)
@@ -437,7 +400,7 @@
 /obj/machinery/rkit/New()
 	..()
 	//link = mechanic_controls
-	SPAWN_DBG(8)
+	spawn(8)
 		if(radio_controller)
 			radio_connection = radio_controller.add_object(src, "[frequency]")
 		if(!src.net_id)
@@ -457,7 +420,7 @@
 	..()
 
 /obj/machinery/rkit/receive_signal(datum/signal/signal)
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		return
 
 	if(!signal || signal.encryption || !signal.data["sender"])
@@ -465,7 +428,7 @@
 
 	var/target = signal.data["sender"]
 	if((signal.data["address_1"] == "ping") && target)
-		SPAWN_DBG(5) //Send a reply for those curious jerks
+		spawn(5) //Send a reply for those curious jerks
 
 			var/datum/signal/newsignal = get_free_signal()
 			newsignal.source = src
@@ -487,7 +450,7 @@
 	var/datum/computer/file/electronics_scan/scanFile = signal.data_file
 	for(var/datum/electronics/scanned_item/O in mechanic_controls.scanned_items)
 		if(scanFile.scannedPath == O.item_type)
-			SPAWN_DBG(5)
+			spawn(5)
 
 				var/datum/signal/newsignal = get_free_signal()
 				newsignal.source = src
@@ -503,7 +466,7 @@
 			return
 
 	mechanic_controls.scan_in(scanFile.scannedName, scanFile.scannedPath, scanFile.scannedMats)
-	SPAWN_DBG(5)
+	spawn(5)
 
 		var/datum/signal/newsignal = get_free_signal()
 		newsignal.source = src
@@ -518,7 +481,7 @@
 		radio_connection.post_signal(src, newsignal)
 
 /obj/machinery/rkit/attackby(obj/item/W as obj, mob/user as mob)
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 
 	if(istype(W,/obj/item/electronics/scanner))
@@ -535,7 +498,7 @@
 			if (!match_check)
 				var/obj/tempobj = new X (src)
 				mechanic_controls.scan_in(tempobj.name,tempobj.type,tempobj.mats)
-				SPAWN_DBG(40)
+				spawn(40)
 					qdel(tempobj)
 				S.scanned -= X
 				add_count++
@@ -565,13 +528,13 @@
 	dat += "<HR>"
 
 	user.machine = src
-	user.Browse("<HEAD><TITLE>Ruckingenur Kit Control Panel</TITLE></HEAD><TT>[dat]</TT>", "window=rkit")
+	user << browse("<HEAD><TITLE>Ruckingenur Kit Control Panel</TITLE></HEAD><TT>[dat]</TT>", "window=rkit")
 	onclose(user, "rkit")
 
 /obj/machinery/rkit/Topic(href, href_list)
 	if (usr.stat)
 		return
-	if ((in_range(src, usr) && istype(src.loc, /turf)) || (issilicon(usr)))
+	if ((in_range(src, usr) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 
 		switch(href_list["tp"])
@@ -590,19 +553,19 @@
 					if (src.no_print_spam && world.time < src.no_print_spam + 50)
 						usr.show_text("[src] isn't done with the previous print job.", "red")
 					else
-						var/datum/electronics/scanned_item/O = locate(href_list["op"]) in mechanic_controls.scanned_items
+						var/datum/electronics/scanned_item/O = locate(href_list["op"])
 						if (istype(O.blueprint, /datum/manufacture/mechanics/))
 							usr.show_text("Print job started...", "blue")
 							var/datum/manufacture/mechanics/M = O.blueprint
 							playsound(src.loc, 'sound/machines/printer_thermal.ogg', 50, 1)
 							src.no_print_spam = world.time
-							SPAWN_DBG (50)
+							spawn (50)
 								if (src)
 									new /obj/item/paper/manufacturer_blueprint(src.loc, M.name)
 
 		updateDialog()
 	else
-		usr.Browse(null, "window=rkit")
+		usr << browse(null, "window=rkit")
 		usr.machine = null
 	return
 
@@ -645,18 +608,15 @@
 			if (istype(R))
 				var/looper = round(R.item_amounts[1] / 10, 1)
 				while (looper > 0)
-					var/obj/item/material_piece/mauxite/M = unpool(/obj/item/material_piece/mauxite)
-					M.set_loc(O.loc)
+					new /obj/item/material_piece/mauxite(O.loc)
 					looper--
 				looper = round(R.item_amounts[2] / 10, 1)
 				while (looper > 0)
-					var/obj/item/material_piece/pharosium/P = unpool(/obj/item/material_piece/pharosium)
-					P.set_loc(O.loc)
+					new /obj/item/material_piece/pharosium(O.loc)
 					looper--
 				looper = round(R.item_amounts[3] / 10, 1)
 				while (looper > 0)
-					var/obj/item/material_piece/molitz/M = unpool(/obj/item/material_piece/molitz)
-					M.set_loc(O.loc)
+					new /obj/item/material_piece/molitz(O.loc)
 					looper--
 			else
 				boutput(user, "<span style=\"color:red\">Could not reclaim resources.</span>")

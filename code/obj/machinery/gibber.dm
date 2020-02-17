@@ -26,12 +26,9 @@
 	src.overlays += image('icons/obj/kitchen.dmi', "grindnotinuse")
 	UnsubscribeProcess()
 
-/obj/machinery/gibber/custom_suicide = 1
 /obj/machinery/gibber/suicide(var/mob/user as mob)
-	if (!src.user_can_suicide(user))
-		return 0
 	if (user.client)
-		user.visible_message("<span style='color:red'><b>[user] climbs into the gibber and switches it on.</b></span>")
+		user.visible_message("<span style=\"color:red\"><b>[user] climbs into the gibber and switches it on.</b></span>")
 		user.set_loc(src)
 		src.occupant = user
 		src.startgibbing(user)
@@ -52,7 +49,7 @@
 	if(src.occupant)
 		boutput(user, "<span style=\"color:red\">The gibber is full, empty it first!</span>")
 		return
-	if (!( istype(G, /obj/item/grab)) || !(ishuman(G.affecting)))
+	if (!( istype(G, /obj/item/grab)) || !(istype(G.affecting, /mob/living/carbon/human)))
 		boutput(user, "<span style=\"color:red\">This item is not suitable for the gibber!</span>")
 		return
 
@@ -62,7 +59,7 @@
 	if(G && G.affecting)
 		user.visible_message("<span style=\"color:red\">[user] stuffs [G.affecting] into the gibber!</span>")
 		logTheThing("combat", user, G.affecting, "forced %target% into a gibber at [log_loc(src)].")
-		message_admins("[key_name(user)] forced [key_name(G.affecting, 1)] ([isdead(G.affecting) ? "dead" : "alive"]) into a gibber at [log_loc(src)].")
+		message_admins("[key_name(user)] forced [key_name(G.affecting, 1)] ([G.affecting.stat == 2 ? "dead" : "alive"]) into a gibber at [log_loc(src)].")
 		var/mob/M = G.affecting
 		M.set_loc(src)
 		src.occupant = M
@@ -72,7 +69,7 @@
 	set src in oview(1)
 	set category = "Local"
 
-	if (!isalive(usr)) return
+	if (usr.stat != 0) return
 	if (src.operating) return
 	src.go_out()
 	add_fingerprint(usr)
@@ -185,26 +182,26 @@
 
 		src.dirty += 1
 		if(decomp)
-			SPAWN_DBG(src.gibtime)
-				playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 50, 1)
+			spawn(src.gibtime)
+				playsound(src.loc, "sound/effects/splat.ogg", 50, 1)
 				operating = 0
 				var/obj/decal/cleanable/blood/B1 = null // For forensics (Convair880).
 				var/obj/decal/cleanable/blood/gibs/G1 = null
 				if (decomp > 2)
 					if (T1 && isturf(T1))
-						make_cleanable( /obj/decal/cleanable/molten_item,T1)
-						B1 = make_cleanable( /obj/decal/cleanable/blood,T1)
+						new /obj/decal/cleanable/molten_item(T1)
+						B1 = new /obj/decal/cleanable/blood(T1)
 						if (bdna && btype)
 							B1.blood_DNA = bdna
 							B1.blood_type = btype
 				else
 					if (T1 && isturf(T1))
-						G1 = make_cleanable( /obj/decal/cleanable/blood/gibs,T1)
+						G1 = new /obj/decal/cleanable/blood/gibs(T1)
 						if (bdna && btype)
 							G1.blood_DNA = bdna
 							G1.blood_type = btype
 					if (T2 && isturf(T2))
-						B1 = make_cleanable( /obj/decal/cleanable/blood,T2)
+						B1 = new /obj/decal/cleanable/blood(T2)
 						if (bdna && btype)
 							B1.blood_DNA = bdna
 							B1.blood_type = btype
@@ -221,25 +218,25 @@
 		newmeat3.name = sourcename + newmeat3.name
 		newmeat3.subjectname = sourcename
 		newmeat3.subjectjob = sourcejob
-		SPAWN_DBG(src.gibtime)
-			playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 50, 1)
+		spawn(src.gibtime)
+			playsound(src.loc, "sound/effects/splat.ogg", 50, 1)
 			operating = 0
 			var/obj/decal/cleanable/blood/gibs/G2 = null // For forensics (Convair880).
 
 			if (T1 && isturf(T1))
-				G2 = make_cleanable( /obj/decal/cleanable/blood/gibs,T1)
+				G2 = new /obj/decal/cleanable/blood/gibs(T1)
 				if (bdna && btype)
 					G2.blood_DNA = bdna
 					G2.blood_type = btype
 				newmeat1.set_loc(T1)
 			if (T2 && isturf(T2))
-				G2 = make_cleanable( /obj/decal/cleanable/blood/gibs,T2)
+				G2 = new /obj/decal/cleanable/blood/gibs(T2)
 				if (bdna && btype)
 					G2.blood_DNA = bdna
 					G2.blood_type = btype
 				newmeat2.set_loc(T2)
 			if (T3 && isturf(T3))
-				G2 = make_cleanable( /obj/decal/cleanable/blood/gibs,T3)
+				G2 = new /obj/decal/cleanable/blood/gibs(T3)
 				if (bdna && btype)
 					G2.blood_DNA = bdna
 					G2.blood_type = btype

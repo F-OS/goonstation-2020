@@ -13,8 +13,6 @@
 				return
 			if (!A.activated)
 				return
-
-			user.lastattacked = src
 			var/turf/U = (istype(target, /atom/movable) ? target.loc : target)
 			A.effect_click_tile(src,user,U)
 			src.ArtifactFaultUsed(user)
@@ -51,7 +49,7 @@
 			return
 
 		ready = 0
-		SPAWN_DBG(cooldown)
+		spawn(cooldown)
 			if (O.loc == user)
 				boutput(user, "<b>[O]</b> [recharge_phrase]")
 			ready = 1
@@ -69,7 +67,7 @@
 					if(locate(/obj/decal/icefloor) in TT.contents)
 						continue
 					var/obj/decal/icefloor/B = new /obj/decal/icefloor(TT)
-					SPAWN_DBG(800)
+					spawn(800)
 						B.dispose()
 				for (var/mob/living/M in range(T,2))
 					if (M.bioHolder)
@@ -87,10 +85,10 @@
 					attack_amt = 1
 					var/list/affected = DrawLine(M, user, /obj/line_obj/elec ,'icons/obj/projectiles.dmi',"WholeLghtn",1,1,"HalfStartLghtn","HalfEndLghtn",OBJ_LAYER,1,PreloadedIcon='icons/effects/LghtLine.dmi')
 					for(var/obj/OB in affected)
-						SPAWN_DBG(6)
+						spawn(6)
 							pool(OB)
 						M.TakeDamage("chest", 0, 25)
-						M.changeStatus("stunned", 50)
+						M.stunned += 5
 				if (attack_amt)
 					playsound(user, "sound/effects/elec_bigzap.ogg", 40, 1)
 				else

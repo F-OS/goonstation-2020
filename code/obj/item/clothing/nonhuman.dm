@@ -9,8 +9,6 @@
 */
 
 // this shit is lazy.  I'm lazy.  lazyyyy
-// all of this was bad and I've replaced its functionality with stuff that sucks far less
-/*
 /obj/item/clothing/under/monkey
 	name = "monkey jumpsuit"
 	desc = "A jumpsuit, for monkeys!"
@@ -99,4 +97,3 @@
 	dropped(mob/user as mob)
 		..()
 		qdel(src)
-*/

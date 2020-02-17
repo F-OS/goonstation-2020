@@ -17,11 +17,6 @@
 	spawnpath = /obj/item/seed/cannabis
 	// not actually an artifact but eh seeds are behaving oddly
 
-/obj/landmark/artifact/kudzu
-	name = "living kudzu spawner"
-	spawnpath = /obj/spacevine/living
-	// yeah kudzu isn't an artifact either whoops
-
 /proc/Artifact_Spawn(var/atom/T,var/forceartitype)
 	if (!T)
 		return
@@ -90,15 +85,11 @@
 	var/datum/artifact/A = src.artifact
 	A.holder = src
 
-	if (!artifact_controls) //Hasn't been init'd yet
-		sleep(20)
-
 	var/datum/artifact_origin/AO = artifact_controls.get_origin_from_string(pick(A.validtypes))
 	if (!istype(AO,/datum/artifact_origin/))
 		qdel(src)
 		return
 	A.artitype = AO
-	A.scramblechance = AO.scramblechance
 	// Refers to the artifact datum's list of origins it's allowed to be from and selects one at random. This way we can avoid
 	// stuff that doesn't make sense like ancient robot plant seeds or eldritch healing devices
 
@@ -115,7 +106,7 @@
 
 	var/name1 = pick(appearance.adjectives)
 	var/name2 = "thingy"
-	if (isitem(src))
+	if (istype(src,/obj/item/))
 		name2 = pick(appearance.nouns_small)
 	else
 		name2 = pick(appearance.nouns_large)
@@ -126,7 +117,7 @@
 	A.touch_descriptors |= appearance.touch_descriptors
 
 	src.icon_state = appearance.name + "-[rand(1,appearance.max_sprites)]"
-	if (isitem(src))
+	if (istype(src,/obj/item/))
 		var/obj/item/I = src
 		I.item_state = appearance.name
 
@@ -139,7 +130,6 @@
 	A.activ_sound = pick(AO.activation_sounds)
 	A.fault_types |= AO.fault_types
 	A.internal_name = AO.generate_name()
-	A.nofx = AO.nofx
 
 	ArtifactDevelopFault(10)
 
@@ -176,12 +166,9 @@
 		playsound(src.loc, A.activ_sound, 100, 1)
 	if (A.activ_text)
 		var/turf/T = get_turf(src)
-		if (T) T.visible_message("<b>[src] [A.activ_text]</b>") //ZeWaka: Fix for null.visible_message()
+		T.visible_message("<b>[src] [A.activ_text]</b>")
 	A.activated = 1
-	if (A.nofx)
-		src.icon_state = src.icon_state + "fx"
-	else
-		src.overlays += A.fx_image
+	src.overlays += A.fx_image
 	A.effect_activate(src)
 
 /obj/proc/ArtifactDeactivated()
@@ -194,10 +181,7 @@
 		var/turf/T = get_turf(src)
 		T.visible_message("<b>[src] [A.deact_text]</b>")
 	A.activated = 0
-	if (A.nofx)
-		src.icon_state = src.icon_state - "fx"
-	else
-		src.overlays = null
+	src.overlays = null
 	A.effect_deactivate(src)
 
 /obj/proc/Artifact_attackby(obj/item/W as obj, mob/user as mob)
@@ -206,7 +190,7 @@
 		CT.cargoteleport(src, user)
 		return
 
-	if (isrobot(user))
+	if (istype(user,/mob/living/silicon/robot))
 		src.ArtifactStimulus("silitouch", 1)
 
 	if (istype(W,/obj/item/artifact/activator_key))
@@ -236,9 +220,9 @@
 			src.visible_message("<span style=\"color:red\">[user.name] burns the artifact with [WELD]!</span>")
 			return 0
 
-	if (istype(W,/obj/item/device/light/zippo))
-		var/obj/item/device/light/zippo/ZIP = W
-		if (ZIP.on)
+	if (istype(W,/obj/item/zippo))
+		var/obj/item/zippo/ZIP = W
+		if (ZIP.lit)
 			src.ArtifactStimulus("heat", 400)
 			src.visible_message("<span style=\"color:red\">[user.name] burns the artifact with [ZIP]!</span>")
 			return 0
@@ -248,28 +232,10 @@
 		if (BAT.can_stun(1, 1, user) == 1)
 			src.ArtifactStimulus("force", BAT.force)
 			src.ArtifactStimulus("elec", 1500)
-			playsound(src.loc, "sound/impact_sounds/Energy_Hit_3.ogg", 100, 1)
+			playsound(src.loc, "sound/weapons/Egloves.ogg", 100, 1)
 			src.visible_message("<span style=\"color:red\">[user.name] beats the artifact with [BAT]!</span>")
 			BAT.process_charges(-1, user)
 			return 0
-
-	if (istype(W,/obj/item/parts/robot_parts))
-		var/obj/item/parts/robot_parts/THISPART = W
-		src.visible_message("<b>[user.name]</b> activates the [THISPART] and it reaches out to the artifact.</span>")
-		src.ArtifactStimulus("silitouch", 1)
-		return 0
-
-	if (istype(W,/obj/item/circuitboard))
-		var/obj/item/circuitboard/CIRCUITBOARD = W
-		src.visible_message("<b>[user.name]</b>offers the [CIRCUITBOARD] to the artifact.</span>")
-		src.ArtifactStimulus("data", 1)
-		return 0
-
-	if (istype(W,/obj/item/disk/data))
-		var/obj/item/disk/data/DISK = W
-		src.visible_message("<b>[user.name]</b>offers the [DISK] to the artifact.</span>")
-		src.ArtifactStimulus("data", 1)
-		return 0
 
 	if (W.force)
 		src.ArtifactStimulus("force", W.force)
@@ -318,7 +284,7 @@
 			if(stimtype == "force")
 				if (strength >= 30)
 					T.visible_message("<span style=\"color:red\">[src] bruises from the impact!</span>")
-					playsound(src.loc, "sound/impact_sounds/Slimy_Hit_3.ogg", 100, 1)
+					playsound(src.loc, "sound/effects/attackblob.ogg", 100, 1)
 					ArtifactDevelopFault(33)
 					src.ArtifactTakeDamage(strength / 1.5)
 			if(stimtype == "elec")
@@ -336,7 +302,7 @@
 			if(stimtype == "force")
 				if (strength >= 20)
 					T.visible_message("<span style=\"color:red\">[src] cracks and splinters!</span>")
-					playsound(src.loc, "sound/impact_sounds/Glass_Shards_Hit_1.ogg", 100, 1)
+					playsound(src.loc, "sound/misc/glass_step.ogg", 100, 1)
 					ArtifactDevelopFault(80)
 					src.ArtifactTakeDamage(strength * 1.5)
 
@@ -364,16 +330,16 @@
 					src.ArtifactActivated()
 
 /obj/proc/ArtifactTouched(mob/user as mob)
-	if (isAI(user))
+	if (istype(user,/mob/living/silicon/ai))
 		return
-	if (isobserver(user))
+	if (istype(user,/mob/dead/))
 		return
 
 	var/datum/artifact/A = src.artifact
 	if (istype(A,/datum/artifact/))
-		if (iscarbon(user))
+		if (istype(user,/mob/living/carbon/))
 			src.ArtifactStimulus("carbtouch", 1)
-		if (issilicon(user))
+		if (istype(user,/mob/living/silicon/))
 			src.ArtifactStimulus("silitouch", 1)
 		src.ArtifactStimulus("force", 1)
 		user.visible_message("<b>[user.name]</b> touches [src].")
@@ -400,7 +366,7 @@
 	return
 
 /obj/proc/ArtifactDestroyed()
-	// Call this rather than straight disposing() on an artifact if you want to destroy it. This way, artifacts can have their own
+	// Call this rather than straight Del() on an artifact if you want to destroy it. This way, artifacts can have their own
 	// version of this for ones that will deliver a payload if broken.
 	if (!src.ArtifactSanityCheck())
 		return

@@ -3,7 +3,7 @@
 
 
 // the datum holding one named color
-/datum/named_color
+/datum/namecustomization_third_color
 	var/name=null
 	var/r=0		// stored 0-255
 	var/g=0		//
@@ -22,22 +22,22 @@
 
 // the global list of all named colors
 
-var/list/named_colors = list()
+var/list/namecustomization_third_colors = list()
 
 // returns the name of the color nearest to the given color RGB
 proc/get_nearest_color(var/datum/color/c)
-	var/datum/named_color/nearest = get_nearest_color_datum(c)
+	var/datum/namecustomization_third_color/nearest = get_nearest_color_datum(c)
 	if (nearest)
 		return nearest.name
 
 
-// returns the named_color datum that is nearest to the given color RGB
+// returns the namecustomization_third_color datum that is nearest to the given color RGB
 
 proc/get_nearest_color_datum(var/datum/color/c)
 	var/distance = INFINITY
 	var/nearest = null
 
-	for(var/datum/named_color/col in named_colors)
+	for(var/datum/namecustomization_third_color/col in namecustomization_third_colors)
 		var/d = col.dist2(c.r,c.g,c.b)
 		if(d < distance)
 			distance = d
@@ -51,8 +51,8 @@ proc/get_nearest_color_datum(var/datum/color/c)
 // given name and RGB color
 proc/add_color(var/name, var/red, var/green, var/blue)
 
-	var/color = new /datum/named_color(name, red, green, blue)
-	named_colors += color
+	var/color = new /datum/namecustomization_third_color(name, red, green, blue)
+	namecustomization_third_colors += color
 
 // called at world startup
 // populates the color list
@@ -426,7 +426,7 @@ proc/create_named_colors()
 	add_color("pear", 203, 248, 95 )
 	add_color("pinkish orange", 255, 114, 76 )
 	add_color("midnight purple", 40, 1, 55 )
-	add_color("light purple", 179, 111, 246 )
+	add_color("light urple", 179, 111, 246 )
 	add_color("dark mint", 72, 192, 114 )
 	add_color("greenish tan", 188, 203, 122 )
 	add_color("light burgundy", 168, 65, 91 )

@@ -9,7 +9,19 @@
 //Folder link
 
 
-//permission defines moved to _setup.dm
+//File permission flags
+#define COMP_ROWNER 1
+#define COMP_WOWNER 2
+#define COMP_DOWNER 4
+#define COMP_RGROUP 8
+#define COMP_WGROUP 16
+#define COMP_DGROUP 32
+#define COMP_ROTHER 64
+#define COMP_WOTHER 128
+#define COMP_DOTHER 256
+
+#define COMP_HIDDEN 0
+#define COMP_ALLACC 511
 
 /datum/computer
 	var/name
@@ -31,7 +43,7 @@
 		var/list/datum/computer/contents = list()
 		var/tmp/list/linkers = list()
 		/* commented by singh, new disposing() pattern should handle this. if i broke everything sorry IBM, SORRY
-		disposing()
+		Del()
 			for(var/datum/computer/F in src.contents)
 				qdel(F)
 
@@ -157,9 +169,9 @@
 	proc/asText() //Convert contents to text, if possible
 		return null
 
-	disposing()
+	Del()
 		if (Debug2)
-			logTheThing("debug", null, null, "<b>Computer Datum:</b> disposing() called on [src.type] \ref[src] [src.name]")
+			logTheThing("debug", null, null, "<b>Computer Datum:</b> Del() called on [src.type] \ref[src] [src.name]")
 		// same as above, XOXOXO. -singh
 		//if(holder && holding_folder)
 		//	holding_folder.remove_file(src)
@@ -202,7 +214,7 @@
 			if (isnull(fields[x]))
 				. += "|n"
 			else
-				. += "=[fields[x]]|n"
+				. += ": [fields[x]]|n"
 
 /datum/computer/file/signal
 	name = "signal"
@@ -300,7 +312,7 @@
 		return
 
 	/* same as above, XOXOXO. -singh
-	disposing()
+	Del()
 		src.contents = null
 		if (src.target)
 			src.target.linkers -= src
@@ -343,20 +355,17 @@
 	extension = "IMG"
 	size = 8
 	var/image/ourImage = null
-	var/icon/ourIcon = null
 	var/asciiVersion = null
-	var/img_name = null
-	var/img_desc = null
 
 	asText()
 		if (asciiVersion)
 			return asciiVersion
 
-		if (!(ourImage && ourImage.icon) && !ourIcon)
+		if (!ourImage || !ourImage.icon)
 			return ""
 
 		asciiVersion = ""
-		var/icon/sourceIcon = ourIcon ? ourIcon : icon(ourImage.icon)
+		var/icon/sourceIcon = icon(ourImage.icon)
 		for (var/py = 32, py > 0, py--)
 			for (var/px = 1, px <= 32, px++)
 				. = sourceIcon.GetPixel(px, py)

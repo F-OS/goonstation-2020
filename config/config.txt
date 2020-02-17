@@ -3,7 +3,7 @@ SERVER_SPECIFIC_CONFIGS
 # log OOC channel
 LOG_OOC
 
-# log client Say
+# log client Say 
 LOG_SAY
 
 # log admin actions
@@ -15,73 +15,67 @@ LOG_ACCESS
 # log game actions (start of round, results, etc.)
 LOG_GAME
 
+# log player votes
+LOG_VOTE
+
 # probablities for game modes chosen in "secret" and "random" modes
-#
+# 
 # default probablity is 1, increase to make that mode more likely to be picked
 # set to 0 to disable that mode
 PROBABILITY ALIEN 0
-PROBABILITY BLOB 4
-PROBABILITY CHANGELING 6
+PROBABILITY BLOB 5
+PROBABILITY CHANGELING 5
 PROBABILITY DISASTER 0
 PROBABILITY EXTENDED 0
 PROBABILITY MALFUNCTION 0
 PROBABILITY METEOR 0
 PROBABILITY MONKEY 0
-PROBABILITY MIXED 4
-PROBABILITY MIXED_RP 15
-PROBABILITY NUCLEAR 6
+PROBABILITY MIXED 5
+PROBABILITY NUCLEAR 5
 PROBABILITY RESTRUCTURING 0
-PROBABILITY REVOLUTION 5
+PROBABILITY REVOLUTION 0
 PROBABILITY SANDBOX 0
 PROBABILITY TRAITOR 30
 PROBABILITY VAMPIRE 0
 PROBABILITY WALDO 0
-PROBABILITY WIZARD 6
-PROBABILITY GANG 4
+PROBABILITY WIZARD 5
+PROBABILITY GANG 0
 PROBABILITY SPY 0
 PROBABILITY CONSTRUCTION 0
-PROBABILITY CONSPIRACY 0
-PROBABILITY SPY_THEFT 5
 
-# these represent what % of total rounds a player should play as antag x
-# so for example, TRAITOR 10 means "players should be chosen for traitor in 10% of their traitor-eligible rounds played"
-# note that the antag name maps directly to special_role in code, uppercased
-# please keep this alphabetically sorted
-PLAY_ANTAG ALIEN 10
-PLAY_ANTAG BLOB 10
-PLAY_ANTAG CHANGELING 10
-PLAY_ANTAG CONSPIRATOR 10
-PLAY_ANTAG GANG_LEADER 10
-PLAY_ANTAG TRAITOR 10
-PLAY_ANTAG GRINCH 10
-PLAY_ANTAG HEAD_REV 10
-PLAY_ANTAG NUKEOP 10
-PLAY_ANTAG PREDATOR 10
-PLAY_ANTAG SPY_THIEF 10
-PLAY_ANTAG VAMPIRE 10
-PLAY_ANTAG WALDO 10
-PLAY_ANTAG WEREWOLF 10
-PLAY_ANTAG WIZARD 10
-PLAY_ANTAG WRAITH 10
-PLAY_ANTAG WRESTLER 10
+# allow players to initiate a restart vote
+ALLOW_VOTE_RESTART
+
+# allow players to initate a mode-change start
+ALLOW_VOTE_MODE
+
+# min delay (seconds) between voting sessions (default 10 minutes)
+VOTE_DELAY 600
+
+# time period (seconds) which voting session will last (default 1 minute)
+VOTE_PERIOD 60
+
+# prevents dead players from voting or starting votes
+# NO_DEAD_VOTE
+
+# players' votes default to "No vote" (otherwise,  default to "No change")
+# DEFAULT_NO_VOTE
 
 # allow AI job
 ALLOW_AI
 
-# goon authentication
-# AUTHENTICATION
-
 # disable abandon mob
 NORESPAWN
 
+# set a hosted by name for unix platforms
+HOSTEDBY Galactic Order of Oppressive Neckbeards
+
 # name
-SERVERNAME GOON
-SERVERSUFFIX RELEASE
-SERVERREGION 2020
+#SERVERNAME Gibbed
+SERVERNAME LLJK
+SERVERSUFFIX
+SERVERREGION US
 
-CDN http://some-cdn
-ENV dev
+ENV prod
 
-TICKLAG 0.5
-
-UPDATE_CHECK_ENABLED
+CDN http://cdn.goonhub.com

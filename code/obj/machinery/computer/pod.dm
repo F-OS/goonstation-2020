@@ -5,11 +5,7 @@
 	var/obj/machinery/mass_driver/connected = null
 	var/timing = 0.0
 	var/time = 30.0
-	//var/TPR = 0
-
-	lr = 0.6
-	lg = 1
-	lb = 0.1
+	var/TPR = 0
 
 /obj/machinery/computer/pod/old
 	icon_state = "old"
@@ -31,15 +27,15 @@
 			return ..()
 
 /obj/machinery/computer/pod/proc/alarm()
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 
 	if (!( src.connected ))
 		viewers(null, null) << "Cannot locate mass driver connector. Cancelling firing sequence!"
 		return
-	for(var/obj/machinery/door/poddoor/M in doors)
+	for(var/obj/machinery/door/poddoor/M)
 		if (M.id == src.id)
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				M.open()
 				return
 	sleep(20)
@@ -51,16 +47,16 @@
 			M.drive()
 
 	sleep(50)
-	for(var/obj/machinery/door/poddoor/M in doors)
+	for(var/obj/machinery/door/poddoor/M)
 		if (M.id == src.id)
-			SPAWN_DBG( 0 )
+			spawn( 0 )
 				M.close()
 				return
 	return
 
 /obj/machinery/computer/pod/New()
 	..()
-	SPAWN_DBG( 5 )
+	spawn( 5 )
 		for(var/obj/machinery/mass_driver/M in machines)
 			if (M.id == src.id)
 				src.connected = M
@@ -68,16 +64,15 @@
 		return
 	return
 
-/obj/machinery/computer/pod/attackby(obj/item/I as obj, user as mob)
-	if (isscrewingtool(I))
+/obj/machinery/computer/pod/attackby(I as obj, user as mob)
+	if(istype(I, /obj/item/screwdriver))
 		playsound(src.loc, "sound/items/Screwdriver.ogg", 50, 1)
 		if(do_after(user, 20))
-			if (src.status & BROKEN)
+			if (src.stat & BROKEN)
 				boutput(user, "<span style=\"color:blue\">The broken glass falls out.</span>")
 				var/obj/computerframe/A = new /obj/computerframe( src.loc )
 				if(src.material) A.setMaterial(src.material)
-				var/obj/item/raw_material/shard/glass/G = unpool(/obj/item/raw_material/shard/glass)
-				G.set_loc(src.loc)
+				new /obj/item/raw_material/shard/glass( src.loc )
 
 				//generate appropriate circuitboard. Accounts for /pod/old computer types
 				var/obj/item/circuitboard/pod/M = null
@@ -159,13 +154,13 @@
 	dat += text("<BR><BR><A href='?action=mach_close&window=computer'>Close</A></TT></BODY></HTML>")
 	if(istype(src, /obj/machinery/computer/pod/old/swf))
 		dat = "<HTML><BODY><TT><B>Magix IV Shuttle and Teleport Control</B>"
-		//if(!src.TPR)
-		dat += "<BR><BR><BR><A href='byond://?src=\ref[src];spell_teleport=1'>Teleport</A><BR>"
-		//else
-			//dat += "<BR><BR><BR>RECHARGING TELEPORT<BR><DD>Please stand by...</DD>"
+		if(!src.TPR)
+			dat += "<BR><BR><BR><A href='byond://?src=\ref[src];spell_teleport=1'>Teleport</A><BR>"
+		else
+			dat += "<BR><BR><BR>RECHARGING TELEPORT<BR><DD>Please stand by...</DD>"
 		dat += text("<BR><BR><A href = '?src=\ref[];door=1'>Toggle Outer Door</A><BR>", src)
 		dat += text("<BR><BR><A href='?action=mach_close&window=computer'>Close</A></TT></BODY></HTML>")
-	user.Browse(dat, "window=computer;size=400x500")
+	user << browse(dat, "window=computer;size=400x500")
 	onclose(user, "computer")
 	return
 
@@ -184,16 +179,16 @@
 /obj/machinery/computer/pod/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
 		usr.machine = src
 		if (href_list["spell_teleport"])
-			//src.TPR = 1
-			//SPAWN_DBG(600)
-			//	if(src)
-			//		src.TPR = 0
-			//		src.updateDialog()
+			src.TPR = 1
+			spawn(600)
+				if(src)
+					src.TPR = 0
+					src.updateDialog()
 			usr.machine = null
-			usr.Browse(null, "window=computer")
+			usr << browse(null, "window=computer")
 			usr.teleportscroll(1, 2, src)
 			return
 		if (href_list["power"])
@@ -214,14 +209,14 @@
 						src.time = min(max(round(src.time), 0), 120)
 					else
 						if (href_list["door"])
-							for(var/obj/machinery/door/poddoor/M in doors)
+							for(var/obj/machinery/door/poddoor/M)
 								if (M.id == src.id)
 									if (M.density)
-										SPAWN_DBG( 0 )
+										spawn( 0 )
 											M.open()
 											return
 									else
-										SPAWN_DBG( 0 )
+										spawn( 0 )
 											M.close()
 											return
 								//Foreach goto(298)

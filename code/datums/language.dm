@@ -13,7 +13,7 @@ var/global/datum/languages/languages = new()
 	proc/get_messages(var/O)
 		return list(html_encode(heard_understood(O)), html_encode(heard_not_understood(O)))
 
-	proc/heard_not_understood(var/orig_message)
+	proc/heard_not_understood(var/orig_message)	
 		return orig_message
 
 	proc/heard_understood(var/orig_message)
@@ -27,12 +27,6 @@ var/global/datum/languages/languages = new()
 
 /datum/language/monkey
 	id = "monkey"
-
-	heard_not_understood(var/orig_message)
-		return ""
-
-/datum/language/animal
-	id = "animal"
 
 	heard_not_understood(var/orig_message)
 		return ""
@@ -58,7 +52,7 @@ var/global/datum/languages/languages = new()
 		else if (dd_hasprefix(message, ";"))
 			prefix = ";"
 			message = copytext(message, 2)
-		var/list/words = splittext(uppertext(message), " ")
+		var/list/words = dd_text2list(uppertext(message), " ")
 		var/list/newwords = list()
 		for (var/w in words)
 			if (w == "")
@@ -82,10 +76,10 @@ var/global/datum/languages/languages = new()
 				var/list/trl = list()
 				for (var/i = 1, i <= trlen, i++)
 					trl += pick("K", "X", "B", "Q", "U", "I", "J", "F", "D", "V", "W", "P", "Z", "R", "M", "Y", "T")
-				var/tr = jointext(trl, "")
+				var/tr = dd_list2text(trl)
 				martian_dictionary[w] = tr
 				newwords += tr + suf
-		return prefix + jointext(newwords, " ")
+		return prefix + dd_list2text(newwords, " ")
 
 	heard_not_understood(var/orig_message)
 		return translate(orig_message)
@@ -136,38 +130,3 @@ var/global/datum/languages/languages = new()
 				cnt++
 			txt += ascii2text(sum)
 		return txt
-
-/datum/language/feather
-	id = "feather"
-	var/static/regex/getWords = new("\\b\\w+\\b", "g")
-
-	proc/translate(var/message)
-		. = getWords.Replace(message, /proc/genFeatherWord)	
-
-	heard_not_understood(var/orig_message)
-		return translate(orig_message)
-
-// making that dumb prototype byond game that went nowhere finally led somewhere good
-// if anyone knows how i can make this not global scope, PLEASE HELP ME
-/proc/genFeatherWord(var/word)
-	. = ""	
-	var/list/assembled = list()
-	var/loopIterations = max(3, length(word))
-	for(var/i = 1, i <= loopIterations, i++)
-		var/subChar = ""
-		var/char = ""
-		if(i == 1)
-			subChar = "c"
-		else if(i == loopIterations)
-			subChar = "w"
-		else
-			subChar = "a"
-
-		if(i <= length(word))
-			char = copytext(word, i, i+1)
-		else
-			char = copytext(word, -1)
-		if(isUpper(char))
-			subChar = uppertext(subChar)
-		assembled += subChar
-	. = assembled.Join()

@@ -1,7 +1,6 @@
 /datum/targetable/vampire/glare
 	name = "Glare"
 	desc = "Stuns one target for a short time. Blocked by eye protection."
-	icon_state = "glare"
 	targeted = 1
 	target_nodamage_check = 1
 	max_range = 2
@@ -28,7 +27,7 @@
 			boutput(M, __red("[target] is too far away."))
 			return 1
 
-		if (isdead(target))
+		if (target.stat == 2)
 			boutput(M, __red("It would be a waste of time to stun the dead."))
 			return 1
 
@@ -38,25 +37,12 @@
 			return 0 // Cooldown because spam is bad.
 
 		M.visible_message("<span style=\"color:red\"><B>[M]'s eyes emit a blinding flash at [target]!</B></span>")
-		var/obj/itemspecialeffect/glare/E = unpool(/obj/itemspecialeffect/glare)
-		E.color = "#FFFFFF"
-		E.setup(M.loc)
-		playsound(M.loc,"sound/effects/glare.ogg", 50, 1, pitch = 1, extrarange = -4)
 
-		SPAWN_DBG(1)
-			var/obj/itemspecialeffect/glare/EE = unpool(/obj/itemspecialeffect/glare)
-			EE.color = "#FFFFFF"
-			EE.setup(target.loc)
-			playsound(target.loc,"sound/effects/glare.ogg", 50, 1, pitch = 0.8, extrarange = -4)
-
-		if (target.bioHolder && target.traitHolder.hasTrait("training_chaplain"))
+		if (target.bioHolder && target.bioHolder.HasEffect("training_chaplain"))
 			boutput(target, __blue("[M]'s foul gaze falters as it stares upon your righteousness!"))
 			target.visible_message("<span style=\"color:red\"><B>[target] glares right back at [M]!</B></span>")
 		else
-			target.apply_flash(30, 15, stamina_damage = 250)
-
-		if (ishuman(target))
-			target:was_harmed(M, special = "vamp")
+			target.apply_flash(30, 15)
 
 		logTheThing("combat", M, target, "uses glare on %target% at [log_loc(M)].")
 		return 0

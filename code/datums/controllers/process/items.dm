@@ -10,18 +10,15 @@ datum/controller/process/items
 
 		for(var/obj/object in world)
 			object.initialize()
-			LAGCHECK(LAG_HIGH)
 
 		detailed_count = new
-
+		
 		src.processing_items = global.processing_items
 
 	doWork()
 		var/c
 		for(var/datum/i in global.processing_items)
 			i:process()
-			if (i.pooled || i.qdeled) //if the object was pooled or qdeled we have to remove it from this list... otherwise the lagchecks cause this loop to hold refs and block GC!!!
-				i = null //this might not even be working consistenlty after testing? or somethin else has a lingering ref >:(
 			if (!(c++ % 20))
 				scheck()
 

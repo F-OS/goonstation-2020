@@ -2,7 +2,7 @@
 	var/name = "head"							// designation of the
 	var/offset_x = 0							// pixel offset on the x axis for mob overlays
 	var/offset_y = 0							// pixel offset on the x axis for mob overlays
-	var/show_on_holder = 1						// should this be displayed on the mob?
+
 	var/armor_coverage = 0
 	var/icon/icon = 'icons/mob/hud_human.dmi'	// the icon of the HUD object
 	var/icon_state = "hair"						// the icon state of the HUD object
@@ -88,14 +88,6 @@
 				next = new /datum/equipmentHolder/head/skeleton(holder)
 				next.prev = src
 				return next
-
-		bird
-			offset_y = -5
-			on_update()
-				if (istype(holder, /mob/living/critter/small_animal/bird))
-					var/mob/living/critter/small_animal/bird/B = holder
-					offset_y = B.hat_offset_y
-					offset_x = B.hat_offset_x
 
 	suit
 		name = "suit"

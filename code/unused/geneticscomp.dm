@@ -12,7 +12,7 @@
 /obj/machinery/dna_scannernew/verb/eject()
 	set src in oview(1)
 
-	if (!isalive(usr))
+	if (usr.stat != 0)
 		return
 	src.go_out()
 	add_fingerprint(usr)
@@ -21,7 +21,7 @@
 /obj/machinery/dna_scannernew/verb/move_inside()
 	set src in oview(1)
 
-	if (!isalive(usr))
+	if (usr.stat != 0)
 		return
 	if (src.occupant)
 		boutput(usr, "<span style=\"color:blue\"><B>The scanner is already occupied!</B></span>")
@@ -125,25 +125,25 @@
 		qdel(src)
 
 /obj/machinery/scan_consolenew/power_change()
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		icon_state = "broken"
 	else if(powered())
 		icon_state = initial(icon_state)
-		status &= ~NOPOWER
+		stat &= ~NOPOWER
 	else
-		SPAWN_DBG(rand(0, 15))
+		spawn(rand(0, 15))
 			src.icon_state = "c_unpowered"
-			status |= NOPOWER
+			stat |= NOPOWER
 
 /obj/machinery/scan_consolenew/New()
 	..()
-	SPAWN_DBG( 5 )
+	spawn( 5 )
 		src.connected = locate(/obj/machinery/dna_scannernew, get_step(src, WEST))
 		return
 	return
 
 /obj/machinery/scan_consolenew/process() //not really used right now
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 	use_power(250) // power stuff
 
@@ -156,7 +156,7 @@
 		//something else
 	else
 		if (src.status == "placeholder")
-			if (ismob(M))
+			if (istype(M, /mob))
 			//do stuff
 			else
 				src.temphtml = "Process terminated due to lack of occupant in DNA chamber."
@@ -180,7 +180,7 @@
 			var/mob/occupant = src.connected.occupant
 			dat = "<font color='blue'><B>Occupant Statistics:</B></FONT><BR>" //Blah obvious
 			if (occupant) //is there REALLY someone in there?
-				if (!ishuman(occupant))
+				if (!istype(occupant,/mob/living/carbon/human))
 					sleep(1)
 				var/t1
 				switch(occupant.stat) // obvious, see what their status is
@@ -220,7 +220,7 @@
 /obj/machinery/scan_consolenew/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (get_dist(src, usr) <= 1 || usr.telekinesis == 1) && istype(src.loc, /turf)) || (isAI(usr)))
+	if ((usr.contents.Find(src) || (get_dist(src, usr) <= 1 || usr.telekinesis == 1) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon/ai)))
 		usr.machine = src
 		if (href_list["locked"])
 			if ((src.connected && src.connected.occupant))
@@ -467,7 +467,7 @@
 		if (href_list["b1addui"])
 			src.buffer1iue = 0
 			src.buffer1 = src.connected.occupant.primarynew.uni_identity
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer1owner = src.connected.occupant.name
 			else
 				src.buffer1owner = src.connected.occupant.real_name
@@ -476,7 +476,7 @@
 			dopage(src,"buffermenu")
 		if (href_list["b1adduiue"])
 			src.buffer1 = src.connected.occupant.primarynew.uni_identity
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer1owner = src.connected.occupant.name
 			else
 				src.buffer1owner = src.connected.occupant.real_name
@@ -486,7 +486,7 @@
 			dopage(src,"buffermenu")
 		if (href_list["b2adduiue"])
 			src.buffer2 = src.connected.occupant.primarynew.uni_identity
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer2owner = src.connected.occupant.name
 			else
 				src.buffer2owner = src.connected.occupant.real_name
@@ -496,7 +496,7 @@
 			dopage(src,"buffermenu")
 		if (href_list["b3adduiue"])
 			src.buffer3 = src.connected.occupant.primarynew.uni_identity
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer3owner = src.connected.occupant.name
 			else
 				src.buffer3owner = src.connected.occupant.real_name
@@ -507,7 +507,7 @@
 		if (href_list["b2addui"])
 			src.buffer2iue = 0
 			src.buffer2 = src.connected.occupant.primarynew.uni_identity
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer2owner = src.connected.occupant.name
 			else
 				src.buffer2owner = src.connected.occupant.real_name
@@ -517,7 +517,7 @@
 		if (href_list["b3addui"])
 			src.buffer3iue = 0
 			src.buffer3 = src.connected.occupant.primarynew.uni_identity
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer3owner = src.connected.occupant.name
 			else
 				src.buffer3owner = src.connected.occupant.real_name
@@ -527,7 +527,7 @@
 		if (href_list["b1addse"])
 			src.buffer1iue = 0
 			src.buffer1 = src.connected.occupant.primarynew.struc_enzyme
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer1owner = src.connected.occupant.name
 			else
 				src.buffer1owner = src.connected.occupant.real_name
@@ -537,7 +537,7 @@
 		if (href_list["b2addse"])
 			src.buffer2iue = 0
 			src.buffer2 = src.connected.occupant.primarynew.struc_enzyme
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer2owner = src.connected.occupant.name
 			else
 				src.buffer2owner = src.connected.occupant.real_name
@@ -547,7 +547,7 @@
 		if (href_list["b3addse"])
 			src.buffer3iue = 0
 			src.buffer3 = src.connected.occupant.primarynew.struc_enzyme
-			if (!ishuman(src.connected.occupant))
+			if (!istype(src.connected.occupant,/mob/living/carbon/human))
 				src.buffer3owner = src.connected.occupant.name
 			else
 				src.buffer3owner = src.connected.occupant.real_name
@@ -637,7 +637,7 @@
 				src.temphtml = "Injector created."
 				src.delete = 0
 				src.injectorready = 0
-				SPAWN_DBG(1200)
+				spawn(1200)
 					src.injectorready = 1
 			else
 				src.temphtml = "Replicator not ready yet."
@@ -653,7 +653,7 @@
 				src.temphtml = "Injector created."
 				src.delete = 0
 				src.injectorready = 0
-				SPAWN_DBG(1200)
+				spawn(1200)
 					src.injectorready = 1
 			else
 				src.temphtml = "Replicator not ready yet."
@@ -669,7 +669,7 @@
 				src.temphtml = "Injector created."
 				src.delete = 0
 				src.injectorready = 0
-				SPAWN_DBG(1200)
+				spawn(1200)
 					src.injectorready = 1
 			else
 				src.temphtml = "Replicator not ready yet."

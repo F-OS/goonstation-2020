@@ -15,7 +15,7 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 
 	New()
 		if (!src.load())
-			SPAWN_DBG(10)
+			spawn(10)
 				if (!src.loaded)
 					src.load()
 
@@ -29,7 +29,7 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 
 				if (src.queue && src.queue.len > 0)
 					if (src.debugging)
-						src.logDebug("Load success, flushing queue: [json_encode(src.queue)]")
+						src.logDebug("Load success, flushing queue: [list2json(src.queue)]")
 					for (var/x = 1, x <= src.queue.len, x++) //Flush queue
 						src.export(src.queue[x]["iface"], src.queue[x]["args"])
 
@@ -47,7 +47,7 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 		event(type, data)
 			if (!type) return 0
 			var/list/eventArgs = list("type" = type)
-			if (data) eventArgs |= data
+			if (data) eventArgs["data"] = data
 			return src.export("event", eventArgs)
 
 
@@ -62,7 +62,7 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 				if (src.debugging)
 					src.logDebug("Export, message queued due to unloaded config")
 
-				SPAWN_DBG(10)
+				spawn(10)
 					if (!src.loaded)
 						src.load()
 				return "queued"
@@ -70,8 +70,8 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 				if (config.env == "dev") return 0
 
 				args = (args == null ? list() : args)
-				args["server_name"] = (config.server_name ? replacetext(config.server_name, "#", "") : null)
-				args["server"] = serverKey
+				args["server_name"] = (config.server_name ? dd_replacetext(config.server_name, "#", "") : null)
+				args["server"] = (world.port % 1000) / 100
 				args["api_key"] = (src.apikey ? src.apikey : null)
 
 				if (src.debugging)
@@ -88,7 +88,7 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 					src.logDebug("Export, returned data: [content]")
 
 				//Handle the response
-				var/list/contentJson = json_decode(content)
+				var/list/contentJson = json2list(content)
 				if (!contentJson["status"])
 					logTheThing("debug", null, null, "<b>IRCBOT:</b> Object missing status parameter in export response: [list2params(contentJson)]")
 					return 0
@@ -108,12 +108,11 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 				src.logDebug("Response called with args: [list2params(args)]")
 
 			args = (args == null ? list() : args)
-			//args["api_key"] = (src.apikey ? src.apikey : null)
-			//WHY WAS THAT A THING?
+			args["api_key"] = (src.apikey ? src.apikey : null)
 
 			if (config && config.server_name)
-				args["server_name"] = replacetext(config.server_name, "#", "")
-				args["server"] = replacetext(config.server_name, "#", "") //TEMP FOR BACKWARD COMPAT WITH SHITFORMANT
+				args["server_name"] = dd_replacetext(config.server_name, "#", "")
+				args["server"] = dd_replacetext(config.server_name, "#", "") //TEMP FOR BACKWARD COMPAT WITH SHITFORMANT
 
 			if (src.debugging)
 				src.logDebug("Response, final args: [list2params(args)]")
@@ -157,28 +156,28 @@ var/global/datum/ircbot/ircbot = new /datum/ircbot()
 	return 1
 
 
-/client/verb/linkDiscord(discordCode as text)
-	set name = "Link Discord"
+/client/verb/linkNick(ircNick as text)
+	set name = "Link IRC"
 	set category = "Special Verbs"
-	set desc = "Links your Byond key with your Discord account. Enter the code Spacebee gave you when you ran !link."
+	set desc = "Links your Byond username with your IRC nickname"
 	set popup_menu = 0
 
-	if (!discordCode)
-		discordCode = input(src, "Please enter your Discord access code. You can get this by running !link in Discord.", "Link Discord") as null|text
+	if (!ircNick)
+		ircNick = input(src, "Please enter your IRC nickname", "Link IRC") as null|text
 
 	if (ircbot.debugging)
-		ircbot.logDebug("linkDiscord verb called. <b>src.ckey:</b> [src.ckey]. <b>discordCode:</b> [discordCode]")
+		ircbot.logDebug("linkNick verb called. <b>src.ckey:</b> [src.ckey]. <b>ircNick:</b> [ircNick]")
 
-	if (!discordCode || !src.ckey) return 0
+	if (!ircNick || !src.ckey) return 0
 
 	var/ircmsg[] = new()
 	ircmsg["key"] = src.key
 	ircmsg["ckey"] = src.ckey
-	ircmsg["nick"] = discordCode
+	ircmsg["nick"] = ircNick
 	var/res = ircbot.export("link", ircmsg)
 
 	if (res)
-		alert(src, "Please return to Discord and look for any spacebee PMs.")
+		alert(src, "Linked Byond username: [src.key] with IRC nickname: [ircNick]. Please return to IRC and use !verify in #goonstation to continue.")
 		return 1
 	else
 		alert(src, "An unknown internal error occurred. Please report this.")

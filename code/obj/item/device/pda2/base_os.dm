@@ -85,9 +85,6 @@
 					. += "<ul>"
 					. += "<li><a href='byond://?src=\ref[src];mode=4'>Atmospheric Scan</a></li>"
 					. += "<li>Scanner: [src.master.scan_program ? "<a href='byond://?src=\ref[src];scanner=1'>[src.master.scan_program.name]</a>" : "None loaded"]</li>"
-#ifdef UNDERWATER_MAP
-					. += "<li><a href='byond://?src=\ref[src];trenchmap=1'>Trench Map</a></li>"
-#endif
 //					. += "<li><a href='byond://?src=\ref[src];flight=1'>[src.master.fon ? "Disable" : "Enable"] Flashlight</a></li>"
 
 					if(src.master.module)
@@ -152,7 +149,6 @@
 							for (var/department_id in page_departments)
 								. += "<li><a href='byond://?src=\ref[src];input=message;target=[page_departments[department_id]];department=1'>DEPT-[department_id]</a></li>"
 
-							var/pdaOwnerNames = list()
 							for (var/P_id in src.detected_pdas)
 								var/P_name = src.detected_pdas[P_id]
 								if (!P_name)
@@ -161,11 +157,6 @@
 								else if (P_id == src.master.net_id) //I guess this can happen if somebody copies the system file.
 									src.detected_pdas -= P_id
 									continue
-								pdaOwnerNames += P_name
-								pdaOwnerNames[P_name] = P_id
-							pdaOwnerNames = sortList(pdaOwnerNames)
-							for (var/P_name in pdaOwnerNames)
-								var/P_id = pdaOwnerNames[P_name]
 
 								. += "<li><a href='byond://?src=\ref[src];input=message;target=[P_id]'>PDA-[P_name]</a>"
 								. += " (<a href='byond://?src=\ref[src];input=send_file;target=[P_id]'>*Send File*</a>)"
@@ -273,12 +264,6 @@
 				if(src.master.scan_program)
 					src.master.scan_program = null
 
-#ifdef UNDERWATER_MAP
-			else if(href_list["trenchmap"])
-				if (usr.client && hotspot_controller)
-					hotspot_controller.show_map(usr.client)
-#endif
-
 			else if(href_list["input"])
 				switch(href_list["input"])
 					if("tone")
@@ -300,30 +285,8 @@
 							src.message_tone = t
 
 					if("note")
-						var/inputtext = html_decode(replacetext(src.note, "<br>", "\n"))
-						inputtext = html_decode(replacetext(src.note, "<b>", "\[b\]"))
-						inputtext = html_decode(replacetext(src.note, "</b>", "\[/b\]"))
-						inputtext = html_decode(replacetext(src.note, "<u>", "\[u\]"))
-						inputtext = html_decode(replacetext(src.note, "</u>", "\[/u\]"))
-						inputtext = html_decode(replacetext(src.note, "<sup>", "\[sup\]"))
-						inputtext = html_decode(replacetext(src.note, "</sup>", "\[/sup\]"))
-						inputtext = html_decode(replacetext(src.note, "<h1>", "\[h1\]"))
-						inputtext = html_decode(replacetext(src.note, "</h1>", "\[/h1\]"))
-						inputtext = html_decode(replacetext(src.note, "<h2>", "\[h2\]"))
-						inputtext = html_decode(replacetext(src.note, "</h2>", "\[/h2\]"))
-						inputtext = html_decode(replacetext(src.note, "<h3>", "\[h3\]"))
-						inputtext = html_decode(replacetext(src.note, "</h3>", "\[/h3\]"))
-						inputtext = html_decode(replacetext(src.note, "<h4>", "\[h4]"))
-						inputtext = html_decode(replacetext(src.note, "</h4>", "\[/h4\]"))
-						inputtext = html_decode(replacetext(src.note, "<blockquote>", "\[blockquote\]"))
-						inputtext = html_decode(replacetext(src.note, "</blockquote>", "\[/blockquote\]"))
-						inputtext = html_decode(replacetext(src.note, "<li>", "\[li\]"))
-						inputtext = html_decode(replacetext(src.note, "</li>", "\[/li\]"))
-						inputtext = html_decode(replacetext(src.note, "<hr>", "\[hr\]"))
-						inputtext = html_decode(replacetext(src.note, "</hr>", "\[/hr\]"))
-						inputtext = html_decode(replacetext(src.note, "<i>", "\[i\]"))
-						inputtext = html_decode(replacetext(src.note, "</i>", "\[/i\]"))
-						inputtext = html_decode(replacetext(src.note, "<br>", "\[br\]"))
+						var/inputtext = html_decode(dd_replacetext(src.note, "<br>", "\n"))
+
 						var/t = input(usr, "Please enter note", src.name, inputtext) as message
 						if (!t)
 							return
@@ -333,55 +296,9 @@
 
 						if(!(src.holder in src.master))
 							return
-						t = replacetext(t, "\n", "|1|")
-						t = replacetext(t, "\[b\]", "|2|")
-						t = replacetext(t, "\[/b\]", "|3|")
-						t = replacetext(t, "\[u\]", "|4|")
-						t = replacetext(t, "\[/u\]", "|5|")
-						t = replacetext(t, "\[i\]", "|6|")
-						t = replacetext(t, "\[sup\]", "|7|")
-						t = replacetext(t, "\[/sup\]", "|8|")
-						t = replacetext(t, "\[h1\]", "|9|")
-						t = replacetext(t, "\[/h1\]", "|10|")
-						t = replacetext(t, "\[h2\]", "|11|")
-						t = replacetext(t, "\[/h2\]", "|12|")
-						t = replacetext(t, "\[h3\]", "|13|")
-						t = replacetext(t, "\[/h3\]", "|14|")
-						t = replacetext(t, "\[h4\]", "|15|")
-						t = replacetext(t, "\[/h4\]", "|16|")
-						t = replacetext(t, "\[bq\]", "|17|")
-						t = replacetext(t, "\[/bq\]", "|18|")
-						t = replacetext(t, "\[li\]", "|19|")
-						t = replacetext(t, "\[/li\]", "|20|")
-						t = replacetext(t, "\[hr\]", "|21|")
-						t = replacetext(t, "\[/hr\]", "|22|")
-						t = replacetext(t, "\[/i\]", "|23|")
-						t = replacetext(t, "\[br\]", "|24|")
+						t = dd_replacetext(t, "\n", "|||")
 						t = copytext(adminscrub(t), 1, MAX_MESSAGE_LEN)
-						t = replacetext(t, "|1|", "<br>")
-						t = replacetext(t, "|2|", "<b>")
-						t = replacetext(t, "|3|", "</b>")
-						t = replacetext(t, "|4|", "<u>")
-						t = replacetext(t, "|5|", "</u>")
-						t = replacetext(t, "|6|", "<i>")
-						t = replacetext(t, "|7|", "<sup>")
-						t = replacetext(t, "|8|", "</sup>")
-						t = replacetext(t, "|9|", "<h1>")
-						t = replacetext(t, "|10|", "</h1>")
-						t = replacetext(t, "|11|", "<h2>")
-						t = replacetext(t, "|12|", "</h2>")
-						t = replacetext(t, "|13|", "<h3>")
-						t = replacetext(t, "|14|", "</h3>")
-						t = replacetext(t, "|15|", "<h4>")
-						t = replacetext(t, "|16|", "</h4>")
-						t = replacetext(t, "|17|", "<blockquote>")
-						t = replacetext(t, "|18|", "</blockquote>")
-						t = replacetext(t, "|19|", "<li>")
-						t = replacetext(t, "|20|", "</li>")
-						t = replacetext(t, "|21|", "<hr>")
-						t = replacetext(t, "|22|", "</hr>")
-						t = replacetext(t, "|23|", "</i>")
-						t = replacetext(t, "|24|", "<br>")
+						t = dd_replacetext(t, "|||", "<br>")
 						src.note = t
 
 
@@ -400,7 +317,7 @@
 							return
 
 						var/t = input(usr, "Please enter message", target_name, null) as text
-						if (!t || !isalive(usr))
+						if (!t)
 							return
 
 						src.pda_message(target_id, target_name, t, is_department_page)
@@ -442,7 +359,6 @@
 						signal.data["file_ext"] = src.clipboard.extension
 						signal.data["file_size"] = src.clipboard.size
 						signal.data["sender_name"] = src.master.owner
-						signal.data["sender_assignment"] = src.master.ownerAssignment
 						//signal.data["sender"] = src.master.net_id
 						signal.data["address_1"] = target_id
 						src.post_signal(signal)
@@ -618,23 +534,15 @@
 					if(!message_on || !signal.data["message"])
 						return
 
-					var/groupAddress = signal.data["group"]
-					if(groupAddress) //Check to see if it's our ~mailgroup~
-						if(groupAddress != src.master.mailgroup && groupAddress != "ai")
+					if(signal.data["group"]) //Check to see if it's our ~mailgroup~
+						if(signal.data["group"] != src.master.mailgroup)
 							return
 
 					var/sender = signal.data["sender_name"]
 					if(!sender)
 						sender = "!Unknown!"
 
-					var/senderAssignment = signal.data["sender_assignment"]
-					var/messageFrom = sender
-					if (senderAssignment)
-						messageFrom = "[messageFrom] - [senderAssignment]"
-					if (groupAddress)
-						messageFrom = "[messageFrom] (to [groupAddress])"
-
-					if((length(signal.data["sender"]) == 8) && (is_hex(signal.data["sender"])) )
+					if((length(signal.data["sender"]) == 8) && (ishex(signal.data["sender"])) )
 						if (!(signal.data["sender"] in src.detected_pdas))
 							src.detected_pdas += signal.data["sender"]
 							//src.master.pdasay_autocomplete += sender
@@ -643,7 +551,7 @@
 
 					//Only add the reply link if the sender is another pda2.
 
-					var/senderstring = "From <a href='byond://?src=\ref[src];input=message;target=[signal.data["sender"]]'>[messageFrom]</a>"
+					var/senderstring = "From <a href='byond://?src=\ref[src];input=message;target=[signal.data["sender"]]'>[sender]</a>"
 
 					src.message_note += "<i><b>&larr; [senderstring]:</b></i><br>[signal.data["message"]]<br>"
 					var/alert_beep = null //Don't beep if set to silent.
@@ -653,12 +561,15 @@
 					if((signal.data["batt_adjust"] == netpass_syndicate) && (signal.data["address_1"] == src.master.net_id) && !(src.master.exploding))
 						if (src.master)
 							src.master.exploding = 1
-						SPAWN_DBG(20)
+						spawn(20)
 							if (src.master)
 								src.master.explode()
 
 					src.master.display_alert(alert_beep)
-					src.master.display_message("<i><b>[bicon(master)] <a href='byond://?src=\ref[src];input=message;norefresh=1;target=[signal.data["sender"]]'>[messageFrom]</a>:</b></i> [signal.data["message"]]")
+
+					if(ismob(master.loc)) //Alert the person holding us.
+						var/mob/M = master.loc
+						boutput(M, "<i><b>[bicon(master)] <a href='byond://?src=\ref[src];input=message;norefresh=1;target=[signal.data["sender"]]'>[sender]</a>:</b></i> [signal.data["message"]]")
 
 					src.master.updateSelfDialog()
 
@@ -669,7 +580,6 @@
 					var/filename = signal.data["file_name"]
 					var/sender = signal.data["sender"]
 					var/sendername = signal.data["sender_name"]
-					var/senderassignment = signal.data["sender_assignment"]
 					var/file_ext = signal.data["file_ext"]
 					var/filesize = signal.data["file_size"]
 
@@ -679,10 +589,6 @@
 					if(!sendername)
 						sendername = "!Unknown!"
 
-					var/messageFrom = sendername
-					if (senderassignment)
-						messageFrom = "[sendername] - [senderassignment]"
-
 					if(!(sender in src.detected_pdas))
 						src.detected_pdas += sender
 						//src.master.pdasay_autocomplete += sendername
@@ -691,7 +597,7 @@
 
 
 					src.message_note += {"
-<i><b>&larr;File Offer From <a href='byond://?src=\ref[src];input=message;target=[sender]'>[messageFrom]</a>:</b></i><br>
+<i><b>&larr;File Offer From <a href='byond://?src=\ref[src];input=message;target=[sender]'>[sendername]</a>:</b></i><br>
 <a href='byond://?src=\ref[src];message_func=accfile;sender=[sender]'>[filename]</a>
  | Ext: [file_ext ? file_ext : "NONE"]
  | Size: [filesize ? filesize : "???"]<br>"}
@@ -717,7 +623,6 @@
 					sendsig.data_file = src.clipboard.copy_file()
 					sendsig.data["command"] = "file_send"
 					sendsig.data["sender_name"] = src.master.owner
-					sendsig.data["sender_assignment"] = src.master.ownerAssignment
 					sendsig.data["address_1"] = signal.data["sender"]
 					src.post_signal(sendsig)
 
@@ -730,23 +635,18 @@
 						return
 
 					var/sender = signal.data["sender"]
-					var/sendername = signal.data["sender_name"]
-					var/senderassignment = signal.data["sender_assignment"]
-
 					if(sender != last_filereq_id)
 						return
 
-					if(!sendername)
-						sendername = "!UNKNOWN!"
-					var/messageFrom = sendername
-					if (senderassignment)
-						messageFrom = "[sendername] - [senderassignment]"
+					var/sender_name = "!UNKNOWN!"
+					if(signal.data["sender_name"])
+						sender_name = signal.data["sender_name"]
 
 					if(!signal.data_file)
 						return
 
 					if(signal.data_file.copy_file_to_folder(src.holding_folder))
-						src.message_note += "<b><i>File Accepted from [messageFrom]</b></i><br>"
+						src.message_note += "<b><i>File Accepted from [sender_name]</b></i><br>"
 					return
 
 			// this is now in network_hook
@@ -796,13 +696,13 @@
 				. += " | <a href='byond://?src=\ref[src.master];refresh=1'>Refresh</a>"
 
 			else
-				if (!isnull(src.master.cartridge) && !istype(src.master,/obj/item/device/pda2/ai))
+				if (!isnull(src.master.cartridge))
 					. += " | <a href='byond://?src=\ref[src.master];eject_cart=1'>Eject [src.master.cartridge]</a>"
 				if (!isnull(src.master.ID_card))
 					. += " | <a href='byond://?src=\ref[src.master];eject_id_card=1'>Eject [src.master.ID_card]</a>"
 
 		pda_message(var/target_id, var/target_name, var/message, var/is_department_message)
-			if (!src.master || !src.master.is_user_in_range(usr))
+			if (!src.master || (!in_range(src.master, usr) && src.master.loc != usr))
 				return 1
 
 			if (!target_id || !target_name || !message)
@@ -820,7 +720,6 @@
 			signal.data["command"] = "text_message"
 			signal.data["message"] = message
 			signal.data["sender_name"] = src.master.owner
-			signal.data["sender_assignment"] = src.master.ownerAssignment
 			//signal.data["sender"] = src.master.net_id
 			if (is_department_message)
 				signal.data["group"] = target_id

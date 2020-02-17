@@ -2,7 +2,7 @@
 
 /turf/proc/move_camera_by_click()
 	if (usr.stat || !isAI(usr))
-		return
+		return ..()
 	//try to find the closest working camera in the same area, switch to it
 
 	var/area/A = get_area(src)
@@ -16,7 +16,7 @@
 			continue	//	different network (syndicate)
 		if(C.z != usr.z)
 			continue	//	different viewing plane
-		if(!C.camera_status)
+		if(!C.status)
 			continue	//	ignore disabled cameras
 		var/dist = get_dist(src, C)
 		if(dist < best_dist)
@@ -24,7 +24,7 @@
 			best_cam = C
 
 	if(!best_cam)
-		return
+		return ..()
 	//usr:cameraFollow = null
 	usr:tracker.cease_track()
 	usr:switchCamera(best_cam)
@@ -33,18 +33,18 @@
 	set category = "AI Commands"
 	set name = "Show Camera List"
 
-	if(isdead(src))
-		boutput(get_message_mob(), "You can't track with camera because you are dead!")
+	if(usr.stat == 2)
+		boutput(usr, "You can't track with camera because you are dead!")
 		return
 
-	attack_ai(get_message_mob())
+	attack_ai(src)
 
 #define SORT "* Sort alphabetically..."
 
 /mob/living/silicon/ai/proc/ai_camera_track()
 	set category = "AI Commands"
 	set name = "Track With Camera"
-	if(isdead(usr))
+	if(usr.stat == 2)
 		boutput(usr, "You can't track with camera because you are dead!")
 		return
 
@@ -78,17 +78,10 @@
 	ai_actual_track(target)
 #undef SORT
 
-/mob/living/silicon/proc/ai_actual_track(mob/target as mob)
-	if (isnull(target) || !ismob(target) || !isAIControlled(src))
-		return
-	if (!src.mainframe)
-		return
-	src.mainframe.return_to(src)
-	src.mainframe.tracker.begin_track(target)
-
-/mob/living/silicon/ai/ai_actual_track(mob/target as mob)
+/mob/living/silicon/ai/proc/ai_actual_track(mob/target as mob)
 	if (isnull(target) || !ismob(target))
 		return
+
 	src.tracker.begin_track(target)
 
 /proc/camera_sort(var/list/L, var/start=1, var/end=-1)
@@ -126,16 +119,16 @@
 	return L
 
 /mob/living/silicon/ai/attack_ai(var/mob/user as mob)
-	if (user != src && user != src.eyecam)
+	if (user != src)
 		return
 
-	if (isdead(src) || !src.classic_move)
+	if (stat == 2 || !src.classic_move)
 		return
 
 	user.machine = src
 
 	var/list/L = list()
-	for (var/obj/machinery/camera/C in cameras)
+	for (var/obj/machinery/camera/C in machines)
 		L.Add(C)
 
 	L = camera_sort(L)
@@ -145,7 +138,7 @@
 	D["Cancel"] = "Cancel"
 	for (var/obj/machinery/camera/C in L)
 		if (C.network == src.network)
-			var/T = text("[][]", C.c_tag, (C.camera_status ? null : " (Deactivated)"))
+			var/T = text("[][]", C.c_tag, (C.status ? null : " (Deactivated)"))
 			if(D[T])
 				D["[T] #[counter++]"] = C
 			else
@@ -174,7 +167,7 @@
 	var/last_track = 0	//When did we do the last tracking attempt?
 	var/delay = 10		//How long should we wait between attempts?
 
-	var/success_delay = 10	//How long between refreshes if we succeeded in tracking someone?
+	var/success_delay = 5	//How long between refreshes if we succeeded in tracking someone?
 	var/fail_delay = 50		// Same but in case we failed
 
 	New(var/mob/living/silicon/ai/A)
@@ -194,21 +187,11 @@
 		if(!owner.machine)
 			owner.machine = owner
 
-		if (!owner.deployed_to_eyecam)
-			if (!owner.deployed_to_eyecam)
-				owner.eye_view()
-
-		boutput(owner.eyecam, "Tracking...")
-
 		process() //Process now!!!
 
 	proc/cease_track()
-		owner.eyecam.set_loc(get_turf(owner.eyecam))
 		tracking = null
 		delay = success_delay
-
-	proc/cease_track_temporary()
-		owner.eyecam.set_loc(get_turf(owner.eyecam))
 
 	proc/process()
 		if(!tracking || !owner || ( ( (last_track + delay) > world.timeofday ) && (world.timeofday > last_track) ) )
@@ -221,42 +204,32 @@
 
 		if(!failedToTrack) //We don't have a premature failure
 			failedToTrack = 1 //Assume failure
-			var/turf/T = get_turf(tracking)
-			if (T.cameras && T.cameras.len)
-				failedToTrack = 0
-			//for(var/obj/machinery/camera/C in range(7, tracking))
-			//	if(C.network == owner.network && C.camera_status) //The goodest camera
-			//		failedToTrack = 0
-			//		owner.switchCamera(C)
-			//		break
+			for(var/obj/machinery/camera/C in range(7, tracking))
+				if(C.network == owner.network && C.status) //The goodest camera
+					failedToTrack = 0
+					owner.switchCamera(C)
+					break
 		/*
 		else
 			sleep(rand(0,1)) //Hey it went real fast this time! Bet it's a syndie
 		*/
 
 		if (failedToTrack)
-			cease_track_temporary()
-			//owner.show_text("Target is not on or near any active cameras on the station. We'll check again in 5 seconds (unless you use the Cancel-Camera-View verb).")
+			owner.show_text("Target is not on or near any active cameras on the station. We'll check again in 5 seconds (unless you use the cancel-camera verb).")
 			delay = fail_delay
 		else
 			delay = success_delay
-			owner.eyecam.set_loc(tracking)
-
-		owner.eyecam.update_statics()
 
 		last_track = world.timeofday
 
 	proc/can_track(mob/target as mob)
-		//Allow tracking of cyborgs & mobcritters, however
+		//Allow tracking of cyborgs, however
 		//Track autofails if:
 		//Target is wearing a syndicate ID
 		//Target is inside a dummy
 		//Target is not at a turf
-		//Target is not on station level
-		return (target.loc.z == 1) \
-				&& ((issilicon(target) && istype(target.loc, /turf) ) \
-				|| (iscritter(target) && istype(target.loc, /turf) ) \
-				|| !((ishuman(target) \
+		return (issilicon(target) && istype(target.loc, /turf) ) \
+				|| !((istype(target, /mob/living/carbon/human) \
 				&& istype(target:wear_id, /obj/item/card/id/syndicate)) \
-				|| (target:wear_id && istype(target:wear_id, /obj/item/device/pda2) && target:wear_id:ID_card && istype(target:wear_id:ID_card, /obj/item/card/id/syndicate)) \
-				||  !istype(target.loc, /turf)))
+				|| (istype(target:wear_id, /obj/item/device/pda2) && target:wear_id:ID_card && istype(target:wear_id:ID_card, /obj/item/card/id/syndicate)) \
+				||  !istype(target.loc, /turf))

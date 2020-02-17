@@ -3,10 +3,9 @@
 	name = "microphone"
 	icon = 'icons/obj/device.dmi'
 	icon_state = "mic"
-	item_state = "mic"
 	var/max_font = 8
 	var/font_amp = 4
-	var/on = 0
+	var/on = 1
 
 	get_desc()
 		..()
@@ -62,7 +61,7 @@
 	var/obj/item/device/microphone/myMic = null
 
 	New()
-		SPAWN_DBG(1)
+		spawn(1)
 			if (!myMic)
 				myMic = new(src)
 		return ..()
@@ -80,7 +79,7 @@
 			if (myMic)
 				user.show_text("There's already a microphone on [src]!", "red")
 				return
-			user.show_text("You place [W] on [src].", "blue")
+			user.show_text("You place the [W] on [src].", "blue")
 			myMic = W
 			user.u_equip(W)
 			W.set_loc(src)
@@ -97,13 +96,7 @@
 
 	proc/update_icon()
 		if (myMic)
-			switch (myMic.icon_state)
-				if ("radio_mic1")
-					src.icon_state = "micstand-b"
-				if ("radio_mic2")
-					src.icon_state = "micstand-r"
-				else
-					src.icon_state = "micstand"
+			src.icon_state = "micstand"
 		else
 			src.icon_state = "micstand-empty"
 

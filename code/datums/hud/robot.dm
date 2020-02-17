@@ -1,6 +1,3 @@
-#define COLOR_MATRIX_IDENTITY list(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
-#define COLOR_MATRIX_GRAYSCALE list(0.2126,0.2126,0.2126,0, 0.7152,0.7152,0.7152,0, 0.0722,0.0722,0.0722,0, 0,0,0,1)
-
 /datum/hud/robot
 	var/obj/screen/hud
 		mod1
@@ -29,21 +26,11 @@
 	var/items_screen = 1
 	var/show_items = 0
 
-	var/last_health = -1
-	var/mini_health = 0
-
 	var/list/last_upgrades = list()
 	var/list/last_tools = list()
 	var/mob/living/silicon/robot/master
-	var/icon/icon_hud = 'icons/mob/hud_robot.dmi'
-
-	var/list/statusUiElements = list() //Assoc. List  STATUS EFFECT INSTANCE : UI ELEMENT add_screen(obj/screen/S). Used to hold the ui elements since they shouldnt be on the status effects themselves.
 
 	var/obj/screen/hud
-
-	clear_master()
-		master = null
-		..()
 
 	proc
 		toggle_equipment()
@@ -53,12 +40,10 @@
 		module_added()
 			items_screen = 1
 			update_equipment()
-			update_module()
 
 		module_removed()
 			items_screen = 1
 			update_equipment()
-			update_module()
 
 		update_equipment()
 			if (!master.module || !show_items)
@@ -73,8 +58,8 @@
 			var x = 1, y = 10, sx = 1, sy = 10
 			if (!boxes)
 				return
-			if (items_screen + 6 > master.module.modules.len)
-				items_screen = max(master.module.modules.len - 6, 1)
+			if (items_screen + 6 > master.module.contents.len)
+				items_screen = max(master.module.contents.len - 6, 1)
 			if (items_screen < 1)
 				items_screen = 1
 			boxes.screen_loc = "[x], [y] to [x+sx-1], [y-sy+1]"
@@ -97,46 +82,28 @@
 
 			if (items_screen > 1)
 				prev.icon_state = "up"
-				prev.color = COLOR_MATRIX_IDENTITY
 			else
 				prev.icon_state = "up_dis"
-				prev.color = COLOR_MATRIX_GRAYSCALE
 
 			var/sid = 1
 			var/i_max = items_screen + 7
-			if (i_max <= master.module.modules.len)
+			if (i_max <= master.module.contents.len)
 				next.icon_state = "down"
-				next.color = COLOR_MATRIX_IDENTITY
 			else
 				next.icon_state = "down_dis"
-				prev.color = COLOR_MATRIX_GRAYSCALE
 
 			for (var/i = items_screen, i < i_max, i++)
-				if (i > master.module.modules.len)
+				if (i > master.module.contents.len)
 					break
-				var/obj/item/I = master.module.modules[i]
-				var/obj/screen/hud/S = screen_tools[sid]
-				if (!I) // if the item has been deleted, just show an empty slot.
-					S.name = null
-					S.icon = 0
-					S.icon_state = null
-					S.overlays = null
-					S.underlays = null
-					S.color = COLOR_MATRIX_IDENTITY
-					S.alpha = 255
-					S.item = null
-				else
-					S.name = I.name
-					S.icon = I.icon
-					S.icon_state = I.icon_state
-					S.overlays = I.overlays.Copy()
-					S.underlays = I.underlays.Copy()
-					if (I.loc == master.module)
-						S.color = I.color
-					else
-						S.color = COLOR_MATRIX_GRAYSCALE // If the tool is already equipped, set grayscale
-					S.alpha = I.alpha
-					S.item = I
+				var/obj/item/I = master.module.contents[i]
+				var/obj/screen/S = screen_tools[sid]
+				S.name = I.name
+				S.icon = I.icon
+				S.icon_state = I.icon_state
+				S.overlays = I.overlays.Copy()
+				S.underlays = I.underlays.Copy()
+				S.color = I.color
+				S.alpha = I.alpha
 				S.screen_loc = "[x], [y - sid]"
 				add_screen(S)
 				sid++
@@ -149,11 +116,9 @@
 				update_equipment()
 				return
 			var/content_id = items_screen + i - 1
-			if (content_id > master.module.modules.len || content_id < 1)
-				boutput(usr, "<span style=\"color:red\">An error occurred. Please notify a coder immediately. (Content ID: [content_id].)</span>")
-			var/obj/item/O = master.module.modules[content_id]
-			if(!O || O.loc != master.module)
-				return
+			if (content_id > master.module.contents.len || content_id < 1)
+				boutput(usr, "<span style=\"color:red\">An error occurred. Please notify Marquesas immediately. (Content ID: [content_id].)</span>")
+			var/obj/item/O = master.module.contents[content_id]
 			if(!master.module_states[1] && istype(master.part_arm_l,/obj/item/parts/robot_parts/arm/))
 				master.module_states[1] = O
 				O.loc = master
@@ -205,31 +170,22 @@
 		create_screen("", "", 'icons/mob/hud_common.dmi', "hotbar_side", "CENTER+6, SOUTH+1", HUD_LAYER, SOUTHEAST)
 		create_screen("", "", 'icons/mob/hud_common.dmi', "hotbar_side", "CENTER+6, SOUTH", HUD_LAYER, WEST)
 
-		mod1 = create_screen("mod1", "Module 1", icon_hud, "mod10", "CENTER-5, SOUTH", HUD_LAYER+1)
-		mod2 = create_screen("mod2", "Module 2", icon_hud, "mod20", "CENTER-4, SOUTH", HUD_LAYER+1)
-		mod3 = create_screen("mod3", "Module 3", icon_hud, "mod30", "CENTER-3, SOUTH", HUD_LAYER+1)
+		mod1 = create_screen("mod1", "Module 1", 'icons/mob/hud_robot.dmi', "mod10", "CENTER-5, SOUTH", HUD_LAYER+1)
+		mod2 = create_screen("mod2", "Module 2", 'icons/mob/hud_robot.dmi', "mod20", "CENTER-4, SOUTH", HUD_LAYER+1)
+		mod3 = create_screen("mod3", "Module 3", 'icons/mob/hud_robot.dmi', "mod30", "CENTER-3, SOUTH", HUD_LAYER+1)
 
-		create_screen("store", "Store", icon_hud, "store", "CENTER-2, SOUTH", HUD_LAYER+1)
-		charge = create_screen("charge", "Battery", icon_hud, "charge4", "CENTER-1, SOUTH", HUD_LAYER+1)
-		charge.maptext_y = -5
-		charge.maptext_width = 48
-		charge.maptext_x = -9
+		create_screen("store", "Store", 'icons/mob/hud_robot.dmi', "store", "CENTER-2, SOUTH", HUD_LAYER+1)
+		charge = create_screen("charge", "Battery", 'icons/mob/hud_robot.dmi', "charge4", "CENTER-1, SOUTH", HUD_LAYER+1)
+		module = create_screen("module", "Module", 'icons/mob/hud_robot.dmi', "module-blank", "CENTER, SOUTH", HUD_LAYER+1)
+		create_screen("radio", "Radio", 'icons/mob/hud_robot.dmi', "radio", "CENTER+1, SOUTH", HUD_LAYER+1)
+		intent = create_screen("intent", "Intent", 'icons/mob/hud_robot.dmi', "intent-[master.a_intent]", "CENTER+2, SOUTH", HUD_LAYER+1)
 
-		module = create_screen("module", "Module", icon_hud, "module-initial", "CENTER, SOUTH", HUD_LAYER+1)
-		create_screen("radio", "Radio", icon_hud, "radio", "CENTER+1, SOUTH", HUD_LAYER+1)
-		intent = create_screen("intent", "Intent", icon_hud, "intent-[master.a_intent]", "CENTER+2, SOUTH", HUD_LAYER+1)
+		pulling = create_screen("pulling", "Pulling", 'icons/mob/hud_robot.dmi', "pull0", "CENTER+4, SOUTH", HUD_LAYER+1)
+		create_screen("upgrades", "Upgrades", 'icons/mob/hud_robot.dmi', "upgrades", "CENTER+5, SOUTH", HUD_LAYER+1)
 
-		pulling = create_screen("pulling", "Pulling", icon_hud, "pull0", "CENTER+4, SOUTH", HUD_LAYER+1)
-		create_screen("upgrades", "Upgrades", icon_hud, "upgrades", "CENTER+5, SOUTH", HUD_LAYER+1)
-
-		health = create_screen("health", "Health", icon_hud, "health0", "EAST, NORTH")
-		health.maptext_width = 148
-		health.maptext_height = 64
-		health.maptext_x = -150
-		health.maptext_y = -36
-
-		oxy = create_screen("oxy", "Oxygen", icon_hud, "oxy0", "EAST, NORTH-1")
-		temp = create_screen("temp", "Temperature", icon_hud, "temp0", "EAST, NORTH-2")
+		health = create_screen("health", "Health", 'icons/mob/hud_robot.dmi', "health0", "EAST, NORTH")
+		oxy = create_screen("oxy", "Oxygen", 'icons/mob/hud_robot.dmi', "oxy0", "EAST, NORTH-1")
+		temp = create_screen("temp", "Temperature", 'icons/mob/hud_robot.dmi', "temp0", "EAST, NORTH-2")
 
 		if (master.module_active)
 			set_active_tool(master.module_states.Find(master.module_active))
@@ -239,18 +195,7 @@
 		update_module()
 		update_upgrades()
 		update_equipment()
-	scrolled(id, dx, dy, loc, parms, obj/screen/hud/scr)
-		if(!master) return
-		switch(id)
-			if("object1", "object2", "object3", "object4", "object5", "object6", "object7", "next", "nextbg", "prev", "prevbg", "boxes")
-				if(dy < 0) items_screen += 7
-				else items_screen -= 7
-				update_equipment()
-			else
-				if(scr.item)
-					if(dy < 0) items_screen += 7
-					else items_screen -= 7
-					update_equipment()
+
 	clicked(id)
 		if (!master)
 			return
@@ -304,7 +249,7 @@
 					master.a_intent = INTENT_HARM
 				else
 					master.a_intent = INTENT_HELP
-				update_intent()
+				intent.icon_state = "intent-[master.a_intent]"
 			if ("pulling")
 				master.pulling = null
 				update_pulling()
@@ -340,47 +285,6 @@
 			if ("upgrade10")
 				if (last_upgrades.len >= 10)
 					master.activate_upgrade(src.last_upgrades[10])
-			if ("health")
-				mini_health = (mini_health + 1) % 3
-				last_health = -1
-
-	proc/update_status_effects()
-		for(var/obj/screen/statusEffect/G in src.objects)
-			remove_screen(G)
-
-		for(var/datum/statusEffect/S in src.statusUiElements) //Remove stray effects.
-			if(!master.statusEffects || !(S in master.statusEffects) || !S.visible)
-				pool(statusUiElements[S])
-				src.statusUiElements.Remove(S)
-				qdel(S)
-
-		var/spacing = 0.6
-		var/pos_x = spacing - 0.2 - 1
-
-		if(master.statusEffects)
-			for(var/datum/statusEffect/S in master.statusEffects) //Add new ones, update old ones.
-				if(!S.visible) continue
-				if((S in statusUiElements) && statusUiElements[S])
-					var/obj/screen/statusEffect/U = statusUiElements[S]
-					U.icon = icon_hud
-					U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH-0.7"
-					U.update_value()
-					add_screen(U)
-					pos_x -= spacing
-				else
-					if(S.visible)
-						var/obj/screen/statusEffect/U = unpool(/obj/screen/statusEffect)
-						U.init(master,S)
-						U.icon = icon_hud
-						statusUiElements.Add(S)
-						statusUiElements[S] = U
-						U.screen_loc = "EAST[pos_x < 0 ? "":"+"][pos_x],NORTH-0.7"
-						U.update_value()
-						add_screen(U)
-						pos_x -= spacing
-						animate_buff_in(U)
-		return
-
 	proc
 		set_active_tool(active) // naming these tools to distinuish it from the module of a borg
 			mod1.icon_state = "mod1[active == 1]"
@@ -423,19 +327,12 @@
 		update_module()
 			if (master.module)
 				module.icon_state = "module-[master.module.mod_hudicon]"
-			else if (master.freemodule)
-				module.icon_state = "module-initial"
 			else
-				module.icon_state = "module-empty"
+				module.icon_state = "module-blank"
 
-		update_intent()
-			intent.icon_state = "intent-[master.a_intent]"
 
 		update_charge()
 			if (master.cell)
-				var/pct = round(100*master.cell.charge/master.cell.maxcharge, 1)
-				charge.maptext = "<span class='ps2p ol vt c' style='color: [rgb(255 * clamp((100 - pct) / 50, 0, 1), 255 * clamp(pct / 50, 1, 0), 0)];'>[pct]%</span>"
-
 				switch(round(100*master.cell.charge/master.cell.maxcharge))
 					if(75 to INFINITY)
 						charge.icon_state = "charge4"
@@ -449,48 +346,9 @@
 						charge.icon_state = "charge0"
 			else
 				charge.icon_state = "charge-none"
-				charge.maptext = "<span class='ps2p ol vt c' style='color: #f00;'>---</span>"
-
-		maptext_health_percent(var/obj/item/parts/robot_parts/part)
-			if (!part || !istype(part) || part.qdeled)
-				return "<span style='color: #f00;'>[!mini_health ? "---%" : "MISSING"]</span>"
-
-			var/dmg = part.dmg_blunt + part.dmg_burns
-			var/pct = 100 - clamp(dmg / part.max_health * 100, 0, 100)
-			return "<span style='color: [rgb(255 * clamp((100 - pct) / 50, 0, 1), 255 * clamp(pct / 50, 1, 0), 0)];'>[!mini_health ? "[add_lspace(round(pct), 3)]%" : "[add_lspace(round(part.max_health - dmg), 3)]</span>/<span style='color: #ffffff;'>[add_lspace(round(part.max_health), 3)]"]</span>"
-
 
 		update_health()
-			if (!isdead(master))
-				//var/pct = round(100*master.cell.charge/master.cell.maxcharge, 1)
-				//charge.maptext = "<span class='vga ol vt c'>[pct]%</span>"
-				//charge.maptext_y = 11
-				if (mini_health == 2)
-					health.maptext = " "
-				else if (1 || last_health != master.health)
-
-					var/list/hp = list(
-						"[!mini_health ? "H/C " : "HEAD "][maptext_health_percent(master.part_head)]",
-						"[!mini_health ? " " : "\nCHST "][maptext_health_percent(master.part_chest)]",
-						"[!mini_health ? "\nARM " : "\nLARM "][maptext_health_percent(master.part_arm_l)]",
-						"[!mini_health ? " " : "\nRARM "][maptext_health_percent(master.part_arm_r)]",
-						"[!mini_health ? "\nLEG " : "\nLLEG "][maptext_health_percent(master.part_leg_l)]",
-						"[!mini_health ? " " : "\nRLEG "][maptext_health_percent(master.part_leg_r)]"
-						)
-
-					health.maptext = "<span class='ol r vt ps2p'>[jointext(hp, "")]</span>"
-					last_health = master.health
-
-
-				/*
-					var/obj/item/parts/robot_parts/head/part_head = null
-					var/obj/item/parts/robot_parts/chest/part_chest = null
-					var/obj/item/parts/robot_parts/arm/part_arm_r = null
-					var/obj/item/parts/robot_parts/arm/part_arm_l = null
-					var/obj/item/parts/robot_parts/leg/part_leg_r = null
-					var/obj/item/parts/robot_parts/leg/part_leg_l = null
-				*/
-
+			if (master.stat != 2)
 				switch(master.health)
 					if(100 to INFINITY)
 						health.icon_state = "health0"
@@ -547,7 +405,7 @@
 
 				upgrade_slots.len = 0
 				for (var/i = 0; i < master.max_upgrades; i++)
-					upgrade_slots += create_screen("upgrade[i+1]", "Upgrade [i+1]", icon_hud, "upgrade0", "CENTER+[startx+i]:24, SOUTH+1:4", HUD_LAYER+1)
+					upgrade_slots += create_screen("upgrade[i+1]", "Upgrade [i+1]", 'icons/mob/hud_robot.dmi', "upgrade0", "CENTER+[startx+i]:24, SOUTH+1:4", HUD_LAYER+1)
 
 				if (!show_upgrades) // this is dumb
 					for (var/obj/screen/hud/H in upgrade_bg)
@@ -568,17 +426,3 @@
 					add_object(upgrade, HUD_LAYER+2, "CENTER+[startx+i]:24, SOUTH+1:4")
 					i++
 			last_upgrades = master.upgrades.Copy()
-
-	proc/handle_event(var/event, var/sender)
-		. = ..(event, sender)
-		if (event == "icon_updated") // this is only ever emitted by atoms
-			var/atom/senderAtom = sender
-			if (senderAtom.loc != master.module) // An equipped tool has changed its icon; refresh module display
-				update_equipment()
-
-/mob/living/silicon/robot
-	updateStatusUi()
-		if(src.hud && istype(src.hud, /datum/hud/robot))
-			var/datum/hud/robot/H = src.hud
-			H.update_status_effects()
-		return

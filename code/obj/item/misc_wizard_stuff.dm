@@ -27,29 +27,29 @@
 	if (!src.uses)
 		boutput(user, "<span style=\"color:blue\"><b>The depleted scroll vanishes in a puff of smoke!</b></span>")
 		user.machine = null
-		user.Browse(null,"window=scroll")
+		user << browse(null,"window=scroll")
 		qdel(src)
 		return
 	dat += "<b>Teleportation Scroll:</b><br><br>"
 	dat += "Charges left: [src.uses]<br><hr><br>"
 	dat += "<A href='byond://?src=\ref[src];spell_teleport=1'>Teleport</A><br><br><hr>"
-	user.Browse(dat,"window=scroll")
+	user << browse(dat,"window=scroll")
 	onclose(user, "scroll")
 	return
 
 /obj/item/teleportation_scroll/Topic(href, href_list)
 	..()
-	if (usr.getStatusDuration("paralysis") || !isalive(usr) || usr.restrained())
+	if (usr.paralysis > 0 || usr.stat != 0 || usr.restrained())
 		return
 	var/mob/living/carbon/human/H = usr
-	if (!( ishuman(H)))
+	if (!( istype(H, /mob/living/carbon/human)))
 		return 1
 	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))))
 		usr.machine = src
 		if (href_list["spell_teleport"])
 			if (src.uses >= 1 && usr.teleportscroll(0, 1, src) == 1)
 				src.uses -= 1
-		if (ismob(src.loc))
+		if (istype(src.loc, /mob))
 			attack_self(src.loc)
 		else
 			for(var/mob/M in viewers(1, src))
@@ -72,7 +72,6 @@
 	throw_range = 5
 	w_class = 2.0
 	flags = FPRINT | TABLEPASS | NOSHIELD
-	object_flags = NO_ARM_ATTACH
 	var/wizard_key = "" // The owner of this staff.
 
 	handle_other_remove(var/mob/source, var/mob/living/carbon/human/target)
@@ -83,13 +82,13 @@
 
 	// Part of the parent for convenience.
 	proc/do_brainmelt(var/mob/affected_mob, var/severity = 2)
-		if (!src || !istype(src) || !affected_mob || !ismob(affected_mob) || check_target_immunity(affected_mob))
+		if (!src || !istype(src) || !affected_mob || !ismob(affected_mob))
 			return
 
 		switch (severity)
 			if (0)
 				affected_mob.visible_message("<span style=\"color:red\">[affected_mob] is knocked off-balance by the curse upon [src]!</span>")
-				affected_mob.do_disorient(30, weakened = 1 SECONDS, stunned = 0, disorient = 1 SECONDS, remove_stamina_below_zero = 0)
+				affected_mob.weakened += 1
 				affected_mob.stuttering += 2
 				affected_mob.take_brain_damage(2)
 
@@ -98,10 +97,10 @@
 				affected_mob.show_text("Horrible visions of depravity and terror flood your mind!", "red")
 				if (prob(50))
 					affected_mob.emote("scream")
-
-				affected_mob.do_disorient(80, weakened = 5 SECONDS, stunned = 0, paralysis = 2 SECONDS, disorient = 2 SECONDS, remove_stamina_below_zero = 0)
+				affected_mob.paralysis += 1
 				affected_mob.stuttering += 10
-				affected_mob.take_brain_damage(6)
+				affected_mob.weakened += 5
+				affected_mob.take_brain_damage(15)
 
 			else
 				var/datum/effects/system/spark_spread/s = unpool(/datum/effects/system/spark_spread)
@@ -110,10 +109,10 @@
 				affected_mob.visible_message("<span style=\"color:red\">The curse upon [src] rebukes [affected_mob]!</span>")
 				boutput(affected_mob, "<span style=\"color:red\">Horrible visions of depravity and terror flood your mind!</span>")
 				affected_mob.emote("scream")
-				affected_mob.changeStatus("paralysis", 80)
-				affected_mob.changeStatus("stunned", 10 SECONDS)
+				affected_mob.paralysis += 5
+				affected_mob.stunned += 10
 				affected_mob.stuttering += 20
-				affected_mob.take_brain_damage(25)
+				affected_mob.take_brain_damage(60)
 
 		return
 
@@ -152,14 +151,13 @@
 	name = "staff of cthulhu"
 	desc = "A dark staff infused with eldritch power. Trying to steal this is probably a bad idea."
 	icon_state = "staffcthulhu"
-	item_state = "staffcthulhu"
-	force = 14
+	force = 19
 	hitsound = 'sound/effects/ghost2.ogg'
 
 	attack_hand(var/mob/user as mob)
 		if (user.mind)
-			if (iswizard(user) || check_target_immunity(user))
-				if (user.mind.key != src.wizard_key && !check_target_immunity(user))
+			if (iswizard(user))
+				if (user.mind.key != src.wizard_key)
 					boutput(user, "<span style=\"color:red\">The [src.name] is magically attuned to another wizard! You can use it, but the staff will refuse your attempts to control or summon it.</span>")
 				..()
 				return
@@ -169,10 +167,10 @@
 		else ..()
 
 	attack(mob/M as mob, mob/user as mob)
-		if (iswizard(user) && !iswizard(M) && !isdead(M) && !check_target_immunity(M))
-			if (prob(20))
+		if (iswizard(user) && !iswizard(M) && M.stat != 2)
+			if (prob(15))
 				src.do_brainmelt(M, 1)
-			else if (prob(35))
+			else if (prob(30))
 				src.do_brainmelt(M, 0)
 		..()
 		return
@@ -182,10 +180,6 @@
 		set category = "Local"
 
 		var/mob/living/user = usr
-
-		if(check_target_immunity(user))
-			return ..()
-
 		if (!istype(user))
 			return
 
@@ -234,7 +228,6 @@
 		/*var/corrupt = 0
 		var/count = 0
 		for(var/turf/simulated/floor/T in world)
-			LAGCHECK(LAG_LOW)
 			if(T.z != 1) continue
 			count++
 			if(T.loc:corrupted) corrupt++

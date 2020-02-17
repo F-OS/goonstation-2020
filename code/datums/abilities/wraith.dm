@@ -1,7 +1,6 @@
 /datum/abilityHolder/wraith
 	topBarRendered = 1
 	pointName = "Wraith Points"
-	cast_while_dead = 1
 	var/corpsecount = 0
 
 /obj/screen/ability/topBar/wraith
@@ -10,17 +9,17 @@
 	secs_offset_x = 23
 	secs_offset_y = 7
 
-	MouseEntered(location, control, params)
-		if (usr.client.tooltipHolder && control == "mapwindow.map")
-			if (!istype(owner, /datum/targetable/wraithAbility/poltergeist))
-				var/theme = src.owner.theme
+	//clicked(parameters)
+		//if (!istype(usr, /mob/wraith))
+		//	return
 
-				usr.client.tooltipHolder.showHover(src, list(
-					"params" = params,
-					"title" = src.name,
-					"content" = (src.desc ? src.desc : null),
-					"theme" = theme
-				))
+		//var/mob/wraith/user = usr
+
+		//if (!istype(user) || !istype(owner))
+		//	return
+
+		//..()
+
 
 /datum/targetable/wraithAbility
 	icon = 'icons/mob/wraith_ui.dmi'
@@ -30,7 +29,6 @@
 	targeted = 1
 	target_anything = 1
 	preferred_holder_type = /datum/abilityHolder/wraith
-	theme = "wraith"
 
 	New()
 		var/obj/screen/ability/topBar/wraith/B = new /obj/screen/ability/topBar/wraith(null)
@@ -44,7 +42,7 @@
 	cast(atom/target)
 		if (!holder || !holder.owner)
 			return 1
-		//if (!iswraith(holder.owner))
+		//if (!istype(holder.owner, /mob/wraith))
 		//	boutput(holder.owner, "<span style=\"color:red\">Yo, you're not a wraith, stop that. (like how the hell did you get this. report this to a coder asap)</span>")
 		//	return 1
 		return 0
@@ -54,7 +52,7 @@
 			return
 		last_cast = world.time + cooldown
 		holder.updateButtons()
-		SPAWN_DBG(cooldown + 5)
+		spawn(cooldown + 5)
 			holder.updateButtons()
 
 
@@ -102,14 +100,14 @@
 		var/mob/living/carbon/human/M
 		if (isturf(T))
 			for (var/mob/living/carbon/human/target in T.contents)
-				if (isdead(target))
+				if (target.stat == 2)
 					error = 1
 					if (target:decomp_stage != 4)
 						M = target
 						break
 		else if (ishuman(T))
 			M = T
-			if (!isdead(M))
+			if (M.stat != 2)
 				boutput(holder.owner, "<span style=\"color:red\">The living consciousness controlling this body shields it from being absorbed.</span>")
 				return 1
 			else if (M.decomp_stage == 4)
@@ -161,7 +159,7 @@
 				W.corpsecount += 1
 		last_cast = world.time + cooldown
 		holder.updateButtons()
-		SPAWN_DBG(cooldown + 5)
+		spawn(cooldown + 5)
 			holder.updateButtons()
 
 
@@ -182,17 +180,17 @@
 			boutput(usr, "<span style=\"color:red\">You cannot force your consciousness into a body while corporeal.</span>")
 			return 1
 
-		if (!isitem(T) || istype(T, /obj/item/storage/bible))
+		if (!istype(T, /obj/item) || istype(T, /obj/item/storage/bible))
 			boutput(holder.owner, "<span style=\"color:red\">You cannot possess this!</span>")
 			return 1
 
 		boutput(holder.owner, "<span style=\"color:red\"><strong>[pick("You extend your will into [T].", "You force [T] to do your bidding.")]</strong></span>")
 		var/mob/living/object/O = new/mob/living/object(T, holder.owner)
 
-		SPAWN_DBG (450)
+		spawn (450)
 			if (O)
 				boutput(O, "<span style=\"color:red\">You feel your control of this vessel slipping away!</span>")
-		SPAWN_DBG (600) //time limit on possession: 1 minute
+		spawn (600) //time limit on possession: 1 minute
 			if (O)
 				boutput(O, "<span style=\"color:red\"><strong>Your control is wrested away! The item is no longer yours.</strong></span>")
 				O.death(0)
@@ -220,7 +218,7 @@
 		//If you targeted a turf for some reason, find a corpse on it
 		if (istype(T, /turf))
 			for (var/mob/living/carbon/human/target in T.contents)
-				if (isdead(target) && target:decomp_stage != 4)
+				if (target.stat == 2 && target:decomp_stage != 4)
 					T = target
 					break
 
@@ -249,7 +247,7 @@
 		var/atom/target = null
 		if (istype(T, /turf))
 			for (var/mob/living/carbon/human/M in T.contents)
-				if (!isdead(M))
+				if (M.stat != 2)
 					target = M
 					break
 			if (!target)
@@ -261,21 +259,17 @@
 
 		if (ishuman(T))
 			var/mob/living/carbon/H = T
-			if (H.traitHolder.hasTrait("training_chaplain"))
+			if (H.bioHolder.HasEffect("training_chaplain"))
 				boutput(usr, "<span style=\"color:red\">Some mysterious force protects [T] from your influence.</span>")
 				return 1
 			else
 				boutput(usr, "<span style=\"color:blue\">[pick("You sap [T]'s energy.", "You suck the breath out of [T].")]</span>")
 				boutput(T, "<span style=\"color:red\">You feel really tired all of a sudden!</span>")
-				H.emote("pale")
-				H.remove_stamina( rand(100, 120) )//might be nice if decay was useful.
-				H.changeStatus("stunned", 4 SECONDS)
+				T:emote("pale")
+				T:stamina -= 100
 				return 0
 		else if (isobj(T))
 			var/obj/O = T
-			if(istype(O, /obj/machinery/computer/shuttle/embedded))
-				boutput(usr, "<span style='color:red'>You cannot seem to alter the energy off [O].</span>" )
-				return 0
 			// go to jail, do not pass src, do not collect pushed messages
 			if (O.emag_act(null, null))
 				boutput(usr, "<span style=\"color:blue\">You alter the energy of [O].</span>")
@@ -301,22 +295,21 @@
 		var/current_prob = 100
 		if (ishuman(T))
 			var/mob/living/carbon/H = T
-			if (H.traitHolder.hasTrait("training_chaplain"))
+			if (H.bioHolder.HasEffect("training_chaplain"))
 				boutput(usr, "<span style=\"color:red\">Some mysterious force protects [T] from your influence.</span>")
 				return 1
 			else
-				H.setStatus("stunned", max(H.getStatusDuration("weakened"), max(H.getStatusDuration("stunned"), 3))) // change status "stunned" to max(stunned,weakened,3)
-				// T:stunned = max(max(T:weakened, T:stunned), 3)
-				H.delStatus("weakened")
-				H.lying = 0
-				H.show_message("<span style=\"color:red\">A ghostly force compels you to be still on your feet.</span>")
+				T:stunned = max(max(T:weakened, T:stunned), 3)
+				T:lying = 0
+				T:weakened = 0
+				T:show_message("<span style=\"color:red\">A ghostly force compels you to be still on your feet.</span>")
 		for (var/obj/O in view(7, holder.owner))
 			if (!O.anchored && isturf(O.loc))
 				if (prob(current_prob))
 					current_prob *= 0.35 // very steep. probably grabs 3 or 4 objects per cast -- much less effective than revenant command
 					thrown += O
 					animate_float(O)
-		SPAWN_DBG(10)
+		spawn(10)
 			for (var/obj/O in thrown)
 				O.throw_at(T, 32, 2)
 
@@ -338,20 +331,19 @@
 		//If you targeted a turf for some reason, find a corpse on it
 		if (istype(T, /turf))
 			for (var/mob/living/carbon/human/target in T.contents)
-				if (isdead(target) && target:decomp_stage == 4)
+				if (target.stat == 2 && target:decomp_stage == 4)
 					T = target
 					break
 
 		if (ishuman(T))
-			var/mob/living/carbon/human/H = T
-			if (!isdead(H) || H.decomp_stage != 4)
+			if (T:stat != 2 || T:decomp_stage != 4)
 				boutput(usr, "<span style=\"color:red\">That body refuses to submit its skeleton to your will.</span>")
 				return 1
-			var/personname = H.real_name
+			var/personname = T:real_name
 			var/obj/critter/wraithskeleton/S = new /obj/critter/wraithskeleton(get_turf(T))
 			S.name = "[personname]'s skeleton"
 			S.health = 1
-			H.gib()
+			T:gib()
 			return 0
 		else
 			boutput(usr, "<span style=\"color:red\">There are no skeletonized corpses here to raise!</span>")
@@ -390,7 +382,7 @@
 			L.desc = "[O.desc]. It appears to be alive!"
 			L.overlays += O
 			L.health = rand(10, 50)
-			L.atk_brute_amt = rand(5, 20)
+			L.atck_dmg = rand(5, 20)
 			L.defensive = 1
 			L.aggressive = 1
 			L.atkcarbon = 1
@@ -420,55 +412,33 @@
 		return W.haunt()
 
 /obj/poltergeistMarker
-	name = "Spooky Marker"
-	desc = "What is this? You feel like you shouldn't be able to see it."
-	icon = 'icons/effects/particles.dmi'
-	icon_state = "32x32circle"
-	color = "#222222"
-	// invisibility = 101
-	invisibility = 16
+	name = "nope"
+	desc = "nope"
+	invisibility = 101
 	anchored = 1
 	density = 0
 	opacity = 0
-	mouse_opacity = 0
-	alpha = 100
 
-	New()
-		..()
-		var/matrix/M = matrix()
-		M.Scale(0.5,0.5)
-		animate(src, transform = M, time = 3 SECONDS, loop = -1,easing = ELASTIC_EASING)
 
 /datum/targetable/wraithAbility/poltergeist
 	name = "Poltergeist - Mark Location"
 	icon_state = "poltergeist"
 	desc = "Cause freaky, weird, creepy or spooky stuff to happen in an area around you. Use this ability to mark your current tile as the origin of these events, then activate it by using this ability again."
 	targeted = 0
-	pointCost = 0
-	cooldown = 200
+	pointCost = 20
+	cooldown = 0
 	special_screen_loc="NORTH,EAST"
 
 	var/datum/radio_frequency/pda_connection
-	var/obj/poltergeistMarker/marker = new /obj/poltergeistMarker()		//removed for now
+	var/obj/poltergeistMarker/marker = new /obj/poltergeistMarker()
 	var/status = 0
+	var/casting = 0
 	var/static/list/effects = list("Flip light switches" = 1, "Burn out lights" = 2, "Create smoke" = 3, "Create ectoplasm" = 4, "Sap APC" = 5, "Haunt PDAs" = 6, "Open doors, lockers, crates" = 7, "Random" = 8)
-	var/list/effects_buttons = list() 
 
 
 	New()
 		..()
 		pda_connection = radio_controller.return_frequency("1149")
-		object.contextLayout = new /datum/contextLayout/screen_HUD_default(2, 16, 16)//, -32, -32)
-		if (!object.contextActions)
-			object.contextActions = list()
-
-		for(var/i=1, i<=8, i++)
-			var/datum/contextAction/wraith_poltergeist_button/newcontext = new /datum/contextAction/wraith_poltergeist_button(i)
-			object.contextActions += newcontext
-
-	disposing()
-		radio_controller.remove_object(src,"1149")
-		..()
 
 	proc/haunt_pda(var/obj/item/device/pda2/pda)
 		if (!pda_connection)
@@ -484,94 +454,104 @@
 		signal.data["sender"] = "00000000" // surely this isn't going to be a problem
 		signal.data["address_1"] = pda.net_id
 
+
 		pda_connection.post_signal(src, signal)
 
 	cast()
 		if (..())
 			return 1
 
-	proc/do_poltergeist_ability(var/effect as text)		
-		if (effect == 8)
-			effect = rand(1, 7)
-		switch (effect)
-			if (1)
-				boutput(holder.owner, "<span style=\"color:blue\">You flip some light switches near the designated location!!</span>")
-				for (var/obj/machinery/light_switch/L in range(10, holder.owner))
-					L.attack_hand(holder.owner)
-				return 0
-			if (2)
-				boutput(holder.owner, "<span style=\"color:blue\">You cause a few lights to burn out near the designated location!.</span>")
-				var/c_prob = 100
-				for (var/obj/machinery/light/L in range(10, holder.owner))
-					if (L.status == 2 || L.status == 1)
-						continue
-					if (prob(c_prob))
-						L.broken()
-						c_prob *= 0.5
-				return 0
-			if (3)
-				boutput(holder.owner, "<span style=\"color:blue\">Smoke rises in the designated location.</span>")
-				var/turf/trgloc = get_turf(holder.owner)
-				var/list/affected = block(locate(trgloc.x - 3,trgloc.y - 3,trgloc.z), locate(trgloc.x + 3,trgloc.y + 3,trgloc.z))
-				if(!affected.len) return
-				var/list/centerview = view(4, trgloc)
-				for(var/atom/A in affected)
-					if(!(A in centerview)) continue
-					//if (A == holder.owner) continue
-					var/obj/smokeDummy/D = new(A)
-					SPAWN_DBG(150)
-						qdel(D)
-				particleMaster.SpawnSystem(new/datum/particleSystem/areaSmoke("#ffffff", 30, trgloc))
-				return 0
-			if (4)
-				boutput(holder.owner, "<span style=\"color:blue\">Matter from your realm appears near the designated location!</span>")
-				var/count = rand(5,9)
-				var/turf/trgloc = get_turf(holder.owner)
-				var/list/affected = block(locate(trgloc.x - 8,trgloc.y - 8,trgloc.z), locate(trgloc.x + 8,trgloc.y + 8,trgloc.z))
-				for (var/i = 0, i < count, i++)
-					new/obj/item/reagent_containers/food/snacks/ectoplasm(pick(affected))
-				return 0
-			if (5)
-				var/sapped_amt = src.holder.regenRate * 100
-				var/obj/machinery/power/apc/apc = locate() in get_area(holder.owner)
-				if (!apc)
-					boutput(holder.owner, "<span style=\"color:red\">Power sap failed: local APC not found.</span>")
+		if (status == 0)
+			marker.loc = get_turf(holder.owner)
+			boutput(usr, "<span style=\"color:blue\">You prepare the area.</span>")
+			return 0
+		else
+			if (casting)
+				return
+			casting = 1
+			var/effect = input("Which effect?", "Effect", "Random") in effects
+			if (effect == "Random")
+				effect = rand(1, 7)
+			else
+				effect = effects[effect]
+			switch (effect)
+				if (1)
+					boutput(usr, "<span style=\"color:blue\">You flip some light switches near the designated location!!</span>")
+					for (var/obj/machinery/light_switch/L in range(10, marker))
+						L.attack_hand(holder.owner)
 					return 0
-				boutput(holder.owner, "<span style=\"color:blue\">You sap the power of the chamber's power source.</span>")
-				var/obj/item/cell/cell = apc.cell
-				if (cell)
-					cell.use(sapped_amt)
-				return 0
-			if (6)
-				boutput(holder.owner, "<span style=\"color:blue\">Mysterious messages haunt PDAs near the designated location!</span>")
-				for (var/mob/living/L in range(10, holder.owner))
-					var/obj/item/device/pda2/pda = locate() in L
-					if (pda)
+				if (2)
+					boutput(usr, "<span style=\"color:blue\">You cause a few lights to burn out near the designated location!.</span>")
+					var/c_prob = 100
+					for (var/obj/machinery/light/L in range(10, marker))
+						if (L.status == 2 || L.status == 1)
+							continue
+						if (prob(c_prob))
+							L.broken()
+							c_prob *= 0.5
+					return 0
+				if (3)
+					boutput(usr, "<span style=\"color:blue\">Smoke rises in the designated location.</span>")
+					var/turf/trgloc = get_turf(marker)
+					var/list/affected = block(locate(trgloc.x - 3,trgloc.y - 3,trgloc.z), locate(trgloc.x + 3,trgloc.y + 3,trgloc.z))
+					if(!affected.len) return
+					var/list/centerview = view(world.view, trgloc)
+					for(var/atom/A in affected)
+						if(!(A in centerview)) continue
+						if (A == holder.owner) continue
+						var/obj/smokeDummy/D = new(A)
+						spawn(150) qdel(D)
+					particleMaster.SpawnSystem(new/datum/particleSystem/areaSmoke("#ffffff", 150, trgloc))
+					return 0
+				if (4)
+					boutput(usr, "<span style=\"color:blue\">Matter from your realm appears near the designated location!</span>")
+					var/count = rand(5,9)
+					var/turf/trgloc = get_turf(marker)
+					var/list/affected = block(locate(trgloc.x - 8,trgloc.y - 8,trgloc.z), locate(trgloc.x + 8,trgloc.y + 8,trgloc.z))
+					for (var/i = 0, i < count, i++)
+						new/obj/item/reagent_containers/food/snacks/ectoplasm(pick(affected))
+					return 0
+				if (5)
+					var/sapped_amt = src.holder.regenRate * 100
+					var/obj/machinery/power/apc/apc = locate() in get_area(marker)
+					if (!apc)
+						boutput(usr, "<span style=\"color:red\">Power sap failed: local APC not found.</span>")
+						return 0
+					boutput(usr, "<span style=\"color:blue\">You sap the power of the chamber's power source.</span>")
+					var/obj/item/cell/cell = apc.cell
+					if (cell)
+						cell.use(sapped_amt)
+					return 0
+				if (6)
+					boutput(usr, "<span style=\"color:blue\">Mysterious messages haunt PDAs near the designated location!</span>")
+					for (var/mob/living/L in range(10, marker))
+						var/obj/item/device/pda2/pda = locate() in L
+						if (pda)
+							src.haunt_pda(pda)
+					for (var/obj/item/device/pda2/pda in range(10, marker))
 						src.haunt_pda(pda)
-				for (var/obj/item/device/pda2/pda in range(10, holder.owner))
-					src.haunt_pda(pda)
-			if (7)
-				boutput(holder.owner, "<span style=\"color:blue\">Crates, lockers and doors mysteriously open and close in the designated area!</span>")
-				var/c_prob = 100
-				for(var/obj/machinery/door/G in range(10, holder.owner))
-					if (prob(c_prob))
-						c_prob *= 0.4
-						SPAWN_DBG(1)
-							if (G.density)
-								G.open()
-							else
-								G.close()
-				c_prob = 100
-				for(var/obj/storage/F in range(10, holder.owner))
-					if (prob(c_prob))
-						c_prob *= 0.4
-						SPAWN_DBG(1)
-							if (F.open)
-								F.close()
-							else
-								F.open()
+				if (7)
+					boutput(usr, "<span style=\"color:blue\">Crates, lockers and doors mysteriously open and close in the designated area!</span>")
+					var/c_prob = 100
+					for(var/obj/machinery/door/G in range(10, marker))
+						if (prob(c_prob))
+							c_prob *= 0.4
+							spawn(1)
+								if (G.density)
+									G.open()
+								else
+									G.close()
+					c_prob = 100
+					for(var/obj/storage/F in range(10, marker))
+						if (prob(c_prob))
+							c_prob *= 0.4
+							spawn(1)
+								if (F.open)
+									F.close()
+								else
+									F.open()
 
-		return 0
+			return 0
 
 	afterCast()
 		if (status == 0)
@@ -582,11 +562,11 @@
 			icon_state = "poltergeist1"
 		else
 			name = "Poltergeist - Mark Location"
+			casting = 0
 			pointCost = 20
 			cooldown = 0
 			status = 0
 			icon_state = "poltergeist"
-			// holder.owner.contents += marker
 
 /datum/targetable/wraithAbility/whisper
 	name = "Whisper"
@@ -594,8 +574,8 @@
 	desc = "Send an ethereal message to a living being."
 	targeted = 1
 	target_anything = 1
-	pointCost = 1
-	cooldown = 2 SECONDS
+	pointCost = 10
+	cooldown = 200 //20 seconds
 
 	proc/ghostify_message(var/message)
 		return message
@@ -605,12 +585,11 @@
 			return 1
 
 		if (ishuman(target))
-			var/mob/living/carbon/human/H = target
-			if (isdead(H))
+			if (target:stat == 2)
 				boutput(usr, "<span style=\"color:red\">They can hear you just fine without the use of your abilities.</span>")
 				return 1
 			else
-				var/message = html_encode(input("What would you like to whisper to [target]?", "Whisper", "") as text)
+				var/message = input("What would you like to whisper to [target]?", "Whisper", "") as text
 				logTheThing("say", usr, target, "WRAITH WHISPER TO %target%: [message]")
 				message = ghostify_message(trim(copytext(sanitize(message), 1, 255)))
 				boutput(usr, "<b>You whisper to [target]:</b> [message]")
@@ -618,55 +597,3 @@
 		else
 			boutput(usr, "<span style=\"color:red\">It would be futile to attempt to force your voice to the consciousness of that.</span>")
 			return 1
-
-//this is the spooky_writing ability from spooktober ghosts
-/datum/targetable/wraithAbility/blood_writing
-	name = "Blood Writing"
-	desc = "Write a spooky character on the ground."
-	icon_state = "bloodwriting"
-	targeted = 1
-	target_anything = 1
-	pointCost = 10
-	cooldown = 5 SECONDS
-	var/in_use = 0
-
-	// cast(turf/target, params)
-	cast(atom/target, params)
-		if (..())
-			return 1
-
-		var/turf/T = get_turf(target)
-		if (isturf(T))
-			write_on_turf(T, holder.owner, params)
-
-
-	proc/write_on_turf(var/turf/T as turf, var/mob/user as mob, params)
-		if (!T || !user || src.in_use)
-			return
-		src.in_use = 1
-		var/list/c_default = list("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-		"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Exclamation Point", "Question Mark", "Period", "Comma", "Colon", "Semicolon", "Ampersand", "Left Parenthesis", "Right Parenthesis",
-		"Left Bracket", "Right Bracket", "Percent", "Plus", "Minus", "Times", "Divided", "Equals", "Less Than", "Greater Than")
-		var/list/c_symbol = list("Dollar", "Euro", "Arrow North", "Arrow East", "Arrow South", "Arrow West",
-		"Square", "Circle", "Triangle", "Heart", "Star", "Smile", "Frown", "Neutral Face", "Bee", "Pentagram")
-
-		var/t = input(user, "What do you want to write?", null, null) as null|anything in (c_default + c_symbol)
-
-		if (!t)
-			src.in_use = 0
-			return 1
-		var/obj/decal/cleanable/writing/spooky/G = make_cleanable(/obj/decal/cleanable/writing/spooky,T)
-		G.artist = user.key
-
-		logTheThing("station", user, null, "writes on [T] with [src] [log_loc(T)]: [t]")
-		G.icon_state = t
-		G.words = t
-		if (islist(params) && params["icon-y"] && params["icon-x"])
-			// playsound(src.loc, "sound/impact_sounds/Slimy_Splat_1.ogg", 50, 1)
-
-			G.pixel_x = text2num(params["icon-x"]) - 16
-			G.pixel_y = text2num(params["icon-y"]) - 16
-		else
-			G.pixel_x = rand(-4,4)
-			G.pixel_y = rand(-4,4)
-		src.in_use = 0

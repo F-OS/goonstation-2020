@@ -50,11 +50,10 @@
 	var/obj/item/tank/plasma/part3 = null
 	status = 0.0
 	flags = FPRINT | TABLEPASS| CONDUCT
-	event_handler_flags = USE_PROXIMITY | USE_FLUID_ENTER
 
 /obj/item/assembly/proximity_bomb/dropped()
 
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		src.part1.sense()
 		return
 	return
@@ -74,7 +73,7 @@
 	return
 
 /obj/item/assembly/proximity_bomb/attackby(obj/item/W as obj, mob/user as mob)
-	if (iswrenchingtool(W) && !(src.status))
+	if ((istype(W, /obj/item/wrench) && !( src.status )))
 		var/obj/item/assembly/prox_ignite/R = new /obj/item/assembly/prox_ignite(  )
 		R.part1 = src.part1
 		R.part2 = src.part2
@@ -150,7 +149,7 @@
 	return
 
 /obj/item/assembly/proximity_bomb/Bump(atom/O)
-	SPAWN_DBG(0)
+	spawn(0)
 		//boutput(world, "miptank bumped into [O]")
 		if(src.part1.armed)
 			//boutput(world, "sending signal")
@@ -168,7 +167,7 @@
 			src.part1.sense()
 			break
 
-	SPAWN_DBG(10)
+	spawn(10)
 		prox_check()
 
 /////////////////////////////////////////////////// Single tank bomb (timer) ////////////////////////////////////
@@ -203,7 +202,7 @@
 	return
 
 /obj/item/assembly/time_bomb/attackby(obj/item/W as obj, mob/user as mob)
-	if (iswrenchingtool(W) && !(src.status))
+	if ((istype(W, /obj/item/wrench) && !( src.status )))
 		var/obj/item/assembly/time_ignite/R = new /obj/item/assembly/time_ignite(  )
 		R.part1 = src.part1
 		R.part2 = src.part2
@@ -276,7 +275,7 @@
 	..()
 	src.part3.examine()
 
-/obj/item/assembly/radio_bomb/disposing()
+/obj/item/assembly/radio_bomb/Del()
 
 	//src.part1 = null
 	qdel(src.part1)
@@ -288,7 +287,7 @@
 	return
 
 /obj/item/assembly/radio_bomb/attackby(obj/item/W as obj, mob/user as mob)
-	if (iswrenchingtool(W) && !(src.status))
+	if ((istype(W, /obj/item/wrench) && !( src.status )))
 		var/obj/item/assembly/rad_ignite/R = new /obj/item/assembly/rad_ignite(  )
 		R.part1 = src.part1
 		R.part2 = src.part2

@@ -9,7 +9,7 @@
 	var/list/obj/screen/hud/tool_selector_bg = list()
 	var/list/obj/item/tool_selector_tools = list()
 	var/show_tool_selector = 0
-	var/mob/living/silicon/hivebot/master
+	var/mob/living/silicon/shell/master
 
 	New(M)
 		master = M
@@ -32,10 +32,6 @@
 		update_tools()
 		update_tool_selector()
 
-	clear_master()
-		master = null
-		..()
-
 	clicked(id)
 		if (!master)
 			return
@@ -48,7 +44,7 @@
 			if ("tool3")
 				master.swap_hand(3)
 			if ("store")
-				master.uneq_active()
+				master.store_active_tool()
 			if ("tools")
 				set_show_tool_selector(!show_tool_selector)
 
@@ -70,40 +66,32 @@
 				charge.icon_state = "charge-none"
 
 		update_active_tool()
-			if (!master.module_active)
-				tool1.icon_state = "mod10"
-				tool2.icon_state = "mod20"
-				tool3.icon_state = "mod30"
-			else
-				tool1.icon_state = "mod1[master.module_active == master.module_states[1]]"
-				tool2.icon_state = "mod2[master.module_active == master.module_states[2]]"
-				tool3.icon_state = "mod3[master.module_active == master.module_states[3]]"
+			tool1.icon_state = "mod1[master.active_tool == 1]"
+			tool2.icon_state = "mod2[master.active_tool == 2]"
+			tool3.icon_state = "mod3[master.active_tool == 3]"
 
 		update_tools()
 			for (var/obj/item/I in last_tools)
 				remove_object(I)
-			var/obj/item/tool1 = master.module_states[1]
-			var/obj/item/tool2 = master.module_states[2]
-			var/obj/item/tool3 = master.module_states[3]
+			var/obj/item/tool1 = master.active_tools[1]
+			var/obj/item/tool2 = master.active_tools[2]
+			var/obj/item/tool3 = master.active_tools[3]
 			if (tool1)
 				add_object(tool1, HUD_LAYER+2, "CENTER-2:16, SOUTH")
 			if (tool2)
 				add_object(tool2, HUD_LAYER+2, "CENTER-1:16, SOUTH")
 			if (tool3)
 				add_object(tool3, HUD_LAYER+2, "CENTER:16, SOUTH")
-			last_tools = master.module_states.Copy()
+			last_tools = master.active_tools.Copy()
 
 		update_tool_selector()
-			if (!master.module)
-				return
-
 			for (var/obj/item/tool in tool_selector_tools)
 				remove_object(tool)
 
 			tool_selector_tools.len = 0
 			var/i = 0
-			for (var/obj/item/tool in master.module.modules)
-				if (!(tool in master.module_states))
+			for (var/obj/item/tool in master.tools)
+				if (!(tool in master.active_tools))
 					tool_selector_tools += tool
 					tool.screen_loc = "CENTER+2:16, SOUTH+[1+i]"
 					i += 1

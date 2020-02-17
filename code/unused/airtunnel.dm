@@ -10,7 +10,7 @@
 	src.next = new /obj/move/airtunnel( null )
 	src.next.master = src.master
 	src.next.previous = src
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		src.next.create(airtunnel_start - airtunnel_stop, src.y)
 		return
 	return
@@ -20,7 +20,7 @@
 	src.next = new /obj/move/airtunnel/wall( null )
 	src.next.master = src.master
 	src.next.previous = src
-	SPAWN_DBG( 0 )
+	spawn( 0 )
 		src.next.create(airtunnel_start - airtunnel_stop, src.y)
 		return
 	return
@@ -36,7 +36,7 @@
 	src.next.master = src.master
 	src.next.previous = src
 	if (num > 1)
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			src.next.create(num - 1, y_coord)
 			return
 	return
@@ -77,7 +77,7 @@
 	src.next.master = src.master
 	src.next.previous = src
 	if (num > 1)
-		SPAWN_DBG( 0 )
+		spawn( 0 )
 			src.next.create(num - 1, y_coord)
 			return
 	return
@@ -92,13 +92,13 @@
 				for(var/x in src.verbs)
 					src.verbs -= x
 				src.icon_state = "reader_broken"
-				status |= BROKEN
+				stat |= BROKEN
 		if(3.0)
 			if (prob(25))
 				for(var/x in src.verbs)
 					src.verbs -= x
 				src.icon_state = "reader_broken"
-				status |= BROKEN
+				stat |= BROKEN
 		else
 	return
 
@@ -107,10 +107,10 @@
 		for(var/x in src.verbs)
 			src.verbs -= x
 		src.icon_state = "reader_broken"
-		status |= BROKEN
+		stat |= BROKEN
 
 /obj/machinery/at_indicator/proc/update_icon()
-	if(status & (BROKEN|NOPOWER))
+	if(stat & (BROKEN|NOPOWER))
 		icon_state = "reader_broken"
 		return
 
@@ -135,7 +135,7 @@
 	return
 
 /obj/machinery/at_indicator/process()
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		src.update_icon()
 		return
 	use_power(5, ENVIRON)
@@ -186,11 +186,11 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 	return
 
 /obj/machinery/computer/airtunnel/proc/update_icon()
-	if(status & BROKEN)
+	if(stat & BROKEN)
 		icon_state = "broken"
 		return
 
-	if(status & NOPOWER)
+	if(stat & NOPOWER)
 		icon_state = "c_unpowered"
 		return
 
@@ -214,7 +214,7 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 
 /obj/machinery/computer/airtunnel/process()
 	src.update_icon()
-	if(status & (NOPOWER|BROKEN))
+	if(stat & (NOPOWER|BROKEN))
 		return
 	use_power(250)
 	src.updateUsrDialog()
@@ -224,7 +224,7 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 	if(..())
 		return
 
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf)) || (issilicon(usr))))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon))))
 		usr.machine = src
 		if (href_list["retract"])
 			SS13_airtunnel.retract()
@@ -273,7 +273,7 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 
 /obj/machinery/sec_lock/New()
 	..()
-	SPAWN_DBG( 2 )
+	spawn( 2 )
 		if (src.a_type == 1)
 			src.d2 = locate(/obj/machinery/door, locate(src.x - 2, src.y - 1, src.z))
 			src.d1 = locate(/obj/machinery/door, get_step(src, SOUTHWEST))
@@ -293,7 +293,7 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 	if ((!( src.d1 ) || !( src.d2 )))
 		boutput(usr, "<span style=\"color:red\">Error: Cannot interface with door security!</span>")
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf)) || (issilicon(usr))))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon))))
 		usr.machine = src
 		if (href_list["card"])
 			if (src.scan)
@@ -309,22 +309,22 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 			if (src.scan)
 				if (src.check_access(src.scan))
 					if (src.d1.density)
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d1.open()
 							return
 					else
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d1.close()
 							return
 		if (href_list["door2"])
 			if (src.scan)
 				if (src.check_access(src.scan))
 					if (src.d2.density)
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d2.open()
 							return
 					else
-						SPAWN_DBG( 0 )
+						spawn( 0 )
 							src.d2.close()
 							return
 		if (href_list["em_cl"])
@@ -334,19 +334,19 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 						src.d1.close()
 						return
 					sleep(1)
-					SPAWN_DBG( 0 )
+					spawn( 0 )
 						if (!( src.d2.density ))
 							src.d2.close()
 						return
 		if (href_list["em_op"])
 			if (src.scan)
 				if (src.check_access(src.scan))
-					SPAWN_DBG( 0 )
+					spawn( 0 )
 						if (src.d1.density)
 							src.d1.open()
 						return
 					sleep(1)
-					SPAWN_DBG( 0 )
+					spawn( 0 )
 						if (src.d2.density)
 							src.d2.open()
 						return
@@ -394,7 +394,7 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 	if (src.operating)
 		return
 
-	SPAWN_DBG(0)
+	spawn(0)
 		src.operating = 2
 		while(src.operating == 2)
 			var/ok = 1
@@ -420,7 +420,7 @@ obj/machinery/computer/airtunnel/attack_ai(user as mob)
 /datum/air_tunnel/proc/retract()
 	if (src.operating)
 		return
-	SPAWN_DBG(0)
+	spawn(0)
 		src.operating = 1
 		while(src.operating == 1)
 			var/ok = 1

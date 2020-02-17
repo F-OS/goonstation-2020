@@ -5,5 +5,3 @@ borg_pat@=friendly@,cordial@,merry@,jolly@,heartfelt@,cheerful@,nice@,pleasant@,
 borg_shake@=rudely@,strangely@,angrily@,grumpily@,cheekily@,meanly@,hatefully@,jokingly@,messily@,carelessly
 borg_punch@=an idiot@,a git@,a fool@,a tosser@,a dumbass@,a dummy@,a goof@,a jerk@,a horrible bully@,a right prat@,folly@,did they expect would happen
 mopey@=solemnly@,sadly@,gloomily@,quietly@,underwhelmingly@,droopily@,disappointingly
-crusherbrave@=...dang, they're brave.@,...like it ain't no thing!@,...you wish you had the same kinda guts they do!@,Holy shit, that's daring as fuck!@,What a badass!@,...no braver spaceman ever lived!@,...that's awesome!@,HOLY FUCK!@,...dang!@,...they're insane!@,Wow... just wow...@,HOLY SHIT!@,Amazing!
-crusherpoke@=touches@,pokes@,slaps@,gropes@,honks@,strokes@,pets@,thwaps@,licks@,punches@,thwonks@,smacks@,flumps@,plonks@,flicks

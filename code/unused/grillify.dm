@@ -16,7 +16,7 @@
 //
 //		for(var/turf/T in world)
 //			if(!T.density)
-//				SPAWN_DBG(-1)
+//				spawn(-1)
 //					new /obj/grille(locate(T.x,T.y,T.z))
 //	else
 //		alert("Debugging is disabled")
